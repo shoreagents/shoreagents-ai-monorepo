@@ -34,6 +34,8 @@ export async function GET() {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatar: user.avatar,
+        coverPhoto: user.coverPhoto,
       },
       profile: user.profile,
       workSchedules: user.profile?.workSchedule || [],
