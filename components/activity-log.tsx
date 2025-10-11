@@ -1,92 +1,236 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Heart, ThumbsUp, Flame, Zap, Award, MessageSquare, Send } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit } from "lucide-react"
+import Image from "next/image"
 
-type PostType = "ACHIEVEMENT" | "ANNOUNCEMENT" | "WORK_WIN" | "KUDOS" | "MILESTONE" | "CELEBRATION"
-type ReactionType = "LIKE" | "LOVE" | "CELEBRATE" | "FIRE" | "CLAP"
+type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
+type ReactionType = "LIKE" | "LOVE" | "FIRE" | "CELEBRATE" | "CLAP" | "LAUGH" | "POO" | "ROCKET" | "SHOCKED" | "MIND_BLOWN"
+
+interface User {
+  id: string
+  name: string
+  avatar: string | null
+  role?: string
+}
+
+interface Reaction {
+  id: string
+  type: ReactionType
+  user: {
+    id: string
+    name: string
+  }
+}
+
+interface Comment {
+  id: string
+  content: string
+  createdAt: string
+  user: {
+    id: string
+    name: string
+    avatar: string | null
+  }
+}
 
 interface Post {
   id: string
   content: string
   type: PostType
-  authorId: string
+  images: string[]
   createdAt: string
+  user: User
+  reactions: Reaction[]
+  comments: Comment[]
+}
+
+const reactionIcons = {
+  LIKE: { icon: ThumbsUp, color: "text-blue-400", label: "Like" },
+  LOVE: { icon: Heart, color: "text-red-400", label: "Love" },
+  FIRE: { icon: Flame, color: "text-orange-400", label: "Fire" },
+  CELEBRATE: { icon: PartyPopper, color: "text-purple-400", label: "Celebrate" },
+  CLAP: { icon: Sparkles, color: "text-emerald-400", label: "Clap" },
+  LAUGH: { icon: Laugh, color: "text-yellow-400", label: "Haha" },
+  POO: { icon: Skull, color: "text-amber-600", label: "Poo" },
+  ROCKET: { icon: Rocket, color: "text-cyan-400", label: "Rocket" },
+  SHOCKED: { icon: Zap, color: "text-pink-400", label: "Shocked" },
+  MIND_BLOWN: { icon: BrainCircuit, color: "text-fuchsia-400", label: "Mind Blown" },
 }
 
 export default function ActivityLog() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [newPostContent, setNewPostContent] = useState("")
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({})
+  const [currentUserId, setCurrentUserId] = useState<string>("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchPosts()
+    fetchCurrentUser()
   }, [])
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch("/api/profile")
+      const data = await response.json()
+      setCurrentUserId(data.user.id)
+    } catch (error) {
+      console.error("Error fetching current user:", error)
+    }
+  }
 
   const fetchPosts = async () => {
     try {
       const response = await fetch("/api/posts")
-      if (!response.ok) throw new Error("Failed to fetch posts")
       const data = await response.json()
-      setPosts(data.posts)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load posts")
+      setPosts(data.posts || [])
+    } catch (error) {
+      console.error("Error fetching posts:", error)
     } finally {
       setLoading(false)
     }
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const filesArray = Array.from(files).slice(0, 5) // Max 5 images
+    setSelectedImages(filesArray)
+
+    // Generate previews
+    const previews = filesArray.map((file) => URL.createObjectURL(file))
+    setImagePreviews(previews)
+  }
+
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const createPost = async () => {
-    if (!newPostContent.trim()) return
-    
+    if (!newPostContent.trim() && selectedImages.length === 0) return
+
+    setUploading(true)
+    let imageUrls: string[] = []
+
+    // Upload images first if any
+    if (selectedImages.length > 0) {
+      const formData = new FormData()
+      selectedImages.forEach((file) => {
+        formData.append("images", file)
+      })
+
+      try {
+        const uploadResponse = await fetch("/api/posts/images", {
+          method: "POST",
+          body: formData,
+        })
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json()
+          imageUrls = uploadData.urls
+        }
+      } catch (error) {
+        console.error("Error uploading images:", error)
+      }
+    }
+
+    // Create post
     try {
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: newPostContent,
-          type: "WORK_WIN",
+          type: "UPDATE",
+          images: imageUrls,
         }),
       })
-      if (!response.ok) throw new Error("Failed to create post")
-      await fetchPosts()
-      setNewPostContent("")
-    } catch (err) {
-      console.error("Error creating post:", err)
+      if (response.ok) {
+        await fetchPosts()
+        setNewPostContent("")
+        setSelectedImages([])
+        setImagePreviews([])
+      }
+    } catch (error) {
+      console.error("Error creating post:", error)
+    } finally {
+      setUploading(false)
     }
   }
 
-  const postTypeConfig = {
-    ACHIEVEMENT: { emoji: "🏆", color: "bg-amber-500/20 text-amber-400" },
-    ANNOUNCEMENT: { emoji: "📢", color: "bg-blue-500/20 text-blue-400" },
-    WORK_WIN: { emoji: "✨", color: "bg-emerald-500/20 text-emerald-400" },
-    KUDOS: { emoji: "🙌", color: "bg-purple-500/20 text-purple-400" },
-    MILESTONE: { emoji: "🎯", color: "bg-pink-500/20 text-pink-400" },
-    CELEBRATION: { emoji: "🎉", color: "bg-orange-500/20 text-orange-400" },
+  const toggleReaction = async (postId: string, type: ReactionType) => {
+    try {
+      await fetch("/api/posts/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, type }),
+      })
+      await fetchPosts()
+    } catch (error) {
+      console.error("Error toggling reaction:", error)
+    }
+  }
+
+  const addComment = async (postId: string) => {
+    const content = commentInputs[postId]
+    if (!content?.trim()) return
+
+    try {
+      await fetch("/api/posts/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, content }),
+      })
+      setCommentInputs({ ...commentInputs, [postId]: "" })
+      await fetchPosts()
+    } catch (error) {
+      console.error("Error adding comment:", error)
+    }
+  }
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      await fetch(`/api/posts/comments?id=${commentId}`, { method: "DELETE" })
+      await fetchPosts()
+    } catch (error) {
+      console.error("Error deleting comment:", error)
+    }
+  }
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (seconds < 60) return "just now"
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+    return date.toLocaleDateString()
+  }
+
+  const getReactionCount = (reactions: Reaction[], type: ReactionType) => {
+    return reactions.filter((r) => r.type === type).length
+  }
+
+  const hasUserReacted = (reactions: Reaction[], type: ReactionType) => {
+    return reactions.some((r) => r.type === type && r.user.id === currentUserId)
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-3xl space-y-6">
+        <div className="mx-auto max-w-2xl space-y-4">
           <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-48 rounded-xl bg-slate-800/50 animate-pulse" />
+            <div key={i} className="h-64 rounded-xl bg-slate-800/50 animate-pulse" />
           ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-3xl">
-          <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
-            <h2 className="text-xl font-bold text-red-400">Error Loading Feed</h2>
-            <p className="mt-2 text-red-300">{error}</p>
-          </div>
         </div>
       </div>
     )
@@ -94,111 +238,275 @@ export default function ActivityLog() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-2xl space-y-4">
         {/* Header */}
-        <div className="rounded-2xl bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-blue-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
-          <h1 className="text-3xl font-bold text-white">Team Feed</h1>
-          <p className="mt-1 text-slate-300">Share wins, give kudos, and celebrate together</p>
+        <div className="rounded-xl bg-gradient-to-br from-indigo-900/50 via-purple-900/50 to-indigo-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10 shadow-xl">
+          <h1 className="text-3xl font-bold text-white">Team Feed 🎉</h1>
+          <p className="mt-1 text-slate-300">Share updates, wins, memes, and 💩 takes with the team!</p>
         </div>
 
         {/* Create Post */}
-        <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-          <div className="flex items-start gap-3">
-            <img
-              src="/placeholder-user.jpg"
-              alt="You"
-              className="h-10 w-10 rounded-full object-cover ring-2 ring-white/20"
-            />
-            <div className="flex-1">
-              <textarea
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                placeholder="Share a win, give kudos, or celebrate a milestone..."
-                className="w-full resize-none rounded-xl bg-slate-800/50 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 focus:ring-blue-500/50"
-                rows={3}
-              />
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={createPost}
-                  disabled={!newPostContent.trim()}
-                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-4 w-4" />
-                  Post
-                </button>
-              </div>
+        <div className="rounded-xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
+          <textarea
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            placeholder="What's on your mind? Share a win, meme, or update! 🚀"
+            className="w-full rounded-lg bg-slate-800/50 p-4 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 focus:ring-indigo-400/50"
+            rows={3}
+          />
+
+          {/* Image Previews */}
+          {imagePreviews.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative aspect-video overflow-hidden rounded-lg">
+                  <Image
+                    src={preview}
+                    alt={`Preview ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.gif,.pdf"
+              multiple
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 rounded-lg bg-slate-800/50 px-4 py-2 text-sm text-slate-300 transition-all hover:bg-slate-700/50"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Add Image/GIF/PDF
+            </button>
+            <button
+              onClick={createPost}
+              disabled={uploading || (!newPostContent.trim() && selectedImages.length === 0)}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-2 font-semibold text-white transition-all hover:from-indigo-500 hover:to-purple-500 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+            >
+              {uploading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Posting...
+                </>
+              ) : (
+                <>
+                  Post 🚀
+                </>
+              )}
+            </button>
           </div>
         </div>
 
         {/* Posts Feed */}
-        <div className="space-y-4">
-          {posts.length === 0 ? (
-            <div className="rounded-xl bg-slate-900/50 p-12 text-center backdrop-blur-xl ring-1 ring-white/10">
-              <p className="text-slate-400">No posts yet. Be the first to share something!</p>
-            </div>
-          ) : (
-            posts.map((post) => {
-              const typeConfig = postTypeConfig[post.type]
-
-              return (
-                <div
-                  key={post.id}
-                  className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10 transition-all hover:bg-slate-800/50"
-                >
-                  {/* Post Header */}
-                  <div className="flex items-start gap-3">
-                    <img
-                      src="/placeholder-user.jpg"
-                      alt="User"
-                      className="h-12 w-12 rounded-full object-cover ring-2 ring-white/20"
+        {posts.length === 0 ? (
+          <div className="rounded-xl bg-slate-900/50 p-12 text-center backdrop-blur-xl ring-1 ring-white/10">
+            <p className="text-slate-400">No posts yet. Be the first to share something! 🎉</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {posts.map((post, index) => (
+              <div
+                key={post.id}
+                className="animate-fade-in-up rounded-xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10 transition-all hover:ring-white/20 hover:shadow-xl"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Post Header */}
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full ring-2 ring-indigo-400/30 transition-all hover:ring-indigo-400/60 hover:scale-105">
+                    <Image
+                      src={post.user.avatar || "/placeholder-user.jpg"}
+                      alt={post.user.name}
+                      fill
+                      className="object-cover"
                     />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white">Team Member</h3>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${typeConfig.color}`}>
-                          {typeConfig.emoji} {post.type.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-400">
-                        {new Date(post.createdAt).toLocaleString()}
-                      </p>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white hover:text-indigo-300 transition-colors cursor-pointer">{post.user.name}</div>
+                    <div className="text-sm text-slate-400">{formatTimeAgo(post.createdAt)}</div>
+                  </div>
+                </div>
+
+                {/* Post Content */}
+                <div className="mt-4">
+                  <p className="whitespace-pre-wrap text-white">{post.content}</p>
+                </div>
+
+                {/* Post Images */}
+                {post.images && post.images.length > 0 && (
+                  <div className={`mt-4 grid gap-2 ${post.images.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {post.images.map((image, index) => {
+                      const isPDF = image.toLowerCase().endsWith('.pdf')
+                      return (
+                        <div key={index} className="relative aspect-video overflow-hidden rounded-lg">
+                          {isPDF ? (
+                            <div className="flex h-full items-center justify-center bg-slate-800/50">
+                              <div className="text-center">
+                                <FileText className="mx-auto mb-2 h-12 w-12 text-indigo-400" />
+                                <p className="text-sm text-slate-300">PDF Document</p>
+                                <a
+                                  href={image}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2 inline-block text-xs text-indigo-400 hover:underline"
+                                >
+                                  Open PDF
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <Image
+                              src={image}
+                              alt={`Post image ${index + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Reactions */}
+                <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                  {/* Reaction Summary */}
+                  {post.reactions.length > 0 && (
+                    <div className="text-sm text-slate-400">
+                      {Object.entries(reactionIcons).map(([type, { icon: Icon, color }]) => {
+                        const reactions = post.reactions.filter((r) => r.type === type)
+                        if (reactions.length === 0) return null
+                        const names = reactions.map((r) => r.user.name).slice(0, 3)
+                        const extra = reactions.length - 3
+                        return (
+                          <span key={type} className="mr-3">
+                            <Icon className={`inline h-4 w-4 ${color} mr-1`} />
+                            <span className="text-white">{names.join(", ")}</span>
+                            {extra > 0 && <span> and {extra} others</span>}
+                          </span>
+                        )
+                      }).filter(Boolean)}
                     </div>
+                  )}
+                  
+                  {/* Reaction Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(reactionIcons).map(([type, { icon: Icon, color, label }]) => {
+                      const count = getReactionCount(post.reactions, type as ReactionType)
+                      const hasReacted = hasUserReacted(post.reactions, type as ReactionType)
+                      const whoReacted = post.reactions
+                        .filter((r) => r.type === type)
+                        .map((r) => r.user.name)
+                      
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => toggleReaction(post.id, type as ReactionType)}
+                          title={whoReacted.length > 0 ? whoReacted.join(", ") : label}
+                          className={`group relative flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-all duration-200 ${
+                            hasReacted
+                              ? `${color} bg-slate-800/70 ring-1 ring-current scale-105`
+                              : "text-slate-400 hover:bg-slate-800/50 hover:scale-110 hover:text-white"
+                          } active:scale-95`}
+                        >
+                          <Icon className={`h-4 w-4 transition-transform ${hasReacted ? "animate-bounce" : "group-hover:rotate-12"}`} />
+                          {count > 0 && <span className="font-semibold">{count}</span>}
+                          
+                          {/* Tooltip on hover */}
+                          {whoReacted.length > 0 && (
+                            <span className="pointer-events-none absolute -top-10 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1 text-xs text-white opacity-0 shadow-xl ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
+                              {whoReacted.join(", ")}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
+                </div>
 
-                  {/* Post Content */}
-                  <div className="mt-4">
-                    <p className="text-white leading-relaxed">{post.content}</p>
-                  </div>
+                {/* Comments Section */}
+                <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                  {post.comments.map((comment, idx) => (
+                    <div 
+                      key={comment.id} 
+                      className="flex gap-3 animate-fade-in-up"
+                      style={{ animationDelay: `${idx * 50}ms` }}
+                    >
+                      <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white/10 transition-all hover:ring-white/30">
+                        <Image
+                          src={comment.user.avatar || "/placeholder-user.jpg"}
+                          alt={comment.user.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="group rounded-lg bg-slate-800/50 p-3 transition-all hover:bg-slate-800/70">
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold text-sm text-white">{comment.user.name}</div>
+                            {comment.user.id === currentUserId && (
+                              <button
+                                onClick={() => deleteComment(comment.id)}
+                                className="text-slate-400 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-slate-300">{comment.content}</p>
+                        </div>
+                        <div className="mt-1 ml-1 text-xs text-slate-500">{formatTimeAgo(comment.createdAt)}</div>
+                      </div>
+                    </div>
+                  ))}
 
-                  {/* Reactions */}
-                  <div className="mt-4 flex gap-2 border-t border-white/10 pt-3">
-                    <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-blue-400">
-                      <ThumbsUp className="h-4 w-4" />
-                      Like
-                    </button>
-                    <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400">
-                      <Heart className="h-4 w-4" />
-                      Love
-                    </button>
-                    <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-emerald-400">
-                      <Award className="h-4 w-4" />
-                      Celebrate
-                    </button>
-                    <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-orange-400">
-                      <Flame className="h-4 w-4" />
-                      Fire
-                    </button>
-                    <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-purple-400">
-                      <Zap className="h-4 w-4" />
-                      Clap
+                  {/* Add Comment */}
+                  <div className="flex gap-2 items-center">
+                    <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white/10">
+                      <Image
+                        src={post.user.avatar || "/placeholder-user.jpg"}
+                        alt="Your avatar"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={commentInputs[post.id] || ""}
+                      onChange={(e) =>
+                        setCommentInputs({ ...commentInputs, [post.id]: e.target.value })
+                      }
+                      onKeyPress={(e) => e.key === "Enter" && addComment(post.id)}
+                      placeholder="Write a comment... 💬"
+                      className="flex-1 rounded-lg bg-slate-800/50 px-4 py-2 text-sm text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-2 focus:ring-indigo-400/50 focus:bg-slate-800/70"
+                    />
+                    <button
+                      onClick={() => addComment(post.id)}
+                      disabled={!commentInputs[post.id]?.trim()}
+                      className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 p-2 text-white transition-all hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      <Send className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              )
-            })
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

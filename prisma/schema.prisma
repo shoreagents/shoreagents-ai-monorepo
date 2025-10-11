@@ -422,6 +422,11 @@ enum ReactionType {
   CELEBRATE
   FIRE
   CLAP
+  LAUGH
+  POO
+  ROCKET
+  SHOCKED
+  MIND_BLOWN
 }
 
 model PostReaction {
