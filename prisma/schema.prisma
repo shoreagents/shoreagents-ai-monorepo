@@ -295,6 +295,10 @@ enum TicketCategory {
   HR
   MANAGEMENT
   EQUIPMENT
+  STATION
+  SURROUNDINGS
+  COMPENSATION
+  TRANSPORT
   OTHER
 }
 
@@ -325,6 +329,7 @@ model Ticket {
   status      TicketStatus    @default(OPEN)
   
   assignedTo  String?
+  attachments String[]        @default([]) // URLs to uploaded files
   
   resolvedDate DateTime?
   

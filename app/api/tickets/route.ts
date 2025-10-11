@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, category, priority } = body
+    const { title, description, category, priority, attachments } = body
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique ticket ID
     const ticketCount = await prisma.ticket.count()
-    const ticketId = `TKT-${String(ticketCount + 1).padStart(3, "0")}`
+    const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         category,
         priority: priority || "MEDIUM",
         status: "OPEN",
+        attachments: attachments || [],
       },
       include: {
         responses: {
