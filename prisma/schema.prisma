@@ -43,6 +43,7 @@ model User {
   profile              Profile?
   tasks                Task[]
   breaks               Break[]
+  timeEntries          TimeEntry[]
   performanceMetrics   PerformanceMetric[]
   reviewsReceived      Review[]
   tickets              Ticket[]
@@ -197,6 +198,27 @@ model Break {
   updatedAt   DateTime    @updatedAt
 
   @@map("breaks")
+}
+
+// =====================
+// TIME TRACKING (Clock In/Out)
+// =====================
+
+model TimeEntry {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  clockIn    DateTime
+  clockOut   DateTime?
+  
+  totalHours Decimal?  @db.Decimal(5, 2) // Calculated when clocked out
+  notes      String?
+  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("time_entries")
 }
 
 // =====================

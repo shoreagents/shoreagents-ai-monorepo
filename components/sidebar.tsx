@@ -19,11 +19,13 @@ import {
   Headphones,
   Trophy,
   LogOut,
+  Clock,
 } from "lucide-react"
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/profile", icon: User, label: "My Profile" },
+  { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/breaks", icon: Coffee, label: "Breaks" },
   { href: "/performance", icon: Activity, label: "Performance" },
