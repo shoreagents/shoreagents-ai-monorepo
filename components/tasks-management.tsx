@@ -67,12 +67,17 @@ export default function TasksManagement() {
           deadline: newTask.deadline || null,
         }),
       })
-      if (!response.ok) throw new Error("Failed to create task")
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("API Error:", errorData)
+        throw new Error(errorData.error || "Failed to create task")
+      }
       await fetchTasks()
       setIsAddTaskOpen(false)
       setNewTask({ title: "", description: "", priority: "MEDIUM", deadline: "" })
     } catch (err) {
       console.error("Error creating task:", err)
+      alert(`Failed to create task: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 

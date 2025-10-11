@@ -6,10 +6,11 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import Sidebar from "@/components/sidebar"
+import ElectronProvider from "@/components/electron-provider"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
+  title: "Staff Monitor - Performance Tracking",
+  description: "Desktop performance tracking and staff monitoring",
   generator: "v0.app",
 }
 
@@ -21,11 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Sidebar />
-        </Suspense>
-        <main className="lg:pl-64">{children}</main>
-        <Analytics />
+        <ElectronProvider>
+          <Suspense fallback={<div>Loading...</div>}>
+            <Sidebar />
+          </Suspense>
+          <main className="lg:pl-64">{children}</main>
+          <Analytics />
+        </ElectronProvider>
       </body>
     </html>
   )

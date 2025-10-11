@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       deadline,
       tags,
       source,
-      estimatedHours,
     } = body
 
     if (!title) {
@@ -66,8 +65,7 @@ export async function POST(request: NextRequest) {
         priority: priority || "MEDIUM",
         deadline: deadline ? new Date(deadline) : null,
         tags: tags || [],
-        source: source || "STAFF",
-        estimatedHours: estimatedHours || null,
+        source: source || "SELF",
       },
     })
 

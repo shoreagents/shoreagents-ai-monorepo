@@ -3,18 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Coffee, Clock, Play, Square, Pause, X } from "lucide-react"
 
-declare global {
-  interface Window {
-    electron?: {
-      isElectron: boolean
-      breaks: {
-        notifyBreakStart: (breakData: any) => void
-        notifyBreakEnd: (breakData: any) => void
-      }
-    }
-  }
-}
-
 type BreakType = "MORNING" | "LUNCH" | "AFTERNOON" | "AWAY"
 
 interface Break {
@@ -134,16 +122,6 @@ export default function BreaksTracking() {
       setTimeElapsed(0)
       setTimeRemaining(breakConfig[type].duration * 60)
       setIsPaused(false)
-
-      // Notify Electron about break start
-      if (window.electron?.breaks) {
-        window.electron.breaks.notifyBreakStart({
-          type,
-          duration: breakConfig[type].duration,
-          breakId: result.break.id,
-          fullscreen: true,
-        })
-      }
     } catch (err) {
       console.error("Error starting break:", err)
       alert("Failed to start break")
@@ -163,14 +141,6 @@ export default function BreaksTracking() {
         return
       }
       
-      // Notify Electron about break end
-      if (window.electron?.breaks) {
-        window.electron.breaks.notifyBreakEnd({
-          breakId,
-          autoEnd,
-        })
-      }
-
       setActiveBreak(null)
       setIsPaused(false)
       setTimeElapsed(0)

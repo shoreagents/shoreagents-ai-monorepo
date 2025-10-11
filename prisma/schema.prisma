@@ -53,6 +53,7 @@ model User {
   gamificationProfile  GamificationProfile?
   kudosGiven           Kudos[]                 @relation("KudosGiven")
   kudosReceived        Kudos[]                 @relation("KudosReceived")
+  documents            Document[]
 
   @@map("users")
 }
@@ -506,9 +507,11 @@ enum DocumentCategory {
 
 model Document {
   id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   category    DocumentCategory
-  uploadedBy  String
+  uploadedBy  String           // User's name for display
   size        String
   fileUrl     String?
   content     String?          // For searchable text content

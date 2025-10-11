@@ -1,0 +1,11 @@
+ignoredBuiltDependencies:
+  - active-win
+  - electron
+  - electron-winstaller
+  - iohook
+
+onlyBuiltDependencies:
+  - active-win
+  - electron
+  - electron-winstaller
+  - iohook

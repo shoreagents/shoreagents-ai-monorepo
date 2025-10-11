@@ -5,9 +5,11 @@ import type React from "react"
 import { 
   Send, Bot, User, Sparkles, BookOpen, FileText, Users, HelpCircle,
   FolderOpen, Search, Upload, Clock, Database, Building2, GraduationCap,
-  Settings, Briefcase, TrendingUp, FileCheck, ChevronRight, X
+  Settings, Briefcase, TrendingUp, FileCheck, ChevronRight, X, Trash2, Download, Loader2
 } from "lucide-react"
 import { useRef, useEffect, useState } from "react"
+import ReactMarkdown from 'react-markdown'
+import DocumentUpload from "./document-upload"
 
 type Message = {
   id: string
@@ -19,157 +21,20 @@ type Message = {
 type Document = {
   id: string
   title: string
-  category: "client" | "training" | "procedure" | "culture" | "seo"
+  category: "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO"
   uploadedBy: string
-  uploadedDate: string
+  createdAt: string
   size: string
-  icon: any
+  fileUrl: string | null
 }
-
-const mockDocuments: Document[] = [
-  // Client Documents
-  { 
-    id: "1", 
-    title: "TechCorp - Listing Procedures Guide", 
-    category: "client", 
-    uploadedBy: "Management", 
-    uploadedDate: "2024-12-01", 
-    size: "2.4 MB",
-    icon: Building2
-  },
-  { 
-    id: "2", 
-    title: "TechCorp - Brand Guidelines & Culture", 
-    category: "culture", 
-    uploadedBy: "John Manager", 
-    uploadedDate: "2024-11-28", 
-    size: "1.8 MB",
-    icon: Users
-  },
-  { 
-    id: "3", 
-    title: "Client Communication Best Practices", 
-    category: "client", 
-    uploadedBy: "Management", 
-    uploadedDate: "2024-11-25", 
-    size: "890 KB",
-    icon: Building2
-  },
-  
-  // Training Materials
-  { 
-    id: "4", 
-    title: "SEO Fundamentals for Client Success", 
-    category: "seo", 
-    uploadedBy: "Training Team", 
-    uploadedDate: "2024-12-10", 
-    size: "5.2 MB",
-    icon: TrendingUp
-  },
-  { 
-    id: "5", 
-    title: "Advanced SEO Strategies & Techniques", 
-    category: "seo", 
-    uploadedBy: "Training Team", 
-    uploadedDate: "2024-12-08", 
-    size: "4.1 MB",
-    icon: TrendingUp
-  },
-  { 
-    id: "6", 
-    title: "Customer Service Excellence Training", 
-    category: "training", 
-    uploadedBy: "HR Department", 
-    uploadedDate: "2024-11-20", 
-    size: "3.5 MB",
-    icon: GraduationCap
-  },
-  { 
-    id: "7", 
-    title: "CRM System - Complete User Guide", 
-    category: "training", 
-    uploadedBy: "IT Department", 
-    uploadedDate: "2024-11-15", 
-    size: "2.1 MB",
-    icon: GraduationCap
-  },
-  
-  // Procedures
-  { 
-    id: "8", 
-    title: "Issue Escalation Process", 
-    category: "procedure", 
-    uploadedBy: "Management", 
-    uploadedDate: "2024-11-10", 
-    size: "450 KB",
-    icon: FileCheck
-  },
-  { 
-    id: "9", 
-    title: "Leave Application & Approval Process", 
-    category: "procedure", 
-    uploadedBy: "HR Department", 
-    uploadedDate: "2024-11-05", 
-    size: "320 KB",
-    icon: FileCheck
-  },
-  { 
-    id: "10", 
-    title: "Break Time & Attendance Policy", 
-    category: "procedure", 
-    uploadedBy: "HR Department", 
-    uploadedDate: "2024-10-28", 
-    size: "280 KB",
-    icon: FileCheck
-  },
-]
 
 const categoryConfig = {
-  client: { label: "Client Docs", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: Building2 },
-  training: { label: "Training", color: "bg-purple-500/20 text-purple-400 ring-purple-500/30", icon: GraduationCap },
-  procedure: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },
-  culture: { label: "Culture", color: "bg-pink-500/20 text-pink-400 ring-pink-500/30", icon: Users },
-  seo: { label: "SEO", color: "bg-amber-500/20 text-amber-400 ring-amber-500/30", icon: TrendingUp },
+  CLIENT: { label: "Client Docs", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: Building2 },
+  TRAINING: { label: "Training", color: "bg-purple-500/20 text-purple-400 ring-purple-500/30", icon: GraduationCap },
+  PROCEDURE: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },
+  CULTURE: { label: "Culture", color: "bg-pink-500/20 text-pink-400 ring-pink-500/30", icon: Users },
+  SEO: { label: "SEO", color: "bg-amber-500/20 text-amber-400 ring-amber-500/30", icon: TrendingUp },
 }
-
-const suggestedQuestions = [
-  { 
-    category: "client", 
-    icon: Building2, 
-    text: "TechCorp listing process?", 
-    query: "Can you explain the TechCorp listing procedures and best practices?" 
-  },
-  { 
-    category: "seo", 
-    icon: TrendingUp, 
-    text: "How do I improve SEO?", 
-    query: "What are the key SEO strategies I should use for our clients?" 
-  },
-  { 
-    category: "culture", 
-    icon: Users, 
-    text: "TechCorp company culture?", 
-    query: "Tell me about TechCorp's company culture and brand guidelines" 
-  },
-  { 
-    category: "procedure", 
-    icon: FileCheck, 
-    text: "How to escalate issues?", 
-    query: "What's the process for escalating customer issues?" 
-  },
-  { 
-    category: "training", 
-    icon: GraduationCap, 
-    text: "CRM system training?", 
-    query: "How do I use the CRM system effectively?" 
-  },
-  { 
-    category: "procedure", 
-    icon: HelpCircle, 
-    text: "Leave policy?", 
-    query: "What's the leave application and approval process?" 
-  },
-]
 
 export default function AIChatAssistant() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -178,6 +43,13 @@ export default function AIChatAssistant() {
   const [showDocs, setShowDocs] = useState(true)
   const [searchDocs, setSearchDocs] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loadingDocs, setLoadingDocs] = useState(true)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState("")
+  const [mentionStartPos, setMentionStartPos] = useState(0)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -186,9 +58,97 @@ export default function AIChatAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Handle input changes and detect @ mentions
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setInput(value)
+
+    const cursorPos = e.target.selectionStart || 0
+    
+    // Check if user just typed @ or is in the middle of a mention
+    const textBeforeCursor = value.substring(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1)
+      // Only show mentions if there's no space after @
+      if (!textAfterAt.includes(' ')) {
+        setShowMentions(true)
+        setMentionQuery(textAfterAt.toLowerCase())
+        setMentionStartPos(lastAtIndex)
+        return
+      }
+    }
+    
+    // Hide mentions if no active @ mention
+    setShowMentions(false)
+    setMentionQuery("")
+  }
+
+  // Insert document mention
+  const insertMention = (doc: Document) => {
+    const beforeMention = input.substring(0, mentionStartPos)
+    const afterMention = input.substring(inputRef.current?.selectionStart || input.length)
+    const newValue = `${beforeMention}@${doc.title} ${afterMention}`
+    setInput(newValue)
+    setShowMentions(false)
+    setMentionQuery("")
+    inputRef.current?.focus()
+  }
+
+  // Filter documents based on mention query
+  const mentionSuggestions = showMentions
+    ? documents.filter(doc => 
+        doc.title.toLowerCase().includes(mentionQuery) ||
+        doc.category.toLowerCase().includes(mentionQuery)
+      ).slice(0, 5)
+    : []
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Fetch documents on mount
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
+
+  const fetchDocuments = async () => {
+    setLoadingDocs(true)
+    try {
+      const response = await fetch('/api/documents')
+      if (response.ok) {
+        const data = await response.json()
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
+
+  const handleDeleteDocument = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return
+
+    setDeletingId(id)
+    try {
+      const response = await fetch(`/api/documents/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+      } else {
+        alert('Failed to delete document')
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      alert('Failed to delete document')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return
@@ -201,74 +161,68 @@ export default function AIChatAssistant() {
 
     setMessages((prev) => [...prev, userMessage])
     setIsLoading(true)
+    setInput("")
 
-    // Simulate AI response with document references
-    setTimeout(() => {
-      const mockResponse: Message = {
+    try {
+      // Extract document references from @mentions (e.g., @SEO_Training or @doc:id)
+      const documentIds: string[] = []
+      const mentionPattern = /@(\S+)/g
+      const mentions = text.match(mentionPattern)
+      
+      if (mentions) {
+        mentions.forEach(mention => {
+          const searchTerm = mention.slice(1).toLowerCase()
+          // Find documents that match the mention
+          const matchedDocs = documents.filter(doc => 
+            doc.title.toLowerCase().includes(searchTerm) ||
+            doc.category.toLowerCase() === searchTerm
+          )
+          matchedDocs.forEach(doc => {
+            if (!documentIds.includes(doc.id)) {
+              documentIds.push(doc.id)
+            }
+          })
+        })
+      }
+
+      // Call AI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          documentIds: documentIds.length > 0 ? documentIds : undefined,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
+
+      const data = await response.json()
+      
+      const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: getMockResponse(text),
-        sources: getRelevantDocs(text)
+        content: data.message,
+        sources: data.sources,
       }
-      setMessages((prev) => [...prev, mockResponse])
+      
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Error sending message:', error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "I'm sorry, I encountered an error processing your request. Please make sure the Claude API key is configured in your .env file.",
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1500)
-  }
-
-  const getMockResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase()
-    
-    if (lowerQuery.includes("seo")) {
-      return "Based on our SEO training materials, here are the key strategies:\n\n1. **Keyword Research**: Identify relevant keywords with good search volume\n2. **On-Page Optimization**: Optimize titles, meta descriptions, and headers\n3. **Quality Content**: Create valuable, engaging content for your audience\n4. **Link Building**: Build authoritative backlinks from reputable sites\n5. **Technical SEO**: Ensure fast loading, mobile-friendly, proper site structure\n\nI'm referencing our 'SEO Fundamentals' and 'Advanced SEO Strategies' documents for this answer. Would you like me to dive deeper into any specific area?"
     }
-    
-    if (lowerQuery.includes("listing") || lowerQuery.includes("techcorp")) {
-      return "According to TechCorp's Listing Procedures Guide:\n\n**Key Steps:**\n1. Initial client consultation to understand requirements\n2. Gather all necessary documentation and media assets\n3. Create listing draft following brand guidelines\n4. Submit for client review and approval\n5. Make revisions based on feedback\n6. Final publication and monitoring\n\n**Important**: Always follow TechCorp's brand guidelines and communication standards. Turnaround time is typically 2-3 business days.\n\nWould you like more details on any specific step?"
-    }
-    
-    if (lowerQuery.includes("culture")) {
-      return "TechCorp's Company Culture emphasizes:\n\n✨ **Core Values:**\n- Innovation and creativity\n- Customer-first mindset\n- Collaboration and teamwork\n- Continuous learning and growth\n- Work-life balance\n\n🎯 **Brand Personality:**\n- Professional yet approachable\n- Data-driven but human-centered\n- Forward-thinking and adaptable\n\nThey encourage open communication, value diverse perspectives, and celebrate team wins. The culture document also includes detailed brand voice guidelines for client communications."
-    }
-    
-    if (lowerQuery.includes("escalate") || lowerQuery.includes("escalation")) {
-      return "**Issue Escalation Process:**\n\n🔴 **Level 1 - Immediate Action:**\n- Try to resolve the issue yourself first\n- Document all details in CRM\n- Timeframe: Within 2 hours\n\n🟡 **Level 2 - Team Lead:**\n- If unresolved, escalate to your Team Lead\n- Provide full context and attempted solutions\n- Timeframe: Within 4 hours\n\n🟠 **Level 3 - Management:**\n- For critical/urgent client issues\n- Team Lead will escalate if needed\n- Immediate notification required\n\n✅ **Always include:**\n- Client name and account ID\n- Issue description and impact\n- Steps taken so far\n- Urgency level"
-    }
-    
-    if (lowerQuery.includes("leave") || lowerQuery.includes("vacation")) {
-      return "**Leave Application Process:**\n\n📝 **Steps:**\n1. Submit leave request through the staff portal (My Profile → Leave Credits)\n2. Request must be submitted at least 3 days in advance (except emergencies)\n3. Your Team Lead will review and approve/deny\n4. You'll receive notification via email\n5. Approved leave will be reflected in your schedule\n\n📊 **Leave Credits:**\n- Total: 12 days per year (combined sick + vacation)\n- Can be used flexibly for either sick or vacation\n- Unused credits don't roll over\n\n⚠️ **Emergency Leave:**\nFor same-day sick leave, notify your Team Lead immediately via Slack/phone."
-    }
-    
-    if (lowerQuery.includes("crm")) {
-      return "**CRM System Guide - Key Features:**\n\n📋 **Dashboard:**\n- View all assigned tickets and tasks\n- Track customer interactions\n- Monitor response times\n\n✍️ **Creating Tickets:**\n1. Click 'New Ticket' button\n2. Fill in customer details\n3. Select category and priority\n4. Assign to team member (or self)\n5. Add notes and attachments\n\n🔍 **Searching:**\n- Use the global search bar\n- Filter by status, date, priority\n- Save custom filters\n\n💬 **Customer Communication:**\n- All messages logged automatically\n- Use templates for common responses\n- Track conversation history\n\nNeed help with a specific CRM feature?"
-    }
-    
-    return "I'm here to help! I have access to all company documents including:\n\n📁 Client documentation (TechCorp procedures, guidelines)\n📚 Training materials (SEO, customer service, CRM)\n📋 Company procedures (escalation, leave, attendance)\n🎯 Culture guides and best practices\n\nWhat would you like to learn about? You can ask me anything about our clients, procedures, or training topics!"
-  }
-
-  const getRelevantDocs = (query: string): string[] => {
-    const lowerQuery = query.toLowerCase()
-    const sources: string[] = []
-    
-    if (lowerQuery.includes("seo")) {
-      sources.push("SEO Fundamentals for Client Success", "Advanced SEO Strategies & Techniques")
-    }
-    if (lowerQuery.includes("listing") || lowerQuery.includes("techcorp")) {
-      sources.push("TechCorp - Listing Procedures Guide", "Client Communication Best Practices")
-    }
-    if (lowerQuery.includes("culture")) {
-      sources.push("TechCorp - Brand Guidelines & Culture")
-    }
-    if (lowerQuery.includes("escalate")) {
-      sources.push("Issue Escalation Process")
-    }
-    if (lowerQuery.includes("leave")) {
-      sources.push("Leave Application & Approval Process")
-    }
-    if (lowerQuery.includes("crm")) {
-      sources.push("CRM System - Complete User Guide")
-    }
-    
-    return sources
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -278,12 +232,7 @@ export default function AIChatAssistant() {
     setInput("")
   }
 
-  const handleQuickQuestion = (query: string) => {
-    sendMessage(query)
-    inputRef.current?.focus()
-  }
-
-  const filteredDocs = mockDocuments.filter(doc => {
+  const filteredDocs = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchDocs.toLowerCase())
     const matchesCategory = selectedCategory === "all" || doc.category === selectedCategory
     return matchesSearch && matchesCategory
@@ -292,7 +241,7 @@ export default function AIChatAssistant() {
   const docsByCategory = Object.entries(categoryConfig).map(([key, config]) => ({
     key,
     ...config,
-    count: mockDocuments.filter(d => d.category === key).length
+    count: documents.filter(d => d.category === key).length
   }))
 
   return (
@@ -325,51 +274,23 @@ export default function AIChatAssistant() {
             {/* Knowledge Base Stats */}
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="rounded-xl bg-white/5 p-3 text-center">
-                <div className="text-xl font-bold text-white">{mockDocuments.length}</div>
+                <div className="text-xl font-bold text-white">{loadingDocs ? '...' : documents.length}</div>
                 <div className="text-xs text-slate-400">Documents</div>
               </div>
               <div className="rounded-xl bg-indigo-500/10 p-3 text-center ring-1 ring-indigo-500/30">
                 <div className="text-xl font-bold text-indigo-400">
-                  {mockDocuments.filter(d => d.category === "client").length}
+                  {loadingDocs ? '...' : documents.filter(d => d.category === "CLIENT").length}
                 </div>
                 <div className="text-xs text-indigo-300">Client Docs</div>
               </div>
               <div className="rounded-xl bg-purple-500/10 p-3 text-center ring-1 ring-purple-500/30">
                 <div className="text-xl font-bold text-purple-400">
-                  {mockDocuments.filter(d => d.category === "training" || d.category === "seo").length}
+                  {loadingDocs ? '...' : documents.filter(d => d.category === "TRAINING" || d.category === "SEO").length}
                 </div>
                 <div className="text-xs text-purple-300">Training</div>
               </div>
           </div>
         </div>
-
-          {/* Suggested Questions */}
-        {messages.length === 0 && (
-          <div className="space-y-4 rounded-2xl bg-slate-900/50 p-6 ring-1 ring-white/10 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-400" />
-                <h2 className="font-semibold text-white">Popular Questions</h2>
-            </div>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {suggestedQuestions.map((question, idx) => {
-                const Icon = question.icon
-                  const config = categoryConfig[question.category as keyof typeof categoryConfig]
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleQuickQuestion(question.query)}
-                      className="flex items-center gap-3 rounded-xl bg-slate-800/50 p-4 text-left ring-1 ring-white/10 transition-all hover:bg-slate-800 hover:ring-white/20 hover:scale-[1.02]"
-                  >
-                      <div className={`rounded-lg p-2 ring-1 ${config.color}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                    <span className="text-sm font-medium text-white">{question.text}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Messages */}
         <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl bg-slate-900/50 p-6 ring-1 ring-white/10 backdrop-blur-sm">
@@ -381,8 +302,17 @@ export default function AIChatAssistant() {
               <div>
                   <h3 className="text-xl font-semibold text-white">Ready to help you learn! 📚</h3>
                   <p className="mt-2 text-sm text-slate-400">
-                    I have access to {mockDocuments.length} documents covering client procedures,<br />
-                    training materials, company policies, and more.
+                    {documents.length > 0 
+                      ? `I have access to ${documents.length} document${documents.length !== 1 ? 's' : ''} in your library.`
+                      : 'Upload your first training document to get started!'
+                    }<br />
+                    {documents.length > 0 && (
+                      <>
+                        💡 <strong>Tip:</strong> Use @mentions to reference specific documents (e.g., "What does @SEO say about keywords?")
+                        <br />
+                      </>
+                    )}
+                    Ask me anything about BPO work, training, or your documents!
                   </p>
                 </div>
             </div>
@@ -403,7 +333,29 @@ export default function AIChatAssistant() {
                         : "bg-slate-800/50 text-white ring-1 ring-white/10"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                    {message.role === "assistant" ? (
+                      <div className="prose prose-invert prose-sm max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <p className="mb-3 text-sm leading-relaxed text-slate-100">{children}</p>,
+                            strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                            em: ({ children }) => <em className="italic text-slate-200">{children}</em>,
+                            ul: ({ children }) => <ul className="mb-3 ml-4 list-disc space-y-1 text-sm text-slate-100">{children}</ul>,
+                            ol: ({ children }) => <ol className="mb-3 ml-4 list-decimal space-y-1 text-sm text-slate-100">{children}</ol>,
+                            li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
+                            h1: ({ children }) => <h1 className="mb-2 text-lg font-bold text-white">{children}</h1>,
+                            h2: ({ children }) => <h2 className="mb-2 text-base font-semibold text-white">{children}</h2>,
+                            h3: ({ children }) => <h3 className="mb-2 text-sm font-semibold text-white">{children}</h3>,
+                            code: ({ children }) => <code className="rounded bg-slate-700/50 px-1.5 py-0.5 text-xs text-indigo-300">{children}</code>,
+                            blockquote: ({ children }) => <blockquote className="border-l-2 border-indigo-400/50 pl-3 italic text-slate-300">{children}</blockquote>,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                    )}
                   </div>
                   {message.role === "user" && (
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/30 to-orange-500/30 ring-1 ring-amber-400/50">
@@ -454,20 +406,51 @@ export default function AIChatAssistant() {
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-slate-900/50 p-4 ring-1 ring-white/10 backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="relative rounded-2xl bg-slate-900/50 p-4 ring-1 ring-white/10 backdrop-blur-sm">
+          {/* @ Mention Autocomplete Dropdown */}
+          {showMentions && mentionSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 rounded-xl bg-slate-800 p-2 shadow-xl ring-1 ring-white/20">
+              <div className="mb-2 px-3 py-1 text-xs text-slate-400">
+                Select document to mention:
+              </div>
+              <div className="max-h-64 space-y-1 overflow-y-auto">
+                {mentionSuggestions.map((doc) => (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => insertMention(doc)}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all hover:bg-slate-700/50"
+                  >
+                    <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+                    <div className="flex-1 overflow-hidden">
+                      <div className="truncate text-sm font-medium text-white">
+                        {doc.title}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {doc.category} • {doc.size}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about clients, procedures, training, SEO..."
-              disabled={isLoading}
-              className="flex-1 rounded-lg bg-slate-800/50 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50 disabled:opacity-50"
-            />
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Ask about clients, procedures, training... Use @ to mention documents"
+                disabled={isLoading}
+                className="w-full rounded-lg bg-slate-800/50 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50 disabled:opacity-50"
+              />
+            </div>
             <button
               type="submit"
-                disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim()}
               className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500/30 to-purple-500/30 px-6 py-3 font-medium text-white ring-1 ring-indigo-400/50 transition-all hover:from-indigo-500/40 hover:to-purple-500/40 disabled:opacity-50"
             >
               <Send className="h-5 w-5" />
@@ -511,7 +494,7 @@ export default function AIChatAssistant() {
               >
                 <div className="flex items-center justify-between">
                   <span>All Documents</span>
-                  <span className="text-xs">{mockDocuments.length}</span>
+                  <span className="text-xs">{documents.length}</span>
                 </div>
               </button>
               {docsByCategory.map(({ key, label, icon: Icon, color, count }) => (
@@ -545,44 +528,94 @@ export default function AIChatAssistant() {
               <span className="text-xs text-slate-400">{filteredDocs.length} docs</span>
             </div>
             
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-              {filteredDocs.map((doc) => {
-                const Icon = doc.icon
-                const config = categoryConfig[doc.category]
-                return (
-                  <div
-                    key={doc.id}
-                    className="group cursor-pointer rounded-lg bg-slate-800/30 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800/50 hover:ring-white/10"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`flex-shrink-0 rounded-lg p-2 ring-1 ${config.color}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400">
-                          {doc.title}
-                        </h4>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                          <span>{doc.size}</span>
-                          <span>•</span>
-                          <span className="truncate">{doc.uploadedBy}</span>
-                        </div>
-                      </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                  {loadingDocs ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  ) : filteredDocs.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-slate-400">
+                        {searchDocs ? 'No documents match your search' : 'No documents yet. Upload your first one!'}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredDocs.map((doc) => {
+                      const config = categoryConfig[doc.category]
+                      const Icon = config.icon
+                      const isDeleting = deletingId === doc.id
+                      
+                      return (
+                        <div
+                          key={doc.id}
+                          className="group rounded-lg bg-slate-800/30 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800/50 hover:ring-white/10"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 rounded-lg p-2 ring-1 ${config.color}`}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400">
+                                {doc.title}
+                              </h4>
+                              <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                <span>{doc.size}</span>
+                                <span>•</span>
+                                <span className="truncate">{doc.uploadedBy}</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {doc.fileUrl && (
+                                <a
+                                  href={doc.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-indigo-400"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                disabled={isDeleting}
+                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-red-400 disabled:opacity-50"
+                                title="Delete"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
           </div>
 
-          {/* Upload Button (for future) */}
-          <button className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3 text-sm font-bold text-white ring-1 ring-indigo-500/50 transition-all hover:from-indigo-700 hover:to-purple-700">
+          {/* Upload Button */}
+          <button 
+            onClick={() => setShowUploadModal(true)}
+            className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3 text-sm font-bold text-white ring-1 ring-indigo-500/50 transition-all hover:from-indigo-700 hover:to-purple-700 active:scale-95"
+          >
             <Upload className="inline h-4 w-4 mr-2" />
             Upload Document
           </button>
         </div>
 
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <DocumentUpload
+          onSuccess={fetchDocuments}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
     </div>
   )
 }

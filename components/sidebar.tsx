@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
   LayoutDashboard,
   User,
@@ -17,6 +18,7 @@ import {
   X,
   Headphones,
   Trophy,
+  LogOut,
 } from "lucide-react"
 
 const navItems = [
@@ -36,6 +38,13 @@ const navItems = [
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false })
+    router.push('/login')
+    setIsOpen(false)
+  }
 
   return (
     <>
@@ -120,6 +129,15 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg bg-red-500/10 px-4 py-3 font-medium text-red-400 transition-all hover:bg-red-500/20 hover:text-red-300 active:scale-95"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Logout</span>
+        </button>
       </aside>
     </>
   )

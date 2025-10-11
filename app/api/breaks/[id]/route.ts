@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 // PUT /api/breaks/[id] - End a break
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -14,7 +14,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const breakId = params.id
+    const { id: breakId } = await params
 
     // Find the break
     const existingBreak = await prisma.break.findUnique({

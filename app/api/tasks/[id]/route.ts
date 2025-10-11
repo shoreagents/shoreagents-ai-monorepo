@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 // PUT /api/tasks/[id] - Update a task
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -14,6 +14,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const {
       title,
@@ -28,7 +29,7 @@ export async function PUT(
 
     // Verify task belongs to user
     const existingTask = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingTask) {
@@ -40,7 +41,7 @@ export async function PUT(
     }
 
     const task = await prisma.task.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(title && { title }),
         ...(description && { description }),
@@ -69,7 +70,7 @@ export async function PUT(
 // DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -78,9 +79,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const { id } = await params
+
     // Verify task belongs to user
     const existingTask = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingTask) {
@@ -92,7 +95,7 @@ export async function DELETE(
     }
 
     await prisma.task.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true })
