@@ -114,6 +114,41 @@ contextBridge.exposeInMainWorld('electron', {
     },
   },
   
+  // Activity Tracker API
+  activityTracker: {
+    // Get activity status
+    getStatus: () => ipcRenderer.invoke('get-activity-status'),
+    
+    // Start activity tracking
+    start: () => ipcRenderer.invoke('activity-tracker:start'),
+    
+    // Stop activity tracking
+    stop: () => ipcRenderer.invoke('activity-tracker:stop'),
+    
+    // Set inactivity timeout (in milliseconds)
+    setTimeout: (milliseconds) => ipcRenderer.invoke('activity-tracker:set-timeout', milliseconds),
+    
+    // Listen for break requests from activity tracker
+    onBreakRequested: (callback) => {
+      const subscription = () => callback()
+      ipcRenderer.on('activity-tracker:break-requested', subscription)
+      
+      return () => {
+        ipcRenderer.removeListener('activity-tracker:break-requested', subscription)
+      }
+    },
+    
+    // Listen for debug activity events (temporary for debugging)
+    onActivityDebug: (callback) => {
+      const subscription = (event, data) => callback(data)
+      ipcRenderer.on('activity-debug', subscription)
+      
+      return () => {
+        ipcRenderer.removeListener('activity-debug', subscription)
+      }
+    },
+  },
+  
   // Utility to check if running in Electron
   isElectron: true,
 })

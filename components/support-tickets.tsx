@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { 
   Plus, Monitor, Users, MessageSquare, Package, HelpCircle,
   AlertCircle, CheckCircle, Clock, X, Search, MapPin, Cloud, Gift, Bus,
   Upload, Paperclip, Send, Trash2, ChevronDown, Filter
 } from "lucide-react"
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
 type TicketCategory = "IT" | "HR" | "MANAGEMENT" | "EQUIPMENT" | "STATION" | "SURROUNDINGS" | "COMPENSATION" | "TRANSPORT" | "OTHER"
@@ -59,6 +60,27 @@ export default function SupportTickets() {
   })
   
   const [attachments, setAttachments] = useState<File[]>([])
+  const { emit } = useWebSocketEmit()
+
+  // Real-time event handlers
+  const handleTicketCreated = useCallback((data: any) => {
+    console.log('[Tickets] Real-time ticket created:', data)
+    fetchTickets()
+  }, [])
+
+  const handleTicketUpdated = useCallback((data: any) => {
+    console.log('[Tickets] Real-time ticket updated:', data)
+    fetchTickets()
+  }, [])
+
+  const handleTicketResponded = useCallback((data: any) => {
+    console.log('[Tickets] Real-time ticket response:', data)
+    fetchTickets()
+  }, [])
+
+  useWebSocketEvent('ticket:created', handleTicketCreated)
+  useWebSocketEvent('ticket:updated', handleTicketUpdated)
+  useWebSocketEvent('ticket:responded', handleTicketResponded)
 
   useEffect(() => {
     fetchTickets()
@@ -116,6 +138,11 @@ export default function SupportTickets() {
       })
 
       if (!response.ok) throw new Error("Failed to create ticket")
+      
+      const result = await response.json()
+      
+      // Emit WebSocket event
+      emit('ticket:create', { ticket: result.ticket })
       
       await fetchTickets()
       setIsCreateOpen(false)

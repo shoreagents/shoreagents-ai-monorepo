@@ -41,16 +41,16 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Format metrics for frontend
+    // Format metrics for frontend (convert minutes to seconds for consistent display)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
       date: m.date.toISOString(),
       mouseMovements: m.mouseMovements,
       mouseClicks: m.mouseClicks,
       keystrokes: m.keystrokes,
-      activeTime: m.activeTime,
-      idleTime: m.idleTime,
-      screenTime: m.screenTime,
+      activeTime: m.activeTime * 60, // Convert minutes to seconds
+      idleTime: m.idleTime * 60, // Convert minutes to seconds
+      screenTime: m.screenTime * 60, // Convert minutes to seconds
       downloads: m.downloads,
       uploads: m.uploads,
       bandwidth: m.bandwidth,
@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
           mouseMovements: todayMetric.mouseMovements,
           mouseClicks: todayMetric.mouseClicks,
           keystrokes: todayMetric.keystrokes,
-          activeTime: todayMetric.activeTime,
-          idleTime: todayMetric.idleTime,
-          screenTime: todayMetric.screenTime,
+          activeTime: todayMetric.activeTime * 60, // Convert minutes to seconds
+          idleTime: todayMetric.idleTime * 60, // Convert minutes to seconds
+          screenTime: todayMetric.screenTime * 60, // Convert minutes to seconds
           downloads: todayMetric.downloads,
           uploads: todayMetric.uploads,
           bandwidth: todayMetric.bandwidth,

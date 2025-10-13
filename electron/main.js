@@ -5,6 +5,7 @@ const path = require('path')
 const performanceTracker = require('./services/performanceTracker')
 const syncService = require('./services/syncService')
 const breakHandler = require('./services/breakHandler')
+const activityTracker = require('./activity-tracker')
 const permissions = require('./utils/permissions')
 const config = require('./config/trackerConfig')
 
@@ -426,6 +427,10 @@ async function initializeTracking() {
   performanceTracker.start()
   console.log('[Main] Performance tracking started')
   
+  // Initialize activity tracker with performance tracker integration
+  activityTracker.initialize(mainWindow, performanceTracker)
+  console.log('[Main] Activity tracking started (integrated with performance tracker)')
+  
   // Start sync service (it will automatically get session cookie from Electron's cookie store)
   syncService.start()
   console.log('[Main] Sync service started')
@@ -532,6 +537,26 @@ function setupIPC() {
     return { success: true, break: breakInfo }
   })
   
+  // Activity tracker handlers
+  ipcMain.handle('get-activity-status', () => {
+    return activityTracker.getStatus()
+  })
+  
+  ipcMain.handle('activity-tracker:start', () => {
+    activityTracker.startTracking()
+    return { success: true }
+  })
+  
+  ipcMain.handle('activity-tracker:stop', () => {
+    activityTracker.stopTracking()
+    return { success: true }
+  })
+  
+  ipcMain.handle('activity-tracker:set-timeout', (event, milliseconds) => {
+    activityTracker.setInactivityTimeout(milliseconds)
+    return { success: true }
+  })
+  
   console.log('[Main] IPC handlers registered')
 }
 
@@ -576,6 +601,7 @@ app.on('before-quit', () => {
   console.log('[Main] Stopping tracking services...')
   performanceTracker.stop()
   syncService.stop()
+  activityTracker.destroy()
 })
 
 // Handle crashes and errors

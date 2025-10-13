@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit } from "lucide-react"
 import Image from "next/image"
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
 type ReactionType = "LIKE" | "LOVE" | "FIRE" | "CELEBRATE" | "CLAP" | "LAUGH" | "POO" | "ROCKET" | "SHOCKED" | "MIND_BLOWN"
@@ -68,6 +69,27 @@ export default function ActivityLog() {
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({})
   const [currentUserId, setCurrentUserId] = useState<string>("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { emit } = useWebSocketEmit()
+
+  // Real-time event handlers
+  const handlePostCreated = useCallback((data: any) => {
+    console.log('[ActivityLog] Real-time post created:', data)
+    setPosts(prev => [data.post, ...prev])
+  }, [])
+
+  const handlePostReacted = useCallback((data: any) => {
+    console.log('[ActivityLog] Real-time reaction:', data)
+    fetchPosts() // Refresh to get updated reactions
+  }, [])
+
+  const handlePostCommented = useCallback((data: any) => {
+    console.log('[ActivityLog] Real-time comment:', data)
+    fetchPosts() // Refresh to get updated comments
+  }, [])
+
+  useWebSocketEvent('post:created', handlePostCreated)
+  useWebSocketEvent('post:reacted', handlePostReacted)
+  useWebSocketEvent('post:commented', handlePostCommented)
 
   useEffect(() => {
     fetchPosts()
@@ -152,7 +174,13 @@ export default function ActivityLog() {
         }),
       })
       if (response.ok) {
-        await fetchPosts()
+        const result = await response.json()
+        
+        // Emit WebSocket event
+        emit('post:create', { post: result.post })
+        
+        // Update local state
+        setPosts(prev => [result.post, ...prev])
         setNewPostContent("")
         setSelectedImages([])
         setImagePreviews([])
@@ -166,12 +194,18 @@ export default function ActivityLog() {
 
   const toggleReaction = async (postId: string, type: ReactionType) => {
     try {
-      await fetch("/api/posts/reactions", {
+      const response = await fetch("/api/posts/reactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId, type }),
       })
-      await fetchPosts()
+      
+      if (response.ok) {
+        // Emit WebSocket event
+        emit('post:react', { postId, type, userId: currentUserId })
+        
+        await fetchPosts()
+      }
     } catch (error) {
       console.error("Error toggling reaction:", error)
     }
@@ -182,13 +216,21 @@ export default function ActivityLog() {
     if (!content?.trim()) return
 
     try {
-      await fetch("/api/posts/comments", {
+      const response = await fetch("/api/posts/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId, content }),
       })
-      setCommentInputs({ ...commentInputs, [postId]: "" })
-      await fetchPosts()
+      
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Emit WebSocket event
+        emit('post:comment', { postId, comment: result.comment })
+        
+        setCommentInputs({ ...commentInputs, [postId]: "" })
+        await fetchPosts()
+      }
     } catch (error) {
       console.error("Error adding comment:", error)
     }

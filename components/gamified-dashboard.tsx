@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   CheckSquare, Coffee, Star, Headphones, Trophy, Activity, MessageSquare,
   Calendar, Clock, TrendingUp, AlertCircle, Users
 } from "lucide-react"
+import { useWebSocketEvent } from "@/hooks/use-websocket-event"
 
 interface DashboardData {
   tasks: any[]
@@ -26,6 +27,22 @@ export default function GamifiedDashboard() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState("")
   const [currentDate, setCurrentDate] = useState("")
+
+  // Real-time event handlers - refresh dashboard on any major event
+  const handleDashboardUpdate = useCallback(() => {
+    console.log('[Dashboard] Real-time update received, refreshing data')
+    fetchDashboardData()
+  }, [])
+
+  // Listen to all major events that affect the dashboard
+  useWebSocketEvent('task:created', handleDashboardUpdate)
+  useWebSocketEvent('task:updated', handleDashboardUpdate)
+  useWebSocketEvent('ticket:created', handleDashboardUpdate)
+  useWebSocketEvent('ticket:updated', handleDashboardUpdate)
+  useWebSocketEvent('post:created', handleDashboardUpdate)
+  useWebSocketEvent('leaderboard:updated', handleDashboardUpdate)
+  useWebSocketEvent('break:started', handleDashboardUpdate)
+  useWebSocketEvent('break:ended', handleDashboardUpdate)
 
   useEffect(() => {
     // Update time

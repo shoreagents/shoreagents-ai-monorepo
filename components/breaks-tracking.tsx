@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Coffee, Clock, Play, Square, Pause, X } from "lucide-react"
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 type BreakType = "MORNING" | "LUNCH" | "AFTERNOON" | "AWAY"
 
@@ -51,51 +52,9 @@ export default function BreaksTracking() {
   const [isKioskMode, setIsKioskMode] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const { emit } = useWebSocketEmit()
 
-  useEffect(() => {
-    // Check if in kiosk mode from URL params
-    const urlParams = new URLSearchParams(window.location.search)
-    const kioskParam = urlParams.get('kiosk')
-    const typeParam = urlParams.get('type') as BreakType | null
-    
-    if (kioskParam === 'true' && typeParam) {
-      console.log('[BreaksTracking] Kiosk mode detected, type:', typeParam)
-      setIsKioskMode(true)
-      // In kiosk mode, fetch the active break from API
-      fetchBreaks()
-    } else {
-      fetchBreaks()
-    }
-  }, [])
-
-  // Timer logic
-  useEffect(() => {
-    if (activeBreak && !isPaused) {
-      timerRef.current = setInterval(() => {
-        setTimeElapsed(prev => prev + 1)
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            // Auto-end break when timer reaches 0
-            endBreak(activeBreak.id, true)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-  }, [activeBreak, isPaused])
-
-  const fetchBreaks = async () => {
+  const fetchBreaks = useCallback(async () => {
     try {
       console.log('[BreaksTracking] Fetching breaks...')
       const today = new Date().toISOString().split('T')[0]
@@ -132,7 +91,64 @@ export default function BreaksTracking() {
       console.error("[BreaksTracking] Error fetching breaks:", err)
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  // Listen for real-time break events from other users/sessions
+  const handleBreakStarted = useCallback((data: any) => {
+    console.log('[BreaksTracking] Real-time break started:', data)
+    fetchBreaks() // Refresh breaks list
+  }, [fetchBreaks])
+
+  const handleBreakEnded = useCallback((data: any) => {
+    console.log('[BreaksTracking] Real-time break ended:', data)
+    fetchBreaks() // Refresh breaks list
+  }, [fetchBreaks])
+
+  useWebSocketEvent('break:started', handleBreakStarted)
+  useWebSocketEvent('break:ended', handleBreakEnded)
+
+  useEffect(() => {
+    // Check if in kiosk mode from URL params
+    const urlParams = new URLSearchParams(window.location.search)
+    const kioskParam = urlParams.get('kiosk')
+    const typeParam = urlParams.get('type') as BreakType | null
+    
+    if (kioskParam === 'true' && typeParam) {
+      console.log('[BreaksTracking] Kiosk mode detected, type:', typeParam)
+      setIsKioskMode(true)
+      // In kiosk mode, fetch the active break from API
+      fetchBreaks()
+    } else {
+      fetchBreaks()
+    }
+  }, [fetchBreaks])
+
+  // Timer logic
+  useEffect(() => {
+    if (activeBreak && !isPaused) {
+      timerRef.current = setInterval(() => {
+        setTimeElapsed(prev => prev + 1)
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Auto-end break when timer reaches 0
+            endBreak(activeBreak.id, true)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [activeBreak, isPaused])
 
   const startBreak = async (type: BreakType) => {
     try {
@@ -153,6 +169,15 @@ export default function BreaksTracking() {
       setTimeElapsed(0)
       setTimeRemaining(breakConfig[type].duration * 60)
       setIsPaused(false)
+
+      // Emit WebSocket event for real-time updates
+      emit('break:start', {
+        breakId: result.break.id,
+        type,
+        duration: breakConfig[type].duration,
+        userId: result.break.userId,
+        startTime: result.break.startTime,
+      })
 
       // Start kiosk mode in Electron
       if (window.electron?.breaks?.start) {
@@ -184,6 +209,12 @@ export default function BreaksTracking() {
       }
       
       console.log('[BreaksTracking] Break ended successfully, clearing state')
+      
+      // Emit WebSocket event for real-time updates
+      emit('break:end', {
+        breakId,
+        autoEnd,
+      })
       
       // Clear state immediately
       setActiveBreak(null)

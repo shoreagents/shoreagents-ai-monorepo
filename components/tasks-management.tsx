@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { CheckCircle2, Clock, AlertCircle, Calendar, Filter, Search, Plus, LayoutList, LayoutGrid, X, Tag, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "STUCK" | "FOR_REVIEW" | "COMPLETED"
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT"
@@ -37,6 +38,29 @@ export default function TasksManagement() {
     priority: "MEDIUM" as TaskPriority,
     deadline: "",
   })
+  const { emit } = useWebSocketEmit()
+
+  // Real-time event handlers
+  const handleTaskCreated = useCallback((data: any) => {
+    console.log('[Tasks] Real-time task created:', data)
+    setTasks(prev => [data.task, ...prev])
+  }, [])
+
+  const handleTaskUpdated = useCallback((data: any) => {
+    console.log('[Tasks] Real-time task updated:', data)
+    setTasks(prev => prev.map(t => 
+      t.id === data.taskId ? { ...t, ...data.updates } : t
+    ))
+  }, [])
+
+  const handleTaskDeleted = useCallback((data: any) => {
+    console.log('[Tasks] Real-time task deleted:', data)
+    setTasks(prev => prev.filter(t => t.id !== data.taskId))
+  }, [])
+
+  useWebSocketEvent('task:created', handleTaskCreated)
+  useWebSocketEvent('task:updated', handleTaskUpdated)
+  useWebSocketEvent('task:deleted', handleTaskDeleted)
 
   useEffect(() => {
     setMounted(true)
@@ -72,7 +96,13 @@ export default function TasksManagement() {
         console.error("API Error:", errorData)
         throw new Error(errorData.error || "Failed to create task")
       }
-      await fetchTasks()
+      const result = await response.json()
+      
+      // Emit WebSocket event
+      emit('task:create', { task: result.task })
+      
+      // Update local state
+      setTasks(prev => [result.task, ...prev])
       setIsAddTaskOpen(false)
       setNewTask({ title: "", description: "", priority: "MEDIUM", deadline: "" })
     } catch (err) {
@@ -89,7 +119,17 @@ export default function TasksManagement() {
         body: JSON.stringify({ status: newStatus }),
       })
       if (!response.ok) throw new Error("Failed to update task")
-      await fetchTasks()
+      
+      // Emit WebSocket event
+      emit('task:update', { 
+        taskId, 
+        updates: { status: newStatus } 
+      })
+      
+      // Update local state
+      setTasks(prev => prev.map(t => 
+        t.id === taskId ? { ...t, status: newStatus } : t
+      ))
     } catch (err) {
       console.error("Error updating task:", err)
     }

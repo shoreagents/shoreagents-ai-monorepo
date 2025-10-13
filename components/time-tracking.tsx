@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Clock, LogIn, LogOut, Calendar, TrendingUp } from "lucide-react"
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 interface TimeEntry {
   id: string
@@ -26,6 +27,23 @@ export default function TimeTracking() {
   const [currentSessionTime, setCurrentSessionTime] = useState("00:00:00")
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState<TimeStats>({ today: 0, week: 0, month: 0 })
+  const { emit } = useWebSocketEmit()
+
+  // Real-time event handlers
+  const handleClockedIn = useCallback((data: any) => {
+    console.log('[TimeTracking] Real-time clock in:', data)
+    fetchStatus()
+    fetchTimeEntries()
+  }, [])
+
+  const handleClockedOut = useCallback((data: any) => {
+    console.log('[TimeTracking] Real-time clock out:', data)
+    fetchStatus()
+    fetchTimeEntries()
+  }, [])
+
+  useWebSocketEvent('time:clockedin', handleClockedIn)
+  useWebSocketEvent('time:clockedout', handleClockedOut)
 
   useEffect(() => {
     fetchStatus()
@@ -123,6 +141,14 @@ export default function TimeTracking() {
         return
       }
 
+      const result = await response.json()
+      
+      // Emit WebSocket event
+      emit('time:clockin', { 
+        entryId: result.entry?.id,
+        clockIn: result.entry?.clockIn 
+      })
+
       await fetchStatus()
       await fetchTimeEntries()
     } catch (error) {
@@ -144,6 +170,15 @@ export default function TimeTracking() {
         alert(error.error || "Failed to clock out")
         return
       }
+
+      const result = await response.json()
+      
+      // Emit WebSocket event
+      emit('time:clockout', { 
+        entryId: result.entry?.id,
+        clockOut: result.entry?.clockOut,
+        totalHours: result.entry?.totalHours 
+      })
 
       await fetchStatus()
       await fetchTimeEntries()

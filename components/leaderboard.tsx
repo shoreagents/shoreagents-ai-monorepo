@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Trophy, TrendingUp, TrendingDown, Award, Zap, Crown, Medal, Star, Flame } from "lucide-react"
+import { useWebSocketEvent } from "@/hooks/use-websocket-event"
 
 interface LeaderboardEntry {
   id: string
@@ -21,6 +22,14 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timePeriod, setTimePeriod] = useState<"this_week" | "this_month" | "all_time">("all_time")
+
+  // Real-time event handlers
+  const handleLeaderboardUpdated = useCallback((data: any) => {
+    console.log('[Leaderboard] Real-time update:', data)
+    fetchLeaderboard() // Refresh leaderboard when points change
+  }, [timePeriod])
+
+  useWebSocketEvent('leaderboard:updated', handleLeaderboardUpdated)
 
   useEffect(() => {
     fetchLeaderboard()

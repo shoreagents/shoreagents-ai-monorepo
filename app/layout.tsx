@@ -7,6 +7,8 @@ import { Suspense } from "react"
 import "./globals.css"
 import Sidebar from "@/components/sidebar"
 import ElectronProvider from "@/components/electron-provider"
+import { WebSocketProvider } from "@/lib/websocket-provider"
+import { auth } from "@/lib/auth"
 
 export const metadata: Metadata = {
   title: "Staff Monitor - Performance Tracking",
@@ -14,21 +16,28 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await auth()
+  
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <ElectronProvider>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Sidebar />
-          </Suspense>
-          <main className="lg:pl-64">{children}</main>
-          <Analytics />
-        </ElectronProvider>
+        <WebSocketProvider 
+          userId={session?.user?.id} 
+          userName={session?.user?.name || undefined}
+        >
+          <ElectronProvider>
+            <Suspense fallback={<div>Loading...</div>}>
+              <Sidebar />
+            </Suspense>
+            <main className="lg:pl-64">{children}</main>
+            <Analytics />
+          </ElectronProvider>
+        </WebSocketProvider>
       </body>
     </html>
   )
