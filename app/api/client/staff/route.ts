@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { verifyClientAuth } from "@/lib/api-auth"
 
 const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add client user authentication (Wendy, CEO, etc.)
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
+
+    // TODO: Get clientId from session/user relationship
     // For now, hardcode TechCorp to test the feature
     const clientId = 'tech-corp-001'
 

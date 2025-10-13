@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import {
   LayoutDashboard,
   Users,
@@ -18,9 +19,16 @@ import {
   ClipboardList,
   Clock,
 } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ClientSidebar() {
+  const { data: session, status } = useSession()
   const pathname = usePathname()
+
+  // Don't render sidebar if not authenticated
+  if (status === "unauthenticated" || !session) {
+    return null
+  }
 
   const navItems = [
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
@@ -46,36 +54,38 @@ export function ClientSidebar() {
         <p className="text-sm text-gray-600 mt-1">Client Portal</p>
       </div>
 
-      <nav className="p-4">
-        <ul className="space-y-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      <ScrollArea className="h-[calc(100vh-88px)]">
+        <nav className="p-4">
+          <ul className="space-y-2">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
 
-      {/* Portal Switcher - Dev Only */}
-      <div className="absolute bottom-4 left-4 right-4">
-        <Link
-          href="/"
-          className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          ← Staff Portal
-        </Link>
-      </div>
+        {/* Portal Switcher - Dev Only */}
+        <div className="p-4">
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            ← Staff Portal
+          </Link>
+        </div>
+      </ScrollArea>
     </aside>
   )
 }

@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { verifyClientAuth } from "@/lib/api-auth"
 import { prisma } from "@/lib/prisma"
 
 // GET /api/client/tasks - Fetch tasks for all staff assigned to this client
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
 
     // Get user from email
     const user = await prisma.user.findUnique({
@@ -85,11 +83,9 @@ export async function GET(req: NextRequest) {
 // POST /api/client/tasks - Create new task(s) for staff
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
 
     const body = await req.json()
 
