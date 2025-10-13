@@ -26,8 +26,15 @@ SUPABASE_SERVICE_ROLE_KEY="your-service-role-key-here"
 # ==================================
 # APP CONFIGURATION
 # ==================================
+# NextAuth v5 Configuration
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="generate-a-random-secret-here"
+
+# Alternative: NextAuth v5 also supports these newer variable names
+# AUTH_URL="http://localhost:3000"
+# AUTH_SECRET="generate-a-random-secret-here"
+
+# To generate a secret, run: openssl rand -base64 32
 
 
 # ==================================

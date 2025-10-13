@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { CheckCircle2, Clock, AlertCircle, Calendar, Filter, Search, Plus, LayoutList, LayoutGrid, X, Tag, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import TaskViewModal from "@/components/task-view-modal"
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "STUCK" | "FOR_REVIEW" | "COMPLETED"
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT"
@@ -37,6 +38,8 @@ export default function TasksManagement() {
     priority: "MEDIUM" as TaskPriority,
     deadline: "",
   })
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [isViewTaskOpen, setIsViewTaskOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -115,6 +118,11 @@ export default function TasksManagement() {
 
   const handleDragEnd = () => {
     setDraggedTask(null)
+  }
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task)
+    setIsViewTaskOpen(true)
   }
 
   const formatDate = (dateString: string | null) => {
@@ -307,6 +315,15 @@ export default function TasksManagement() {
           </select>
         </div>
 
+        {/* Task View Modal */}
+        <TaskViewModal
+          task={selectedTask}
+          isOpen={isViewTaskOpen}
+          onClose={() => setIsViewTaskOpen(false)}
+          onStatusUpdate={updateTaskStatus}
+          mounted={mounted}
+        />
+
         {/* Kanban Board View */}
         {viewMode === "board" && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -336,6 +353,7 @@ export default function TasksManagement() {
                         draggable
                         onDragStart={(e) => handleDragStart(e, task)}
                         onDragEnd={handleDragEnd}
+                        onClick={() => handleTaskClick(task)}
                         className="group cursor-grab rounded-xl bg-slate-800/50 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800 hover:ring-blue-500/30 active:cursor-grabbing"
                       >
                         <div className="mb-2 flex items-start gap-2">
@@ -379,7 +397,8 @@ export default function TasksManagement() {
             {filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className="rounded-xl bg-slate-900/50 p-4 backdrop-blur-xl ring-1 ring-white/10 transition-all hover:bg-slate-800/50"
+                onClick={() => handleTaskClick(task)}
+                className="cursor-pointer rounded-xl bg-slate-900/50 p-4 backdrop-blur-xl ring-1 ring-white/10 transition-all hover:bg-slate-800/50"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
