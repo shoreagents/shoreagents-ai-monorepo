@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import {
   LayoutDashboard,
   User,
@@ -41,11 +41,19 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   const handleLogout = async () => {
-    await signOut({ redirect: false })
-    router.push('/login')
     setIsOpen(false)
+    await signOut({ callbackUrl: '/login', redirect: true })
+  }
+
+  // Get user initials
+  const getUserInitials = (name: string | null | undefined) => {
+    if (!name) return "U"
+    const parts = name.split(" ")
+    if (parts.length >= 2) return parts[0][0] + parts[1][0]
+    return name.substring(0, 2).toUpperCase()
   }
 
   return (
@@ -80,16 +88,24 @@ export default function Sidebar() {
         <div className="glass space-y-3 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
-              MS
+              {getUserInitials(session?.user?.name)}
             </div>
             <div className="flex-1">
-              <div className="font-semibold text-white">Maria Santos</div>
-              <div className="text-xs text-white/60">TechCorp Inc.</div>
+              <div className="font-semibold text-white">
+                {status === "loading" ? "Loading..." : session?.user?.name || "Guest"}
+              </div>
+              <div className="text-xs text-white/60">
+                {session?.user?.email || "Not logged in"}
+              </div>
             </div>
           </div>
           <div className="flex items-center justify-between border-t border-white/10 pt-3">
-            <span className="text-xs text-white/60">Level 12</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">98 pts</span>
+            <span className="text-xs text-white/60">
+              {session?.user?.role || "STAFF"}
+            </span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+              {status === "authenticated" ? "Active" : "Offline"}
+            </span>
           </div>
         </div>
 

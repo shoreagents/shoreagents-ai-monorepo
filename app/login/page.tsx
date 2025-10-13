@@ -1,100 +1,79 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
+import Link from "next/link"
+import { Card } from "@/components/ui/card"
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        toast.error("Invalid email or password")
-      } else {
-        toast.success("Login successful!")
-        router.push("/")
-        router.refresh()
-      }
-    } catch (error) {
-      toast.error("Something went wrong")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+export default function LoginSelectorPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4">
-      <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900/50 p-8 shadow-2xl backdrop-blur-xl ring-1 ring-white/10">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-white">Welcome Back!</h1>
-          <p className="mt-2 text-slate-400">Sign in to your account</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+      <div className="w-full max-w-4xl">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-white mb-4">Shore Agents</h1>
+          <p className="text-xl text-slate-300">Select Your Portal</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="email" className="text-white">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="maria.santos@example.com"
-                className="mt-1 bg-slate-800/50 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-blue-500"
-              />
-            </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* System Admin */}
+          <Link href="/login/admin">
+            <Card className="p-8 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 backdrop-blur border-indigo-500/30 hover:border-indigo-400 transition-all cursor-pointer group hover:scale-105">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 mb-6 group-hover:shadow-lg group-hover:shadow-indigo-500/50 transition-shadow">
+                  <span className="text-3xl font-bold text-white">SA</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">System Admin</h2>
+                <p className="text-slate-300 mb-4">
+                  Shore Agents Management
+                </p>
+                <div className="text-sm text-slate-400">
+                  Manage staff, clients, and reviews
+                </div>
+              </div>
+            </Card>
+          </Link>
 
-            <div>
-              <Label htmlFor="password" className="text-white">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="mt-1 bg-slate-800/50 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+          {/* Staff Portal */}
+          <Link href="/login/staff">
+            <Card className="p-8 bg-gradient-to-br from-purple-600/20 to-indigo-600/20 backdrop-blur border-purple-500/30 hover:border-purple-400 transition-all cursor-pointer group hover:scale-105">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 mb-6 group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
+                  <span className="text-3xl font-bold text-white">SP</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Staff Portal</h2>
+                <p className="text-slate-300 mb-4">
+                  Offshore Staff Dashboard
+                </p>
+                <div className="text-sm text-slate-400">
+                  Track tasks, time, and performance
+                </div>
+              </div>
+            </Card>
+          </Link>
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-6 text-white hover:from-blue-700 hover:to-purple-700"
-          >
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
+          {/* Client Portal */}
+          <Link href="/login/client">
+            <Card className="p-8 bg-gradient-to-br from-blue-600/20 to-cyan-600/20 backdrop-blur border-blue-500/30 hover:border-blue-400 transition-all cursor-pointer group hover:scale-105">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 mb-6 group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
+                  <span className="text-3xl font-bold text-white">CP</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Client Portal</h2>
+                <p className="text-slate-300 mb-4">
+                  Client Organization
+                </p>
+                <div className="text-sm text-slate-400">
+                  Manage your offshore team
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
 
-        <div className="mt-4 text-center text-sm text-slate-400">
-          <p>Demo Account:</p>
-          <p className="font-mono">maria.santos@techcorp.com / password123</p>
+        <div className="mt-12 text-center">
+          <p className="text-slate-400 text-sm">
+            Don't know which portal to use? Contact your administrator.
+          </p>
         </div>
       </div>
     </div>
   )
 }
-

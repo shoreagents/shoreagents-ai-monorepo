@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
   LayoutDashboard,
   Users,
@@ -17,10 +18,15 @@ import {
   Coffee,
   ClipboardList,
   Clock,
+  LogOut,
 } from "lucide-react"
 
 export function ClientSidebar() {
   const pathname = usePathname()
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login', redirect: true })
+  }
 
   const navItems = [
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
@@ -67,14 +73,21 @@ export function ClientSidebar() {
         </ul>
       </nav>
 
-      {/* Portal Switcher - Dev Only */}
-      <div className="absolute bottom-4 left-4 right-4">
+      {/* Bottom Actions */}
+      <div className="absolute bottom-4 left-4 right-4 space-y-2">
         <Link
           href="/"
           className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           ← Staff Portal
         </Link>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </button>
       </div>
     </aside>
   )
