@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { verifyClientAuth } from "@/lib/api-auth"
 
 const prisma = new PrismaClient()
 
@@ -8,8 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Add client user authentication (Wendy, CEO, etc.)
-    // For now, allow access to test the feature
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
     
     const { id: userId } = await params
 

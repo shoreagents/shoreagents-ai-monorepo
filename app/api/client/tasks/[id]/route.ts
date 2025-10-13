@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { verifyClientAuth } from "@/lib/api-auth"
 import { prisma } from "@/lib/prisma"
 
 // GET /api/client/tasks/[id] - Get a specific task
@@ -8,11 +8,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
 
     const { id } = params
 
@@ -54,11 +52,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
 
     const { id } = params
     const body = await req.json()
@@ -128,11 +124,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Verify client authentication
+    const { session, error } = await verifyClientAuth()
+    if (error) return error
 
     const { id } = params
 

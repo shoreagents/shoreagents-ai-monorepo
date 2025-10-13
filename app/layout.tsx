@@ -9,6 +9,8 @@ import Sidebar from "@/components/sidebar"
 import ElectronProvider from "@/components/electron-provider"
 import { WebSocketProvider } from "@/lib/websocket-provider"
 import { auth } from "@/lib/auth"
+import { Providers } from "@/components/providers"
+import { MainWrapper } from "@/components/main-wrapper"
 
 export const metadata: Metadata = {
   title: "Staff Monitor - Performance Tracking",
@@ -26,18 +28,22 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <WebSocketProvider 
-          userId={session?.user?.id} 
-          userName={session?.user?.name || undefined}
-        >
-          <ElectronProvider>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Sidebar />
-            </Suspense>
-            <main className="lg:pl-64">{children}</main>
-            <Analytics />
-          </ElectronProvider>
-        </WebSocketProvider>
+        <Providers>
+          <WebSocketProvider 
+            userId={session?.user?.id} 
+            userName={session?.user?.name || undefined}
+          >
+            <ElectronProvider>
+              <Suspense fallback={<div>Loading...</div>}>
+                <Sidebar />
+              </Suspense>
+              <MainWrapper>
+                {children}
+              </MainWrapper>
+              <Analytics />
+            </ElectronProvider>
+          </WebSocketProvider>
+        </Providers>
       </body>
     </html>
   )
