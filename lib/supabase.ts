@@ -12,3 +12,9 @@ export const supabaseAdmin = createClient(
   supabaseServiceRoleKey || supabaseAnonKey
 )
 
+
+
+
+
+
+

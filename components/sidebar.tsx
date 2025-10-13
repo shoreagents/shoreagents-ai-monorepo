@@ -132,6 +132,16 @@ export default function Sidebar() {
           </div>
         </div>
 
+        {/* Portal Switcher - Dev Only */}
+        <Link
+          href="/client"
+          onClick={() => setIsOpen(false)}
+          className="flex w-full items-center gap-3 rounded-lg border border-white/20 bg-white/5 px-4 py-3 font-medium text-white/70 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+        >
+          <LayoutDashboard className="h-5 w-5" />
+          <span>Client Portal →</span>
+        </Link>
+
         {/* Logout Button */}
         <button
           onClick={handleLogout}

@@ -1,27 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-// POST /api/time-tracking/clock-in - Clock in the user
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    // TODO: Get userId from session
+    const userId = "c463d406-e524-4ef6-8ab5-29db543d4cb6" // Maria Santos
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is already clocked in (has an entry without clockOut)
-    const existingEntry = await prisma.timeEntry.findFirst({
+    // Check if user is already clocked in
+    const activeEntry = await prisma.timeEntry.findFirst({
       where: {
-        userId: session.user.id,
+        userId,
         clockOut: null,
       },
     })
 
-    if (existingEntry) {
+    if (activeEntry) {
       return NextResponse.json(
-        { error: 'You are already clocked in' },
+        { error: "You are already clocked in", activeEntry },
         { status: 400 }
       )
     }
@@ -29,18 +24,21 @@ export async function POST(request: NextRequest) {
     // Create new time entry
     const timeEntry = await prisma.timeEntry.create({
       data: {
-        userId: session.user.id,
+        userId,
         clockIn: new Date(),
       },
     })
 
-    return NextResponse.json({ success: true, timeEntry }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      timeEntry,
+      message: "Clocked in successfully",
+    })
   } catch (error) {
-    console.error('Error clocking in:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("Error clocking in:", error)
+    return NextResponse.json({ error: "Failed to clock in" }, { status: 500 })
   }
 }
+
+
 

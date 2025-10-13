@@ -5,7 +5,7 @@ import type React from "react"
 import { 
   Send, Bot, User, Sparkles, BookOpen, FileText, Users, HelpCircle,
   FolderOpen, Search, Upload, Clock, Database, Building2, GraduationCap,
-  Settings, Briefcase, TrendingUp, FileCheck, ChevronRight, X, Trash2, Download, Loader2
+  Settings, Briefcase, TrendingUp, FileCheck, ChevronRight, X, Trash2, Download, Loader2, RefreshCw
 } from "lucide-react"
 import { useRef, useEffect, useState } from "react"
 import ReactMarkdown from 'react-markdown'
@@ -269,6 +269,24 @@ export default function AIChatAssistant() {
               >
                 {showDocs ? <X className="h-5 w-5" /> : <FolderOpen className="h-5 w-5" />}
               </button>
+            </div>
+
+            {/* Client Sync Indicator */}
+            <div className="mt-4 rounded-lg bg-blue-500/10 p-3 ring-1 ring-blue-500/30">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-full bg-blue-500/20 p-2">
+                  <RefreshCw className="h-4 w-4 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-blue-400">Document Sync Active</span>
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-blue-400"></div>
+                  </div>
+                  <p className="text-xs text-blue-300/80">
+                    All documents you upload are automatically shared with your client's knowledge base
+                  </p>
+                </div>
+              </div>
             </div>
             
             {/* Knowledge Base Stats */}
@@ -619,3 +637,6 @@ export default function AIChatAssistant() {
     </div>
   )
 }
+
+
+

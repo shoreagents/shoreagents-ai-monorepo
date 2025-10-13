@@ -104,3 +104,7 @@ export default function ElectronProvider({ children }: { children: React.ReactNo
   )
 }
 
+
+
+
+

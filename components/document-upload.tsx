@@ -109,7 +109,10 @@ export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadPro
       <div className="w-full max-w-lg rounded-2xl bg-slate-900 p-6 shadow-2xl ring-1 ring-white/10">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Upload Training Document</h2>
+          <div>
+            <h2 className="text-xl font-bold text-white">Upload Training Document</h2>
+            <p className="text-sm text-indigo-400 mt-1">📤 Documents are shared with your client</p>
+          </div>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
@@ -245,6 +248,8 @@ export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadPro
                 Your document has been uploaded and the text content has been extracted successfully. 
                 <br /><br />
                 <span className="font-semibold text-indigo-400">Your AI assistant now has full access to this document!</span>
+                <br />
+                <span className="font-semibold text-blue-400">🔄 This document is also visible to your client</span>
                 <br /><br />
                 Use <code className="rounded bg-slate-800 px-2 py-1 text-xs text-indigo-300">@{title || file?.name}</code> in your chat to reference it.
               </p>
@@ -261,4 +266,8 @@ export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadPro
     </div>
   )
 }
+
+
+
+
 

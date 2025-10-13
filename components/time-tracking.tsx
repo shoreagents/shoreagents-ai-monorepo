@@ -70,8 +70,8 @@ export default function TimeTracking() {
       const response = await fetch("/api/time-tracking")
       const data = await response.json()
       
-      setTimeEntries(data.timeEntries || [])
-      calculateStats(data.timeEntries || [])
+      setTimeEntries(data.entries || [])
+      calculateStats(data.entries || [])
       setIsLoading(false)
     } catch (error) {
       console.error("Error fetching time entries:", error)
@@ -91,7 +91,7 @@ export default function TimeTracking() {
 
     entries.forEach((entry) => {
       const entryDate = new Date(entry.clockIn)
-      const hours = entry.totalHours || 0
+      const hours = Number(entry.totalHours) || 0
 
       if (entryDate >= today) {
         todayHours += hours
@@ -135,6 +135,8 @@ export default function TimeTracking() {
     try {
       const response = await fetch("/api/time-tracking/clock-out", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       })
 
       if (!response.ok) {
@@ -362,10 +364,10 @@ export default function TimeTracking() {
                       {entry.totalHours ? (
                         <>
                           <div className="text-xl font-bold text-white">
-                            {entry.totalHours}h
+                            {Number(entry.totalHours).toFixed(2)}h
                           </div>
                           <div className="text-xs text-slate-400">
-                            {Math.round(entry.totalHours * 60)} minutes
+                            {Math.round(Number(entry.totalHours) * 60)} minutes
                           </div>
                         </>
                       ) : (
@@ -385,4 +387,3 @@ export default function TimeTracking() {
     </div>
   )
 }
-

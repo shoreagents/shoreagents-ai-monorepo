@@ -430,7 +430,7 @@ export default function SupportTickets() {
                   {Object.entries(categoryConfig).map(([key, config]) => {
                     const Icon = config.icon
                     const isSelected = newTicket.category === key
-                    return (
+    return (
                       <button
                         key={key}
                         onClick={() => setNewTicket({ ...newTicket, category: key as TicketCategory })}
@@ -636,6 +636,6 @@ export default function SupportTickets() {
           </div>
         </div>
       )}
-    </div>
-  )
+      </div>
+    )
 }
