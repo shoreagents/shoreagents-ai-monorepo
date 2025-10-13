@@ -21,19 +21,24 @@ type Message = {
 type Document = {
   id: string
   title: string
-  category: "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO"
+  category: "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO" | string  // Allow any string as fallback
   uploadedBy: string
   createdAt: string
   size: string
   fileUrl: string | null
+  source?: string  // Add source field
 }
 
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; icon: any }> = {
   CLIENT: { label: "Client Docs", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: Building2 },
   TRAINING: { label: "Training", color: "bg-purple-500/20 text-purple-400 ring-purple-500/30", icon: GraduationCap },
   PROCEDURE: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },
+  PROCEDURES: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },  // Alias
   CULTURE: { label: "Culture", color: "bg-pink-500/20 text-pink-400 ring-pink-500/30", icon: Users },
   SEO: { label: "SEO", color: "bg-amber-500/20 text-amber-400 ring-amber-500/30", icon: TrendingUp },
+  OTHER: { label: "Other", color: "bg-gray-500/20 text-gray-400 ring-gray-500/30", icon: FileText },
+  // Default fallback
+  DEFAULT: { label: "Document", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: FileText },
 }
 
 export default function AIChatAssistant() {
@@ -149,8 +154,18 @@ export default function AIChatAssistant() {
         new Map(allDocuments.map(doc => [doc.id, doc])).values()
       )
       
-      console.log(`✅ Fetched ${uniqueDocs.length} total documents (staff + client)`)
-      setDocuments(uniqueDocs)
+      // Sort: Staff docs FIRST, then Client docs
+      const sortedDocs = uniqueDocs.sort((a, b) => {
+        if (a.source === b.source) {
+          // If same type, sort by date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        }
+        // Staff docs (STAFF) come before Client docs (CLIENT)
+        return a.source === 'STAFF' ? -1 : 1
+      })
+      
+      console.log(`✅ Fetched ${sortedDocs.length} total documents (staff + client)`)
+      setDocuments(sortedDocs)
     } catch (error) {
       console.error('Error fetching documents:', error)
     } finally {
@@ -471,17 +486,17 @@ export default function AIChatAssistant() {
                   >
                     <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
                     <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div className="truncate text-sm font-medium text-white">
                           {doc.title}
                         </div>
                         {doc.source === 'CLIENT' ? (
                           <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                            Client
+                            Client: {doc.uploadedBy}
                           </span>
                         ) : (
                           <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                            Staff
+                            Staff: {doc.uploadedBy}
                           </span>
                         )}
                       </div>
@@ -600,7 +615,7 @@ export default function AIChatAssistant() {
                     </div>
                   ) : (
                     filteredDocs.map((doc) => {
-                      const config = categoryConfig[doc.category]
+                      const config = categoryConfig[doc.category] || categoryConfig.DEFAULT
                       const Icon = config.icon
                       const isDeleting = deletingId === doc.id
                       
@@ -620,11 +635,11 @@ export default function AIChatAssistant() {
                                 </h4>
                                 {doc.source === 'CLIENT' ? (
                                   <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                                    Client
+                                    Client: {doc.uploadedBy}
                                   </span>
                                 ) : (
                                   <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                                    Staff
+                                    Staff: {doc.uploadedBy}
                                   </span>
                                 )}
                               </div>

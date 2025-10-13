@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { use, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, FileText, User, Building2, Clock, Edit, Trash2, Save, X } from "lucide-react"
@@ -42,7 +42,8 @@ interface DocumentDetail {
   createdAt: string
 }
 
-export default function DocumentDetailPage({ params }: { params: { id: string } }) {
+export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [document, setDocument] = useState<DocumentDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -59,11 +60,11 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     fetchDocument()
-  }, [params.id])
+  }, [id])
 
   const fetchDocument = async () => {
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`)
+      const response = await fetch(`/api/client/documents/${id}`)
       if (!response.ok) throw new Error("Failed to fetch document")
       const data = await response.json()
       setDocument(data.document)
@@ -87,7 +88,7 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
 
     setSaving(true)
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`, {
+      const response = await fetch(`/api/client/documents/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -108,7 +109,7 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`, {
+      const response = await fetch(`/api/client/documents/${id}`, {
         method: "DELETE",
       })
 

@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma"
 // GET - Fetch single document
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const document = await prisma.document.findUnique({
       where: { id },
@@ -51,10 +51,10 @@ export async function GET(
 // PUT - Update document (only if client uploaded it)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { title, category, content } = body
 
@@ -108,10 +108,10 @@ export async function PUT(
 // DELETE - Delete document (only if client uploaded it)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Check if document exists
     const existingDoc = await prisma.document.findUnique({

@@ -1,4 +1,5 @@
 import { ClientSidebar } from "@/components/client-sidebar"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function ClientLayout({
   children,
@@ -11,6 +12,7 @@ export default function ClientLayout({
       <main className="flex-1 ml-64">
         {children}
       </main>
+      <Toaster />
     </div>
   )
 }

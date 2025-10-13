@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import CloudConvert from 'cloudconvert'
 
-// GET /api/documents - Fetch all documents for current staff user
+// GET /api/documents - Fetch all documents for current staff user (own + client uploads)
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -21,10 +21,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Fetch all documents uploaded by this staff member
+    // Check which clients this staff is assigned to
+    const assignments = await prisma.staffAssignment.findMany({
+      where: {
+        userId: user.id,
+        isActive: true
+      }
+    })
+
+    const clientIds = assignments.map(a => a.clientId)
+
+    // Fetch:
+    // 1. Documents uploaded by this staff member
+    // 2. All other documents (client uploads) - will filter properly when clientId is added
     const documents = await prisma.document.findMany({
       where: {
-        userId: user.id
+        // For now, fetch all documents
+        // Later: Add proper filtering by clientId when field is added to schema
       },
       include: {
         user: {

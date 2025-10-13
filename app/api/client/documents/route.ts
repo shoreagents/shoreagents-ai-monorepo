@@ -27,15 +27,17 @@ export async function GET(request: NextRequest) {
       where: {
         OR: [
           {
-            // Staff documents
+            // Staff documents (uploaded by assigned staff)
             userId: {
               in: staffUserIds,
             },
           },
           {
-            // Client documents (we'll need to add a clientId field later)
-            // For now, fetch documents with "CLIENT" category
-            category: "CLIENT",
+            // Client documents - fetch all for now
+            // Later: Add clientId field to filter by specific client
+            userId: {
+              notIn: staffUserIds, // Anything not uploaded by assigned staff
+            },
           },
         ],
       },
