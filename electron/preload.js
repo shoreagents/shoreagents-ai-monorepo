@@ -61,12 +61,18 @@ contextBridge.exposeInMainWorld('electron', {
     // Get break status
     getStatus: () => ipcRenderer.invoke('get-break-status'),
     
-    // Notify main process of break start
+    // Start break with kiosk mode
+    start: (breakData) => ipcRenderer.invoke('start-break', breakData),
+    
+    // End break and exit kiosk mode
+    end: () => ipcRenderer.invoke('end-break'),
+    
+    // Notify main process of break start (legacy)
     notifyBreakStart: (breakData) => {
       ipcRenderer.send('break-started', breakData)
     },
     
-    // Notify main process of break end
+    // Notify main process of break end (legacy)
     notifyBreakEnd: (breakData) => {
       ipcRenderer.send('break-ended', breakData)
     },

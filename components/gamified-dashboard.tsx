@@ -53,13 +53,18 @@ export default function GamifiedDashboard() {
         fetch("/api/leaderboard?period=all_time"),
       ])
 
-      const [tasks, reviews, tickets, posts, leaderboard] = await Promise.all([
-        tasksRes.json(),
-        reviewsRes.json(),
-        ticketsRes.json(),
-        postsRes.json(),
-        leaderboardRes.json(),
-      ])
+      // Check for non-OK responses
+      if (!tasksRes.ok) console.error("Tasks API error:", tasksRes.status)
+      if (!reviewsRes.ok) console.error("Reviews API error:", reviewsRes.status)
+      if (!ticketsRes.ok) console.error("Tickets API error:", ticketsRes.status)
+      if (!postsRes.ok) console.error("Posts API error:", postsRes.status)
+      if (!leaderboardRes.ok) console.error("Leaderboard API error:", leaderboardRes.status)
+
+      const tasks = tasksRes.ok ? await tasksRes.json() : { tasks: [] }
+      const reviews = reviewsRes.ok ? await reviewsRes.json() : { reviews: [] }
+      const tickets = ticketsRes.ok ? await ticketsRes.json() : { tickets: [] }
+      const posts = postsRes.ok ? await postsRes.json() : { posts: [] }
+      const leaderboard = leaderboardRes.ok ? await leaderboardRes.json() : { rankings: [] }
 
       setData({
         tasks: tasks.tasks || [],

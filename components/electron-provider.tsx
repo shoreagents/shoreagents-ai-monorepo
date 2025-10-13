@@ -11,8 +11,18 @@ declare global {
   interface Window {
     electron?: {
       isElectron: boolean
+      performance?: {
+        getStatus: () => Promise<any>
+        onStatusChange: (callback: (status: any) => void) => () => void
+      }
       sync: {
         start: (sessionToken: string) => Promise<any>
+      }
+      breaks?: {
+        start: (breakData: any) => Promise<any>
+        end: () => Promise<any>
+        notifyBreakStart: (breakData: any) => void
+        notifyBreakEnd: (breakData: any) => void
       }
     }
   }
