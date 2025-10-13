@@ -48,12 +48,11 @@ export default function KnowledgeBasePage() {
   const [loading, setLoading] = useState(true)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   
   const [newDoc, setNewDoc] = useState({
     title: "",
     category: "procedure",
-    content: "",
-    size: "0 KB",
   })
 
   const categories = [
@@ -82,20 +81,22 @@ export default function KnowledgeBasePage() {
   }
 
   const handleUpload = async () => {
-    if (!newDoc.title || !newDoc.content) {
-      alert("Please fill in all required fields")
+    if (!newDoc.title || !selectedFile) {
+      alert("Please fill in all required fields and select a file")
       return
     }
 
     setUploading(true)
     try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('title', newDoc.title)
+      formData.append('category', newDoc.category.toUpperCase())
+
       const response = await fetch("/api/client/documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newDoc,
-          uploadedBy: "TechCorp Inc.",
-        }),
+        body: formData, // Send FormData instead of JSON
       })
 
       if (!response.ok) throw new Error("Failed to upload document")
@@ -105,9 +106,9 @@ export default function KnowledgeBasePage() {
       setNewDoc({
         title: "",
         category: "procedure",
-        content: "",
-        size: "0 KB",
       })
+      setSelectedFile(null)
+      alert("Document uploaded successfully! Your staff can now access it.")
     } catch (error) {
       console.error("Error uploading document:", error)
       alert("Failed to upload document")
@@ -300,17 +301,52 @@ export default function KnowledgeBasePage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="content">Content *</Label>
-              <Textarea
-                id="content"
-                placeholder="Enter the document content or description..."
-                value={newDoc.content}
-                onChange={(e) => setNewDoc({ ...newDoc, content: e.target.value })}
-                rows={8}
-                className="resize-none"
-              />
+              <Label htmlFor="file">Document File *</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                <input
+                  id="file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.md"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <label htmlFor="file" className="cursor-pointer">
+                  {selectedFile ? (
+                    <div className="space-y-2">
+                      <FileText className="h-8 w-8 text-blue-600 mx-auto" />
+                      <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(selectedFile.size / 1024).toFixed(2)} KB
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setSelectedFile(null)
+                        }}
+                        className="mt-2"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                      <p className="text-sm font-medium text-gray-700">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PDF, DOC, DOCX, TXT, or MD (Max 10MB)
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
               <p className="text-xs text-gray-500">
-                This content will be searchable by your staff
+                Text will be extracted automatically using CloudConvert and made searchable
               </p>
             </div>
 

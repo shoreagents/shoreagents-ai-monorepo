@@ -709,6 +709,144 @@ PrismaClientValidationError: Unknown field `position` for select statement on mo
 
 ---
 
+## 1️⃣4️⃣ **CLOUDCONVERT DOCUMENT UPLOAD PATTERN**
+
+### ✅ CORRECT - Use This Pattern for File Uploads
+
+```typescript
+import CloudConvert from 'cloudconvert'
+
+// Extract text content from file using CloudConvert
+let content = ""
+let fileSize = "0 KB"
+
+if (file) {
+  fileSize = `${(file.size / 1024).toFixed(2)} KB`
+  const fileName = file.name
+  const fileExt = '.' + fileName.split('.').pop()?.toLowerCase()
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const fileBuffer = new Uint8Array(arrayBuffer)
+
+    // For TXT and MD files, read directly (no conversion needed)
+    if (fileExt === '.txt' || fileExt === '.md') {
+      const buffer = Buffer.from(fileBuffer)
+      content = buffer.toString('utf-8')
+      console.log('✅ Text file read directly, length:', content.length)
+    } 
+    // For PDF, DOC, DOCX - use CloudConvert
+    else if (fileExt === '.pdf' || fileExt === '.doc' || fileExt === '.docx') {
+      console.log('☁️ Starting CloudConvert extraction for', fileName)
+      
+      const cloudConvert = new CloudConvert(process.env.CLOUDCONVERT_API_KEY!)
+      
+      const job = await cloudConvert.jobs.create({
+        tasks: {
+          'upload-file': { operation: 'import/upload' },
+          'convert-to-txt': {
+            operation: 'convert',
+            input: 'upload-file',
+            output_format: 'txt',
+            engine: fileExt === '.pdf' ? 'pdftotext' : undefined,
+          },
+          'export-txt': {
+            operation: 'export/url',
+            input: 'convert-to-txt',
+          },
+        },
+      })
+
+      const uploadTask = job.tasks.filter((task) => task.name === 'upload-file')[0]
+      const buffer = Buffer.from(fileBuffer)
+      await cloudConvert.tasks.upload(uploadTask, buffer, fileName)
+
+      const completedJob = await cloudConvert.jobs.wait(job.id)
+      const exportTask = completedJob.tasks.filter((task) => task.name === 'export-txt')[0]
+
+      if (exportTask?.result?.files?.[0]?.url) {
+        const txtUrl = exportTask.result.files[0].url
+        const response = await fetch(txtUrl)
+        content = await response.text()
+        console.log('✅ Text extracted successfully, length:', content.length)
+      } else {
+        content = `[File: ${fileName}]`
+      }
+    } else {
+      content = `[Unsupported file type: ${fileExt}]`
+    }
+  } catch (err) {
+    console.error("Error extracting text:", err)
+    content = `[File: ${fileName} - Extraction failed]`
+  }
+}
+
+// Create document with extracted text
+const document = await prisma.document.create({
+  data: {
+    userId: user.id,
+    title,
+    category,
+    source: 'STAFF',  // or 'CLIENT'
+    content,  // Extracted text
+    size: fileSize,
+    uploadedBy: user.name,
+    fileUrl: null,
+  },
+})
+```
+
+### ❌ WRONG - Don't Use These Approaches
+
+```typescript
+// ❌ DO NOT USE - Basic text decoding (doesn't work for PDF/DOCX)
+const arrayBuffer = await file.arrayBuffer()
+const decoder = new TextDecoder('utf-8')
+content = decoder.decode(arrayBuffer)  // ❌ Returns garbage for PDFs
+
+// ❌ DO NOT USE - JSON body for file uploads
+const body = await request.json()  // ❌ Can't send binary files in JSON
+const { file, title } = body  // ❌ Wrong
+
+// ❌ DO NOT USE - Missing CloudConvert for PDFs
+if (fileExt === '.pdf') {
+  // Just read directly ❌ WRONG
+  content = buffer.toString('utf-8')
+}
+```
+
+### **Why This Matters:**
+- **PDFs, DOCs, and DOCX files** contain binary data, not plain text
+- Using `TextDecoder` on PDFs returns garbled characters, not readable text
+- CloudConvert extracts the actual text content from these files
+- TXT and MD files can be read directly (no conversion needed)
+- FormData is required for file uploads, not JSON
+- Always include error handling - CloudConvert can fail
+
+### **Where This Is Used:**
+- `/app/api/documents/route.ts` - Staff document uploads
+- `/app/api/client/documents/route.ts` - Client document uploads
+- Any future file upload endpoints
+
+### **Error You'll See If You Break This:**
+```
+// If using TextDecoder on PDF:
+content = "ÿþ%PDF-1.4ÿþ1 0 obj..." // Garbage binary data
+
+// If missing CloudConvert:
+Error: Cannot decode binary file format
+
+// If using JSON instead of FormData:
+Error: file is not a File object
+```
+
+### **Environment Variable Required:**
+```env
+CLOUDCONVERT_API_KEY="your_api_key_here"
+```
+
+---
+
 ## 📖 **RELATED DOCUMENTATION:**
 
 - [CLIENT-TASKS-COMPLETE.md](./CLIENT-TASKS-COMPLETE.md) - Client Tasks System

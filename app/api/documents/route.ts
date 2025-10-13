@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import CloudConvert from 'cloudconvert'
 
 // GET /api/documents - Fetch all documents for current staff user
 export async function GET(req: NextRequest) {
@@ -83,21 +84,89 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Read file content if file exists
+    // Extract text content from file using CloudConvert
     let content = ""
     let fileSize = "0 KB"
     
     if (file) {
       fileSize = `${(file.size / 1024).toFixed(2)} KB`
+      const fileName = file.name
+      const fileExt = '.' + fileName.split('.').pop()?.toLowerCase()
       
-      // Read text content from file
       try {
         const arrayBuffer = await file.arrayBuffer()
-        const decoder = new TextDecoder('utf-8')
-        content = decoder.decode(arrayBuffer)
+        const fileBuffer = new Uint8Array(arrayBuffer)
+
+        // For TXT and MD files, read directly (no conversion needed)
+        if (fileExt === '.txt' || fileExt === '.md') {
+          const buffer = Buffer.from(fileBuffer)
+          content = buffer.toString('utf-8')
+          console.log('✅ Text file read directly, length:', content.length)
+        } 
+        // For PDF, DOC, DOCX - use CloudConvert
+        else if (fileExt === '.pdf' || fileExt === '.doc' || fileExt === '.docx') {
+          console.log('☁️ Starting CloudConvert extraction for', fileName)
+          
+          // Initialize CloudConvert
+          const cloudConvert = new CloudConvert(process.env.CLOUDCONVERT_API_KEY!)
+          
+          // Create conversion job
+          const job = await cloudConvert.jobs.create({
+            tasks: {
+              'upload-file': {
+                operation: 'import/upload',
+              },
+              'convert-to-txt': {
+                operation: 'convert',
+                input: 'upload-file',
+                output_format: 'txt',
+                engine: fileExt === '.pdf' ? 'pdftotext' : undefined,
+              },
+              'export-txt': {
+                operation: 'export/url',
+                input: 'convert-to-txt',
+              },
+            },
+          })
+
+          console.log('📤 CloudConvert job created:', job.id)
+
+          // Get upload task
+          const uploadTask = job.tasks.filter((task) => task.name === 'upload-file')[0]
+          
+          // Upload file
+          const buffer = Buffer.from(fileBuffer)
+          await cloudConvert.tasks.upload(uploadTask, buffer, fileName)
+          console.log('✅ File uploaded to CloudConvert')
+
+          // Wait for job to complete
+          console.log('⏳ Waiting for conversion to complete...')
+          const completedJob = await cloudConvert.jobs.wait(job.id)
+          
+          // Get export task
+          const exportTask = completedJob.tasks.filter(
+            (task) => task.name === 'export-txt'
+          )[0]
+
+          if (exportTask?.result?.files?.[0]?.url) {
+            const txtUrl = exportTask.result.files[0].url
+            console.log('⬇️ Downloading extracted text from:', txtUrl)
+            
+            // Download extracted text
+            const response = await fetch(txtUrl)
+            content = await response.text()
+            console.log('✅ Text extracted successfully, length:', content.length)
+          } else {
+            console.error('❌ No export URL found')
+            content = `[File: ${fileName}]`
+          }
+        } else {
+          // Unsupported file type
+          content = `[Unsupported file type: ${fileExt}]`
+        }
       } catch (err) {
-        console.error("Error reading file:", err)
-        content = `[File: ${file.name}]`
+        console.error("Error extracting text:", err)
+        content = `[File: ${fileName} - Extraction failed]`
       }
     }
 
@@ -107,6 +176,7 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         title,
         category,
+        source: 'STAFF',  // Mark as staff upload
         content,
         uploadedBy: user.name,
         size: fileSize,

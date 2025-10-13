@@ -116,11 +116,41 @@ export default function AIChatAssistant() {
   const fetchDocuments = async () => {
     setLoadingDocs(true)
     try {
-      const response = await fetch('/api/documents')
-      if (response.ok) {
-        const data = await response.json()
-        setDocuments(data.documents || [])
+      // Fetch both staff and client documents
+      const [staffResponse, clientResponse] = await Promise.all([
+        fetch('/api/documents'),
+        fetch('/api/client/documents')
+      ])
+      
+      let allDocuments: any[] = []
+      
+      // Add staff documents
+      if (staffResponse.ok) {
+        const staffData = await staffResponse.json()
+        const staffDocs = (staffData.documents || []).map((doc: any) => ({
+          ...doc,
+          source: doc.source || 'STAFF'  // Ensure source field exists
+        }))
+        allDocuments = [...allDocuments, ...staffDocs]
       }
+      
+      // Add client documents
+      if (clientResponse.ok) {
+        const clientData = await clientResponse.json()
+        const clientDocs = (clientData.documents || []).map((doc: any) => ({
+          ...doc,
+          source: doc.isStaffUpload ? 'STAFF' : 'CLIENT'  // Map from client API format
+        }))
+        allDocuments = [...allDocuments, ...clientDocs]
+      }
+      
+      // Deduplicate by ID (in case same doc appears in both)
+      const uniqueDocs = Array.from(
+        new Map(allDocuments.map(doc => [doc.id, doc])).values()
+      )
+      
+      console.log(`✅ Fetched ${uniqueDocs.length} total documents (staff + client)`)
+      setDocuments(uniqueDocs)
     } catch (error) {
       console.error('Error fetching documents:', error)
     } finally {
@@ -441,8 +471,19 @@ export default function AIChatAssistant() {
                   >
                     <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
                     <div className="flex-1 overflow-hidden">
-                      <div className="truncate text-sm font-medium text-white">
-                        {doc.title}
+                      <div className="flex items-center gap-2">
+                        <div className="truncate text-sm font-medium text-white">
+                          {doc.title}
+                        </div>
+                        {doc.source === 'CLIENT' ? (
+                          <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
+                            Client
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
+                            Staff
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-400">
                         {doc.category} • {doc.size}
@@ -573,9 +614,20 @@ export default function AIChatAssistant() {
                               <Icon className="h-4 w-4" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400">
-                                {doc.title}
-                              </h4>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400 flex-1 min-w-0">
+                                  {doc.title}
+                                </h4>
+                                {doc.source === 'CLIENT' ? (
+                                  <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
+                                    Client
+                                  </span>
+                                ) : (
+                                  <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
+                                    Staff
+                                  </span>
+                                )}
+                              </div>
                               <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                                 <span>{doc.size}</span>
                                 <span>•</span>
