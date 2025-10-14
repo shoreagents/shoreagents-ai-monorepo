@@ -34,6 +34,18 @@ export async function POST(
       hmo
     } = body
 
+    console.log("🚀 COMPLETING ONBOARDING REQUEST:", {
+      staffUserId,
+      companyId,
+      employmentStatus,
+      startDate,
+      shiftTime,
+      currentRole,
+      salary,
+      hmo,
+      adminId: managementUser.id
+    })
+
     // Validation
     if (!companyId) {
       return NextResponse.json({ 
@@ -108,6 +120,12 @@ export async function POST(
         name: fullName // Update with full legal name from onboarding
       }
     })
+    console.log("✅ STAFF USER UPDATED:", { 
+      staffUserId: staffUser.id, 
+      companyId, 
+      fullName,
+      companyName: company.companyName 
+    })
 
     // Calculate days employed from start date
     const startDateTime = new Date(startDate)
@@ -138,28 +156,48 @@ export async function POST(
         hmo: hmo !== undefined ? hmo : true,
       }
     })
+    console.log("✅ PROFILE CREATED:", { 
+      profileId: profile.id, 
+      salary, 
+      currentRole, 
+      employmentStatus,
+      daysEmployed,
+      totalLeave: vacationLeave
+    })
 
     // Create StaffPersonalRecord with HR data from onboarding
-    await prisma.staffPersonalRecord.create({
-      data: {
-        staffUserId: staffUser.id,
-        sss: onboarding.sss,
-        tin: onboarding.tin,
-        philhealthNo: onboarding.philhealthNo,
-        pagibigNo: onboarding.pagibigNo,
-        emergencyContactName: onboarding.emergencyContactName,
-        emergencyContactNo: onboarding.emergencyContactNo,
-        emergencyRelationship: onboarding.emergencyRelationship,
-        validIdUrl: onboarding.validIdUrl,
-        birthCertUrl: onboarding.birthCertUrl,
-        nbiClearanceUrl: onboarding.nbiClearanceUrl,
-        policeClearanceUrl: onboarding.policeClearanceUrl,
-        sssDocUrl: onboarding.sssDocUrl,
-        tinDocUrl: onboarding.tinDocUrl,
-        philhealthDocUrl: onboarding.philhealthDocUrl,
-        pagibigDocUrl: onboarding.pagibigDocUrl,
-      }
-    })
+    const personalRecordData = {
+      staffUserId: staffUser.id,
+      sss: onboarding.sss,
+      tin: onboarding.tin,
+      philhealthNo: onboarding.philhealthNo,
+      pagibigNo: onboarding.pagibigNo,
+      emergencyContactName: onboarding.emergencyContactName,
+      emergencyContactNo: onboarding.emergencyContactNo,
+      emergencyRelationship: onboarding.emergencyRelationship,
+      validIdUrl: onboarding.validIdUrl,
+      birthCertUrl: onboarding.birthCertUrl,
+      nbiClearanceUrl: onboarding.nbiClearanceUrl,
+      policeClearanceUrl: onboarding.policeClearanceUrl,
+      sssDocUrl: onboarding.sssDocUrl,
+      tinDocUrl: onboarding.tinDocUrl,
+      philhealthDocUrl: onboarding.philhealthDocUrl,
+      pagibigDocUrl: onboarding.pagibigDocUrl,
+    }
+    console.log("🔐 CREATING PERSONAL RECORD:", personalRecordData)
+    
+    try {
+      const personalRecord = await prisma.staffPersonalRecord.create({
+        data: personalRecordData
+      })
+      console.log("✅ PERSONAL RECORD CREATED:", { 
+        personalRecordId: personalRecord.id,
+        staffUserId: personalRecord.staffUserId
+      })
+    } catch (error) {
+      console.error("❌ PERSONAL RECORD CREATION FAILED:", error)
+      throw error
+    }
 
     // Create work schedule based on shift time
     // Parse shift time (e.g., "9:00 AM - 6:00 PM")
@@ -186,6 +224,11 @@ export async function POST(
     }))
 
     await prisma.workSchedule.createMany({ data: schedules })
+    console.log("✅ WORK SCHEDULE CREATED:", { 
+      profileId: profile.id, 
+      schedulesCount: schedules.length,
+      workdays: schedules.filter(s => s.isWorkday).length
+    })
 
     // Mark onboarding as complete
     await prisma.staffOnboarding.update({
@@ -195,11 +238,25 @@ export async function POST(
         completionPercent: 100
       }
     })
+    console.log("✅ ONBOARDING MARKED COMPLETE:", { 
+      onboardingId: onboarding.id,
+      staffUserId: staffUser.id 
+    })
+
+    console.log("🎉 ONBOARDING COMPLETION SUCCESS:", {
+      staffName: fullName,
+      company: company.companyName,
+      role: currentRole,
+      salary,
+      profileId: profile.id
+    })
 
     return NextResponse.json({ 
       success: true,
-      message: "Onboarding completed! Staff profile and work schedule created.",
-      profileId: profile.id
+      message: `Onboarding completed! ${fullName} assigned to ${company.companyName} as ${currentRole}.`,
+      profileId: profile.id,
+      companyName: company.companyName,
+      staffName: fullName
     })
 
   } catch (error) {

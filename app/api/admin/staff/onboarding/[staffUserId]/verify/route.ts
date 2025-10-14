@@ -26,6 +26,14 @@ export async function POST(
     const body = await req.json()
     const { section, action, feedback } = body
 
+    console.log("📥 VERIFY REQUEST:", { 
+      staffUserId, 
+      section, 
+      action, 
+      feedback,
+      adminId: managementUser.id
+    })
+
     // Validate input
     const validSections = [
       "personalInfo",
@@ -68,14 +76,38 @@ export async function POST(
       updateData[`${section}VerifiedAt`] = new Date()
     }
 
+    console.log("💾 UPDATING DATABASE:", updateData)
+
     // Update onboarding
     const onboarding = await prisma.staffOnboarding.update({
       where: { id: staffUser.onboarding.id },
       data: updateData
     })
 
+    console.log("✅ DATABASE UPDATED:", { 
+      section, 
+      status: action, 
+      hasVerifiedAt: !!updateData[`${section}VerifiedAt`],
+      feedback: feedback || 'none'
+    })
+
     // Recalculate completion percentage
     await updateCompletionPercent(onboarding.id)
+    
+    const updated = await prisma.staffOnboarding.findUnique({ 
+      where: { id: onboarding.id } 
+    })
+    console.log("📊 COMPLETION UPDATED:", { 
+      completionPercent: updated?.completionPercent,
+      isComplete: updated?.isComplete,
+      statuses: {
+        personalInfo: updated?.personalInfoStatus,
+        govId: updated?.govIdStatus,
+        documents: updated?.documentsStatus,
+        signature: updated?.signatureStatus,
+        emergencyContact: updated?.emergencyContactStatus
+      }
+    })
 
     return NextResponse.json({ 
       success: true,

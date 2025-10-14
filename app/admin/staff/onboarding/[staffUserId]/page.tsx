@@ -141,6 +141,13 @@ export default function AdminOnboardingDetailPage() {
     setError("")
     setSuccess("")
     
+    console.log("🔍 ADMIN VERIFY:", { 
+      section, 
+      action, 
+      feedback: feedback[section] || "",
+      staffUserId 
+    })
+    
     try {
       const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/verify`, {
         method: "POST",
@@ -154,8 +161,12 @@ export default function AdminOnboardingDetailPage() {
       
       if (!response.ok) {
         const data = await response.json()
+        console.error("❌ VERIFY FAILED:", data.error)
         throw new Error(data.error || "Failed to verify")
       }
+      
+      const data = await response.json()
+      console.log("✅ VERIFY SUCCESS:", data)
       
       setSuccess(`Section ${action.toLowerCase()} successfully!`)
       setFeedback({ ...feedback, [section]: "" })
@@ -192,29 +203,42 @@ export default function AdminOnboardingDetailPage() {
     setError("")
     setSuccess("")
     
+    const employmentData = {
+      companyId: selectedCompanyId,
+      employmentStatus,
+      startDate,
+      shiftTime,
+      currentRole,
+      salary: parseFloat(salary),
+      hmo
+    }
+    
+    console.log("🚀 COMPLETING ONBOARDING:", { 
+      staffUserId, 
+      ...employmentData 
+    })
+    
     try {
       const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          companyId: selectedCompanyId,
-          employmentStatus,
-          startDate,
-          shiftTime,
-          currentRole,
-          salary: parseFloat(salary),
-          hmo
-        })
+        body: JSON.stringify(employmentData)
       })
       
       if (!response.ok) {
         const data = await response.json()
+        console.error("❌ COMPLETE FAILED:", data.error)
         throw new Error(data.error || "Failed to complete")
       }
       
-      setSuccess("Onboarding completed! Staff assigned to company, profile and work schedule created.")
+      const data = await response.json()
+      console.log("✅ COMPLETE SUCCESS:", data)
+      
+      const successMessage = `✅ Onboarding Complete!\n\n• ${data.staffName || 'Staff'} assigned to ${data.companyName || 'company'}\n• Role: ${currentRole}\n• Salary: $${salary}/month\n• Profile & Personal Records Created\n• Work Schedule Set Up`
+      
+      setSuccess(successMessage)
       await fetchOnboardingDetails()
-      setTimeout(() => router.push("/admin/staff/onboarding"), 2000)
+      setTimeout(() => router.push("/admin/staff/onboarding"), 3000)
     } catch (err: any) {
       setError(err.message)
     } finally {

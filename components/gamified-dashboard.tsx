@@ -175,7 +175,7 @@ export default function GamifiedDashboard() {
 
         {/* Onboarding Banner */}
         {onboardingStatus && !onboardingStatus.isComplete && (
-          <Link href="/onboarding">
+          <Link href={onboardingStatus.completionPercent === 100 ? "/onboarding/status" : "/onboarding"}>
             <div className={`glass cursor-pointer rounded-xl border-2 p-6 shadow-xl transition-all hover:scale-[1.02] ${
               onboardingStatus.completionPercent === 100
                 ? "border-blue-500/50 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500"
@@ -200,7 +200,7 @@ export default function GamifiedDashboard() {
                     </h3>
                     <p className="text-sm text-slate-300">
                       {onboardingStatus.completionPercent === 100
-                        ? "You've completed all sections! Our team is reviewing your documents."
+                        ? "You've completed all sections! Our team is reviewing your documents. Click to view detailed status."
                         : `You're ${onboardingStatus.completionPercent}% done! Complete your profile to unlock all features.`}
                     </p>
                   </div>
