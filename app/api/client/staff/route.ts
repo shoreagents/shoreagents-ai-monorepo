@@ -20,57 +20,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    const assignments = await prisma.staffAssignment.findMany({
+    // Get all staff assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
       where: {
         companyId: clientUser.company.id,
-        isActive: true,
       },
       include: {
-        staffUser: {
+        profile: {
           include: {
-            profile: {
-              include: {
-                workSchedule: true,
-              },
-            },
-            timeEntries: {
-              orderBy: { clockIn: 'desc' },
-              take: 1,
-            },
-            performanceMetrics: {
-              orderBy: { date: 'desc' },
-              take: 30, // Last 30 days
-            },
-            tasks: {
-              where: {
-                status: { in: ['TODO', 'IN_PROGRESS'] }
-              }
-            },
-            reviewsReceived: {
-              orderBy: { submittedDate: 'desc' },
-              take: 1,
-            },
-            gamificationProfile: true,
+            workSchedule: true,
           },
         },
-        manager: {
-          select: {
-            name: true,
-            email: true,
-            role: true,
-          },
+        timeEntries: {
+          orderBy: { clockIn: 'desc' },
+          take: 1,
         },
+        performanceMetrics: {
+          orderBy: { date: 'desc' },
+          take: 30, // Last 30 days
+        },
+        tasks: {
+          where: {
+            status: { in: ['TODO', 'IN_PROGRESS'] }
+          }
+        },
+        reviewsReceived: {
+          orderBy: { submittedDate: 'desc' },
+          take: 1,
+        },
+        gamificationProfile: true,
         company: {
           select: {
             companyName: true,
+            accountManager: {
+              select: {
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
           },
         },
       },
     })
 
     // Calculate stats for each staff member
-    const staffWithStats = assignments.map((assignment) => {
-      const user = assignment.staffUser
+    const staffWithStats = staffUsers.map((user) => {
       const profile = user.profile
       
       // Calculate average productivity score
@@ -107,12 +102,9 @@ export async function GET(request: NextRequest) {
         avatar: user.avatar,
         coverPhoto: user.coverPhoto,
         
-        // Assignment details
-        assignmentRole: assignment.role,
-        rate: assignment.rate,
-        startDate: assignment.startDate,
-        managedBy: assignment.manager?.name,
-        client: assignment.company.companyName,
+        // Company details
+        managedBy: user.company?.accountManager?.name || 'Not assigned',
+        client: user.company?.companyName || 'No company',
         
         // Profile details
         phone: profile?.phone,
@@ -120,7 +112,8 @@ export async function GET(request: NextRequest) {
         employmentStatus: profile?.employmentStatus,
         daysEmployed: profile?.daysEmployed,
         currentRole: profile?.currentRole,
-        salary: profile?.salary,
+        salary: profile?.salary ? Number(profile.salary) : 0,
+        startDate: profile?.startDate,
         
         // Leave credits
         totalLeave: profile?.totalLeave || 0,
