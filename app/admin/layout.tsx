@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { prisma } from "@/lib/prisma"
+import { Toaster } from "@/components/ui/toaster"
 
 export default async function AdminLayout({
   children,
@@ -44,6 +45,11 @@ export default async function AdminLayout({
     redirect("/login/admin")
   }
 
-  return <AdminSidebar user={managementUser}>{children}</AdminSidebar>
+  return (
+    <>
+      <AdminSidebar user={managementUser}>{children}</AdminSidebar>
+      <Toaster />
+    </>
+  )
 }
 

@@ -38,26 +38,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File must be less than 5MB" }, { status: 400 })
     }
 
+    // Delete existing cover photo if it exists
+    if (managementUser.coverPhoto) {
+      try {
+        // Extract the file path from the existing URL
+        const urlParts = managementUser.coverPhoto.split('/management/')
+        if (urlParts.length > 1) {
+          const oldFilePath = urlParts[1].split('?')[0] // Remove query params
+          await supabaseAdmin.storage
+            .from('management')
+            .remove([oldFilePath])
+        }
+      } catch (error) {
+        console.log("Note: Could not delete old cover photo:", error)
+      }
+    }
+
     // Convert file to buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Supabase Storage - use dedicated management_cover folder
-    const filePath = `management_cover/${managementUser.authUserId}.jpg`
+    // Generate unique filename with timestamp to avoid caching issues
+    const timestamp = Date.now()
+    const filePath = `management_cover/${managementUser.authUserId}/cover_${timestamp}.jpg`
     
-    // Delete old file if it exists (ensures clean replacement)
-    if (managementUser.coverPhoto) {
-      await supabaseAdmin.storage
-        .from('management')
-        .remove([filePath])
-    }
-
-    // Upload new file
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('management')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: true,
+        upsert: false, // No need to upsert since filename is unique
       })
 
     if (uploadError) {
@@ -65,23 +74,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
     }
 
-    // Get public URL with cache-busting timestamp
-    const timestamp = Date.now()
+    // Get public URL
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('management')
       .getPublicUrl(filePath)
-    
-    const urlWithTimestamp = `${publicUrl}?t=${timestamp}`
 
     // Update database with cover photo URL
     await prisma.managementUser.update({
       where: { id: managementUser.id },
-      data: { coverPhoto: urlWithTimestamp }
+      data: { coverPhoto: publicUrl }
     })
 
     return NextResponse.json({ 
       success: true, 
-      url: urlWithTimestamp 
+      url: publicUrl 
     })
 
   } catch (error) {

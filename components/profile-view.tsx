@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload } from "lucide-react"
 import Image from "next/image"
+import { useToast } from "@/hooks/use-toast"
 
 interface ProfileData {
   user: {
@@ -40,6 +41,7 @@ interface ProfileData {
 }
 
 export default function ProfileView() {
+  const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +76,28 @@ export default function ProfileView() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload an image file (JPG, PNG, GIF, etc.)",
+        variant: "destructive",
+      })
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Avatar must be less than 5MB. Please choose a smaller image.",
+        variant: "destructive",
+      })
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+      return
+    }
+
     setUploadingAvatar(true)
     const formData = new FormData()
     formData.append('avatar', file)
@@ -91,17 +115,50 @@ export default function ProfileView() {
 
       // Refresh profile data
       await fetchProfileData()
+      
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully!",
+        variant: "success",
+      })
     } catch (error) {
       console.error('Error uploading avatar:', error)
-      alert(`Failed to upload avatar: ${error instanceof Error ? error.message : String(error)}`)
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload avatar",
+        variant: "destructive",
+      })
     } finally {
       setUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
     }
   }
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload an image file (JPG, PNG, GIF, etc.)",
+        variant: "destructive",
+      })
+      if (coverInputRef.current) coverInputRef.current.value = ''
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Cover photo must be less than 5MB. Please choose a smaller image.",
+        variant: "destructive",
+      })
+      if (coverInputRef.current) coverInputRef.current.value = ''
+      return
+    }
 
     setUploadingCover(true)
     const formData = new FormData()
@@ -120,11 +177,22 @@ export default function ProfileView() {
 
       // Refresh profile data
       await fetchProfileData()
+      
+      toast({
+        title: "Success",
+        description: "Cover photo updated successfully!",
+        variant: "success",
+      })
     } catch (error) {
       console.error('Error uploading cover:', error)
-      alert(`Failed to upload cover: ${error instanceof Error ? error.message : String(error)}`)
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload cover photo",
+        variant: "destructive",
+      })
     } finally {
       setUploadingCover(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
     }
   }
 
@@ -193,6 +261,16 @@ export default function ProfileView() {
               </div>
             )}
             
+            {/* Loading Overlay for Cover */}
+            {uploadingCover && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-white border-t-transparent" />
+                  <span className="text-sm text-white font-medium">Uploading cover...</span>
+                </div>
+              </div>
+            )}
+            
             {/* Cover Upload Button */}
             <button
               onClick={() => coverInputRef.current?.click()}
@@ -234,17 +312,23 @@ export default function ProfileView() {
                   />
                 </div>
                 
+                {/* Loading Overlay */}
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
+                      <span className="text-xs text-white font-medium">Uploading...</span>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Avatar Upload Button */}
                 <button
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
                   className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-all hover:bg-indigo-500 disabled:opacity-50"
                 >
-                  {uploadingAvatar ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Camera className="h-5 w-5" />
-                  )}
+                  <Camera className="h-5 w-5" />
                 </button>
                 <input
                   ref={avatarInputRef}
