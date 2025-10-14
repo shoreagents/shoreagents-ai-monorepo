@@ -7,13 +7,17 @@ The `staff` bucket is used to store avatar and cover photos for BPO workers (sta
 
 ```
 staff/
-├── {userId}/
-    ├── avatar.jpg
-    └── cover.jpg
+├── staff_avatar/
+│   └── {userId}/
+│       └── avatar.jpg
+└── staff_cover/
+    └── {userId}/
+        └── cover.jpg
 ```
 
-**Important:** Unlike the `client` bucket which uses subfolders (`client_avatar`, `client_cover`), the `staff` bucket follows the same simple pattern as `management`:
-- Files are stored directly in `{userId}/` folder
+**Important:** The `staff` bucket uses subfolders like the `client` bucket:
+- Avatar files: `staff/staff_avatar/{userId}/avatar.jpg`
+- Cover files: `staff/staff_cover/{userId}/cover.jpg`
 - `{userId}` = the `authUserId` field from `staff_users` table (Supabase auth.users.id)
 
 ## Required Configuration
@@ -69,14 +73,14 @@ USING (
 ### Avatar Upload
 - **Endpoint:** `POST /api/staff/profile/avatar`
 - **Bucket:** `staff`
-- **Path:** `{authUserId}/avatar.jpg`
+- **Path:** `staff_avatar/{authUserId}/avatar.jpg`
 - **Max Size:** 5MB
 - **Types:** Images only
 
 ### Cover Photo Upload
 - **Endpoint:** `POST /api/staff/profile/cover`
 - **Bucket:** `staff`
-- **Path:** `{authUserId}/cover.jpg`
+- **Path:** `staff_cover/{authUserId}/cover.jpg`
 - **Max Size:** 5MB
 - **Types:** Images only
 
@@ -91,7 +95,9 @@ USING (
 2. Navigate to profile: http://localhost:3000/profile
 3. Click camera icon on avatar → upload image
 4. Click "Change Cover" button → upload image
-5. Check Supabase Storage → `staff` bucket → should see `{userId}/avatar.jpg` and `cover.jpg`
+5. Check Supabase Storage → `staff` bucket → should see:
+   - `staff_avatar/{userId}/avatar.jpg`
+   - `staff_cover/{userId}/cover.jpg`
 
 ### 3. Verify RLS Policies
 1. Go to Supabase Dashboard → Storage → `staff` bucket → Policies
@@ -103,7 +109,7 @@ USING (
 | Bucket | Structure | Example Path |
 |--------|-----------|--------------|
 | **management** | Simple | `management/{userId}/avatar.jpg` |
-| **staff** | Simple | `staff/{userId}/avatar.jpg` |
+| **staff** | Subfolders | `staff/staff_avatar/{userId}/avatar.jpg` |
 | **client** | Subfolders | `client/client_avatar/{userId}/avatar.jpg` |
 | **company** | By org | `company/{organizationId}/logo.jpg` |
 

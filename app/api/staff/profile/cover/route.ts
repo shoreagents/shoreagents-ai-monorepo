@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Supabase Storage - staff bucket
-    const filePath = `${staffUser.authUserId}/cover.jpg`
+    // Upload to Supabase Storage - staff bucket with staff_cover subfolder
+    const filePath = `staff_cover/${staffUser.authUserId}/cover.jpg`
     
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('staff')
