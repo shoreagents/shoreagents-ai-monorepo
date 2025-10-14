@@ -14,14 +14,20 @@ interface ProfileData {
     avatar: string | null
     coverPhoto: string | null
   }
+  company: {
+    name: string
+    accountManager: string | null
+  } | null
   profile: {
     phone: string | null
+    location: string | null
+    gender: string | null
+    civilStatus: string | null
+    dateOfBirth: string | null
     employmentStatus: string
     startDate: string
     daysEmployed: number
     currentRole: string
-    client: string | null
-    accountManager: string | null
     salary: number
     lastPayIncrease: string | null
     lastIncreaseAmount: number | null
@@ -235,7 +241,7 @@ export default function ProfileView() {
     )
   }
 
-  const { user, profile, workSchedules } = profileData
+  const { user, company, profile, workSchedules } = profileData
   const remainingLeave = profile.totalLeave - profile.usedLeave
 
   return (
@@ -347,7 +353,7 @@ export default function ProfileView() {
                 <p className="mt-1 text-xl text-indigo-300">{profile.currentRole}</p>
                 <p className="mt-1 flex items-center gap-2 text-slate-400">
                   <Building2 className="h-4 w-4" />
-                  {profile.client || "TechCorp Inc."}
+                  {company?.name || "No company assigned"}
                 </p>
               </div>
               <div className="flex gap-3">
@@ -417,15 +423,15 @@ export default function ProfileView() {
               <div className="flex items-center gap-3">
                 <Building2 className="h-5 w-5 text-slate-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-slate-400">Client</div>
-                  <div className="font-semibold text-white">{profile.client || "TechCorp Inc."}</div>
+                  <div className="text-sm text-slate-400">Company/Client</div>
+                  <div className="font-semibold text-white">{company?.name || "No company assigned"}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <User className="h-5 w-5 text-slate-400" />
                 <div className="flex-1">
                   <div className="text-sm text-slate-400">Account Manager</div>
-                  <div className="font-semibold text-white">{profile.accountManager || "Not assigned"}</div>
+                  <div className="font-semibold text-white">{company?.accountManager || "Not assigned"}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">

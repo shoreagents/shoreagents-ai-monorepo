@@ -5,9 +5,9 @@ import { getStaffUser } from "@/lib/auth-helpers"
 // GET - Fetch time entries for current staff user only
 export async function GET(request: NextRequest) {
   try {
-    const user = await getStaffUser()
+    const staffUser = await getStaffUser()
 
-    if (!user) {
+    if (!staffUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    const where: any = { userId: user.id }
+    const where: any = { staffUserId: staffUser.id }
 
     if (startDate && endDate) {
       where.clockIn = {

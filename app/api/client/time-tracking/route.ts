@@ -27,16 +27,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get all assigned staff for this client
-    const staffAssignments = await prisma.staffAssignment.findMany({
-      where: {
-        companyId: clientUser.company.id,
-        isActive: true
-      },
-      select: { staffUserId: true }
+    // Get all staff assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
     })
     
-    const staffIds = staffAssignments.map(s => s.staffUserId)
+    const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ 
@@ -48,12 +45,12 @@ export async function GET(req: NextRequest) {
 
     // Build where clause for time entries
     const whereClause: any = {
-      userId: { in: staffIds }
+      staffUserId: { in: staffIds }
     }
 
     // Filter by staff member if specified
     if (staffId) {
-      whereClause.userId = staffId
+      whereClause.staffUserId = staffId
     }
 
     // Filter by date range if specified
@@ -78,7 +75,7 @@ export async function GET(req: NextRequest) {
     const timeEntries = await prisma.timeEntry.findMany({
       where: whereClause,
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,

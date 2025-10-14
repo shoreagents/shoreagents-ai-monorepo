@@ -58,15 +58,17 @@ export default function AdminOnboardingPage() {
 
   const getStatusBadge = (percent: number, isComplete: boolean) => {
     if (isComplete) {
-      return <Badge className="bg-green-600">✅ Complete</Badge>
+      return <Badge className="bg-green-600">✅ Verified & Complete</Badge>
+    } else if (percent === 100) {
+      return <Badge className="bg-blue-600">📋 Ready for Verification</Badge>
     } else if (percent >= 80) {
-      return <Badge className="bg-blue-600">🔵 Pending Verification</Badge>
+      return <Badge className="bg-blue-500">🔵 Almost Complete</Badge>
     } else if (percent >= 60) {
-      return <Badge className="bg-green-500">🟢 Almost Done</Badge>
+      return <Badge className="bg-green-500">🟢 In Progress</Badge>
     } else if (percent >= 40) {
       return <Badge className="bg-yellow-500">🟡 Halfway</Badge>
     } else if (percent >= 20) {
-      return <Badge className="bg-orange-500">🟠 In Progress</Badge>
+      return <Badge className="bg-orange-500">🟠 Started</Badge>
     } else {
       return <Badge className="bg-red-500">🔴 Just Started</Badge>
     }

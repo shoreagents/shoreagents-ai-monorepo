@@ -27,6 +27,15 @@ export async function PUT(
       timeTracked,
     } = body
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Verify task belongs to user
     const existingTask = await prisma.task.findUnique({
       where: { id },
@@ -36,7 +45,7 @@ export async function PUT(
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    if (existingTask.userId !== session.user.id) {
+    if (existingTask.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -81,6 +90,15 @@ export async function DELETE(
 
     const { id } = await params
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Verify task belongs to user
     const existingTask = await prisma.task.findUnique({
       where: { id },
@@ -90,7 +108,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    if (existingTask.userId !== session.user.id) {
+    if (existingTask.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

@@ -2,29 +2,25 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 /**
- * Get current user if they are a staff member (STAFF or TEAM_LEAD)
+ * Get current StaffUser from session
  */
 export async function getStaffUser() {
   const session = await auth()
   
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return null
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: { profile: true }
+  const staffUser = await prisma.staffUser.findUnique({
+    where: { authUserId: session.user.id },
+    include: { profile: true, company: true }
   })
 
-  if (!user || (user.role !== "STAFF" && user.role !== "TEAM_LEAD")) {
-    return null
-  }
-
-  return user
+  return staffUser
 }
 
 /**
- * Get current user if they are admin/management (ADMIN or MANAGER)
+ * Get current AdminUser from session
  */
 export async function getAdminUser() {
   const session = await auth()
@@ -33,15 +29,11 @@ export async function getAdminUser() {
     return null
   }
 
-  const user = await prisma.user.findUnique({
+  const adminUser = await prisma.adminUser.findUnique({
     where: { email: session.user.email }
   })
 
-  if (!user || (user.role !== "ADMIN" && user.role !== "MANAGER")) {
-    return null
-  }
-
-  return user
+  return adminUser
 }
 
 /**
@@ -56,40 +48,9 @@ export async function getClientUser() {
 
   const clientUser = await prisma.clientUser.findUnique({
     where: { email: session.user.email },
-    include: { client: true }
+    include: { company: true }
   })
 
   return clientUser
-}
-
-/**
- * Get the client that a staff member is assigned to
- * Returns null if not assigned to any client
- */
-export async function getAssignedClient(userId: string) {
-  const assignment = await prisma.staffAssignment.findFirst({
-    where: {
-      userId,
-      isActive: true
-    },
-    include: { client: true }
-  })
-
-  return assignment?.client || null
-}
-
-/**
- * Get all staff IDs assigned to a client
- */
-export async function getClientStaffIds(clientId: string) {
-  const assignments = await prisma.staffAssignment.findMany({
-    where: {
-      clientId,
-      isActive: true
-    },
-    select: { userId: true }
-  })
-
-  return assignments.map(a => a.userId)
 }
 

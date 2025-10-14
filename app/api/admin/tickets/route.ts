@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by specific staff
     if (staffId) {
-      where.userId = staffId
+      where.staffUserId = staffId
     }
 
     // Filter by category
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const tickets = await prisma.ticket.findMany({
       where,
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
-            user: {
+            staffUser: {
               select: {
                 id: true,
                 name: true,
