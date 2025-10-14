@@ -65,6 +65,7 @@ model StaffUser {
   kudosGiven          Kudos[]              @relation("KudosGiven")
   kudosReceived       Kudos[]              @relation("KudosReceived")
   staffAssignments    StaffAssignment[]
+  onboarding          StaffOnboarding?
 
   @@map("staff_users")
 }
@@ -585,4 +586,87 @@ enum ClientRole {
   ADMIN
   MANAGER
   VIEWER
+}
+
+enum OnboardingStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// ============================================
+// STAFF ONBOARDING (Document Management)
+// ============================================
+model StaffOnboarding {
+  id                    String           @id @default(uuid())
+  staffUserId           String           @unique
+  
+  // Government IDs & Numbers
+  sss                   String?
+  tin                   String?
+  philhealthNo          String?
+  pagibigNo             String?
+  
+  // Personal Info
+  firstName             String?
+  middleName            String?
+  lastName              String?
+  gender                String?
+  civilStatus           String?
+  dateOfBirth           DateTime?
+  contactNo             String?
+  email                 String?
+  
+  // Emergency Contact
+  emergencyContactName  String?
+  emergencyContactNo    String?
+  emergencyRelationship String?
+  
+  // Document Upload URLs (Supabase Storage)
+  validIdUrl            String?
+  birthCertUrl          String?
+  nbiClearanceUrl       String?
+  birForm2316Url        String?
+  idPhotoUrl            String?
+  signatureUrl          String?
+  policeClearanceUrl    String?
+  certificateEmpUrl     String?
+  sssDocUrl             String?
+  tinDocUrl             String?
+  philhealthDocUrl      String?
+  pagibigDocUrl         String?
+  
+  // Verification Status (per section)
+  personalInfoStatus    OnboardingStatus @default(PENDING)
+  govIdStatus           OnboardingStatus @default(PENDING)
+  documentsStatus       OnboardingStatus @default(PENDING)
+  signatureStatus       OnboardingStatus @default(PENDING)
+  emergencyContactStatus OnboardingStatus @default(PENDING)
+  
+  // Admin Feedback
+  personalInfoFeedback  String?
+  govIdFeedback         String?
+  documentsFeedback     String?
+  signatureFeedback     String?
+  emergencyContactFeedback String?
+  
+  // Verification timestamps
+  personalInfoVerifiedAt DateTime?
+  govIdVerifiedAt        DateTime?
+  documentsVerifiedAt    DateTime?
+  signatureVerifiedAt    DateTime?
+  emergencyContactVerifiedAt DateTime?
+  verifiedBy             String?
+  
+  // Overall completion
+  isComplete            Boolean  @default(false)
+  completionPercent     Int      @default(0)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  staffUser             StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@map("staff_onboarding")
 }
