@@ -10,13 +10,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user with profile and work schedule
+    // Get staff user with profile, work schedule, and company
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
       include: {
         profile: {
           include: {
             workSchedule: true
+          }
+        },
+        company: {
+          include: {
+            accountManager: true
           }
         }
       }
@@ -35,14 +40,20 @@ export async function GET(req: NextRequest) {
         avatar: staffUser.avatar,
         coverPhoto: staffUser.coverPhoto,
       },
+      company: staffUser.company ? {
+        name: staffUser.company.companyName,
+        accountManager: staffUser.company.accountManager?.name || null,
+      } : null,
       profile: staffUser.profile ? {
         phone: staffUser.profile.phone,
+        location: staffUser.profile.location,
+        gender: staffUser.profile.gender,
+        civilStatus: staffUser.profile.civilStatus,
+        dateOfBirth: staffUser.profile.dateOfBirth,
         employmentStatus: staffUser.profile.employmentStatus,
         startDate: staffUser.profile.startDate,
         daysEmployed: staffUser.profile.daysEmployed,
         currentRole: staffUser.profile.currentRole,
-        client: staffUser.profile.client,
-        accountManager: staffUser.profile.accountManager,
         salary: Number(staffUser.profile.salary),
         lastPayIncrease: staffUser.profile.lastPayIncrease,
         lastIncreaseAmount: staffUser.profile.lastIncreaseAmount ? Number(staffUser.profile.lastIncreaseAmount) : null,

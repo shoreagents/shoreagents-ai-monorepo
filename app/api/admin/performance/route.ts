@@ -21,19 +21,16 @@ export async function GET(request: NextRequest) {
 
     // Filter by specific staff
     if (staffId) {
-      where.userId = staffId
+      where.staffUserId = staffId
     }
 
-    // Filter by client (via staff assignments)
+    // Filter by client/company
     if (clientId) {
-      const assignments = await prisma.staffAssignment.findMany({
-        where: {
-          clientId,
-          isActive: true
-        },
-        select: { userId: true }
+      const staffUsers = await prisma.staffUser.findMany({
+        where: { companyId: clientId },
+        select: { id: true }
       })
-      where.userId = { in: assignments.map(a => a.userId) }
+      where.staffUserId = { in: staffUsers.map(s => s.id) }
     }
 
     // Filter by date range
@@ -57,7 +54,7 @@ export async function GET(request: NextRequest) {
     const metrics = await prisma.performanceMetric.findMany({
       where,
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,

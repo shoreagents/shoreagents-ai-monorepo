@@ -21,16 +21,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get all staff members assigned to this client
-    const staffAssignments = await prisma.staffAssignment.findMany({
-      where: {
-        companyId: clientUser.company.id,
-        isActive: true
-      },
-      select: { userId: true }
+    // Get all staff members assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
     })
     
-    const staffIds = staffAssignments.map(s => s.userId)
+    const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ tasks: [] })
@@ -39,12 +36,12 @@ export async function GET(req: NextRequest) {
     // Fetch all tasks for these staff members
     const tasks = await prisma.task.findMany({
       where: {
-        userId: {
+        staffUserId: {
           in: staffIds
         }
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,

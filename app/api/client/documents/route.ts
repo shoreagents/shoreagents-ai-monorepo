@@ -22,18 +22,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get all assigned staff for this client
-    const assignments = await prisma.staffAssignment.findMany({
-      where: {
-        companyId: clientUser.company.id,
-        isActive: true,
-      },
-      include: {
-        staffUser: true,
-      },
+    // Get all staff assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
     })
 
-    const staffUserIds = assignments.map((a) => a.staffUserId)
+    const staffUserIds = staffUsers.map((s) => s.id)
 
     // Fetch documents:
     // 1. Client's own uploads (source=CLIENT, staffUserId in staff IDs is used as placeholder)
@@ -79,13 +74,13 @@ export async function GET(request: NextRequest) {
       category: doc.category.toLowerCase().replace("_", "-"),
       description: doc.content?.substring(0, 150) || "No description available",
       uploadedBy: doc.uploadedBy,
-      uploadedByUser: doc.user,
+      uploadedByUser: doc.staffUser,
       size: doc.size,
       fileUrl: doc.fileUrl,
       lastUpdated: doc.updatedAt.toISOString().split("T")[0],
       createdAt: doc.createdAt.toISOString(),
       views: 0, // TODO: Add view tracking
-      isStaffUpload: staffUserIds.includes(doc.userId),
+      isStaffUpload: staffUserIds.includes(doc.staffUserId),
     }))
 
     // Get category counts

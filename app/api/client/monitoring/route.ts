@@ -21,16 +21,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get all assigned staff for this client
-    const staffAssignments = await prisma.staffAssignment.findMany({
-      where: {
-        companyId: clientUser.company.id,
-        isActive: true
-      },
-      select: { staffUserId: true }
+    // Get all staff assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
     })
     
-    const staffIds = staffAssignments.map(s => s.staffUserId)
+    const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ 
@@ -50,7 +47,7 @@ export async function GET(req: NextRequest) {
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     // Fetch all staff with their user info and today's performance metrics
-    const staffMembers = await prisma.user.findMany({
+    const staffMembers = await prisma.staffUser.findMany({
       where: {
         id: { in: staffIds }
       },
@@ -62,8 +59,12 @@ export async function GET(req: NextRequest) {
         profile: {
           select: {
             currentRole: true,
-            client: true,
             location: true
+          }
+        },
+        company: {
+          select: {
+            companyName: true
           }
         }
       }
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
     // Fetch today's performance metrics for all staff
     const performanceMetrics = await prisma.performanceMetric.findMany({
       where: {
-        userId: { in: staffIds },
+        staffUserId: { in: staffIds },
         date: {
           gte: today,
           lt: tomorrow
@@ -80,10 +81,10 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Create a map of userId -> performance metrics
+    // Create a map of staffUserId -> performance metrics
     const metricsMap = new Map()
     performanceMetrics.forEach(metric => {
-      metricsMap.set(metric.userId, metric)
+      metricsMap.set(metric.staffUserId, metric)
     })
 
     // Calculate productivity score
@@ -110,7 +111,7 @@ export async function GET(req: NextRequest) {
         email: staff.email,
         avatar: staff.avatar,
         position: staff.profile?.currentRole || 'Staff Member',
-        department: staff.profile?.client || staff.profile?.location || 'General',
+        department: staff.company?.companyName || staff.profile?.location || 'General',
         metrics: metrics ? {
           mouseMovements: metrics.mouseMovements,
           mouseClicks: metrics.mouseClicks,

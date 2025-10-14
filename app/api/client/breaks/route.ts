@@ -26,16 +26,13 @@ export async function GET(req: NextRequest) {
     const dateParam = searchParams.get('date')
     const staffId = searchParams.get('staffId')
 
-    // Get assigned staff IDs
-    const staffAssignments = await prisma.staffAssignment.findMany({
-      where: {
-        companyId: clientUser.company.id,
-        isActive: true
-      },
-      select: { staffUserId: true }
+    // Get assigned staff IDs for this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
     })
     
-    const staffIds = staffAssignments.map(s => s.staffUserId)
+    const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ breaks: [] })
@@ -50,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     // Build where clause
     const whereClause: any = {
-      userId: { in: staffIds },
+      staffUserId: { in: staffIds },
       actualStart: {
         gte: startOfDay,
         lte: endOfDay,
@@ -59,13 +56,13 @@ export async function GET(req: NextRequest) {
 
     // Filter by specific staff if requested
     if (staffId && staffIds.includes(staffId)) {
-      whereClause.userId = staffId
+      whereClause.staffUserId = staffId
     }
 
     const breaks = await prisma.break.findMany({
       where: whereClause,
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
