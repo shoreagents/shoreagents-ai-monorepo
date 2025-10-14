@@ -96,6 +96,18 @@ export default function StaffLoginPage() {
           </Button>
         </form>
 
+        <div className="mt-6 pt-6 border-t border-slate-700 text-center">
+          <p className="text-sm text-slate-400">
+            Don't have an account?{" "}
+            <a
+              href="/login/staff/signup"
+              className="text-purple-400 hover:text-purple-300 font-semibold"
+            >
+              Sign Up
+            </a>
+          </p>
+        </div>
+
         <div className="mt-6 pt-6 border-t border-slate-700">
           <p className="text-sm text-slate-400 text-center mb-4">Other Portals:</p>
           <div className="space-y-2">
