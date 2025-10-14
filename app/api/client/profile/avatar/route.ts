@@ -45,11 +45,19 @@ export async function POST(req: NextRequest) {
     // Upload to Supabase Storage - client_avatar folder
     const filePath = `client_avatar/${clientUser.authUserId}/avatar.jpg`
     
+    // Delete old file if it exists (ensures clean replacement)
+    if (clientUser.avatar) {
+      await supabaseAdmin.storage
+        .from('client')
+        .remove([filePath])
+    }
+
+    // Upload new file
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('client')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: true, // Replace if exists
+        upsert: true,
       })
 
     if (uploadError) {
@@ -57,20 +65,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
     }
 
-    // Get public URL
+    // Get public URL with cache-busting timestamp
+    const timestamp = Date.now()
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('client')
       .getPublicUrl(filePath)
+    
+    const urlWithTimestamp = `${publicUrl}?t=${timestamp}`
 
     // Update database with avatar URL
     await prisma.clientUser.update({
       where: { id: clientUser.id },
-      data: { avatar: publicUrl }
+      data: { avatar: urlWithTimestamp }
     })
 
     return NextResponse.json({ 
       success: true, 
-      url: publicUrl 
+      url: urlWithTimestamp 
     })
 
   } catch (error) {

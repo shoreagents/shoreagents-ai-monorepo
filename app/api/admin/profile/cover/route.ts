@@ -33,23 +33,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File must be an image" }, { status: 400 })
     }
 
-    // Validate file size (max 10MB for cover photos)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "File must be less than 10MB" }, { status: 400 })
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "File must be less than 5MB" }, { status: 400 })
     }
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Supabase Storage
-    const filePath = `${managementUser.authUserId}/cover.jpg`
+    // Upload to Supabase Storage - use dedicated management_cover folder
+    const filePath = `management_cover/${managementUser.authUserId}.jpg`
     
+    // Delete old file if it exists (ensures clean replacement)
+    if (managementUser.coverPhoto) {
+      await supabaseAdmin.storage
+        .from('management')
+        .remove([filePath])
+    }
+
+    // Upload new file
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('management')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: true, // Replace if exists
+        upsert: true,
       })
 
     if (uploadError) {
@@ -57,20 +65,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
     }
 
-    // Get public URL
+    // Get public URL with cache-busting timestamp
+    const timestamp = Date.now()
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('management')
       .getPublicUrl(filePath)
+    
+    const urlWithTimestamp = `${publicUrl}?t=${timestamp}`
 
     // Update database with cover photo URL
     await prisma.managementUser.update({
       where: { id: managementUser.id },
-      data: { coverPhoto: publicUrl }
+      data: { coverPhoto: urlWithTimestamp }
     })
 
     return NextResponse.json({ 
       success: true, 
-      url: publicUrl 
+      url: urlWithTimestamp 
     })
 
   } catch (error) {
