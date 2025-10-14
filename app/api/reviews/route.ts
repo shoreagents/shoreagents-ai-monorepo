@@ -11,9 +11,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const reviews = await prisma.review.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         status: "FINALIZED", // Staff can only see approved/finalized reviews
       },
       orderBy: { submittedDate: "desc" },

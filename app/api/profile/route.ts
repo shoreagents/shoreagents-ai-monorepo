@@ -2,105 +2,41 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/profile - Get current user's profile
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth()
-
-    if (!session?.user?.id) {
+    
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        profile: {
-          include: {
-            workSchedule: {
-              orderBy: { dayOfWeek: "asc" },
-            },
-          },
-        },
-      },
+    // Get staff user by authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
     })
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        avatar: user.avatar,
-        coverPhoto: user.coverPhoto,
-      },
-      profile: user.profile,
-      workSchedules: user.profile?.workSchedule || [],
+        id: staffUser.id,
+        name: staffUser.name,
+        email: staffUser.email,
+        role: staffUser.role,
+        avatar: staffUser.avatar,
+        coverPhoto: staffUser.coverPhoto,
+        companyId: staffUser.companyId,
+        createdAt: staffUser.createdAt,
+      }
     })
+
   } catch (error) {
-    console.error("Error fetching profile:", error)
+    console.error("Profile fetch error:", error)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch profile" },
       { status: 500 }
     )
   }
 }
-
-// PUT /api/profile - Update current user's profile
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth()
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const {
-      name,
-      phone,
-      profileImage,
-      mood,
-      currentTask,
-      // Add other updateable fields as needed
-    } = body
-
-    // Update user name if provided
-    if (name) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { name },
-      })
-    }
-
-    // Update or create profile
-    const profile = await prisma.profile.upsert({
-      where: { userId: session.user.id },
-      update: {
-        ...(phone && { phone }),
-        ...(profileImage && { profileImage }),
-        ...(mood && { mood }),
-        ...(currentTask && { currentTask }),
-      },
-      create: {
-        userId: session.user.id,
-        ...(phone && { phone }),
-        ...(profileImage && { profileImage }),
-        ...(mood && { mood }),
-        ...(currentTask && { currentTask }),
-      },
-    })
-
-    return NextResponse.json({ success: true, profile })
-  } catch (error) {
-    console.error("Error updating profile:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
-  }
-}
-

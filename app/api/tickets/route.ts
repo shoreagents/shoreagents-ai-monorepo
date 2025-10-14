@@ -14,16 +14,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const tickets = await prisma.ticket.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         ...(status && { status }),
       },
       include: {
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
-            user: {
+            staffUser: {
               select: {
                 id: true,
                 name: true,
@@ -66,13 +75,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Generate unique ticket ID
     const ticketCount = await prisma.ticket.count()
     const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
 
     const ticket = await prisma.ticket.create({
       data: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         ticketId,
         title,
         description,
@@ -84,7 +102,7 @@ export async function POST(request: NextRequest) {
       include: {
         responses: {
           include: {
-            user: {
+            staffUser: {
               select: {
                 id: true,
                 name: true,

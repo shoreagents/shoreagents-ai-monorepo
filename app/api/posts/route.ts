@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const posts = await prisma.activityPost.findMany({
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         },
         reactions: {
           include: {
-            user: {
+            staffUser: {
               select: {
                 id: true,
                 name: true,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         },
         comments: {
           include: {
-            user: {
+            staffUser: {
               select: {
                 id: true,
                 name: true,
@@ -78,16 +78,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const post = await prisma.activityPost.create({
       data: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         content,
         type,
         achievement: achievement || null,
         images: images || [],
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,

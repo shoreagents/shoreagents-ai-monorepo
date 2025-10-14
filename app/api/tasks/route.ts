@@ -14,9 +14,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const tasks = await prisma.task.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         ...(status && { status }),
       },
       orderBy: { createdAt: "desc" },
@@ -56,9 +65,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const task = await prisma.task.create({
       data: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         title,
         description,
         status: status || "TODO",
