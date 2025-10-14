@@ -178,18 +178,14 @@ async function updateCompletionPercent(onboardingId: string) {
 
   const completionPercent = Math.min(totalProgress, 100)
   
-  // Staff completes at 100% (all submitted)
-  // Admin verification is tracked by individual section status
-  const submittedOrApprovedCount = sections.filter(
-    status => status === "SUBMITTED" || status === "APPROVED"
-  ).length
-  const isComplete = submittedOrApprovedCount === 5
+  // DON'T set isComplete here - only admin can complete via complete route!
+  // 100% just means staff has submitted everything, not that it's verified
 
   await prisma.staffOnboarding.update({
     where: { id: onboardingId },
     data: { 
-      completionPercent,
-      isComplete
+      completionPercent
+      // isComplete is NOT updated here - only in admin complete route!
     }
   })
 }
