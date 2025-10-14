@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   LayoutDashboard,
   Users,
@@ -19,14 +21,36 @@ import {
   ClipboardList,
   Clock,
   LogOut,
+  ChevronDown,
 } from "lucide-react"
 
-export function ClientSidebar() {
+type ClientUserWithCompany = {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  coverPhoto: string | null
+  role: string
+  company: {
+    id: string
+    companyName: string
+    organizationId: string
+  }
+}
+
+export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
   const pathname = usePathname()
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login', redirect: true })
+    await signOut({ callbackUrl: '/login/client', redirect: true })
   }
+
+  const initials = user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 
   const navItems = [
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
@@ -46,13 +70,34 @@ export function ClientSidebar() {
   ]
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen fixed left-0 top-0 z-50">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">TechCorp Inc.</h2>
+    <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-50 flex flex-col">
+      {/* Company Header */}
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        <h2 className="text-xl font-semibold text-gray-900">{user.company.companyName}</h2>
         <p className="text-sm text-gray-600 mt-1">Client Portal</p>
       </div>
 
-      <nav className="p-4">
+      {/* User Profile Section */}
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
+        <Link href="/client/profile">
+          <Button variant="ghost" className="w-full justify-start gap-3 h-auto py-3">
+            <Avatar className="size-10">
+              <AvatarImage src={user.avatar || undefined} />
+              <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium text-gray-900">{user.name}</p>
+              <p className="text-xs text-gray-500">{user.role}</p>
+            </div>
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* Navigation - Scrollable */}
+      <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -73,8 +118,8 @@ export function ClientSidebar() {
         </ul>
       </nav>
 
-      {/* Bottom Actions */}
-      <div className="absolute bottom-4 left-4 right-4 space-y-2">
+      {/* Bottom Actions - Always visible */}
+      <div className="p-4 border-t border-gray-200 space-y-2 flex-shrink-0 bg-white">
         <Link
           href="/"
           className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

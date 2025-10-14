@@ -1,252 +1,123 @@
-// Admin API - Reviews Management
-// GET: List all reviews + calculate overdue reviews from assignments
-
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { getAdminUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
-import { getNextReviewDue, formatReviewType } from "@/lib/review-schedule"
 
-// GET /api/admin/reviews - List all reviews with overdue calculation
+// GET /api/admin/reviews - Get ALL reviews (admin view)
 export async function GET(request: NextRequest) {
   try {
-    // Authentication check - ADMIN only
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      )
+    const user = await getAdminUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get query parameters for filtering
-    const searchParams = request.nextUrl.searchParams
+    const { searchParams } = new URL(request.url)
+    const staffId = searchParams.get("staffId")
     const clientId = searchParams.get("clientId")
-    const userId = searchParams.get("userId")
-    const type = searchParams.get("type") // MONTH_1, MONTH_3, etc.
-    const status = searchParams.get("status") // PENDING, ACKNOWLEDGED, ARCHIVED
-    const filter = searchParams.get("filter") // "overdue", "due_this_month", "completed", "all"
+    const status = searchParams.get("status")
 
-    // 1. Fetch submitted reviews from database
-    const reviewWhere: any = {}
-    
-    if (userId) {
-      reviewWhere.userId = userId
+    const where: any = {}
+
+    // Filter by specific staff
+    if (staffId) {
+      where.userId = staffId
     }
-    
-    if (type) {
-      reviewWhere.type = type
+
+    // Filter by client (via staff assignments)
+    if (clientId) {
+      const assignments = await prisma.staffAssignment.findMany({
+        where: {
+          clientId,
+          isActive: true
+        },
+        select: { userId: true }
+      })
+      where.userId = { in: assignments.map(a => a.userId) }
     }
-    
+
+    // Filter by status
     if (status) {
-      reviewWhere.status = status
+      where.status = status
     }
 
-    const submittedReviews = await prisma.review.findMany({
-      where: reviewWhere,
+    const reviews = await prisma.review.findMany({
+      where,
       include: {
         user: {
-          include: {
-            profile: true,
-            staffAssignments: {
-              where: { isActive: true },
-              include: {
-                client: true,
-                manager: true,
-              }
-            }
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
           }
         }
       },
-      orderBy: { submittedDate: "desc" }
+      orderBy: { submittedDate: "desc" },
     })
 
-    // 2. Fetch all active assignments to calculate overdue reviews
-    const assignmentWhere: any = {
-      isActive: true,
-    }
-    
-    if (clientId) {
-      assignmentWhere.clientId = clientId
-    }
-    
-    if (userId) {
-      assignmentWhere.userId = userId
-    }
-
-    const activeAssignments = await prisma.staffAssignment.findMany({
-      where: assignmentWhere,
-      include: {
-        user: {
-          include: {
-            profile: true,
-            reviewsReceived: {
-              orderBy: { submittedDate: "desc" }
-            }
-          }
-        },
-        client: true,
-        manager: true,
-      }
-    })
-
-    // 3. Calculate which reviews are due/overdue for each assignment
-    const calculatedReviews: any[] = []
-    
-    for (const assignment of activeAssignments) {
-      const nextReview = getNextReviewDue(
-        assignment.startDate,
-        assignment.user.reviewsReceived
-      )
-
-      if (nextReview) {
-        // Check if this review has been submitted
-        const existingReview = assignment.user.reviewsReceived.find(
-          r => r.type === nextReview.type && r.status !== "ARCHIVED"
-        )
-
-        if (!existingReview) {
-          // This review is due but not submitted
-          calculatedReviews.push({
-            // No id - this is a "virtual" review
-            type: nextReview.type,
-            userId: assignment.userId,
-            clientId: assignment.clientId,
-            assignmentId: assignment.id,
-            dueDate: nextReview.dueDate,
-            daysUntilDue: nextReview.daysUntilDue,
-            isOverdue: nextReview.isOverdue,
-            status: nextReview.status,
-            staff: {
-              id: assignment.user.id,
-              name: assignment.user.name,
-              email: assignment.user.email,
-              avatar: assignment.user.avatar,
-              profile: assignment.user.profile ? {
-                currentRole: assignment.user.profile.currentRole,
-                employmentStatus: assignment.user.profile.employmentStatus,
-              } : null,
-            },
-            client: {
-              id: assignment.client.id,
-              companyName: assignment.client.companyName,
-              industry: assignment.client.industry,
-            },
-            manager: assignment.manager ? {
-              id: assignment.manager.id,
-              name: assignment.manager.name,
-              email: assignment.manager.email,
-            } : null,
-            startDate: assignment.startDate,
-            isCalculated: true, // Flag to indicate this is calculated, not submitted
-          })
-        }
-      }
-    }
-
-    // 4. Format submitted reviews
-    const formattedSubmittedReviews = submittedReviews.map(review => {
-      const assignment = review.user.staffAssignments[0] // Get primary assignment
-      
-      return {
-        id: review.id,
-        type: review.type,
-        userId: review.userId,
-        clientId: assignment?.clientId,
-        assignmentId: assignment?.id,
-        dueDate: null, // Already submitted
-        daysUntilDue: null,
-        isOverdue: false,
-        status: review.status === "PENDING" ? "PENDING" : "COMPLETED",
-        submittedDate: review.submittedDate,
-        overallScore: review.overallScore,
-        reviewer: review.reviewer,
-        reviewerTitle: review.reviewerTitle,
-        acknowledgedDate: review.acknowledgedDate,
-        staff: {
-          id: review.user.id,
-          name: review.user.name,
-          email: review.user.email,
-          avatar: review.user.avatar,
-          profile: review.user.profile ? {
-            currentRole: review.user.profile.currentRole,
-            employmentStatus: review.user.profile.employmentStatus,
-          } : null,
-        },
-        client: assignment ? {
-          id: assignment.client.id,
-          companyName: assignment.client.companyName,
-          industry: assignment.client.industry,
-        } : null,
-        manager: assignment?.manager ? {
-          id: assignment.manager.id,
-          name: assignment.manager.name,
-          email: assignment.manager.email,
-        } : null,
-        isCalculated: false,
-      }
-    })
-
-    // 5. Combine and filter based on filter parameter
-    let allReviews = [...calculatedReviews, ...formattedSubmittedReviews]
-
-    if (filter === "overdue") {
-      allReviews = allReviews.filter(r => r.isOverdue && r.isCalculated)
-    } else if (filter === "due_this_month") {
-      const now = new Date()
-      const thirtyDaysFromNow = new Date()
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-      
-      allReviews = allReviews.filter(r => {
-        if (!r.dueDate) return false
-        const dueDate = new Date(r.dueDate)
-        return dueDate >= now && dueDate <= thirtyDaysFromNow
-      })
-    } else if (filter === "completed") {
-      allReviews = allReviews.filter(r => !r.isCalculated && r.status === "COMPLETED")
-    }
-    // "all" or no filter - return everything
-
-    // 6. Sort: overdue first, then by due date
-    allReviews.sort((a, b) => {
-      if (a.isOverdue && !b.isOverdue) return -1
-      if (!a.isOverdue && b.isOverdue) return 1
-      if (a.dueDate && b.dueDate) {
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      }
-      if (a.submittedDate && b.submittedDate) {
-        return new Date(b.submittedDate).getTime() - new Date(a.submittedDate).getTime()
-      }
-      return 0
-    })
-
-    // 7. Calculate statistics
-    const stats = {
-      total: allReviews.length,
-      overdue: allReviews.filter(r => r.isOverdue && r.isCalculated).length,
-      dueThisMonth: allReviews.filter(r => {
-        if (!r.dueDate) return false
-        const dueDate = new Date(r.dueDate)
-        const now = new Date()
-        const thirtyDays = new Date()
-        thirtyDays.setDate(thirtyDays.getDate() + 30)
-        return dueDate >= now && dueDate <= thirtyDays
-      }).length,
-      completed: allReviews.filter(r => !r.isCalculated).length,
-      pending: allReviews.filter(r => r.status === "PENDING").length,
-    }
-
-    return NextResponse.json({
-      success: true,
-      stats,
-      reviews: allReviews
-    })
-
+    return NextResponse.json({ reviews, count: reviews.length })
   } catch (error) {
-    console.error("Error fetching reviews:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch reviews" },
-      { status: 500 }
-    )
+    console.error("Error fetching admin reviews:", error)
+    return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 })
   }
 }
 
+// PUT /api/admin/reviews - Approve/Finalize a review
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await getAdminUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { reviewId, action } = body
+
+    if (!reviewId || !action) {
+      return NextResponse.json({ error: "Missing reviewId or action" }, { status: 400 })
+    }
+
+    // Get the review
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId }
+    })
+
+    if (!review) {
+      return NextResponse.json({ error: "Review not found" }, { status: 404 })
+    }
+
+    // Update status based on action
+    let newStatus: "PENDING_APPROVAL" | "APPROVED" | "FINALIZED" | "ARCHIVED"
+
+    if (action === "approve") {
+      newStatus = "APPROVED"
+    } else if (action === "finalize") {
+      newStatus = "FINALIZED" // This makes it visible to staff
+    } else if (action === "archive") {
+      newStatus = "ARCHIVED"
+    } else {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    }
+
+    const updatedReview = await prisma.review.update({
+      where: { id: reviewId },
+      data: { status: newStatus },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json({ success: true, review: updatedReview })
+  } catch (error) {
+    console.error("Error updating review:", error)
+    return NextResponse.json({ error: "Failed to update review" }, { status: 500 })
+  }
+}

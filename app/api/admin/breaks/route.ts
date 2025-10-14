@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getAdminUser } from "@/lib/auth-helpers"
+import { prisma } from "@/lib/prisma"
+
+// GET /api/admin/breaks - Get ALL breaks (admin view)
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getAdminUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const staffId = searchParams.get("staffId")
+    const clientId = searchParams.get("clientId")
+    const date = searchParams.get("date")
+
+    const where: any = {}
+
+    // Filter by specific staff
+    if (staffId) {
+      where.userId = staffId
+    }
+
+    // Filter by client (via staff assignments)
+    if (clientId) {
+      const assignments = await prisma.staffAssignment.findMany({
+        where: {
+          clientId,
+          isActive: true
+        },
+        select: { userId: true }
+      })
+      where.userId = { in: assignments.map(a => a.userId) }
+    }
+
+    // Filter by date
+    if (date) {
+      const targetDate = new Date(date)
+      const startOfDay = new Date(targetDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(targetDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      where.actualStart = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    }
+
+    const breaks = await prisma.break.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        }
+      },
+      orderBy: { actualStart: "desc" },
+    })
+
+    return NextResponse.json({ breaks, count: breaks.length })
+  } catch (error) {
+    console.error("Error fetching admin breaks:", error)
+    return NextResponse.json({ error: "Failed to fetch breaks" }, { status: 500 })
+  }
+}
+

@@ -11,40 +11,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get user from email
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    // Try to get client via ClientUser table, otherwise show all tasks (for testing)
+    // Get ClientUser
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
-      include: { client: true }
+      include: { company: true }
     })
 
-    let staffIds: string[] = []
-
-    if (clientUser) {
-      // Get all staff members assigned to this client
-      const staffAssignments = await prisma.staffAssignment.findMany({
-        where: {
-          clientId: clientUser.client.id,
-          isActive: true
-        },
-        select: { userId: true }
-      })
-      staffIds = staffAssignments.map(s => s.userId)
-    } else {
-      // For testing with regular user account, show all users
-      const allUsers = await prisma.user.findMany({
-        select: { id: true }
-      })
-      staffIds = allUsers.map(u => u.id)
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
+
+    // Get all staff members assigned to this client
+    const staffAssignments = await prisma.staffAssignment.findMany({
+      where: {
+        companyId: clientUser.company.id,
+        isActive: true
+      },
+      select: { userId: true }
+    })
+    
+    const staffIds = staffAssignments.map(s => s.userId)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ tasks: [] })
@@ -93,13 +79,33 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
+
     // Check if this is bulk task creation
     if (body.tasks && Array.isArray(body.tasks)) {
       // Bulk create
       const { userId, tasks } = body
 
-      // For testing, allow any user to create tasks
-      // In production, verify staff assignment to client
+      // Verify staff is assigned to this client
+      const assignment = await prisma.staffAssignment.findFirst({
+        where: {
+          userId,
+          companyId: clientUser.company.id,
+          isActive: true
+        }
+      })
+
+      if (!assignment) {
+        return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
+      }
 
       // Create all tasks
       const createdTasks = await Promise.all(
@@ -138,8 +144,18 @@ export async function POST(req: NextRequest) {
       // Single task creation
       const { userId, title, description, priority, deadline } = body
 
-      // For testing, allow any user to create tasks
-      // In production, verify staff assignment to client
+      // Verify staff is assigned to this client
+      const assignment = await prisma.staffAssignment.findFirst({
+        where: {
+          userId,
+          companyId: clientUser.company.id,
+          isActive: true
+        }
+      })
+
+      if (!assignment) {
+        return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
+      }
 
       const task = await prisma.task.create({
         data: {

@@ -238,3 +238,44 @@ export default async function DocumentsPage() {
     </div>
   )
 }
+
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-5 gap-4">
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Total Documents</div>
+          <div className="text-2xl font-semibold text-foreground mt-1">{documents.length}</div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Contracts</div>
+          <div className="text-2xl font-semibold text-purple-500 mt-1">
+            {documents.filter(d => d.type === 'CONTRACT').length}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Invoices</div>
+          <div className="text-2xl font-semibold text-blue-500 mt-1">
+            {documents.filter(d => d.type === 'INVOICE').length}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Reports</div>
+          <div className="text-2xl font-semibold text-emerald-500 mt-1">
+            {documents.filter(d => d.type === 'REPORT').length}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Total Size</div>
+          <div className="text-2xl font-semibold text-orange-500 mt-1">
+            {formatFileSize(documents.reduce((acc, d) => acc + (d.fileSize || 0), 0))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}

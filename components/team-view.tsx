@@ -23,6 +23,7 @@ interface TeamMember {
 
 export default function TeamView() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [clientName, setClientName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,7 +36,8 @@ export default function TeamView() {
       const response = await fetch("/api/team")
       if (!response.ok) throw new Error("Failed to fetch team members")
       const data = await response.json()
-      setTeamMembers(data.members)
+      setTeamMembers(data.members || [])
+      setClientName(data.clientName || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load team")
     } finally {
@@ -93,9 +95,13 @@ export default function TeamView() {
             <div>
               <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
                 <Users className="h-8 w-8 text-blue-400" />
-                Team Overview
+                {clientName ? `${clientName} Team` : "Team Overview"}
               </h1>
-              <p className="mt-1 text-slate-300">Your team's activity and performance</p>
+              <p className="mt-1 text-slate-300">
+                {clientName 
+                  ? `Your teammates working on ${clientName}` 
+                  : "Your team's activity and performance"}
+              </p>
             </div>
           </div>
 

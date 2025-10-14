@@ -225,3 +225,45 @@ export default async function TimeTrackingPage() {
     </div>
   )
 }
+
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-5 gap-4">
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Total Entries</div>
+          <div className="text-2xl font-semibold text-foreground mt-1">{entries.length}</div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Active Now</div>
+          <div className="text-2xl font-semibold text-emerald-500 mt-1">
+            {entries.filter(e => !e.clockOut).length}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Total Hours</div>
+          <div className="text-2xl font-semibold text-blue-500 mt-1">
+            {formatDuration(entries.reduce((acc, e) => acc + calculateDuration(e.clockIn, e.clockOut), 0))}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Avg Per Day</div>
+          <div className="text-2xl font-semibold text-purple-500 mt-1">
+            {entries.length > 0 ? formatDuration(Math.floor(entries.reduce((acc, e) => acc + calculateDuration(e.clockIn, e.clockOut), 0) / entries.length)) : "0h 0m"}
+          </div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Break Time</div>
+          <div className="text-2xl font-semibold text-orange-500 mt-1">
+            {entries.reduce((acc, e) => acc + (e.breakDuration || 0), 0)}m
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}

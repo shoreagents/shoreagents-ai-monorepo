@@ -14,28 +14,23 @@ export async function GET(req: NextRequest) {
     // Get client user and their organization
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
-      include: { client: true }
+      include: { company: true }
     })
 
-    let staffIds: string[] = []
-
-    if (clientUser) {
-      // Logged in as a client - get all assigned staff
-      const staffAssignments = await prisma.staffAssignment.findMany({
-        where: {
-          clientId: clientUser.client.id,
-          isActive: true
-        },
-        select: { userId: true }
-      })
-      staffIds = staffAssignments.map(s => s.userId)
-    } else {
-      // For testing: if logged in as regular user, show all staff
-      const allUsers = await prisma.user.findMany({
-        select: { id: true }
-      })
-      staffIds = allUsers.map(u => u.id)
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
+
+    // Get all assigned staff for this client
+    const staffAssignments = await prisma.staffAssignment.findMany({
+      where: {
+        companyId: clientUser.company.id,
+        isActive: true
+      },
+      select: { staffUserId: true }
+    })
+    
+    const staffIds = staffAssignments.map(s => s.staffUserId)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ 

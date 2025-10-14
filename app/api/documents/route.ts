@@ -21,23 +21,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Check which clients this staff is assigned to
-    const assignments = await prisma.staffAssignment.findMany({
-      where: {
-        userId: user.id,
-        isActive: true
-      }
-    })
-
-    const clientIds = assignments.map(a => a.clientId)
-
     // Fetch:
     // 1. Documents uploaded by this staff member
-    // 2. All other documents (client uploads) - will filter properly when clientId is added
+    // 2. Documents shared with this staff member (sharedWithAll OR in sharedWith array)
     const documents = await prisma.document.findMany({
       where: {
-        // For now, fetch all documents
-        // Later: Add proper filtering by clientId when field is added to schema
+        OR: [
+          // Staff's own uploads
+          { userId: user.id },
+          // Documents shared with all
+          { sharedWithAll: true },
+          // Documents specifically shared with this user
+          { sharedWith: { has: user.id } }
+        ]
       },
       include: {
         user: {

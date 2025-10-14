@@ -1,17 +1,33 @@
-"use client"
-
 import { Users, TrendingUp, Clock, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { redirect } from "next/navigation"
 
-export default function ClientDashboard() {
+export default async function ClientDashboard() {
+  const session = await auth()
+
+  if (!session?.user) {
+    redirect("/login/client")
+  }
+
+  const clientUser = await prisma.clientUser.findUnique({
+    where: { email: session.user.email },
+    include: { company: true }
+  })
+
+  if (!clientUser) {
+    redirect("/login/client")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Client Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome to TechCorp Inc. Portal</p>
+          <p className="text-gray-600 mt-2">Welcome to {clientUser.company.companyName} Portal</p>
         </div>
 
         {/* Quick Stats */}

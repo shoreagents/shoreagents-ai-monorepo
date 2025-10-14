@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { prisma } from "@/lib/prisma"
 
 export default async function AdminLayout({
   children,
@@ -14,17 +15,35 @@ export default async function AdminLayout({
     redirect("/login?callbackUrl=/admin")
   }
 
-  // Must have ADMIN role
-  if (session.user.role !== "ADMIN") {
+  // Must have ADMIN or MANAGER role
+  if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
     // Redirect based on their actual role
     if (session.user.role === "CLIENT") {
       redirect("/client")
     } else {
-      // STAFF, TEAM_LEAD, MANAGER go to staff portal
+      // STAFF, TEAM_LEAD go to staff portal
       redirect("/")
     }
   }
 
-  return <AdminSidebar>{children}</AdminSidebar>
+  // Fetch full management user profile
+  const managementUser = await prisma.managementUser.findUnique({
+    where: { authUserId: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatar: true,
+      coverPhoto: true,
+      role: true,
+      department: true,
+    }
+  })
+
+  if (!managementUser) {
+    redirect("/login/admin")
+  }
+
+  return <AdminSidebar user={managementUser}>{children}</AdminSidebar>
 }
 

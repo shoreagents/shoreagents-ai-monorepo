@@ -161,12 +161,36 @@ const navItems = [
   { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
 ]
 
-export function AdminSidebar({ children }: { children: React.ReactNode }) {
+type ManagementUser = {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  coverPhoto: string | null
+  role: string
+  department: string
+}
+
+export function AdminSidebar({ 
+  children, 
+  user 
+}: { 
+  children: React.ReactNode
+  user: ManagementUser
+}) {
   const pathname = usePathname()
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login', redirect: true })
   }
+
+  // Get user initials for fallback
+  const initials = user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 
   return (
     <div className="flex h-screen bg-background">
@@ -270,14 +294,18 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
               <Icons.Bell />
               <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500" />
             </Button>
-            <Button variant="ghost" className="gap-2">
-              <Avatar className="size-7">
-                <AvatarImage src="/admin-interface.png" />
-                <AvatarFallback>AD</AvatarFallback>
-              </Avatar>
-              <span className="text-sm">Admin</span>
-              <Icons.ChevronDown />
-            </Button>
+            <Link href="/admin/profile">
+              <Button variant="ghost" className="gap-2">
+                <Avatar className="size-7">
+                  <AvatarImage src={user.avatar || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm">{user.name}</span>
+                <Icons.ChevronDown />
+              </Button>
+            </Link>
           </div>
         </header>
 

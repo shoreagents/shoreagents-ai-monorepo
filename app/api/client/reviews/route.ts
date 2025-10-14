@@ -1,108 +1,128 @@
-// Client API - Submit Review
-// POST: Client submits review for staff member
-
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// POST /api/client/reviews - Submit a review
-export async function POST(request: NextRequest) {
+// GET /api/client/reviews - Fetch reviews submitted BY client (not reviews OF staff)
+export async function GET(req: NextRequest) {
   try {
-    // Authentication check - CLIENT user only
     const session = await auth()
-    if (!session?.user || session.user.role !== "CLIENT") {
-      return NextResponse.json(
-        { error: "Unauthorized - Client access required" },
-        { status: 403 }
-      )
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { 
-      assignmentId,
-      type,
-      answers,
-      evaluationPeriod 
-    } = body
-
-    // Validation
-    if (!assignmentId || !type || !answers) {
-      return NextResponse.json(
-        { error: "Missing required fields: assignmentId, type, answers" },
-        { status: 400 }
-      )
-    }
-
-    // Fetch assignment to get staff and client details
-    const assignment = await prisma.staffAssignment.findUnique({
-      where: { id: assignmentId },
-      include: {
-        user: true,
-        client: true,
-        manager: true,
-      }
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
     })
 
-    if (!assignment) {
-      return NextResponse.json(
-        { error: "Assignment not found" },
-        { status: 404 }
-      )
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Calculate overall score from rating answers
-    let totalScore = 0
-    let ratingCount = 0
-    
-    for (const answer of answers) {
-      if (typeof answer.value === 'number' && answer.value >= 1 && answer.value <= 5) {
-        totalScore += answer.value
-        ratingCount++
-      }
-    }
-    
-    const overallScore = ratingCount > 0 ? totalScore / ratingCount : 0
-
-    // Get client user (reviewer)
-    const clientUser = await prisma.clientUser.findFirst({
+    // Get all reviews submitted by this client user
+    // Reviews are stored with reviewer email matching the client user's email
+    const reviews = await prisma.review.findMany({
       where: {
-        email: session.user.email
-      }
+        reviewer: clientUser.email
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        }
+      },
+      orderBy: { submittedDate: "desc" },
     })
 
-    // Create review
-    const review = await prisma.review.create({
-      data: {
-        userId: assignment.userId,
-        type,
-        status: "PENDING",
-        client: assignment.client.companyName,
-        reviewer: clientUser?.name || session.user.name || "Unknown",
-        reviewerTitle: clientUser?.title || "Manager",
-        submittedDate: new Date(),
-        evaluationPeriod: evaluationPeriod || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        overallScore,
-        answers: JSON.stringify(answers),
-      }
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: "Review submitted successfully",
-      review: {
-        id: review.id,
-        type: review.type,
-        overallScore: review.overallScore,
-        submittedDate: review.submittedDate,
-      }
-    }, { status: 201 })
-
+    return NextResponse.json({ reviews })
   } catch (error) {
-    console.error("Error submitting review:", error)
+    console.error("Error fetching client reviews:", error)
     return NextResponse.json(
-      { error: "Failed to submit review" },
+      { error: "Internal server error" },
       { status: 500 }
     )
   }
 }
 
+// POST /api/client/reviews - Create new review for staff member
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { userId, type, answers, overallScore, evaluationPeriod } = body
+
+    if (!userId || !type || !answers || !overallScore) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      )
+    }
+
+    // Verify staff is assigned to this client
+    const assignment = await prisma.staffAssignment.findFirst({
+      where: {
+        userId,
+        companyId: clientUser.company.id,
+        isActive: true
+      }
+    })
+
+    if (!assignment) {
+      return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
+    }
+
+    // Create review with PENDING_APPROVAL status
+    const review = await prisma.review.create({
+      data: {
+        userId,
+        type,
+        status: "PENDING_APPROVAL", // Requires admin approval
+        client: clientUser.client.companyName,
+        reviewer: clientUser.email,
+        reviewerTitle: clientUser.role,
+        evaluationPeriod: evaluationPeriod || `${new Date().toISOString().split('T')[0]}`,
+        overallScore,
+        answers,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json({ success: true, review }, { status: 201 })
+  } catch (error) {
+    console.error("Error creating review:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}

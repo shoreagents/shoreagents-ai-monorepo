@@ -20,34 +20,29 @@ export async function GET(req: NextRequest) {
     // Try to get client via ClientUser table
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
-      include: { client: true }
+      include: { company: true }
     })
 
-    let staffIds: string[] = []
-
-    if (clientUser) {
-      // Logged in as a client - show all assigned staff
-      const staffAssignments = await prisma.staffAssignment.findMany({
-        where: {
-          clientId: clientUser.client.id,
-          isActive: true
-        },
-        select: { userId: true }
-      })
-      staffIds = staffAssignments.map(s => s.userId)
-    } else {
-      // Logged in as regular user (staff) - for testing, show all staff time entries
-      // In production, you'd restrict this or show only the logged-in user's data
-      const allUsers = await prisma.user.findMany({
-        select: { id: true }
-      })
-      staffIds = allUsers.map(u => u.id)
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
+
+    // Get all assigned staff for this client
+    const staffAssignments = await prisma.staffAssignment.findMany({
+      where: {
+        companyId: clientUser.company.id,
+        isActive: true
+      },
+      select: { staffUserId: true }
+    })
+    
+    const staffIds = staffAssignments.map(s => s.staffUserId)
 
     if (staffIds.length === 0) {
       return NextResponse.json({ 
         timeEntries: [], 
-        summary: { totalHours: 0, activeStaff: 0, totalEntries: 0 }
+        summary: { totalHours: 0, activeStaff: 0, totalEntries: 0 },
+        staffList: []
       })
     }
 

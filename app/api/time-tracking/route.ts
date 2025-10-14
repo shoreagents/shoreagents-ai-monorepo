@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getStaffUser } from "@/lib/auth-helpers"
 
-// GET - Fetch time entries for a user
+// GET - Fetch time entries for current staff user only
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get userId from session
-    const userId = "c463d406-e524-4ef6-8ab5-29db543d4cb6" // Maria Santos
+    const user = await getStaffUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    const where: any = { userId }
+    const where: any = { userId: user.id }
 
     if (startDate && endDate) {
       where.clockIn = {

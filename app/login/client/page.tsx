@@ -114,10 +114,16 @@ export default function ClientLoginPage() {
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-xs text-blue-400 font-semibold mb-1">Demo Credentials:</p>
-          <p className="text-xs text-blue-300 font-mono">client@techcorp.com</p>
-          <p className="text-xs text-blue-300 font-mono">client123</p>
+        <div className="mt-6 pt-6 border-t border-slate-700 text-center">
+          <p className="text-sm text-slate-400 mb-4">
+            Don't have an account?
+          </p>
+          <a
+            href="/login/client/signup"
+            className="inline-block text-sm text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+          >
+            Create Client Account →
+          </a>
         </div>
       </Card>
     </div>

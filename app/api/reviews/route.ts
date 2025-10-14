@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/reviews - Get reviews for current user
+// GET /api/reviews - Get FINALIZED reviews for current user only
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -11,13 +11,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status")
-
     const reviews = await prisma.review.findMany({
       where: {
         userId: session.user.id,
-        ...(status && { status }),
+        status: "FINALIZED", // Staff can only see approved/finalized reviews
       },
       orderBy: { submittedDate: "desc" },
     })

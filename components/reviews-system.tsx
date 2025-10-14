@@ -6,18 +6,18 @@ import {
   ChevronDown, ChevronUp, Eye, Calendar, User
 } from "lucide-react"
 
-type ReviewStatus = "PENDING" | "ACKNOWLEDGED" | "ARCHIVED"
-type ReviewType = "month_1" | "month_3" | "month_5" | "recurring_6m" | "ad_hoc"
+type ReviewStatus = "PENDING_APPROVAL" | "APPROVED" | "FINALIZED" | "ACKNOWLEDGED" | "ARCHIVED"
+type ReviewType = "MONTH_1" | "MONTH_3" | "MONTH_5" | "RECURRING_6M" | "AD_HOC"
 
 interface Review {
   id: string
   type: ReviewType
-  staffMemberId: string
-  reviewerId: string
+  userId: string
+  reviewer: string
   client: string
   submittedDate: string
   status: ReviewStatus
-  overallScore: number | null
+  overallScore: number
   answers: any
   acknowledgedDate: string | null
 }
@@ -69,29 +69,31 @@ export default function ReviewsSystem() {
 
   const getReviewTypeLabel = (type: ReviewType) => {
     const labels = {
-      month_1: "Month 1 Assessment",
-      month_3: "Month 3 Progress Check",
-      month_5: "Month 5 Regularization",
-      recurring_6m: "6-Month Recurring Check-In",
-      ad_hoc: "Ad-Hoc Feedback",
+      MONTH_1: "Month 1 Assessment",
+      MONTH_3: "Month 3 Progress Check",
+      MONTH_5: "Month 5 Regularization",
+      RECURRING_6M: "6-Month Recurring Check-In",
+      AD_HOC: "Ad-Hoc Feedback",
     }
     return labels[type] || type
   }
 
   const getReviewTypeColor = (type: ReviewType) => {
     const colors = {
-      month_1: "bg-blue-500/20 text-blue-400 ring-blue-500/30",
-      month_3: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30",
-      month_5: "bg-purple-500/20 text-purple-400 ring-purple-500/30",
-      recurring_6m: "bg-amber-500/20 text-amber-400 ring-amber-500/30",
-      ad_hoc: "bg-pink-500/20 text-pink-400 ring-pink-500/30",
+      MONTH_1: "bg-blue-500/20 text-blue-400 ring-blue-500/30",
+      MONTH_3: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30",
+      MONTH_5: "bg-purple-500/20 text-purple-400 ring-purple-500/30",
+      RECURRING_6M: "bg-amber-500/20 text-amber-400 ring-amber-500/30",
+      AD_HOC: "bg-pink-500/20 text-pink-400 ring-pink-500/30",
     }
     return colors[type] || "bg-slate-500/20 text-slate-400"
   }
 
   const getStatusColor = (status: ReviewStatus) => {
     const colors = {
-      PENDING: "bg-amber-500/20 text-amber-400 ring-amber-500/30",
+      PENDING_APPROVAL: "bg-yellow-500/20 text-yellow-400 ring-yellow-500/30",
+      APPROVED: "bg-blue-500/20 text-blue-400 ring-blue-500/30",
+      FINALIZED: "bg-purple-500/20 text-purple-400 ring-purple-500/30",
       ACKNOWLEDGED: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30",
       ARCHIVED: "bg-slate-500/20 text-slate-400 ring-slate-500/30",
     }
@@ -145,10 +147,14 @@ export default function ReviewsSystem() {
           </div>
         </div>
 
-        {/* Filter Tabs */}
+        {/* Filter Tabs - Staff only sees FINALIZED (new) and ACKNOWLEDGED reviews */}
         <div className="flex gap-2 rounded-xl bg-slate-900/50 p-2 backdrop-blur-xl ring-1 ring-white/10">
-          {(["all", "PENDING", "ACKNOWLEDGED", "ARCHIVED"] as const).map((status) => {
+          {(["all", "FINALIZED", "ACKNOWLEDGED", "ARCHIVED"] as const).map((status) => {
             const count = status === "all" ? reviews.length : reviews.filter(r => r.status === status).length
+            const label = status === "all" ? "All" : 
+                         status === "FINALIZED" ? "New" :
+                         status === "ACKNOWLEDGED" ? "Acknowledged" :
+                         status === "ARCHIVED" ? "Archived" : status
             return (
               <button
                 key={status}
@@ -159,7 +165,7 @@ export default function ReviewsSystem() {
                     : "text-slate-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                {status === "all" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
+                {label}
                 <span className="ml-2 text-xs">({count})</span>
               </button>
             )
@@ -223,7 +229,7 @@ export default function ReviewsSystem() {
 
                 {/* Actions */}
                 <div className="mt-4 flex gap-2">
-                  {review.status === "PENDING" && (
+                  {review.status === "FINALIZED" && (
                     <button
                       onClick={() => acknowledgeReview(review.id)}
                       className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-2 text-sm font-medium text-white transition-all hover:from-emerald-700 hover:to-emerald-800"
@@ -235,6 +241,11 @@ export default function ReviewsSystem() {
                   {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
                     <div className="rounded-lg bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400 ring-1 ring-emerald-500/20">
                       Acknowledged on {mounted ? formatDate(review.acknowledgedDate) : review.acknowledgedDate}
+                    </div>
+                  )}
+                  {review.status === "FINALIZED" && (
+                    <div className="rounded-lg bg-purple-500/10 px-4 py-2 text-sm text-purple-400 ring-1 ring-purple-500/20">
+                      📋 New Review - Please acknowledge after reading
                     </div>
                   )}
                 </div>

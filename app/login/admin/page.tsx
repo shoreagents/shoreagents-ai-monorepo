@@ -114,10 +114,16 @@ export default function AdminLoginPage() {
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-xs text-blue-400 font-semibold mb-1">Demo Credentials:</p>
-          <p className="text-xs text-blue-300 font-mono">sysadmin@shoreagents.com</p>
-          <p className="text-xs text-blue-300 font-mono">admin123</p>
+        <div className="mt-6 pt-6 border-t border-slate-700 text-center">
+          <p className="text-sm text-slate-400 mb-4">
+            Don't have an account?
+          </p>
+          <a
+            href="/login/admin/signup"
+            className="inline-block text-sm text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+          >
+            Create Management Account →
+          </a>
         </div>
       </Card>
     </div>

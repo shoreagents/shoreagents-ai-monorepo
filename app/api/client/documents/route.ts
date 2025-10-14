@@ -3,46 +3,62 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import CloudConvert from 'cloudconvert'
 
-// GET - Fetch all documents (staff + client uploads)
+// GET - Fetch documents for client: own uploads + staff documents shared with them
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get actual clientId from session
-    const clientId = "cm59d03ng0000a17aykwgg8xj" // TechCorp Inc.
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
 
     // Get all assigned staff for this client
     const assignments = await prisma.staffAssignment.findMany({
       where: {
-        clientId: clientId,
+        companyId: clientUser.company.id,
         isActive: true,
       },
       include: {
-        user: true,
+        staffUser: true,
       },
     })
 
-    const staffUserIds = assignments.map((a) => a.userId)
+    const staffUserIds = assignments.map((a) => a.staffUserId)
 
-    // Fetch documents from assigned staff + client's own documents
+    // Fetch documents:
+    // 1. Client's own uploads (source=CLIENT, staffUserId in staff IDs is used as placeholder)
+    // 2. Staff documents that are shared (sharedWithAll=true or client in sharedWith)
     const documents = await prisma.document.findMany({
       where: {
         OR: [
-          {
-            // Staff documents (uploaded by assigned staff)
-            userId: {
-              in: staffUserIds,
-            },
+          // Client's own documents
+          { source: 'CLIENT' },
+          // Staff documents shared with all
+          { 
+            staffUserId: { in: staffUserIds },
+            source: 'STAFF',
+            sharedWithAll: true
           },
+          // Staff documents shared with this specific client
           {
-            // Client documents - fetch all for now
-            // Later: Add clientId field to filter by specific client
-            userId: {
-              notIn: staffUserIds, // Anything not uploaded by assigned staff
-            },
-          },
+            staffUserId: { in: staffUserIds },
+            source: 'STAFF',
+            sharedWith: { has: clientUser.company.id }
+          }
         ],
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -115,12 +131,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user info (for now use first staff user as placeholder for client upload)
-    // TODO: Get actual ClientUser from session
-    const user = await prisma.user.findFirst()
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
+
+    // Get first staff assigned to this client (for storing in User relation)
+    const firstStaff = await prisma.staffAssignment.findFirst({
+      where: {
+        companyId: clientUser.company.id,
+        isActive: true
+      },
+      include: { staffUser: true }
+    })
+
+    if (!firstStaff) {
+      return NextResponse.json({ error: "No staff assigned to your organization" }, { status: 400 })
     }
 
     // Extract text content from file using CloudConvert
@@ -203,17 +234,19 @@ export async function POST(request: NextRequest) {
     // Create document with CLIENT source
     const document = await prisma.document.create({
       data: {
-        userId: user.id, // TODO: Use actual ClientUser ID
+        staffUserId: firstStaff.staffUser.id, // Use first staff as placeholder for relation
         title,
         category,
         source: 'CLIENT',  // Mark as client upload
         content,
         size: fileSize,
         fileUrl: null,
-        uploadedBy: "TechCorp Inc.", // TODO: Get from ClientUser session
+        uploadedBy: clientUser.company.companyName,
+        sharedWithAll: false, // Clients don't auto-share, staff decide
+        sharedWith: []
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,

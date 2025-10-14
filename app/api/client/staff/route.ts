@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add client user authentication (Wendy, CEO, etc.)
-    // For now, hardcode TechCorp to test the feature
-    const clientId = 'tech-corp-001'
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
 
     const assignments = await prisma.staffAssignment.findMany({
       where: {
-        clientId: clientId,
+        companyId: clientUser.company.id,
         isActive: true,
       },
       include: {
-        user: {
+        staffUser: {
           include: {
             profile: {
               include: {
@@ -49,7 +60,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        client: {
+        company: {
           select: {
             companyName: true,
           },
@@ -59,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats for each staff member
     const staffWithStats = assignments.map((assignment) => {
-      const user = assignment.user
+      const user = assignment.staffUser
       const profile = user.profile
       
       // Calculate average productivity score
@@ -101,7 +112,7 @@ export async function GET(request: NextRequest) {
         rate: assignment.rate,
         startDate: assignment.startDate,
         managedBy: assignment.manager?.name,
-        client: assignment.client.companyName,
+        client: assignment.company.companyName,
         
         // Profile details
         phone: profile?.phone,
