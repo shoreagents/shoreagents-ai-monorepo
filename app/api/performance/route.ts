@@ -11,13 +11,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Get metrics for the last 7 days
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
     const metrics = await prisma.performanceMetric.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: sevenDaysAgo,
         },
@@ -33,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const todayMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -108,6 +117,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const {
       mouseMovements,
@@ -134,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     const existingMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -169,7 +187,7 @@ export async function POST(request: NextRequest) {
       // Create new metric
       metric = await prisma.performanceMetric.create({
         data: {
-          userId: session.user.id,
+          staffUserId: staffUser.id,
           mouseMovements: mouseMovements || 0,
           mouseClicks: mouseClicks || 0,
           keystrokes: keystrokes || 0,

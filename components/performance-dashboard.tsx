@@ -122,9 +122,13 @@ export default function PerformanceDashboard() {
 
   const calculateProductivityScore = (metric: PerformanceMetric) => {
     if (!metric) return 0
-    const activePercent = (metric.activeTime / (metric.activeTime + metric.idleTime)) * 100
+    
+    // Prevent NaN by checking for zero division
+    const totalTime = metric.activeTime + metric.idleTime
+    const activePercent = totalTime > 0 ? (metric.activeTime / totalTime) * 100 : 0
     const keystrokesScore = Math.min((metric.keystrokes / 5000) * 100, 100)
     const clicksScore = Math.min((metric.mouseClicks / 1000) * 100, 100)
+    
     return Math.round((activePercent + keystrokesScore + clicksScore) / 3)
   }
 

@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getStaffUser } from "@/lib/auth-helpers"
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get userId from session
-    const userId = "c463d406-e524-4ef6-8ab5-29db543d4cb6" // Maria Santos
+    const staffUser = await getStaffUser()
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     // Check if user is already clocked in
     const activeEntry = await prisma.timeEntry.findFirst({
       where: {
-        userId,
+        staffUserId: staffUser.id,
         clockOut: null,
       },
     })
@@ -24,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Create new time entry
     const timeEntry = await prisma.timeEntry.create({
       data: {
-        userId,
+        staffUserId: staffUser.id,
         clockIn: new Date(),
       },
     })
