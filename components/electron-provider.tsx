@@ -11,8 +11,36 @@ declare global {
   interface Window {
     electron?: {
       isElectron: boolean
+      performance?: {
+        getStatus: () => Promise<any>
+        onStatusChange: (callback: (status: any) => void) => () => void
+        getCurrentMetrics: () => Promise<any>
+        onMetricsUpdate: (callback: (data: any) => void) => () => void
+      }
       sync: {
         start: (sessionToken: string) => Promise<any>
+        getStatus: () => Promise<any>
+        forceSync: () => Promise<any>
+      }
+      breaks?: {
+        start: (breakData: any) => Promise<any>
+        end: () => Promise<any>
+        notifyBreakStart: (breakData: any) => void
+        notifyBreakEnd: (breakData: any) => void
+      }
+      activityTracker?: {
+        getStatus: () => Promise<{
+          isTracking: boolean
+          lastActivityTime: number
+          inactivityDuration: number
+          isInactive: boolean
+          inactiveSeconds: number
+        }>
+        start: () => Promise<{ success: boolean }>
+        stop: () => Promise<{ success: boolean }>
+        setTimeout: (milliseconds: number) => Promise<{ success: boolean }>
+        onBreakRequested: (callback: () => void) => () => void
+        onActivityDebug: (callback: (data: any) => void) => () => void
       }
     }
   }
@@ -103,7 +131,6 @@ export default function ElectronProvider({ children }: { children: React.ReactNo
     </>
   )
 }
-
 
 
 

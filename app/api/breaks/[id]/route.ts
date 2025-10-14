@@ -14,6 +14,15 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const { id: breakId } = await params
 
     // Find the break
@@ -25,7 +34,7 @@ export async function PUT(
       return NextResponse.json({ error: "Break not found" }, { status: 404 })
     }
 
-    if (existingBreak.userId !== session.user.id) {
+    if (existingBreak.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

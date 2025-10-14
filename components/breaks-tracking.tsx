@@ -1,19 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Coffee, Clock, Play, Square, Pause, X } from "lucide-react"
-
-declare global {
-  interface Window {
-    electron?: {
-      isElectron: boolean
-      breaks: {
-        notifyBreakStart: (breakData: any) => void
-        notifyBreakEnd: (breakData: any) => void
-      }
-    }
-  }
-}
+import { useWebSocketEvent, useWebSocketEmit } from "@/hooks/use-websocket-event"
 
 type BreakType = "MORNING" | "LUNCH" | "AFTERNOON" | "AWAY"
 
@@ -60,11 +49,79 @@ export default function BreaksTracking() {
   const [isPaused, setIsPaused] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0) // seconds
   const [timeElapsed, setTimeElapsed] = useState(0) // seconds
+  const [isKioskMode, setIsKioskMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const { emit } = useWebSocketEmit()
+
+  const fetchBreaks = useCallback(async () => {
+    try {
+      console.log('[BreaksTracking] Fetching breaks...')
+      const today = new Date().toISOString().split('T')[0]
+      const response = await fetch(`/api/breaks?date=${today}`)
+      console.log('[BreaksTracking] Fetch response:', response.ok, response.status)
+      
+      if (!response.ok) {
+        console.error('[BreaksTracking] Failed to fetch breaks:', response.status)
+        setIsLoading(false)
+        return
+      }
+      
+      const data = await response.json()
+      console.log('[BreaksTracking] Breaks data:', data)
+      setBreaks(data.breaks || [])
+      
+      // Check for active break
+      const active = data.breaks?.find((b: Break) => !b.endTime) || null
+      console.log('[BreaksTracking] Active break:', active)
+      
+      if (active) {
+        setActiveBreak(active)
+        const config = breakConfig[active.type as BreakType]
+        const elapsed = Math.floor((Date.now() - new Date(active.startTime).getTime()) / 1000)
+        setTimeElapsed(elapsed)
+        setTimeRemaining(Math.max(0, (config.duration * 60) - elapsed))
+        console.log('[BreaksTracking] Set active break:', active.type, 'elapsed:', elapsed, 'remaining:', Math.max(0, (config.duration * 60) - elapsed))
+      } else {
+        console.log('[BreaksTracking] No active break found')
+      }
+      
+      setIsLoading(false)
+    } catch (err) {
+      console.error("[BreaksTracking] Error fetching breaks:", err)
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Listen for real-time break events from other users/sessions
+  const handleBreakStarted = useCallback((data: any) => {
+    console.log('[BreaksTracking] Real-time break started:', data)
+    fetchBreaks() // Refresh breaks list
+  }, [fetchBreaks])
+
+  const handleBreakEnded = useCallback((data: any) => {
+    console.log('[BreaksTracking] Real-time break ended:', data)
+    fetchBreaks() // Refresh breaks list
+  }, [fetchBreaks])
+
+  useWebSocketEvent('break:started', handleBreakStarted)
+  useWebSocketEvent('break:ended', handleBreakEnded)
 
   useEffect(() => {
-    fetchBreaks()
-  }, [])
+    // Check if in kiosk mode from URL params
+    const urlParams = new URLSearchParams(window.location.search)
+    const kioskParam = urlParams.get('kiosk')
+    const typeParam = urlParams.get('type') as BreakType | null
+    
+    if (kioskParam === 'true' && typeParam) {
+      console.log('[BreaksTracking] Kiosk mode detected, type:', typeParam)
+      setIsKioskMode(true)
+      // In kiosk mode, fetch the active break from API
+      fetchBreaks()
+    } else {
+      fetchBreaks()
+    }
+  }, [fetchBreaks])
 
   // Timer logic
   useEffect(() => {
@@ -93,28 +150,6 @@ export default function BreaksTracking() {
     }
   }, [activeBreak, isPaused])
 
-  const fetchBreaks = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      const response = await fetch(`/api/breaks?date=${today}`)
-      if (!response.ok) return
-      const data = await response.json()
-      setBreaks(data.breaks || [])
-      
-      // Check for active break
-      const active = data.breaks?.find((b: Break) => !b.endTime) || null
-      if (active) {
-        setActiveBreak(active)
-        const config = breakConfig[active.type]
-        const elapsed = Math.floor((Date.now() - new Date(active.startTime).getTime()) / 1000)
-        setTimeElapsed(elapsed)
-        setTimeRemaining(Math.max(0, (config.duration * 60) - elapsed))
-      }
-    } catch (err) {
-      console.error("Error fetching breaks:", err)
-    }
-  }
-
   const startBreak = async (type: BreakType) => {
     try {
       const response = await fetch("/api/breaks", {
@@ -135,13 +170,21 @@ export default function BreaksTracking() {
       setTimeRemaining(breakConfig[type].duration * 60)
       setIsPaused(false)
 
-      // Notify Electron about break start
-      if (window.electron?.breaks) {
-        window.electron.breaks.notifyBreakStart({
+      // Emit WebSocket event for real-time updates
+      emit('break:start', {
+        breakId: result.break.id,
+        type,
+        duration: breakConfig[type].duration,
+        userId: result.break.userId,
+        startTime: result.break.startTime,
+      })
+
+      // Start kiosk mode in Electron
+      if (window.electron?.breaks?.start) {
+        await window.electron.breaks.start({
           type,
           duration: breakConfig[type].duration,
           breakId: result.break.id,
-          fullscreen: true,
         })
       }
     } catch (err) {
@@ -152,6 +195,8 @@ export default function BreaksTracking() {
 
   const endBreak = async (breakId: string, autoEnd = false) => {
     try {
+      console.log('[BreaksTracking] Ending break:', breakId)
+      
       const response = await fetch(`/api/breaks/${breakId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -163,22 +208,37 @@ export default function BreaksTracking() {
         return
       }
       
-      // Notify Electron about break end
-      if (window.electron?.breaks) {
-        window.electron.breaks.notifyBreakEnd({
-          breakId,
-          autoEnd,
-        })
-      }
-
+      console.log('[BreaksTracking] Break ended successfully, clearing state')
+      
+      // Emit WebSocket event for real-time updates
+      emit('break:end', {
+        breakId,
+        autoEnd,
+      })
+      
+      // Clear state immediately
       setActiveBreak(null)
       setIsPaused(false)
       setTimeElapsed(0)
       setTimeRemaining(0)
       
+      // Exit kiosk mode in Electron
+      if (window.electron?.breaks?.end) {
+        console.log('[BreaksTracking] Exiting kiosk mode')
+        await window.electron.breaks.end()
+      }
+      
       if (autoEnd) {
         // Show completion message
         alert("⏰ Break time is up! Welcome back! 🎉")
+      }
+      
+      // If in kiosk mode, we need to close this window
+      // The main window will be shown by Electron
+      if (isKioskMode) {
+        console.log('[BreaksTracking] Kiosk mode ended, window will be closed by Electron')
+        // Don't fetch breaks or do anything else - this window is closing
+        return
       }
       
       await fetchBreaks()
@@ -199,6 +259,18 @@ export default function BreaksTracking() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
   }
 
+  // Loading state
+  if (isLoading && isKioskMode) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="text-center">
+          <div className="mb-4 h-16 w-16 mx-auto animate-spin rounded-full border-4 border-slate-700 border-t-blue-500"></div>
+          <p className="text-white text-xl">Loading break...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Full-screen break overlay
   if (activeBreak) {
     const config = breakConfig[activeBreak.type]
@@ -210,13 +282,15 @@ export default function BreaksTracking() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_50%)] animate-pulse"></div>
         
         <div className="relative z-10 w-full max-w-2xl p-8 text-center">
-          {/* Close button */}
-          <button
-            onClick={() => endBreak(activeBreak.id)}
-            className="absolute top-4 right-4 rounded-full bg-slate-800/50 p-2 text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          {/* Close button (hidden in kiosk mode) */}
+          {!isKioskMode && (
+            <button
+              onClick={() => endBreak(activeBreak.id)}
+              className="absolute top-4 right-4 rounded-full bg-slate-800/50 p-2 text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          )}
 
           {/* Break type badge */}
           <div className={`mx-auto mb-8 inline-block rounded-full bg-gradient-to-r ${config.color} px-6 py-3`}>
@@ -401,4 +475,3 @@ export default function BreaksTracking() {
     </div>
   )
 }
-

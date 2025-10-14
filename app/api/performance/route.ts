@@ -11,13 +11,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Get metrics for the last 7 days
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
     const metrics = await prisma.performanceMetric.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: sevenDaysAgo,
         },
@@ -33,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const todayMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -41,16 +50,16 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Format metrics for frontend
+    // Format metrics for frontend (convert minutes to seconds for consistent display)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
       date: m.date.toISOString(),
       mouseMovements: m.mouseMovements,
       mouseClicks: m.mouseClicks,
       keystrokes: m.keystrokes,
-      activeTime: m.activeTime,
-      idleTime: m.idleTime,
-      screenTime: m.screenTime,
+      activeTime: m.activeTime * 60, // Convert minutes to seconds
+      idleTime: m.idleTime * 60, // Convert minutes to seconds
+      screenTime: m.screenTime * 60, // Convert minutes to seconds
       downloads: m.downloads,
       uploads: m.uploads,
       bandwidth: m.bandwidth,
@@ -70,9 +79,9 @@ export async function GET(request: NextRequest) {
           mouseMovements: todayMetric.mouseMovements,
           mouseClicks: todayMetric.mouseClicks,
           keystrokes: todayMetric.keystrokes,
-          activeTime: todayMetric.activeTime,
-          idleTime: todayMetric.idleTime,
-          screenTime: todayMetric.screenTime,
+          activeTime: todayMetric.activeTime * 60, // Convert minutes to seconds
+          idleTime: todayMetric.idleTime * 60, // Convert minutes to seconds
+          screenTime: todayMetric.screenTime * 60, // Convert minutes to seconds
           downloads: todayMetric.downloads,
           uploads: todayMetric.uploads,
           bandwidth: todayMetric.bandwidth,
@@ -108,6 +117,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const {
       mouseMovements,
@@ -134,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     const existingMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -169,7 +187,7 @@ export async function POST(request: NextRequest) {
       // Create new metric
       metric = await prisma.performanceMetric.create({
         data: {
-          userId: session.user.id,
+          staffUserId: staffUser.id,
           mouseMovements: mouseMovements || 0,
           mouseClicks: mouseClicks || 0,
           keystrokes: keystrokes || 0,
