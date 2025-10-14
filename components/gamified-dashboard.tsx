@@ -15,6 +15,12 @@ interface DashboardData {
   leaderboard: any
 }
 
+interface OnboardingStatus {
+  exists: boolean
+  completionPercent: number
+  isComplete: boolean
+}
+
 export default function GamifiedDashboard() {
   const [data, setData] = useState<DashboardData>({
     tasks: [],
@@ -26,6 +32,8 @@ export default function GamifiedDashboard() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState("")
   const [currentDate, setCurrentDate] = useState("")
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
+  const [userName, setUserName] = useState("there")
 
   useEffect(() => {
     // Update time
@@ -39,9 +47,41 @@ export default function GamifiedDashboard() {
 
     // Fetch all dashboard data
     fetchDashboardData()
+    fetchOnboardingStatus()
+    fetchUserName()
 
     return () => clearInterval(interval)
   }, [])
+
+  const fetchUserName = async () => {
+    try {
+      const response = await fetch("/api/onboarding")
+      if (response.ok) {
+        const data = await response.json()
+        if (data.onboarding?.firstName) {
+          setUserName(data.onboarding.firstName)
+        } else if (data.user?.name) {
+          // Fallback to user name from session
+          const firstName = data.user.name.split(' ')[0]
+          setUserName(firstName)
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user name:", err)
+    }
+  }
+
+  const fetchOnboardingStatus = async () => {
+    try {
+      const response = await fetch("/api/onboarding/status")
+      if (response.ok) {
+        const data = await response.json()
+        setOnboardingStatus(data)
+      }
+    } catch (err) {
+      console.error("Error fetching onboarding status:", err)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -120,7 +160,7 @@ export default function GamifiedDashboard() {
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-white md:text-5xl">Welcome back, Maria! 👋</h1>
+            <h1 className="text-4xl font-bold text-white md:text-5xl">Welcome back, {userName}! 👋</h1>
             <p className="text-lg text-slate-400">{currentDate} • {currentTime}</p>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -132,6 +172,48 @@ export default function GamifiedDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Onboarding Banner */}
+        {onboardingStatus && !onboardingStatus.isComplete && (
+          <Link href="/onboarding">
+            <div className="glass cursor-pointer rounded-xl border-2 border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 p-6 shadow-xl transition-all hover:scale-[1.02] hover:border-yellow-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-full bg-yellow-500 p-3">
+                    <AlertCircle className="h-6 w-6 text-yellow-900" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      Complete Your Onboarding
+                    </h3>
+                    <p className="text-sm text-slate-300">
+                      You're {onboardingStatus.completionPercent}% done! Complete your profile to unlock all features.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-white">
+                      {onboardingStatus.completionPercent}%
+                    </div>
+                    <div className="text-xs text-slate-400">Complete</div>
+                  </div>
+                  <div className="rounded-full bg-yellow-500 px-6 py-2 font-semibold text-yellow-900 transition-colors hover:bg-yellow-400">
+                    Continue →
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-500"
+                    style={{ width: `${onboardingStatus.completionPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
