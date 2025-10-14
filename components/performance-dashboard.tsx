@@ -21,22 +21,6 @@ interface PerformanceMetric {
   urlsVisited: string[]
 }
 
-declare global {
-  interface Window {
-    electron?: {
-      isElectron: boolean
-      performance: {
-        getCurrentMetrics: () => Promise<any>
-        onMetricsUpdate: (callback: (data: any) => void) => () => void
-      }
-      sync: {
-        forceSync: () => Promise<any>
-        getStatus: () => Promise<any>
-      }
-    }
-  }
-}
-
 export default function PerformanceDashboard() {
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([])
   const [todayMetrics, setTodayMetrics] = useState<PerformanceMetric | null>(null)
@@ -46,6 +30,8 @@ export default function PerformanceDashboard() {
   const [mounted, setMounted] = useState(false)
   const [isElectron, setIsElectron] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [debugEvents, setDebugEvents] = useState<any[]>([])
+  const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -62,14 +48,28 @@ export default function PerformanceDashboard() {
       fetchLiveMetrics()
       
       // Subscribe to real-time updates
-      const unsubscribe = window.electron?.performance.onMetricsUpdate((data) => {
+      const unsubscribe = window.electron?.performance?.onMetricsUpdate((data) => {
         if (data.metrics) {
           setLiveMetrics(data.metrics)
         }
       })
       
+            // Subscribe to debug activity events
+            const unsubscribeDebug = window.electron?.activityTracker?.onActivityDebug((event) => {
+              setDebugEvents(prev => {
+                // Filter out redundant events that don't count towards metrics
+                const skipEvents = ['keyup', 'mouseup', 'mousedown', 'wheel']
+                if (skipEvents.includes(event.type)) {
+                  return prev // Skip redundant events
+                }
+                const newEvents = [event, ...prev].slice(0, 50) // Keep last 50 events
+                return newEvents
+              })
+            })
+      
       return () => {
         unsubscribe?.()
+        unsubscribeDebug?.()
       }
     }
   }, [])
@@ -114,10 +114,13 @@ export default function PerformanceDashboard() {
     }
   }
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}h ${mins}m`
+  const formatTime = (seconds: number) => {
+    // Handle both seconds (live metrics) and minutes (API metrics)
+    const totalSeconds = Math.floor(seconds)
+    const hours = Math.floor(totalSeconds / 3600)
+    const mins = Math.floor((totalSeconds % 3600) / 60)
+    const secs = totalSeconds % 60
+    return `${hours}h ${mins}m ${secs}s`
   }
 
   const calculateProductivityScore = (metric: PerformanceMetric) => {
@@ -187,16 +190,27 @@ export default function PerformanceDashboard() {
             </div>
             <div className="flex items-center gap-3">
               {isElectron && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleForceSync}
-                  disabled={isSyncing}
-                  className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync Now'}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDebug(!showDebug)}
+                    className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {showDebug ? 'Hide' : 'Show'} Debug
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleForceSync}
+                    disabled={isSyncing}
+                    className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Syncing...' : 'Sync Now'}
+                  </Button>
+                </>
               )}
               <div className="rounded-xl bg-white/10 px-4 py-2 text-center backdrop-blur-sm">
                 <div className="text-2xl font-bold text-white">{productivity}%</div>
@@ -205,6 +219,89 @@ export default function PerformanceDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Debug Panel - Shows real-time events from uiohook-napi */}
+        {showDebug && isElectron && (
+          <div className="rounded-2xl bg-gradient-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/30">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-amber-400 animate-pulse" />
+                uiohook-napi Event Monitor (Temporary Debug)
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDebugEvents([])}
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="rounded-lg bg-black/50 p-4 h-96 overflow-y-auto font-mono text-sm">
+              {debugEvents.length === 0 ? (
+                <div className="text-center text-slate-400 mt-8">
+                  <p>Waiting for activity...</p>
+                  <p className="text-xs mt-2">Move your mouse, click, or type to see events</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {debugEvents.map((event, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-3 p-2 rounded ${
+                        event.type === 'keydown'
+                          ? 'bg-emerald-900/30 text-emerald-300'
+                          : event.type === 'click'
+                          ? 'bg-purple-900/30 text-purple-300'
+                          : event.type === 'mousemove'
+                          ? 'bg-blue-900/30 text-blue-300'
+                          : 'bg-slate-800/30 text-slate-300'
+                      }`}
+                    >
+                      <span className="text-xs text-slate-500 w-20">{event.timestamp}</span>
+                      <span className="font-bold w-28">
+                        {event.type === 'keydown' ? 'KEY' : event.type === 'click' ? 'CLICK' : event.type === 'mousemove' ? 'MOVE' : event.type.toUpperCase()}
+                      </span>
+                      {event.data && (
+                        <span className="text-xs flex-1">
+                          {/* Keyboard events - show key name prominently */}
+                          {event.data.keyName && (
+                            <span className="font-bold text-emerald-400 px-3 py-1 bg-emerald-900/40 rounded text-sm">
+                              {event.data.keyName}
+                            </span>
+                          )}
+                          
+                          {/* Mouse events */}
+                          {event.data.x !== undefined && event.data.y !== undefined && !event.data.keyName && (
+                            <span>x:{event.data.x} y:{event.data.y}</span>
+                          )}
+                          {event.data.button !== undefined && (
+                            <span className="ml-2 text-purple-400">btn:{event.data.button}</span>
+                          )}
+                        </span>
+                      )}
+                      <div className="ml-auto flex gap-1">
+                        {event.type === 'keydown' && <Keyboard className="h-4 w-4" />}
+                        {event.type === 'click' && <MousePointer className="h-4 w-4" />}
+                        {event.type === 'mousemove' && <MousePointer className="h-4 w-4 opacity-50" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-4 text-sm text-amber-200 bg-amber-900/20 p-3 rounded-lg">
+              <p className="font-bold">ℹ️ Debug Mode (Temporary)</p>
+              <p className="mt-1 text-xs text-amber-300">
+                This panel shows only the events that count towards performance metrics (redundant events are filtered).
+                Color coding: <span className="text-emerald-300">Green = Keyboard</span>, <span className="text-purple-300">Purple = Click</span>, <span className="text-blue-300">Blue = Mouse Move</span>
+              </p>
+              <p className="mt-2 text-xs text-amber-300">
+                💡 <strong>Filtered out:</strong> KEYUP, MOUSEUP, MOUSEDOWN, WHEEL - only showing KEYDOWN, CLICK, and MOUSEMOVE
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Real-time Input Tracking */}
         {displayMetrics && (
@@ -243,7 +340,7 @@ export default function PerformanceDashboard() {
               <div className="rounded-xl bg-gradient-to-br from-amber-900/50 to-amber-800/50 p-4 ring-1 ring-amber-500/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.idleTime || 0} min</div>
+                    <div className="text-2xl font-bold text-white">{formatTime(displayMetrics.idleTime || 0)}</div>
                     <div className="mt-1 text-sm text-amber-300">Idle Time</div>
                   </div>
                   <Clock className="h-8 w-8 text-amber-400" />

@@ -22,7 +22,7 @@ class PerformanceTracker {
     this.systemIdleTime = this.loadOptionalDependency('@paulcbetts/system-idle-time')
     this.activeWin = this.loadOptionalDependency('active-win')
     this.clipboardy = this.loadOptionalDependency('clipboardy')
-    this.iohook = this.loadOptionalDependency('iohook')
+    // Note: iohook removed (deprecated) - Input tracking handled by Activity Tracker (uiohook-napi)
     
     // Activity tracking state
     this.currentApp = null
@@ -64,6 +64,7 @@ class PerformanceTracker {
 
   /**
    * Start tracking user activity
+   * Note: Keyboard and mouse input tracking is handled by Activity Tracker (uiohook-napi)
    */
   start() {
     if (this.isTracking) {
@@ -75,9 +76,10 @@ class PerformanceTracker {
     this.sessionStartTime = Date.now()
     this.lastActivityTime = Date.now()
     this.log('Starting performance tracking...')
+    this.log('Note: Input tracking is handled by Activity Tracker (uiohook-napi)')
 
-    // Setup keyboard and mouse tracking with iohook (if available)
-    this.setupInputTracking()
+    // Input tracking is now handled by Activity Tracker
+    // this.setupInputTracking() - REMOVED (deprecated iohook)
 
     // Start main tracking loop
     this.trackingInterval = setInterval(() => {
@@ -115,15 +117,6 @@ class PerformanceTracker {
       this.trackingInterval = null
     }
 
-    // Stop iohook if running
-    if (this.iohook && this.iohook.stop) {
-      try {
-        this.iohook.stop()
-      } catch (error) {
-        this.log(`Error stopping iohook: ${error.message}`)
-      }
-    }
-
     this.log('Performance tracking stopped')
   }
 
@@ -145,53 +138,17 @@ class PerformanceTracker {
   }
 
   /**
-   * Setup keyboard and mouse input tracking
+   * Input tracking is now handled by Activity Tracker (uiohook-napi)
+   * This method is kept for compatibility but does nothing
+   * @deprecated - Use Activity Tracker for input tracking
    */
   setupInputTracking() {
-    if (!this.iohook) {
-      this.log('iohook not available, using fallback tracking')
-      return
-    }
-
-    try {
-      // Track mouse clicks
-      this.iohook.on('mouseclick', () => {
-        if (!this.isPaused && config.TRACK_MOUSE) {
-          this.metrics.mouseClicks++
-          this.lastActivityTime = Date.now()
-        }
-      })
-
-      // Track mouse movements (throttled)
-      let lastMouseTrack = 0
-      this.iohook.on('mousemove', (event) => {
-        const now = Date.now()
-        if (!this.isPaused && config.TRACK_MOUSE && now - lastMouseTrack > config.MOUSE_MOVEMENT_THROTTLE) {
-          this.metrics.mouseMovements++
-          this.lastMousePosition = { x: event.x, y: event.y }
-          this.lastActivityTime = now
-          lastMouseTrack = now
-        }
-      })
-
-      // Track keystrokes (count only, no content)
-      this.iohook.on('keydown', () => {
-        if (!this.isPaused && config.TRACK_KEYBOARD) {
-          this.metrics.keystrokes++
-          this.lastActivityTime = Date.now()
-        }
-      })
-
-      // Start iohook
-      this.iohook.start()
-      this.log('Input tracking (iohook) started successfully')
-    } catch (error) {
-      this.log(`Error setting up input tracking: ${error.message}`)
-    }
+    this.log('Input tracking is handled by Activity Tracker (uiohook-napi)')
   }
 
   /**
    * Update metrics periodically
+   * Note: Idle time is now tracked by Activity Tracker when inactivity is detected
    */
   updateMetrics() {
     if (this.isPaused) {
@@ -204,15 +161,18 @@ class PerformanceTracker {
     // Update screen time
     this.metrics.screenTime += timeSinceLastUpdate
 
-    // Check for idle time
+    // Active time tracking
+    // Note: Idle time is now tracked by Activity Tracker when inactivity dialog is shown
+    // We only track active time here to avoid double-counting
     const idleSeconds = this.getSystemIdleTime()
     const isIdle = idleSeconds >= config.IDLE_THRESHOLD
 
-    if (isIdle) {
-      this.metrics.idleTime += timeSinceLastUpdate
-    } else {
+    if (!isIdle) {
+      // Only add to active time if user is not idle
+      // Idle time will be added by Activity Tracker when inactivity is detected
       this.metrics.activeTime += timeSinceLastUpdate
     }
+    // If idle, don't add time to either counter yet - wait for Activity Tracker to handle it
 
     // Calculate productivity score
     this.metrics.productivityScore = this.calculateProductivityScore()
@@ -335,31 +295,32 @@ class PerformanceTracker {
   }
 
   /**
-   * Get current metrics
+   * Get current metrics (with raw seconds for real-time display)
    */
   getMetrics() {
     return {
       ...this.metrics,
-      // Convert seconds to minutes for API
-      activeTime: Math.round(this.metrics.activeTime / 60),
-      idleTime: Math.round(this.metrics.idleTime / 60),
-      screenTime: Math.round(this.metrics.screenTime / 60),
+      // Keep raw seconds for real-time display (frontend will format)
+      activeTime: this.metrics.activeTime,
+      idleTime: this.metrics.idleTime,
+      screenTime: this.metrics.screenTime,
     }
   }
 
   /**
-   * Get metrics for API (formatted)
+   * Get metrics for API (formatted - converts seconds to minutes)
    */
   getMetricsForAPI() {
-    const metrics = this.getMetrics()
+    const metrics = this.metrics
     
     return {
       mouseMovements: metrics.mouseMovements,
       mouseClicks: metrics.mouseClicks,
       keystrokes: metrics.keystrokes,
-      activeTime: metrics.activeTime,
-      idleTime: metrics.idleTime,
-      screenTime: metrics.screenTime,
+      // Convert seconds to minutes for API/database storage
+      activeTime: Math.round(metrics.activeTime / 60),
+      idleTime: Math.round(metrics.idleTime / 60),
+      screenTime: Math.round(metrics.screenTime / 60),
       downloads: metrics.downloads,
       uploads: metrics.uploads,
       bandwidth: metrics.bandwidth,
@@ -368,6 +329,17 @@ class PerformanceTracker {
       urlsVisited: metrics.urlsVisited,
       tabsSwitched: metrics.tabsSwitched,
       productivityScore: metrics.productivityScore,
+    }
+  }
+
+  /**
+   * Add idle time manually (called by Activity Tracker)
+   * @param {number} seconds - Idle time in seconds to add
+   */
+  addIdleTime(seconds) {
+    if (seconds > 0) {
+      this.metrics.idleTime += seconds
+      this.log(`Added ${seconds.toFixed(2)}s to idle time. Total: ${this.metrics.idleTime.toFixed(2)}s`)
     }
   }
 
@@ -400,7 +372,7 @@ class PerformanceTracker {
       isPaused: this.isPaused,
       sessionDuration: Math.floor((Date.now() - this.sessionStartTime) / 1000),
       lastUpdate: this.metrics.lastUpdated,
-      hasIohook: !!this.iohook,
+      inputTrackingBy: 'Activity Tracker (uiohook-napi)',
       hasSystemIdleTime: !!this.systemIdleTime,
       hasActiveWin: !!this.activeWin,
       hasClipboardy: !!this.clipboardy,
@@ -415,6 +387,5 @@ class PerformanceTracker {
 }
 
 module.exports = new PerformanceTracker()
-
 
 

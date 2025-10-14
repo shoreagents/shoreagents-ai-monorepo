@@ -11,11 +11,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Find active break
     const activeBreak = await prisma.break.findFirst({
       where: {
-        userId: session.user.id,
-        endTime: null,
+        staffUserId: staffUser.id,
+        actualEnd: null,
       },
     })
 
@@ -27,15 +36,16 @@ export async function POST(request: NextRequest) {
     }
 
     const endTime = new Date()
-    const actualDuration = Math.floor(
-      (endTime.getTime() - activeBreak.startTime.getTime()) / 1000 / 60
+    const startTime = activeBreak.actualStart || new Date()
+    const duration = Math.floor(
+      (endTime.getTime() - startTime.getTime()) / 1000 / 60
     ) // in minutes
 
     const updatedBreak = await prisma.break.update({
       where: { id: activeBreak.id },
       data: {
-        endTime,
-        actualDuration,
+        actualEnd: endTime,
+        duration,
       },
     })
 

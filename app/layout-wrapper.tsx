@@ -1,10 +1,15 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import Sidebar from "@/components/sidebar"
+import { Toaster } from "@/components/ui/toaster"
+import ElectronProvider from "@/components/electron-provider"
+import { WebSocketProvider } from "@/lib/websocket-provider"
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
   
   // Don't show sidebar on login pages, admin pages, or client pages
   const isLoginPage = pathname?.startsWith("/login")
@@ -14,19 +19,30 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Staff pages = everything else (root level pages)
   const isStaffPage = !isLoginPage && !isAdminPage && !isClientPage
   
-  if (isStaffPage) {
-    return (
-      <>
-        <Sidebar />
-        <main className="lg:pl-64">
-          <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-900 p-4 lg:p-8">
-            {children}
-          </div>
-        </main>
-      </>
-    )
-  }
+  // Extract user info from session for WebSocket
+  const userId = session?.user?.id
+  const userName = session?.user?.name || session?.user?.email || undefined
   
-  // For login, admin, and client pages - no sidebar
-  return <>{children}</>
+  const content = isStaffPage ? (
+    <>
+      <Sidebar />
+      <main className="lg:pl-64">
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-900 p-4 lg:p-8">
+          {children}
+        </div>
+      </main>
+      <Toaster />
+    </>
+  ) : (
+    // For login, admin, and client pages - no sidebar
+    <>{children}</>
+  )
+  
+  return (
+    <ElectronProvider>
+      <WebSocketProvider userId={userId} userName={userName}>
+        {content}
+      </WebSocketProvider>
+    </ElectronProvider>
+  )
 }

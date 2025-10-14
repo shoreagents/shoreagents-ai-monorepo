@@ -8,17 +8,17 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get user from email
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    // Get StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
     })
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
     // Fetch:
@@ -28,15 +28,15 @@ export async function GET(req: NextRequest) {
       where: {
         OR: [
           // Staff's own uploads
-          { userId: user.id },
+          { staffUserId: staffUser.id },
           // Documents shared with all
           { sharedWithAll: true },
           // Documents specifically shared with this user
-          { sharedWith: { has: user.id } }
+          { sharedWith: { has: staffUser.id } }
         ]
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -66,32 +66,42 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id },
+      select: { id: true, name: true }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
     // Parse FormData
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     const title = formData.get('title') as string
-    const category = formData.get('category') as string
+    const categoryString = formData.get('category') as string
 
-    if (!title || !category) {
+    if (!title || !categoryString) {
       return NextResponse.json(
         { error: "Title and category are required" },
         { status: 400 }
       )
     }
 
-    // Get user info
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, name: true }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    // Validate category is a valid DocumentCategory
+    const validCategories = ['CLIENT', 'TRAINING', 'PROCEDURE', 'CULTURE', 'SEO', 'OTHER']
+    if (!validCategories.includes(categoryString)) {
+      return NextResponse.json(
+        { error: "Invalid category" },
+        { status: 400 }
+      )
     }
+    const category = categoryString as "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO" | "OTHER"
 
     // Extract text content from file using CloudConvert
     let content = ""
@@ -182,17 +192,17 @@ export async function POST(req: NextRequest) {
     // Create the document
     const document = await prisma.document.create({
       data: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         title,
         category,
         source: 'STAFF',  // Mark as staff upload
         content,
-        uploadedBy: user.name,
+        uploadedBy: staffUser.name,
         size: fileSize,
         fileUrl: null, // Can add Supabase storage later
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -203,29 +213,12 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Check if this staff member is assigned to any clients
-    // Documents are automatically visible to assigned clients via StaffAssignment
-    const assignments = await prisma.staffAssignment.findMany({
-      where: {
-        userId: user.id,
-        isActive: true
-      },
-      include: {
-        client: {
-          select: {
-            id: true,
-            companyName: true
-          }
-        }
-      }
-    })
-
+    // TODO: Check if this staff member is assigned to any clients
+    // Documents can be shared with clients later via sharedWith field
+    
     return NextResponse.json({
       document,
-      sharedWith: assignments.map(a => a.client),
-      message: assignments.length > 0 
-        ? `Document shared with ${assignments.length} client(s)` 
-        : "Document created (not yet assigned to clients)"
+      message: "Document created successfully"
     }, { status: 201 })
   } catch (error) {
     console.error("Error creating document:", error)
