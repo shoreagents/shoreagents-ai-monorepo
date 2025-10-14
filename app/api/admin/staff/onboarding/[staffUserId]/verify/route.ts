@@ -97,8 +97,18 @@ export async function POST(
     const updated = await prisma.staffOnboarding.findUnique({ 
       where: { id: onboarding.id } 
     })
+    const approvedCount = [
+      updated?.personalInfoStatus,
+      updated?.govIdStatus,
+      updated?.documentsStatus,
+      updated?.signatureStatus,
+      updated?.emergencyContactStatus
+    ].filter(status => status === "APPROVED").length
+    
     console.log("📊 COMPLETION UPDATED:", { 
       completionPercent: updated?.completionPercent,
+      approvedCount: approvedCount,
+      allApproved: approvedCount === 5 ? "✅ GREEN FORM SHOULD APPEAR!" : `❌ Only ${approvedCount}/5 approved`,
       isComplete: updated?.isComplete,
       statuses: {
         personalInfo: updated?.personalInfoStatus,
@@ -147,14 +157,15 @@ async function updateCompletionPercent(onboardingId: string) {
   })
 
   const completionPercent = Math.min(totalProgress, 100)
-  const approvedCount = sections.filter(status => status === "APPROVED").length
-  const isComplete = approvedCount === 5
+  // DON'T set isComplete here - that should only happen when admin clicks "Complete Onboarding"!
+  // const approvedCount = sections.filter(status => status === "APPROVED").length
+  // const isComplete = approvedCount === 5
 
   await prisma.staffOnboarding.update({
     where: { id: onboardingId },
     data: { 
-      completionPercent,
-      isComplete
+      completionPercent
+      // isComplete is NOT updated here - only in complete route!
     }
   })
 }

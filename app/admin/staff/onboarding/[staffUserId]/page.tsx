@@ -127,6 +127,23 @@ export default function AdminOnboardingDetailPage() {
       if (!response.ok) throw new Error("Failed to fetch onboarding details")
       
       const data = await response.json()
+      console.log("📋 ONBOARDING DATA RECEIVED:", {
+        completionPercent: data.onboarding.completionPercent,
+        isComplete: data.onboarding.isComplete,
+        allApproved: 
+          data.onboarding.personalInfoStatus === "APPROVED" &&
+          data.onboarding.govIdStatus === "APPROVED" &&
+          data.onboarding.documentsStatus === "APPROVED" &&
+          data.onboarding.signatureStatus === "APPROVED" &&
+          data.onboarding.emergencyContactStatus === "APPROVED",
+        shouldShowForm: 
+          data.onboarding.personalInfoStatus === "APPROVED" &&
+          data.onboarding.govIdStatus === "APPROVED" &&
+          data.onboarding.documentsStatus === "APPROVED" &&
+          data.onboarding.signatureStatus === "APPROVED" &&
+          data.onboarding.emergencyContactStatus === "APPROVED" &&
+          !data.onboarding.isComplete
+      })
       setStaff(data.staff)
       setOnboarding(data.onboarding)
     } catch (err) {
@@ -428,14 +445,14 @@ export default function AdminOnboardingDetailPage() {
                   {/* Salary */}
                   <div className="space-y-2">
                     <Label htmlFor="salary" className="text-white">
-                      Monthly Salary (USD) *
+                      Monthly Salary (PHP) *
                     </Label>
                     <Input
                       id="salary"
                       type="number"
                       value={salary}
                       onChange={(e) => setSalary(e.target.value)}
-                      placeholder="e.g., 800"
+                      placeholder="e.g., 25000"
                       className="bg-slate-800 border-slate-700 text-white"
                     />
                   </div>
