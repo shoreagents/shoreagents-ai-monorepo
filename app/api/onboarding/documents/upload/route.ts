@@ -8,19 +8,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Map document types to folder names and onboarding fields
-const DOCUMENT_CONFIG: Record<string, { folder: string; field: string }> = {
-  validId: { folder: "staff_valid_id", field: "validIdUrl" },
-  birthCert: { folder: "staff_birth_cert", field: "birthCertUrl" },
-  nbiClearance: { folder: "staff_nbi_clearance", field: "nbiClearanceUrl" },
-  policeClearance: { folder: "staff_police_clearance", field: "policeClearanceUrl" },
-  birForm2316: { folder: "staff_bir_2316", field: "birForm2316Url" },
-  certificateEmp: { folder: "staff_cert_employment", field: "certificateEmpUrl" },
-  idPhoto: { folder: "staff_id_photo", field: "idPhotoUrl" },
-  sssDoc: { folder: "staff_sss", field: "sssDocUrl" },
-  tinDoc: { folder: "staff_tin", field: "tinDocUrl" },
-  philhealthDoc: { folder: "staff_philhealth", field: "philhealthDocUrl" },
-  pagibigDoc: { folder: "staff_pagibig", field: "pagibigDocUrl" },
+// Map document types to filenames and onboarding fields
+// New structure: staff/staff_onboarding/{userId}/filename.ext
+const DOCUMENT_CONFIG: Record<string, { filename: string; field: string }> = {
+  validId: { filename: "valid-id", field: "validIdUrl" },
+  birthCert: { filename: "birth-cert", field: "birthCertUrl" },
+  nbiClearance: { filename: "nbi-clearance", field: "nbiClearanceUrl" },
+  policeClearance: { filename: "police-clearance", field: "policeClearanceUrl" },
+  birForm2316: { filename: "bir-2316", field: "birForm2316Url" },
+  certificateEmp: { filename: "certificate-employment", field: "certificateEmpUrl" },
+  idPhoto: { filename: "id-photo", field: "idPhotoUrl" },
+  sssDoc: { filename: "sss-doc", field: "sssDocUrl" },
+  tinDoc: { filename: "tin-doc", field: "tinDocUrl" },
+  philhealthDoc: { filename: "philhealth-doc", field: "philhealthDocUrl" },
+  pagibigDoc: { filename: "pagibig-doc", field: "pagibigDocUrl" },
 }
 
 export async function POST(req: NextRequest) {
@@ -84,8 +85,9 @@ export async function POST(req: NextRequest) {
 
     const config = DOCUMENT_CONFIG[documentType]
     const fileExt = file.name.split('.').pop()
-    const fileName = `${documentType}.${fileExt}`
-    const filePath = `${config.folder}/${staffUser.id}/${fileName}`
+    const fileName = `${config.filename}.${fileExt}`
+    // New structure: staff_onboarding/{userId}/{filename}.ext
+    const filePath = `staff_onboarding/${staffUser.authUserId}/${fileName}`
 
     // Upload to Supabase
     const fileBuffer = await file.arrayBuffer()

@@ -46,6 +46,14 @@ interface OnboardingData {
   philhealthNo: string
   pagibigNo: string
   
+  // Documents
+  validIdUrl: string
+  birthCertUrl: string
+  nbiClearanceUrl: string
+  policeClearanceUrl: string
+  idPhotoUrl: string
+  signatureUrl: string
+  
   // Emergency Contact
   emergencyContactName: string
   emergencyContactNo: string
@@ -60,6 +68,10 @@ interface OnboardingData {
   completionPercent: number
 }
 
+interface UploadingState {
+  [key: string]: boolean
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
@@ -67,6 +79,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [uploading, setUploading] = useState<UploadingState>({})
   
   const [formData, setFormData] = useState<Partial<OnboardingData>>({})
 
@@ -169,7 +182,21 @@ export default function OnboardingPage() {
     setError("")
     setSuccess("")
     
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error("⏰ Save timeout after 30 seconds")
+      setError("Save is taking too long. Please check your connection and try again.")
+      setSaving(false)
+    }, 30000) // 30 second timeout
+    
     try {
+      console.log("📝 Saving emergency contact...")
+      console.log("Data:", {
+        emergencyContactName: formData.emergencyContactName,
+        emergencyContactNo: formData.emergencyContactNo,
+        emergencyRelationship: formData.emergencyRelationship
+      })
+      
       const response = await fetch("/api/onboarding/emergency-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -180,24 +207,96 @@ export default function OnboardingPage() {
         })
       })
       
+      console.log("✅ Response received:", response.status, response.statusText)
+      
       if (!response.ok) {
         const data = await response.json()
+        console.error("❌ Error response:", data)
         throw new Error(data.error || "Failed to save")
       }
       
-      setSuccess("Emergency contact saved! You can now go back to the dashboard.")
+      const responseData = await response.json()
+      console.log("✅ Save successful:", responseData)
+      
+      setSuccess("Emergency contact saved! Onboarding 100% complete! Admin will verify your documents.")
+      
+      console.log("🔄 Refreshing onboarding data...")
       await fetchOnboardingData()
+      console.log("✅ Onboarding data refreshed!")
+      
+      clearTimeout(timeoutId) // Clear timeout on success
+    } catch (err: any) {
+      console.error("❌ Error saving emergency contact:", err)
+      setError(err.message || "Failed to save. Please try again.")
+      clearTimeout(timeoutId)
+    } finally {
+      console.log("✅ Setting saving to false")
+      setSaving(false)
+    }
+  }
+
+  const handleFileUpload = async (file: File, documentType: string) => {
+    setUploading({ ...uploading, [documentType]: true })
+    setError("")
+    
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("documentType", documentType)
+      
+      const response = await fetch("/api/onboarding/documents/upload", {
+        method: "POST",
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to upload")
+      }
+      
+      const data = await response.json()
+      setSuccess(`${documentType} uploaded successfully!`)
+      await fetchOnboardingData()
+      setTimeout(() => setSuccess(""), 3000)
     } catch (err: any) {
       setError(err.message)
     } finally {
-      setSaving(false)
+      setUploading({ ...uploading, [documentType]: false })
+    }
+  }
+
+  const handleSignatureUpload = async (file: File) => {
+    setUploading({ ...uploading, signature: true })
+    setError("")
+    
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const response = await fetch("/api/onboarding/signature", {
+        method: "POST",
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to upload")
+      }
+      
+      setSuccess("Signature uploaded successfully!")
+      await fetchOnboardingData()
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setUploading({ ...uploading, signature: false })
     }
   }
 
   const getStatusIcon = (status: string) => {
     if (status === "APPROVED") return <CheckCircle2 className="h-4 w-4 text-green-500" />
     if (status === "REJECTED") return <AlertCircle className="h-4 w-4 text-red-500" />
-    if (status === "SUBMITTED") return <Loader2 className="h-4 w-4 text-yellow-500 animate-spin" />
+    if (status === "SUBMITTED") return <CheckCircle2 className="h-4 w-4 text-blue-500" />
     return null
   }
 
@@ -489,9 +588,150 @@ export default function OnboardingPage() {
                 <Alert className="bg-blue-900/50 border-blue-700">
                   <Upload className="h-4 w-4" />
                   <AlertDescription className="text-blue-200">
-                    Document uploads will be added in the next phase. For now, click Continue to proceed.
+                    Upload your documents below. Don't have them yet? No worries - you can skip and add them later!
                   </AlertDescription>
                 </Alert>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-slate-300">Valid ID (National ID, Driver's License, etc.)</Label>
+                    {formData.validIdUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                          <a 
+                            href={formData.validIdUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 text-sm underline"
+                          >
+                            View
+                          </a>
+                        </div>
+                        {formData.documentsStatus !== "APPROVED" && (
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="bg-slate-700 border-slate-600 text-white"
+                            disabled={uploading.validId}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleFileUpload(file, "validId")
+                            }}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="bg-slate-700 border-slate-600 text-white"
+                          disabled={formData.documentsStatus === "APPROVED" || uploading.validId}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(file, "validId")
+                          }}
+                        />
+                        {uploading.validId && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label className="text-slate-300">Birth Certificate (PSA)</Label>
+                    {formData.birthCertUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                          <a href={formData.birthCertUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm underline">View</a>
+                        </div>
+                        {formData.documentsStatus !== "APPROVED" && (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={uploading.birthCert}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birthCert") }} />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED" || uploading.birthCert}
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birthCert") }} />
+                        {uploading.birthCert && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-300">NBI Clearance</Label>
+                    {formData.nbiClearanceUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                          <a href={formData.nbiClearanceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm underline">View</a>
+                        </div>
+                        {formData.documentsStatus !== "APPROVED" && (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={uploading.nbiClearance}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "nbiClearance") }} />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED" || uploading.nbiClearance}
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "nbiClearance") }} />
+                        {uploading.nbiClearance && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-300">Police Clearance</Label>
+                    {formData.policeClearanceUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                          <a href={formData.policeClearanceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm underline">View</a>
+                        </div>
+                        {formData.documentsStatus !== "APPROVED" && (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={uploading.policeClearance}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "policeClearance") }} />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED" || uploading.policeClearance}
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "policeClearance") }} />
+                        {uploading.policeClearance && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-300">ID Photo (2x2, white background)</Label>
+                    {formData.idPhotoUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                          <a href={formData.idPhotoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm underline">View</a>
+                        </div>
+                        <img src={formData.idPhotoUrl} alt="ID Photo" className="w-32 h-32 object-cover rounded border border-slate-600" />
+                        {formData.documentsStatus !== "APPROVED" && (
+                          <Input type="file" accept=".jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={uploading.idPhoto}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "idPhoto") }} />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center mt-1">
+                        <Input type="file" accept=".jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED" || uploading.idPhoto}
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "idPhoto") }} />
+                        {uploading.idPhoto && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex gap-4">
                   <Button
@@ -502,10 +742,23 @@ export default function OnboardingPage() {
                     Back
                   </Button>
                   <Button
-                    onClick={() => setCurrentStep(4)}
+                    onClick={async () => {
+                      // Mark as submitted
+                      try {
+                        const response = await fetch("/api/onboarding/documents/submit", {
+                          method: "POST"
+                        })
+                        if (response.ok) {
+                          await fetchOnboardingData()
+                        }
+                      } catch (err) {
+                        console.error("Failed to submit documents:", err)
+                      }
+                      setCurrentStep(4)
+                    }}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
                   >
-                    Continue
+                    {formData.documentsStatus === "APPROVED" ? "Next" : "Continue"}
                   </Button>
                 </div>
               </div>
@@ -517,9 +770,48 @@ export default function OnboardingPage() {
                 <Alert className="bg-blue-900/50 border-blue-700">
                   <PenTool className="h-4 w-4" />
                   <AlertDescription className="text-blue-200">
-                    Signature upload will be added in the next phase. For now, click Continue to proceed.
+                    Upload your signature image (white background recommended). You can also skip and add it later.
                   </AlertDescription>
                 </Alert>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-slate-300">Signature Image (PNG or JPG)</Label>
+                    <div className="flex gap-2 items-center mt-1">
+                      <Input
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        className="bg-slate-700 border-slate-600 text-white"
+                        disabled={formData.signatureStatus === "APPROVED" || uploading.signature}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleSignatureUpload(file)
+                        }}
+                      />
+                      {uploading.signature && <Loader2 className="h-4 w-4 animate-spin text-purple-600" />}
+                      {formData.signatureUrl && !uploading.signature && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Sign on white paper, take a photo, or use a drawing app
+                    </p>
+                  </div>
+
+                  {/* Preview */}
+                  {formData.signatureUrl ? (
+                    <div className="border-2 border-slate-600 rounded-lg p-4 bg-white">
+                      <img 
+                        src={formData.signatureUrl} 
+                        alt="Signature preview" 
+                        className="max-h-32 mx-auto"
+                      />
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
+                      <PenTool className="h-12 w-12 mx-auto text-slate-500 mb-2" />
+                      <p className="text-slate-400 text-sm">Signature preview will appear here</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex gap-4">
                   <Button
@@ -530,10 +822,27 @@ export default function OnboardingPage() {
                     Back
                   </Button>
                   <Button
-                    onClick={() => setCurrentStep(5)}
+                    onClick={async () => {
+                      // Mark as submitted if not already
+                      if (formData.signatureStatus !== "SUBMITTED" && formData.signatureStatus !== "APPROVED") {
+                        try {
+                          const response = await fetch("/api/onboarding/signature", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({}) // Empty - just mark as submitted
+                          })
+                          if (response.ok) {
+                            await fetchOnboardingData()
+                          }
+                        } catch (err) {
+                          console.error("Failed to submit signature:", err)
+                        }
+                      }
+                      setCurrentStep(5)
+                    }}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
                   >
-                    Continue
+                    {formData.signatureStatus === "APPROVED" ? "Next" : "Continue"}
                   </Button>
                 </div>
               </div>
@@ -586,15 +895,30 @@ export default function OnboardingPage() {
                   >
                     Back
                   </Button>
-                  {formData.emergencyContactStatus !== "APPROVED" && (
-                    <Button
-                      onClick={handleEmergencyContactSubmit}
-                      disabled={saving}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
-                    >
-                      {saving ? "Saving..." : "Save & Finish"}
-                    </Button>
-                  )}
+                {formData.emergencyContactStatus !== "APPROVED" && (
+                  <Button
+                    onClick={handleEmergencyContactSubmit}
+                    disabled={saving}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
+                  >
+                    {saving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </span>
+                    ) : "Save & Finish"}
+                  </Button>
+                )}
+                
+                {formData.emergencyContactStatus === "SUBMITTED" && (
+                  <div className="mt-4 p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                    <p className="text-green-200 text-sm">
+                      🎉 <strong>Onboarding 100% Complete!</strong>
+                      <br/>
+                      Your documents will be reviewed and verified by admin.
+                    </p>
+                  </div>
+                )}
                 </div>
 
                 {formData.completionPercent === 100 && (

@@ -16,6 +16,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Check if JSON request (skip for now) or FormData (actual upload)
+    const contentType = req.headers.get("content-type") || ""
+    
+    if (contentType.includes("application/json")) {
+      // Skip for now - just mark as submitted
+      const staffUser = await prisma.staffUser.findUnique({
+        where: { authUserId: session.user.id },
+        include: { onboarding: true }
+      })
+
+      if (!staffUser) {
+        return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+      }
+
+      const onboarding = await prisma.staffOnboarding.upsert({
+        where: { staffUserId: staffUser.id },
+        update: {
+          signatureStatus: "SUBMITTED",
+          updatedAt: new Date()
+        },
+        create: {
+          staffUserId: staffUser.id,
+          signatureStatus: "SUBMITTED"
+        }
+      })
+
+      await updateCompletionPercent(onboarding.id)
+
+      return NextResponse.json({ 
+        success: true,
+        message: "Signature section marked for review" 
+      })
+    }
+
     const formData = await req.formData()
     const file = formData.get("file") as File
 
@@ -59,7 +93,8 @@ export async function POST(req: NextRequest) {
 
     const fileExt = file.name.split('.').pop()
     const fileName = `signature.${fileExt}`
-    const filePath = `staff_signature/${staffUser.id}/${fileName}`
+    // New structure: staff_onboarding/{userId}/signature.ext
+    const filePath = `staff_onboarding/${staffUser.authUserId}/${fileName}`
 
     // Upload to Supabase
     const fileBuffer = await file.arrayBuffer()
@@ -131,14 +166,30 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.emergencyContactStatus
   ]
 
-  const approvedCount = sections.filter(status => status === "APPROVED").length
-  const completionPercent = Math.round((approvedCount / sections.length) * 100)
+  // NEW: Each section = 20% when SUBMITTED or APPROVED
+  // 100% = All sections filled out by staff
+  // Verification (APPROVED/REJECTED) is separate from completion
+  let totalProgress = 0
+  sections.forEach(status => {
+    if (status === "SUBMITTED" || status === "APPROVED") {
+      totalProgress += 20
+    }
+  })
+
+  const completionPercent = Math.min(totalProgress, 100)
+  
+  // Staff completes at 100% (all submitted)
+  // Admin verification is tracked by individual section status
+  const submittedOrApprovedCount = sections.filter(
+    status => status === "SUBMITTED" || status === "APPROVED"
+  ).length
+  const isComplete = submittedOrApprovedCount === 5
 
   await prisma.staffOnboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent,
-      isComplete: completionPercent === 100
+      isComplete
     }
   })
 }

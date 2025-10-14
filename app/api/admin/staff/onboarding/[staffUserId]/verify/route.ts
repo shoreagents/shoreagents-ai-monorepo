@@ -107,14 +107,22 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.emergencyContactStatus
   ]
 
+  // Count progress: SUBMITTED = 15%, APPROVED = 20% per section
+  let totalProgress = 0
+  sections.forEach(status => {
+    if (status === "SUBMITTED") totalProgress += 15
+    if (status === "APPROVED") totalProgress += 20
+  })
+
+  const completionPercent = Math.min(totalProgress, 100)
   const approvedCount = sections.filter(status => status === "APPROVED").length
-  const completionPercent = Math.round((approvedCount / sections.length) * 100)
+  const isComplete = approvedCount === 5
 
   await prisma.staffOnboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent,
-      isComplete: completionPercent === 100
+      isComplete
     }
   })
 }

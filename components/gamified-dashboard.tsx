@@ -33,6 +33,7 @@ export default function GamifiedDashboard() {
   const [currentTime, setCurrentTime] = useState("")
   const [currentDate, setCurrentDate] = useState("")
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
+  const [userName, setUserName] = useState("there")
 
   useEffect(() => {
     // Update time
@@ -47,9 +48,28 @@ export default function GamifiedDashboard() {
     // Fetch all dashboard data
     fetchDashboardData()
     fetchOnboardingStatus()
+    fetchUserName()
 
     return () => clearInterval(interval)
   }, [])
+
+  const fetchUserName = async () => {
+    try {
+      const response = await fetch("/api/onboarding")
+      if (response.ok) {
+        const data = await response.json()
+        if (data.onboarding?.firstName) {
+          setUserName(data.onboarding.firstName)
+        } else if (data.user?.name) {
+          // Fallback to user name from session
+          const firstName = data.user.name.split(' ')[0]
+          setUserName(firstName)
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user name:", err)
+    }
+  }
 
   const fetchOnboardingStatus = async () => {
     try {
@@ -140,7 +160,7 @@ export default function GamifiedDashboard() {
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-white md:text-5xl">Welcome back, Maria! 👋</h1>
+            <h1 className="text-4xl font-bold text-white md:text-5xl">Welcome back, {userName}! 👋</h1>
             <p className="text-lg text-slate-400">{currentDate} • {currentTime}</p>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

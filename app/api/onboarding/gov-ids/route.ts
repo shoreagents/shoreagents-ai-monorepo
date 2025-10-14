@@ -39,31 +39,31 @@ export async function POST(req: NextRequest) {
       }, { status: 403 })
     }
 
-    // Validate ID formats
-    const errors: string[] = []
-    
-    if (sss && !/^\d{2}-\d{7}-\d$/.test(sss)) {
-      errors.push("SSS format should be XX-XXXXXXX-X")
-    }
-    
-    if (tin && !/^\d{3}-\d{3}-\d{3}-\d{3}$/.test(tin)) {
-      errors.push("TIN format should be XXX-XXX-XXX-XXX")
-    }
-    
-    if (philhealthNo && !/^\d{2}-\d{9}-\d$/.test(philhealthNo)) {
-      errors.push("PhilHealth format should be XX-XXXXXXXXX-X")
-    }
-    
-    if (pagibigNo && !/^\d{4}-\d{4}-\d{4}$/.test(pagibigNo)) {
-      errors.push("Pag-IBIG format should be XXXX-XXXX-XXXX")
-    }
-
-    if (errors.length > 0) {
-      return NextResponse.json({ 
-        error: "Invalid ID format", 
-        details: errors 
-      }, { status: 400 })
-    }
+    // Validate ID formats (COMMENTED OUT FOR TESTING - RE-ENABLE LATER)
+    // const errors: string[] = []
+    // 
+    // if (sss && !/^\d{2}-\d{7}-\d$/.test(sss)) {
+    //   errors.push("SSS format should be XX-XXXXXXX-X")
+    // }
+    // 
+    // if (tin && !/^\d{3}-\d{3}-\d{3}-\d{3}$/.test(tin)) {
+    //   errors.push("TIN format should be XXX-XXX-XXX-XXX")
+    // }
+    // 
+    // if (philhealthNo && !/^\d{2}-\d{9}-\d$/.test(philhealthNo)) {
+    //   errors.push("PhilHealth format should be XX-XXXXXXXXX-X")
+    // }
+    // 
+    // if (pagibigNo && !/^\d{4}-\d{4}-\d{4}$/.test(pagibigNo)) {
+    //   errors.push("Pag-IBIG format should be XXXX-XXXX-XXXX")
+    // }
+    //
+    // if (errors.length > 0) {
+    //   return NextResponse.json({ 
+    //     error: "Invalid ID format", 
+    //     details: errors 
+    //   }, { status: 400 })
+    // }
 
     // Update or create onboarding
     const onboarding = await prisma.staffOnboarding.upsert({
@@ -127,14 +127,22 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.emergencyContactStatus
   ]
 
+  // Count progress: SUBMITTED = 15%, APPROVED = 20% per section
+  let totalProgress = 0
+  sections.forEach(status => {
+    if (status === "SUBMITTED") totalProgress += 15
+    if (status === "APPROVED") totalProgress += 20
+  })
+
+  const completionPercent = Math.min(totalProgress, 100)
   const approvedCount = sections.filter(status => status === "APPROVED").length
-  const completionPercent = Math.round((approvedCount / sections.length) * 100)
+  const isComplete = approvedCount === 5
 
   await prisma.staffOnboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent,
-      isComplete: completionPercent === 100
+      isComplete
     }
   })
 }

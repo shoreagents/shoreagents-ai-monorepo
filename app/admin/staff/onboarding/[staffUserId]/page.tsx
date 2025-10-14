@@ -435,10 +435,98 @@ export default function AdminOnboardingDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 mb-4">
-              <p className="text-sm text-slate-400">
-                Document upload functionality will be added in the next phase.
-              </p>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Valid ID</p>
+                {onboarding.validIdUrl ? (
+                  <a 
+                    href={onboarding.validIdUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </a>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Birth Certificate</p>
+                {onboarding.birthCertUrl ? (
+                  <a 
+                    href={onboarding.birthCertUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </a>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">NBI Clearance</p>
+                {onboarding.nbiClearanceUrl ? (
+                  <a 
+                    href={onboarding.nbiClearanceUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </a>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Police Clearance</p>
+                {onboarding.policeClearanceUrl ? (
+                  <a 
+                    href={onboarding.policeClearanceUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </a>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">ID Photo (2x2)</p>
+                {onboarding.idPhotoUrl ? (
+                  <div className="space-y-2">
+                    <a 
+                      href={onboarding.idPhotoUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      View Photo
+                    </a>
+                    <img 
+                      src={onboarding.idPhotoUrl} 
+                      alt="ID Photo" 
+                      className="w-24 h-24 object-cover rounded border border-slate-600"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
             </div>
 
             {onboarding.documentsFeedback && (
@@ -492,9 +580,29 @@ export default function AdminOnboardingDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-400 mb-4">
-              Signature upload functionality will be added in the next phase.
-            </p>
+            {onboarding.signatureUrl ? (
+              <div className="mb-4">
+                <p className="text-sm text-slate-400 mb-2">Signature Preview:</p>
+                <div className="border-2 border-slate-600 rounded-lg p-4 bg-white inline-block">
+                  <img 
+                    src={onboarding.signatureUrl} 
+                    alt="Staff Signature" 
+                    className="max-h-32"
+                  />
+                </div>
+                <a 
+                  href={onboarding.signatureUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  View Full Size
+                </a>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm mb-4">Signature not uploaded yet</p>
+            )}
 
             {onboarding.signatureFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
