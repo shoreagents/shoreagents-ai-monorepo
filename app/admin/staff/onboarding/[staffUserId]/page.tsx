@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { 
   Loader2, 
   CheckCircle2, 
@@ -89,10 +93,33 @@ export default function AdminOnboardingDetailPage() {
   const [staff, setStaff] = useState<any>(null)
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
   const [feedback, setFeedback] = useState<Record<string, string>>({})
+  const [companies, setCompanies] = useState<any[]>([])
+  
+  // Employment Details (filled by management)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("")
+  const [employmentStatus, setEmploymentStatus] = useState<string>("PROBATION")
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [shiftTime, setShiftTime] = useState<string>("9:00 AM - 6:00 PM")
+  const [currentRole, setCurrentRole] = useState<string>("")
+  const [salary, setSalary] = useState<string>("")
+  const [hmo, setHmo] = useState<boolean>(true)
 
   useEffect(() => {
     fetchOnboardingDetails()
+    fetchCompanies()
   }, [staffUserId])
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch("/api/admin/companies")
+      if (response.ok) {
+        const data = await response.json()
+        setCompanies(data.companies || [])
+      }
+    } catch (err) {
+      console.error("Failed to fetch companies:", err)
+    }
+  }
 
   const fetchOnboardingDetails = async () => {
     try {
@@ -141,7 +168,23 @@ export default function AdminOnboardingDetailPage() {
   }
 
   const handleCompleteOnboarding = async () => {
-    if (!confirm("Complete this staff member's onboarding? This will create their profile and work schedule.")) {
+    // Validation
+    if (!selectedCompanyId) {
+      setError("Please select a company to assign this staff member to.")
+      return
+    }
+    
+    if (!currentRole) {
+      setError("Please enter the staff member's role title.")
+      return
+    }
+    
+    if (!salary || parseFloat(salary) <= 0) {
+      setError("Please enter a valid salary amount.")
+      return
+    }
+    
+    if (!confirm("Complete this staff member's onboarding and assign to selected company? This will create their profile and work schedule.")) {
       return
     }
     
@@ -151,7 +194,17 @@ export default function AdminOnboardingDetailPage() {
     
     try {
       const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/complete`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          companyId: selectedCompanyId,
+          employmentStatus,
+          startDate,
+          shiftTime,
+          currentRole,
+          salary: parseFloat(salary),
+          hmo
+        })
       })
       
       if (!response.ok) {
@@ -159,8 +212,9 @@ export default function AdminOnboardingDetailPage() {
         throw new Error(data.error || "Failed to complete")
       }
       
-      setSuccess("Onboarding completed! Profile and work schedule created.")
+      setSuccess("Onboarding completed! Staff assigned to company, profile and work schedule created.")
       await fetchOnboardingDetails()
+      setTimeout(() => router.push("/admin/staff/onboarding"), 2000)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -244,25 +298,154 @@ export default function AdminOnboardingDetailPage() {
           </Alert>
         )}
 
-        {/* Complete Onboarding Button */}
-        {onboarding.completionPercent === 100 && !onboarding.isComplete && (
+        {/* Complete Onboarding Button - Only show when ALL sections APPROVED */}
+        {onboarding.personalInfoStatus === "APPROVED" &&
+         onboarding.govIdStatus === "APPROVED" &&
+         onboarding.documentsStatus === "APPROVED" &&
+         onboarding.signatureStatus === "APPROVED" &&
+         onboarding.emergencyContactStatus === "APPROVED" &&
+         !onboarding.isComplete && (
           <Card className="mb-6 bg-green-900/30 border-green-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
-                    All Sections Approved!
-                  </h3>
-                  <p className="text-sm text-slate-300">
-                    Ready to complete onboarding and create staff profile
+            <CardHeader>
+              <CardTitle className="text-white">✅ Complete Onboarding & Setup Employment</CardTitle>
+              <CardDescription className="text-slate-300">
+                All documents verified. Fill in employment details to complete onboarding.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                
+                {/* Company Assignment */}
+                <div className="space-y-2">
+                  <Label htmlFor="company" className="text-white">
+                    Assign to Company/Client *
+                  </Label>
+                  <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                    <SelectTrigger id="company" className="bg-slate-800 border-slate-700 text-white">
+                      <SelectValue placeholder="Select a company..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {companies.map((company) => (
+                        <SelectItem 
+                          key={company.id} 
+                          value={company.id}
+                          className="text-white hover:bg-slate-700"
+                        >
+                          {company.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Employment Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-white">
+                    Employment Status *
+                  </Label>
+                  <Select value={employmentStatus} onValueChange={setEmploymentStatus}>
+                    <SelectTrigger id="status" className="bg-slate-800 border-slate-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="PROBATION" className="text-white hover:bg-slate-700">Probation</SelectItem>
+                      <SelectItem value="REGULAR" className="text-white hover:bg-slate-700">Regular</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Start Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-white">
+                      Start Date *
+                    </Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
+
+                  {/* Shift Time */}
+                  <div className="space-y-2">
+                    <Label htmlFor="shiftTime" className="text-white">
+                      Shift Time *
+                    </Label>
+                    <Input
+                      id="shiftTime"
+                      type="text"
+                      value={shiftTime}
+                      onChange={(e) => setShiftTime(e.target.value)}
+                      placeholder="e.g., 9:00 AM - 6:00 PM"
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Current Role */}
+                  <div className="space-y-2">
+                    <Label htmlFor="role" className="text-white">
+                      Role Title *
+                    </Label>
+                    <Input
+                      id="role"
+                      type="text"
+                      value={currentRole}
+                      onChange={(e) => setCurrentRole(e.target.value)}
+                      placeholder="e.g., Virtual Assistant"
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
+
+                  {/* Salary */}
+                  <div className="space-y-2">
+                    <Label htmlFor="salary" className="text-white">
+                      Monthly Salary (USD) *
+                    </Label>
+                    <Input
+                      id="salary"
+                      type="number"
+                      value={salary}
+                      onChange={(e) => setSalary(e.target.value)}
+                      placeholder="e.g., 800"
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* HMO Toggle */}
+                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
+                  <div>
+                    <Label htmlFor="hmo" className="text-white">
+                      HMO Coverage
+                    </Label>
+                    <p className="text-xs text-slate-400">
+                      Does this staff member have HMO coverage?
+                    </p>
+                  </div>
+                  <Switch
+                    id="hmo"
+                    checked={hmo}
+                    onCheckedChange={setHmo}
+                  />
+                </div>
+
+                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                  <p className="text-xs text-blue-200">
+                    <strong>Auto-calculated:</strong> Days Employed (from start date), Vacation Leave (0 until after probation)
                   </p>
                 </div>
+
                 <Button
                   onClick={handleCompleteOnboarding}
-                  disabled={completing}
-                  className="bg-green-600 hover:bg-green-700"
+                  disabled={completing || !selectedCompanyId || !currentRole || !salary}
+                  className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  {completing ? "Processing..." : "Complete Onboarding"}
+                  {completing ? "Processing..." : "Complete Onboarding & Create Profile"}
                 </Button>
               </div>
             </CardContent>

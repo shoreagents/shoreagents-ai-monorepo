@@ -50,6 +50,13 @@ const Icons = {
       <path d="m20.7 13.8 1-.4" />
     </svg>
   ),
+  ClipboardCheck: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="m9 14 2 2 4-4" />
+    </svg>
+  ),
   LinkIcon: () => (
     <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -147,6 +154,7 @@ const Icons = {
 const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
   { icon: "Users", label: "Staff Management", href: "/admin/staff", badge: null },
+  { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
   { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
   { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
   { icon: "LinkIcon", label: "Staff Assignments", href: "/admin/assignments", badge: null },

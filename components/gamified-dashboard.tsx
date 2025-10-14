@@ -176,18 +176,32 @@ export default function GamifiedDashboard() {
         {/* Onboarding Banner */}
         {onboardingStatus && !onboardingStatus.isComplete && (
           <Link href="/onboarding">
-            <div className="glass cursor-pointer rounded-xl border-2 border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 p-6 shadow-xl transition-all hover:scale-[1.02] hover:border-yellow-500">
+            <div className={`glass cursor-pointer rounded-xl border-2 p-6 shadow-xl transition-all hover:scale-[1.02] ${
+              onboardingStatus.completionPercent === 100
+                ? "border-blue-500/50 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500"
+                : "border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500"
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="rounded-full bg-yellow-500 p-3">
-                    <AlertCircle className="h-6 w-6 text-yellow-900" />
+                  <div className={`rounded-full p-3 ${
+                    onboardingStatus.completionPercent === 100 ? "bg-blue-500" : "bg-yellow-500"
+                  }`}>
+                    {onboardingStatus.completionPercent === 100 ? (
+                      <Clock className="h-6 w-6 text-white" />
+                    ) : (
+                      <AlertCircle className="h-6 w-6 text-yellow-900" />
+                    )}
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white">
-                      Complete Your Onboarding
+                      {onboardingStatus.completionPercent === 100 
+                        ? "⏳ Awaiting Admin Verification" 
+                        : "Complete Your Onboarding"}
                     </h3>
                     <p className="text-sm text-slate-300">
-                      You're {onboardingStatus.completionPercent}% done! Complete your profile to unlock all features.
+                      {onboardingStatus.completionPercent === 100
+                        ? "You've completed all sections! Our team is reviewing your documents."
+                        : `You're ${onboardingStatus.completionPercent}% done! Complete your profile to unlock all features.`}
                     </p>
                   </div>
                 </div>
@@ -196,17 +210,27 @@ export default function GamifiedDashboard() {
                     <div className="text-3xl font-bold text-white">
                       {onboardingStatus.completionPercent}%
                     </div>
-                    <div className="text-xs text-slate-400">Complete</div>
+                    <div className="text-xs text-slate-400">
+                      {onboardingStatus.completionPercent === 100 ? "Submitted" : "Complete"}
+                    </div>
                   </div>
-                  <div className="rounded-full bg-yellow-500 px-6 py-2 font-semibold text-yellow-900 transition-colors hover:bg-yellow-400">
-                    Continue →
+                  <div className={`rounded-full px-6 py-2 font-semibold transition-colors ${
+                    onboardingStatus.completionPercent === 100 
+                      ? "bg-blue-500 text-white hover:bg-blue-400"
+                      : "bg-yellow-500 text-yellow-900 hover:bg-yellow-400"
+                  }`}>
+                    {onboardingStatus.completionPercent === 100 ? "View Status →" : "Continue →"}
                   </div>
                 </div>
               </div>
               <div className="mt-4">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
                   <div
-                    className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-500"
+                    className={`h-full transition-all duration-500 ${
+                      onboardingStatus.completionPercent === 100
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+                        : "bg-gradient-to-r from-yellow-500 to-orange-500"
+                    }`}
                     style={{ width: `${onboardingStatus.completionPercent}%` }}
                   />
                 </div>

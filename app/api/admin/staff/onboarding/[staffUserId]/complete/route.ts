@@ -23,6 +23,46 @@ export async function POST(
     }
 
     const { staffUserId } = await context.params
+    const body = await req.json()
+    const { 
+      companyId,
+      employmentStatus,
+      startDate,
+      shiftTime,
+      currentRole,
+      salary,
+      hmo
+    } = body
+
+    // Validation
+    if (!companyId) {
+      return NextResponse.json({ 
+        error: "Company ID is required" 
+      }, { status: 400 })
+    }
+
+    if (!currentRole) {
+      return NextResponse.json({ 
+        error: "Role title is required" 
+      }, { status: 400 })
+    }
+
+    if (!salary || salary <= 0) {
+      return NextResponse.json({ 
+        error: "Valid salary is required" 
+      }, { status: 400 })
+    }
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    })
+
+    if (!company) {
+      return NextResponse.json({ 
+        error: "Company not found" 
+      }, { status: 404 })
+    }
 
     // Get staff onboarding
     const staffUser = await prisma.staffUser.findUnique({
@@ -59,28 +99,74 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Create StaffProfile with data from onboarding
+    // Assign staff to company & update legal name from onboarding
+    const fullName = `${onboarding.firstName} ${onboarding.middleName || ''} ${onboarding.lastName}`.trim()
+    await prisma.staffUser.update({
+      where: { id: staffUser.id },
+      data: { 
+        companyId: companyId,
+        name: fullName // Update with full legal name from onboarding
+      }
+    })
+
+    // Calculate days employed from start date
+    const startDateTime = new Date(startDate)
+    const today = new Date()
+    const daysEmployed = Math.floor((today.getTime() - startDateTime.getTime()) / (1000 * 60 * 60 * 24))
+
+    // Vacation leave: 0 for PROBATION, 12 for REGULAR
+    const vacationLeave = employmentStatus === "PROBATION" ? 0 : 12
+
+    // Create StaffProfile with data from onboarding + management input
     const profile = await prisma.staffProfile.create({
       data: {
         staffUserId: staffUser.id,
         phone: onboarding.contactNo || "",
-        location: "Philippines", // Default
-        employmentStatus: "PROBATION", // Default for new hires
-        startDate: new Date(),
-        daysEmployed: 0,
-        currentRole: "New Hire", // Admin will update later
-        client: "", // Admin will assign later
-        accountManager: "", // Admin will assign later
-        salary: 0, // Admin will set later
-        totalLeave: 12,
+        location: "Philippines", // Default location
+        gender: onboarding.gender,
+        civilStatus: onboarding.civilStatus,
+        dateOfBirth: onboarding.dateOfBirth,
+        employmentStatus: employmentStatus || "PROBATION",
+        startDate: new Date(startDate),
+        daysEmployed: daysEmployed >= 0 ? daysEmployed : 0,
+        currentRole: currentRole,
+        salary: salary,
+        totalLeave: vacationLeave,
         usedLeave: 0,
         vacationUsed: 0,
         sickUsed: 0,
-        hmo: true,
+        hmo: hmo !== undefined ? hmo : true,
       }
     })
 
-    // Create default work schedule (Mon-Fri 9AM-6PM)
+    // Create StaffPersonalRecord with HR data from onboarding
+    await prisma.staffPersonalRecord.create({
+      data: {
+        staffUserId: staffUser.id,
+        sss: onboarding.sss,
+        tin: onboarding.tin,
+        philhealthNo: onboarding.philhealthNo,
+        pagibigNo: onboarding.pagibigNo,
+        emergencyContactName: onboarding.emergencyContactName,
+        emergencyContactNo: onboarding.emergencyContactNo,
+        emergencyRelationship: onboarding.emergencyRelationship,
+        validIdUrl: onboarding.validIdUrl,
+        birthCertUrl: onboarding.birthCertUrl,
+        nbiClearanceUrl: onboarding.nbiClearanceUrl,
+        policeClearanceUrl: onboarding.policeClearanceUrl,
+        sssDocUrl: onboarding.sssDocUrl,
+        tinDocUrl: onboarding.tinDocUrl,
+        philhealthDocUrl: onboarding.philhealthDocUrl,
+        pagibigDocUrl: onboarding.pagibigDocUrl,
+      }
+    })
+
+    // Create work schedule based on shift time
+    // Parse shift time (e.g., "9:00 AM - 6:00 PM")
+    const shiftParts = shiftTime.split('-').map(s => s.trim())
+    const startTime = shiftParts[0] || "9:00 AM"
+    const endTime = shiftParts[1] || "6:00 PM"
+
     const days = [
       "Monday",
       "Tuesday",
@@ -94,8 +180,8 @@ export async function POST(
     const schedules = days.map(day => ({
       profileId: profile.id,
       dayOfWeek: day,
-      startTime: ["Saturday", "Sunday"].includes(day) ? "" : "9:00 AM",
-      endTime: ["Saturday", "Sunday"].includes(day) ? "" : "6:00 PM",
+      startTime: ["Saturday", "Sunday"].includes(day) ? "" : startTime,
+      endTime: ["Saturday", "Sunday"].includes(day) ? "" : endTime,
       isWorkday: !["Saturday", "Sunday"].includes(day)
     }))
 

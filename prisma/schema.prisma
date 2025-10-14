@@ -64,8 +64,8 @@ model StaffUser {
   gamificationProfile GamificationProfile?
   kudosGiven          Kudos[]              @relation("KudosGiven")
   kudosReceived       Kudos[]              @relation("KudosReceived")
-  staffAssignments    StaffAssignment[]
   onboarding          StaffOnboarding?
+  personalRecord      StaffPersonalRecord?
 
   @@map("staff_users")
 }
@@ -78,8 +78,9 @@ model StaffProfile {
   staffUserId        String           @unique
   phone              String?
   location           String?
-  client             String?
-  accountManager     String?
+  gender             String?
+  civilStatus        String?
+  dateOfBirth        DateTime?
   employmentStatus   EmploymentStatus @default(PROBATION)
   startDate          DateTime
   daysEmployed       Int              @default(0)
@@ -113,6 +114,42 @@ model WorkSchedule {
   profile   StaffProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@map("work_schedules")
+}
+
+// ============================================
+// STAFF PERSONAL RECORDS (HR Data)
+// ============================================
+model StaffPersonalRecord {
+  id                    String    @id @default(uuid())
+  staffUserId           String    @unique
+  
+  // Government/Tax Numbers
+  sss                   String?
+  tin                   String?
+  philhealthNo          String?
+  pagibigNo             String?
+  
+  // Emergency Contact
+  emergencyContactName  String?
+  emergencyContactNo    String?
+  emergencyRelationship String?
+  
+  // Government Document URLs (from onboarding)
+  validIdUrl            String?
+  birthCertUrl          String?
+  nbiClearanceUrl       String?
+  policeClearanceUrl    String?
+  sssDocUrl             String?
+  tinDocUrl             String?
+  philhealthDocUrl      String?
+  pagibigDocUrl         String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  staffUser             StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@map("staff_personal_records")
 }
 
 // ============================================
@@ -392,7 +429,6 @@ model Company {
   accountManager   ManagementUser?   @relation(fields: [accountManagerId], references: [id])
   clientUsers      ClientUser[]      @relation("CompanyUsers")
   staffUsers       StaffUser[]       @relation("CompanyStaff")
-  staffAssignments StaffAssignment[]
 
   @@map("company")
 }
@@ -410,28 +446,8 @@ model ClientUser {
   updatedAt            DateTime          @updatedAt
   
   company              Company           @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  managedOffshoreStaff StaffAssignment[] @relation("ManagedBy")
 
   @@map("client_users")
-}
-
-model StaffAssignment {
-  id          String      @id @default(uuid())
-  staffUserId String
-  companyId   String
-  managerId   String?
-  role        String?
-  startDate   DateTime    @default(now())
-  rate        Decimal?    @db.Decimal(10, 2)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  manager     ClientUser? @relation("ManagedBy", fields: [managerId], references: [id])
-  staffUser   StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-
-  @@unique([staffUserId, companyId])
-  @@map("staff_assignments")
 }
 
 // ============================================
