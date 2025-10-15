@@ -22,12 +22,14 @@ class PerformanceTracker {
     this.systemIdleTime = this.loadOptionalDependency('@paulcbetts/system-idle-time')
     this.activeWin = this.loadOptionalDependency('active-win')
     this.clipboardy = this.loadOptionalDependency('clipboardy')
-    this.iohook = this.loadOptionalDependency('iohook')
+    // Note: iohook removed (deprecated) - Input tracking handled by Activity Tracker (uiohook-napi)
     
     // Activity tracking state
     this.currentApp = null
+    this.currentUrl = null
     this.lastClipboardContent = ''
     this.activeApps = new Set()
+    this.visitedUrls = new Set()
     
     this.log('Performance Tracker initialized')
   }
@@ -54,7 +56,7 @@ class PerformanceTracker {
       bandwidth: 0,
       clipboardActions: 0,
       filesAccessed: 0,
-      urlsVisited: 0,
+      urlsVisited: 0, // Count of unique URLs visited
       tabsSwitched: 0,
       productivityScore: 0,
       applicationsUsed: [],
@@ -64,6 +66,7 @@ class PerformanceTracker {
 
   /**
    * Start tracking user activity
+   * Note: Keyboard and mouse input tracking is handled by Activity Tracker (uiohook-napi)
    */
   start() {
     if (this.isTracking) {
@@ -75,9 +78,10 @@ class PerformanceTracker {
     this.sessionStartTime = Date.now()
     this.lastActivityTime = Date.now()
     this.log('Starting performance tracking...')
+    this.log('Note: Input tracking is handled by Activity Tracker (uiohook-napi)')
 
-    // Setup keyboard and mouse tracking with iohook (if available)
-    this.setupInputTracking()
+    // Input tracking is now handled by Activity Tracker
+    // this.setupInputTracking() - REMOVED (deprecated iohook)
 
     // Start main tracking loop
     this.trackingInterval = setInterval(() => {
@@ -115,15 +119,6 @@ class PerformanceTracker {
       this.trackingInterval = null
     }
 
-    // Stop iohook if running
-    if (this.iohook && this.iohook.stop) {
-      try {
-        this.iohook.stop()
-      } catch (error) {
-        this.log(`Error stopping iohook: ${error.message}`)
-      }
-    }
-
     this.log('Performance tracking stopped')
   }
 
@@ -145,53 +140,17 @@ class PerformanceTracker {
   }
 
   /**
-   * Setup keyboard and mouse input tracking
+   * Input tracking is now handled by Activity Tracker (uiohook-napi)
+   * This method is kept for compatibility but does nothing
+   * @deprecated - Use Activity Tracker for input tracking
    */
   setupInputTracking() {
-    if (!this.iohook) {
-      this.log('iohook not available, using fallback tracking')
-      return
-    }
-
-    try {
-      // Track mouse clicks
-      this.iohook.on('mouseclick', () => {
-        if (!this.isPaused && config.TRACK_MOUSE) {
-          this.metrics.mouseClicks++
-          this.lastActivityTime = Date.now()
-        }
-      })
-
-      // Track mouse movements (throttled)
-      let lastMouseTrack = 0
-      this.iohook.on('mousemove', (event) => {
-        const now = Date.now()
-        if (!this.isPaused && config.TRACK_MOUSE && now - lastMouseTrack > config.MOUSE_MOVEMENT_THROTTLE) {
-          this.metrics.mouseMovements++
-          this.lastMousePosition = { x: event.x, y: event.y }
-          this.lastActivityTime = now
-          lastMouseTrack = now
-        }
-      })
-
-      // Track keystrokes (count only, no content)
-      this.iohook.on('keydown', () => {
-        if (!this.isPaused && config.TRACK_KEYBOARD) {
-          this.metrics.keystrokes++
-          this.lastActivityTime = Date.now()
-        }
-      })
-
-      // Start iohook
-      this.iohook.start()
-      this.log('Input tracking (iohook) started successfully')
-    } catch (error) {
-      this.log(`Error setting up input tracking: ${error.message}`)
-    }
+    this.log('Input tracking is handled by Activity Tracker (uiohook-napi)')
   }
 
   /**
    * Update metrics periodically
+   * Note: Idle time is now tracked by Activity Tracker when inactivity is detected
    */
   updateMetrics() {
     if (this.isPaused) {
@@ -204,15 +163,18 @@ class PerformanceTracker {
     // Update screen time
     this.metrics.screenTime += timeSinceLastUpdate
 
-    // Check for idle time
+    // Active time tracking
+    // Note: Idle time is now tracked by Activity Tracker when inactivity dialog is shown
+    // We only track active time here to avoid double-counting
     const idleSeconds = this.getSystemIdleTime()
     const isIdle = idleSeconds >= config.IDLE_THRESHOLD
 
-    if (isIdle) {
-      this.metrics.idleTime += timeSinceLastUpdate
-    } else {
+    if (!isIdle) {
+      // Only add to active time if user is not idle
+      // Idle time will be added by Activity Tracker when inactivity is detected
       this.metrics.activeTime += timeSinceLastUpdate
     }
+    // If idle, don't add time to either counter yet - wait for Activity Tracker to handle it
 
     // Calculate productivity score
     this.metrics.productivityScore = this.calculateProductivityScore()
@@ -307,12 +269,104 @@ class PerformanceTracker {
             this.metrics.tabsSwitched++
             this.activeApps.add(appName)
             this.metrics.applicationsUsed = Array.from(this.activeApps)
+            console.log(`[PerformanceTracker] App switched to: ${appName}`)
+          }
+
+          // Track URLs for browsers (count only)
+          const browserApps = ['Google Chrome', 'Chrome', 'Microsoft Edge', 'Edge', 'Brave Browser', 'Brave', 'Firefox', 'Mozilla Firefox']
+          if (browserApps.some(browser => appName.includes(browser))) {
+            console.log(`[PerformanceTracker] Browser detected: ${appName}, Title: ${window.title || 'no title'}`)
+            const url = this.extractUrlFromWindow(window)
+            console.log(`[PerformanceTracker] Extracted URL: ${url}`)
+            if (url && url !== this.currentUrl) {
+              this.currentUrl = url
+              this.visitedUrls.add(url)
+              this.metrics.urlsVisited = this.visitedUrls.size
+              console.log(`[PerformanceTracker] URL visited: ${url} (Total: ${this.metrics.urlsVisited})`)
+              // Log all visited URLs
+              this.logVisitedUrls()
+            }
           }
         }
       } catch (error) {
-        // Ignore active window errors
+        console.error('[PerformanceTracker] Error in application tracking:', error)
       }
     }, 2000) // Check every 2 seconds
+  }
+
+  /**
+   * Extract URL from browser window
+   * @param {Object} window - Active window object from active-win
+   * @returns {string|null} URL or null
+   */
+  extractUrlFromWindow(window) {
+    // Try direct URL property first (some browsers provide this)
+    if (window.url) {
+      return window.url
+    }
+
+    // Try to extract from window title
+    if (window.title) {
+      let title = window.title.trim()
+      
+      // Remove browser suffix (e.g., " - Google Chrome", " - Personal - Microsoft​ Edge")
+      const browserSuffixes = [
+        ' - Google Chrome',
+        ' - Chrome',
+        ' - Microsoft Edge',
+        ' - Microsoft​ Edge', // with zero-width space
+        ' - Edge',
+        ' - Mozilla Firefox',
+        ' - Firefox',
+        ' - Brave',
+        ' - Brave Browser'
+      ]
+      
+      for (const suffix of browserSuffixes) {
+        if (title.endsWith(suffix)) {
+          title = title.substring(0, title.length - suffix.length).trim()
+          break
+        }
+      }
+      
+      // Remove "Personal - " prefix (Edge adds this)
+      if (title.endsWith(' - Personal')) {
+        title = title.substring(0, title.length - ' - Personal'.length).trim()
+      }
+      
+      // Skip common non-page titles
+      const skipTitles = ['New Tab', 'New tab', 'Untitled', '', 'Chrome', 'Edge', 'Firefox', 'Brave']
+      
+      // Check for exact match
+      if (skipTitles.includes(title)) {
+        return null
+      }
+      
+      // Check if title starts with skip patterns (for cases like "New tab and 6 more pages")
+      const skipStartsWith = ['New Tab', 'New tab']
+      if (skipStartsWith.some(pattern => title.startsWith(pattern))) {
+        return null
+      }
+      
+      // Skip if it's just a number (like "1 more page")
+      if (/^\d+\s+more\s+page/i.test(title)) {
+        return null
+      }
+
+      // Check if title contains URL-like patterns
+      const urlPattern = /https?:\/\/[^\s]+/
+      const urlMatch = title.match(urlPattern)
+      if (urlMatch) {
+        return urlMatch[0]
+      }
+
+      // Use the cleaned page title as identifier
+      if (title.length > 0) {
+        return `page:${title.substring(0, 100)}` // Limit length
+      }
+    }
+
+    return null
   }
 
   /**
@@ -335,31 +389,34 @@ class PerformanceTracker {
   }
 
   /**
-   * Get current metrics
+   * Get current metrics (with raw seconds for real-time display)
    */
   getMetrics() {
     return {
       ...this.metrics,
-      // Convert seconds to minutes for API
-      activeTime: Math.round(this.metrics.activeTime / 60),
-      idleTime: Math.round(this.metrics.idleTime / 60),
-      screenTime: Math.round(this.metrics.screenTime / 60),
+      // Keep raw seconds for real-time display (frontend will format)
+      activeTime: this.metrics.activeTime,
+      idleTime: this.metrics.idleTime,
+      screenTime: this.metrics.screenTime,
+      // Include visited URLs array
+      visitedUrlsList: Array.from(this.visitedUrls),
     }
   }
 
   /**
-   * Get metrics for API (formatted)
+   * Get metrics for API (formatted - converts seconds to minutes)
    */
   getMetricsForAPI() {
-    const metrics = this.getMetrics()
+    const metrics = this.metrics
     
     return {
       mouseMovements: metrics.mouseMovements,
       mouseClicks: metrics.mouseClicks,
       keystrokes: metrics.keystrokes,
-      activeTime: metrics.activeTime,
-      idleTime: metrics.idleTime,
-      screenTime: metrics.screenTime,
+      // Convert seconds to minutes for API/database storage
+      activeTime: Math.round(metrics.activeTime / 60),
+      idleTime: Math.round(metrics.idleTime / 60),
+      screenTime: Math.round(metrics.screenTime / 60),
       downloads: metrics.downloads,
       uploads: metrics.uploads,
       bandwidth: metrics.bandwidth,
@@ -368,6 +425,36 @@ class PerformanceTracker {
       urlsVisited: metrics.urlsVisited,
       tabsSwitched: metrics.tabsSwitched,
       productivityScore: metrics.productivityScore,
+      // Include visited URLs array for database storage
+      visitedUrlsList: Array.from(this.visitedUrls),
+    }
+  }
+
+  /**
+   * Log all visited URLs to console
+   */
+  logVisitedUrls() {
+    console.log('\n=== VISITED URLs ===')
+    console.log(`Total unique URLs visited: ${this.visitedUrls.size}`)
+    if (this.visitedUrls.size > 0) {
+      console.log('\nURLs List:')
+      Array.from(this.visitedUrls).forEach((url, index) => {
+        console.log(`  ${index + 1}. ${url}`)
+      })
+    } else {
+      console.log('No URLs visited yet')
+    }
+    console.log('===================\n')
+  }
+
+  /**
+   * Add idle time manually (called by Activity Tracker)
+   * @param {number} seconds - Idle time in seconds to add
+   */
+  addIdleTime(seconds) {
+    if (seconds > 0) {
+      this.metrics.idleTime += seconds
+      this.log(`Added ${seconds.toFixed(2)}s to idle time. Total: ${this.metrics.idleTime.toFixed(2)}s`)
     }
   }
 
@@ -400,7 +487,7 @@ class PerformanceTracker {
       isPaused: this.isPaused,
       sessionDuration: Math.floor((Date.now() - this.sessionStartTime) / 1000),
       lastUpdate: this.metrics.lastUpdated,
-      hasIohook: !!this.iohook,
+      inputTrackingBy: 'Activity Tracker (uiohook-napi)',
       hasSystemIdleTime: !!this.systemIdleTime,
       hasActiveWin: !!this.activeWin,
       hasClipboardy: !!this.clipboardy,
@@ -415,6 +502,5 @@ class PerformanceTracker {
 }
 
 module.exports = new PerformanceTracker()
-
 
 

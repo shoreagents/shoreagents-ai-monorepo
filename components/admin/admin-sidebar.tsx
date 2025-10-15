@@ -189,6 +189,16 @@ export function AdminSidebar({
   const pathname = usePathname()
 
   const handleLogout = async () => {
+    // Stop Electron sync service if running in Electron
+    if (typeof window !== 'undefined' && window.electron?.sync?.stop) {
+      try {
+        await window.electron.sync.stop()
+        console.log('Electron sync service stopped')
+      } catch (error) {
+        console.error('Failed to stop Electron sync:', error)
+      }
+    }
+    
     await signOut({ callbackUrl: '/login', redirect: true })
   }
 

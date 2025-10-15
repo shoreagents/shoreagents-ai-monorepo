@@ -56,9 +56,15 @@ export async function POST(req: NextRequest) {
     // Recalculate completion percentage
     await updateCompletionPercent(onboarding.id)
 
+    // Fetch updated onboarding to get completion percent
+    const updatedOnboarding = await prisma.staffOnboarding.findUnique({
+      where: { id: onboarding.id }
+    })
+
     return NextResponse.json({ 
       success: true,
-      message: "Emergency contact saved successfully" 
+      message: "Emergency contact saved successfully",
+      completionPercent: updatedOnboarding?.completionPercent || 0
     })
 
   } catch (error) {

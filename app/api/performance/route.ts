@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user first
+    // Get the StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id }
     })
@@ -50,16 +50,27 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Format metrics for frontend
+    // Calculate total screenshot count (sum of all clipboardActions)
+    const allMetrics = await prisma.performanceMetric.findMany({
+      where: {
+        staffUserId: staffUser.id
+      },
+      select: {
+        clipboardActions: true
+      }
+    })
+    const totalScreenshotCount = allMetrics.reduce((sum, m) => sum + m.clipboardActions, 0)
+
+    // Format metrics for frontend (convert minutes to seconds for consistent display)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
       date: m.date.toISOString(),
       mouseMovements: m.mouseMovements,
       mouseClicks: m.mouseClicks,
       keystrokes: m.keystrokes,
-      activeTime: m.activeTime,
-      idleTime: m.idleTime,
-      screenTime: m.screenTime,
+      activeTime: m.activeTime * 60, // Convert minutes to seconds
+      idleTime: m.idleTime * 60, // Convert minutes to seconds
+      screenTime: m.screenTime * 60, // Convert minutes to seconds
       downloads: m.downloads,
       uploads: m.uploads,
       bandwidth: m.bandwidth,
@@ -68,7 +79,7 @@ export async function GET(request: NextRequest) {
       urlsVisited: m.urlsVisited,
       tabsSwitched: m.tabsSwitched,
       productivityScore: m.productivityScore,
-      screenshotCount: 0, // Not in schema, set to 0
+      screenshotCount: m.clipboardActions, // Use clipboardActions as screenshot count
       applicationsUsed: [], // Not in schema, set to empty array
     }))
 
@@ -79,9 +90,9 @@ export async function GET(request: NextRequest) {
           mouseMovements: todayMetric.mouseMovements,
           mouseClicks: todayMetric.mouseClicks,
           keystrokes: todayMetric.keystrokes,
-          activeTime: todayMetric.activeTime,
-          idleTime: todayMetric.idleTime,
-          screenTime: todayMetric.screenTime,
+          activeTime: todayMetric.activeTime * 60, // Convert minutes to seconds
+          idleTime: todayMetric.idleTime * 60, // Convert minutes to seconds
+          screenTime: todayMetric.screenTime * 60, // Convert minutes to seconds
           downloads: todayMetric.downloads,
           uploads: todayMetric.uploads,
           bandwidth: todayMetric.bandwidth,
@@ -90,7 +101,7 @@ export async function GET(request: NextRequest) {
           urlsVisited: todayMetric.urlsVisited,
           tabsSwitched: todayMetric.tabsSwitched,
           productivityScore: todayMetric.productivityScore,
-          screenshotCount: 0,
+          screenshotCount: todayMetric.clipboardActions, // Use clipboardActions as screenshot count
           applicationsUsed: [],
         }
       : null
@@ -98,6 +109,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       metrics: formattedMetrics,
       today: formattedToday,
+      totalScreenshots: totalScreenshotCount,
     })
   } catch (error) {
     console.error("Error fetching performance metrics:", error)
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user first
+    // Get the StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id }
     })
@@ -176,7 +188,8 @@ export async function POST(request: NextRequest) {
           downloads: downloads ?? existingMetric.downloads,
           uploads: uploads ?? existingMetric.uploads,
           bandwidth: bandwidth ?? existingMetric.bandwidth,
-          clipboardActions: clipboardActions ?? existingMetric.clipboardActions,
+          // NEVER overwrite clipboardActions from sync - it's managed by screenshot service
+          clipboardActions: existingMetric.clipboardActions,
           filesAccessed: filesAccessed ?? existingMetric.filesAccessed,
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,

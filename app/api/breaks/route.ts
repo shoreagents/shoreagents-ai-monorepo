@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user first
+    // Get the StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id }
     })
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user first
+    // Get the StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id }
     })
