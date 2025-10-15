@@ -132,21 +132,31 @@ model Break {
   notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  isLate         Boolean     @default(false)
+  lateBy         Int?
+  timeEntryId    String?
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
   @@map("breaks")
 }
 
 model TimeEntry {
-  id          String    @id @default(uuid())
-  staffUserId String
-  clockIn     DateTime
-  clockOut    DateTime?
-  totalHours  Decimal?  @db.Decimal(5, 2)
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id              String          @id @default(uuid())
+  staffUserId     String
+  clockIn         DateTime
+  clockOut        DateTime?
+  totalHours      Decimal?        @db.Decimal(5, 2)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  breaksScheduled Boolean         @default(false)
+  clockOutReason  ClockOutReason?
+  expectedClockIn DateTime?
+  lateBy          Int?
+  wasLate         Boolean         @default(false)
+  breaks          Break[]
+  staffUser       StaffUser       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("time_entries")
 }
@@ -598,4 +608,15 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum ClockOutReason {
+  END_OF_SHIFT
+  EMERGENCY
+  SICK
+  EARLY_LEAVE_APPROVED
+  INTERNET_ISSUE
+  POWER_OUTAGE
+  PERSONAL
+  OTHER
 }

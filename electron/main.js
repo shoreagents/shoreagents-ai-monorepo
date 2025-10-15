@@ -6,6 +6,7 @@ const performanceTracker = require('./services/performanceTracker')
 const syncService = require('./services/syncService')
 const breakHandler = require('./services/breakHandler')
 const activityTracker = require('./activity-tracker')
+const screenshotService = require('./services/screenshotService')
 const permissions = require('./utils/permissions')
 const config = require('./config/trackerConfig')
 
@@ -427,13 +428,34 @@ async function initializeTracking() {
   performanceTracker.start()
   console.log('[Main] Performance tracking started')
   
-  // Initialize activity tracker with performance tracker integration
-  activityTracker.initialize(mainWindow, performanceTracker)
-  console.log('[Main] Activity tracking started (integrated with performance tracker)')
+  // Initialize activity tracker with performance tracker and screenshot service integration
+  activityTracker.initialize(mainWindow, performanceTracker, screenshotService)
+  console.log('[Main] Activity tracking started (integrated with performance tracker and screenshot service)')
   
   // Start sync service (it will automatically get session cookie from Electron's cookie store)
   syncService.start()
   console.log('[Main] Sync service started')
+  
+  // Initialize screenshot service (detection mode)
+  await screenshotService.initialize({
+    apiUrl: 'http://localhost:3000'
+  })
+  console.log('[Main] Screenshot service initialized (detection mode)')
+  
+  // Start screenshot capture (will try to get session token from cookies)
+  try {
+    const cookies = await mainWindow.webContents.session.cookies.get({})
+    const sessionCookie = cookies.find(c => 
+      c.name === 'authjs.session-token' || 
+      c.name === 'next-auth.session-token'
+    )
+    if (sessionCookie) {
+      await screenshotService.start(sessionCookie.value)
+      console.log('[Main] Screenshot service started')
+    }
+  } catch (err) {
+    console.error('[Main] Error starting screenshot service:', err)
+  }
   
   // Update tray menu with current status
   updateTrayMenu()
@@ -472,6 +494,12 @@ function setupIPC() {
     performanceTracker.resume()
     updateTrayMenu()
     return { success: true, isPaused: false }
+  })
+  
+  // Log visited URLs to console
+  ipcMain.handle('log-visited-urls', () => {
+    performanceTracker.logVisitedUrls()
+    return { success: true }
   })
   
   // Get sync status
@@ -557,6 +585,15 @@ function setupIPC() {
     return { success: true }
   })
   
+  // Screenshot service handlers
+  ipcMain.handle('screenshot:get-status', () => {
+    return screenshotService.getStatus()
+  })
+  
+  ipcMain.handle('screenshot:capture-now', async () => {
+    return await screenshotService.captureNow()
+  })
+  
   console.log('[Main] IPC handlers registered')
 }
 
@@ -602,6 +639,7 @@ app.on('before-quit', () => {
   performanceTracker.stop()
   syncService.stop()
   activityTracker.destroy()
+  screenshotService.destroy()
 })
 
 // Handle crashes and errors

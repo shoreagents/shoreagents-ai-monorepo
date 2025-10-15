@@ -26,8 +26,10 @@ class PerformanceTracker {
     
     // Activity tracking state
     this.currentApp = null
+    this.currentUrl = null
     this.lastClipboardContent = ''
     this.activeApps = new Set()
+    this.visitedUrls = new Set()
     
     this.log('Performance Tracker initialized')
   }
@@ -54,7 +56,7 @@ class PerformanceTracker {
       bandwidth: 0,
       clipboardActions: 0,
       filesAccessed: 0,
-      urlsVisited: 0,
+      urlsVisited: 0, // Count of unique URLs visited
       tabsSwitched: 0,
       productivityScore: 0,
       applicationsUsed: [],
@@ -267,12 +269,104 @@ class PerformanceTracker {
             this.metrics.tabsSwitched++
             this.activeApps.add(appName)
             this.metrics.applicationsUsed = Array.from(this.activeApps)
+            console.log(`[PerformanceTracker] App switched to: ${appName}`)
+          }
+
+          // Track URLs for browsers (count only)
+          const browserApps = ['Google Chrome', 'Chrome', 'Microsoft Edge', 'Edge', 'Brave Browser', 'Brave', 'Firefox', 'Mozilla Firefox']
+          if (browserApps.some(browser => appName.includes(browser))) {
+            console.log(`[PerformanceTracker] Browser detected: ${appName}, Title: ${window.title || 'no title'}`)
+            const url = this.extractUrlFromWindow(window)
+            console.log(`[PerformanceTracker] Extracted URL: ${url}`)
+            if (url && url !== this.currentUrl) {
+              this.currentUrl = url
+              this.visitedUrls.add(url)
+              this.metrics.urlsVisited = this.visitedUrls.size
+              console.log(`[PerformanceTracker] URL visited: ${url} (Total: ${this.metrics.urlsVisited})`)
+              // Log all visited URLs
+              this.logVisitedUrls()
+            }
           }
         }
       } catch (error) {
-        // Ignore active window errors
+        console.error('[PerformanceTracker] Error in application tracking:', error)
       }
     }, 2000) // Check every 2 seconds
+  }
+
+  /**
+   * Extract URL from browser window
+   * @param {Object} window - Active window object from active-win
+   * @returns {string|null} URL or null
+   */
+  extractUrlFromWindow(window) {
+    // Try direct URL property first (some browsers provide this)
+    if (window.url) {
+      return window.url
+    }
+
+    // Try to extract from window title
+    if (window.title) {
+      let title = window.title.trim()
+      
+      // Remove browser suffix (e.g., " - Google Chrome", " - Personal - Microsoft​ Edge")
+      const browserSuffixes = [
+        ' - Google Chrome',
+        ' - Chrome',
+        ' - Microsoft Edge',
+        ' - Microsoft​ Edge', // with zero-width space
+        ' - Edge',
+        ' - Mozilla Firefox',
+        ' - Firefox',
+        ' - Brave',
+        ' - Brave Browser'
+      ]
+      
+      for (const suffix of browserSuffixes) {
+        if (title.endsWith(suffix)) {
+          title = title.substring(0, title.length - suffix.length).trim()
+          break
+        }
+      }
+      
+      // Remove "Personal - " prefix (Edge adds this)
+      if (title.endsWith(' - Personal')) {
+        title = title.substring(0, title.length - ' - Personal'.length).trim()
+      }
+      
+      // Skip common non-page titles
+      const skipTitles = ['New Tab', 'New tab', 'Untitled', '', 'Chrome', 'Edge', 'Firefox', 'Brave']
+      
+      // Check for exact match
+      if (skipTitles.includes(title)) {
+        return null
+      }
+      
+      // Check if title starts with skip patterns (for cases like "New tab and 6 more pages")
+      const skipStartsWith = ['New Tab', 'New tab']
+      if (skipStartsWith.some(pattern => title.startsWith(pattern))) {
+        return null
+      }
+      
+      // Skip if it's just a number (like "1 more page")
+      if (/^\d+\s+more\s+page/i.test(title)) {
+        return null
+      }
+
+      // Check if title contains URL-like patterns
+      const urlPattern = /https?:\/\/[^\s]+/
+      const urlMatch = title.match(urlPattern)
+      if (urlMatch) {
+        return urlMatch[0]
+      }
+
+      // Use the cleaned page title as identifier
+      if (title.length > 0) {
+        return `page:${title.substring(0, 100)}` // Limit length
+      }
+    }
+
+    return null
   }
 
   /**
@@ -304,6 +398,8 @@ class PerformanceTracker {
       activeTime: this.metrics.activeTime,
       idleTime: this.metrics.idleTime,
       screenTime: this.metrics.screenTime,
+      // Include visited URLs array
+      visitedUrlsList: Array.from(this.visitedUrls),
     }
   }
 
@@ -329,7 +425,26 @@ class PerformanceTracker {
       urlsVisited: metrics.urlsVisited,
       tabsSwitched: metrics.tabsSwitched,
       productivityScore: metrics.productivityScore,
+      // Include visited URLs array for database storage
+      visitedUrlsList: Array.from(this.visitedUrls),
     }
+  }
+
+  /**
+   * Log all visited URLs to console
+   */
+  logVisitedUrls() {
+    console.log('\n=== VISITED URLs ===')
+    console.log(`Total unique URLs visited: ${this.visitedUrls.size}`)
+    if (this.visitedUrls.size > 0) {
+      console.log('\nURLs List:')
+      Array.from(this.visitedUrls).forEach((url, index) => {
+        console.log(`  ${index + 1}. ${url}`)
+      })
+    } else {
+      console.log('No URLs visited yet')
+    }
+    console.log('===================\n')
   }
 
   /**

@@ -92,11 +92,12 @@ class ActivityTracker {
    * Initialize the activity tracker
    * @param {BrowserWindow} mainWindow - Reference to the main Electron window
    * @param {Object} performanceTracker - Reference to the performance tracker (optional)
+   * @param {Object} screenshotService - Reference to the screenshot service (optional)
    */
-  initialize(mainWindow, performanceTracker = null) {
-    console.log('[ActivityTracker] Initializing...')
+  initialize(mainWindow, performanceTracker = null, screenshotService = null) {
     this.mainWindow = mainWindow
     this.performanceTracker = performanceTracker
+    this.screenshotService = screenshotService
     
     if (this.performanceTracker) {
       console.log('[ActivityTracker] Integrated with performance tracker')
@@ -209,12 +210,6 @@ class ActivityTracker {
     
     this.lastActivityTime = now
     
-    // Log event type for debugging
-    if (eventType === 'keydown' || eventType === 'keyup') {
-      const keyName = eventData?.keycode ? getKeyName(eventData.keycode) : 'Unknown'
-      console.log(`[ActivityTracker] Keyboard event received: ${eventType} - ${keyName}`)
-    }
-    
     // Update performance tracker metrics
     if (this.performanceTracker && !this.performanceTracker.isPaused) {
       this.updatePerformanceMetrics(eventType, eventData)
@@ -278,12 +273,10 @@ class ActivityTracker {
         case 'click':
           // Only count 'click' events, not mousedown/mouseup to avoid double counting
           metrics.mouseClicks++
-          console.log(`[ActivityTracker] Mouse click detected, total: ${metrics.mouseClicks}`)
           break
         
         case 'keydown':
           metrics.keystrokes++
-          console.log(`[ActivityTracker] Keystroke detected, total: ${metrics.keystrokes}`)
           break
         
         // mousedown, mouseup, wheel, keyup don't increment counters but still count as activity
@@ -325,6 +318,14 @@ class ActivityTracker {
     if (this.inactivityStartTime === null) {
       this.inactivityStartTime = this.lastActivityTime
       console.log(`[ActivityTracker] Started tracking idle time from: ${new Date(this.inactivityStartTime).toLocaleTimeString()}`)
+    }
+
+    // Trigger screenshot capture on inactivity
+    if (this.screenshotService && typeof this.screenshotService.triggerCapture === 'function') {
+      console.log('[ActivityTracker] Triggering screenshot capture due to inactivity')
+      this.screenshotService.triggerCapture().catch(err => {
+        console.error('[ActivityTracker] Error triggering screenshot:', err)
+      })
     }
 
     if (this.inactivityDialog && !this.inactivityDialog.isDestroyed()) {

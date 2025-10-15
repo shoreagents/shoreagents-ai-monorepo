@@ -50,6 +50,17 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Calculate total screenshot count (sum of all clipboardActions)
+    const allMetrics = await prisma.performanceMetric.findMany({
+      where: {
+        staffUserId: staffUser.id
+      },
+      select: {
+        clipboardActions: true
+      }
+    })
+    const totalScreenshotCount = allMetrics.reduce((sum, m) => sum + m.clipboardActions, 0)
+
     // Format metrics for frontend (convert minutes to seconds for consistent display)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
@@ -68,7 +79,7 @@ export async function GET(request: NextRequest) {
       urlsVisited: m.urlsVisited,
       tabsSwitched: m.tabsSwitched,
       productivityScore: m.productivityScore,
-      screenshotCount: 0, // Not in schema, set to 0
+      screenshotCount: m.clipboardActions, // Use clipboardActions as screenshot count
       applicationsUsed: [], // Not in schema, set to empty array
     }))
 
@@ -90,7 +101,7 @@ export async function GET(request: NextRequest) {
           urlsVisited: todayMetric.urlsVisited,
           tabsSwitched: todayMetric.tabsSwitched,
           productivityScore: todayMetric.productivityScore,
-          screenshotCount: 0,
+          screenshotCount: todayMetric.clipboardActions, // Use clipboardActions as screenshot count
           applicationsUsed: [],
         }
       : null
@@ -98,6 +109,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       metrics: formattedMetrics,
       today: formattedToday,
+      totalScreenshots: totalScreenshotCount,
     })
   } catch (error) {
     console.error("Error fetching performance metrics:", error)
@@ -176,7 +188,8 @@ export async function POST(request: NextRequest) {
           downloads: downloads ?? existingMetric.downloads,
           uploads: uploads ?? existingMetric.uploads,
           bandwidth: bandwidth ?? existingMetric.bandwidth,
-          clipboardActions: clipboardActions ?? existingMetric.clipboardActions,
+          // NEVER overwrite clipboardActions from sync - it's managed by screenshot service
+          clipboardActions: existingMetric.clipboardActions,
           filesAccessed: filesAccessed ?? existingMetric.filesAccessed,
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,

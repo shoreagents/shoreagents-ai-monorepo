@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electron', {
     // Resume tracking
     resume: () => ipcRenderer.invoke('resume-tracking'),
     
+    // Log visited URLs to console
+    logVisitedUrls: () => ipcRenderer.invoke('log-visited-urls'),
+    
     // Listen for metrics updates
     onMetricsUpdate: (callback) => {
       const subscription = (event, data) => callback(data)
@@ -147,6 +150,15 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.removeListener('activity-debug', subscription)
       }
     },
+  },
+  
+  // Screenshot Service API
+  screenshots: {
+    // Get screenshot detection status
+    getStatus: () => ipcRenderer.invoke('screenshot:get-status'),
+    
+    // Manually capture screenshot from clipboard
+    captureNow: () => ipcRenderer.invoke('screenshot:capture-now'),
   },
   
   // Utility to check if running in Electron

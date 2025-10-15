@@ -18,12 +18,14 @@ interface PerformanceMetric {
   activeTime: number
   screenshotCount: number
   applicationsUsed: string[]
-  urlsVisited: string[]
+  urlsVisited: number
+  visitedUrlsList?: string[]
 }
 
 export default function PerformanceDashboard() {
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([])
   const [todayMetrics, setTodayMetrics] = useState<PerformanceMetric | null>(null)
+  const [totalScreenshots, setTotalScreenshots] = useState(0)
   const [liveMetrics, setLiveMetrics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +44,11 @@ export default function PerformanceDashboard() {
     
     // Fetch API metrics
     fetchMetrics()
+    
+    // Auto-refresh metrics every 10 seconds to pick up new screenshots
+    const refreshInterval = setInterval(() => {
+      fetchMetrics()
+    }, 10000) // 10 seconds
     
     // If in Electron, also get live metrics
     if (inElectron) {
@@ -68,9 +75,14 @@ export default function PerformanceDashboard() {
             })
       
       return () => {
+        clearInterval(refreshInterval)
         unsubscribe?.()
         unsubscribeDebug?.()
       }
+    }
+    
+    return () => {
+      clearInterval(refreshInterval)
     }
   }, [])
 
@@ -81,6 +93,7 @@ export default function PerformanceDashboard() {
       const data = await response.json()
       setMetrics(data.metrics)
       setTodayMetrics(data.today || null)
+      setTotalScreenshots(data.totalScreenshots || 0)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load performance data")
     } finally {
@@ -164,7 +177,10 @@ export default function PerformanceDashboard() {
   }
 
   // Use live metrics if available in Electron, otherwise use todayMetrics
-  const displayMetrics = (isElectron && liveMetrics) ? liveMetrics : todayMetrics
+  // BUT always use todayMetrics for screenshotCount (managed by screenshot service, not Electron)
+  const displayMetrics = (isElectron && liveMetrics) 
+    ? { ...liveMetrics, screenshotCount: todayMetrics?.screenshotCount || 0 }
+    : todayMetrics
   const productivity = displayMetrics ? calculateProductivityScore(displayMetrics) : 0
 
   return (
@@ -373,7 +389,7 @@ export default function PerformanceDashboard() {
               <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.urlsVisited?.length || 0}</div>
+                    <div className="text-2xl font-bold text-white">{displayMetrics.urlsVisited?.toLocaleString() || 0}</div>
                     <div className="mt-1 text-sm text-slate-400">URLs Visited</div>
                   </div>
                   <Globe className="h-8 w-8 text-purple-400" />
@@ -383,8 +399,8 @@ export default function PerformanceDashboard() {
               <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.screenshotCount || 0}</div>
-                    <div className="mt-1 text-sm text-slate-400">Screenshots</div>
+                    <div className="text-2xl font-bold text-white">{displayMetrics.screenshotCount?.toLocaleString() || 0}</div>
+                    <div className="mt-1 text-sm text-slate-400">Screenshots Today</div>
                   </div>
                   <Eye className="h-8 w-8 text-amber-400" />
                 </div>
@@ -412,21 +428,40 @@ export default function PerformanceDashboard() {
               </div>
 
               <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-                <h2 className="mb-4 text-xl font-bold text-white">Recent URLs</h2>
-                {!displayMetrics.urlsVisited || displayMetrics.urlsVisited.length === 0 ? (
-                  <p className="text-slate-400">No URLs recorded yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {displayMetrics.urlsVisited.slice(0, 5).map((url: string, index: number) => (
-                      <div key={index} className="rounded-lg bg-slate-800/50 p-3 ring-1 ring-white/5">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-purple-400" />
-                          <span className="text-sm text-white line-clamp-1">{url}</span>
+                <h2 className="mb-4 text-xl font-bold text-white">Browser Activity</h2>
+                <div className="space-y-4">
+                  
+                  
+                  {/* Display list of visited URLs */}
+                  {isElectron && (
+                    <div className="mt-4 space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-300">Visited Pages:</h3>
+                      {displayMetrics.visitedUrlsList && displayMetrics.visitedUrlsList.length > 0 ? (
+                        <div className="max-h-64 overflow-y-auto space-y-2 pr-2" style={{ 
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: '#475569 #1e293b'
+                        }}>
+                          {displayMetrics.visitedUrlsList.map((url: string, index: number) => {
+                            // Remove "page:" prefix if present
+                            const displayUrl = url.startsWith('page:') ? url.substring(5) : url
+                            
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-start gap-2 rounded-lg bg-slate-800/50 p-3 text-sm hover:bg-slate-800 transition-colors"
+                              >
+                                <Globe className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                                <span className="text-slate-300 break-all">{displayUrl}</span>
+                              </div>
+                            )
+                          })}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No pages visited yet. Browse some websites to see them here.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>
