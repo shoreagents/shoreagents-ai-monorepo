@@ -43,6 +43,8 @@ export default function TimeTracking() {
   const [activeBreak, setActiveBreak] = useState<any | null>(null)
   const [breakModalOpen, setBreakModalOpen] = useState(false)
   const [breakIsPaused, setBreakIsPaused] = useState(false)
+  const [isStartingBreak, setIsStartingBreak] = useState(false)
+  const [isEndingBreak, setIsEndingBreak] = useState(false)
 
   useEffect(() => {
     fetchStatus()
@@ -180,7 +182,14 @@ export default function TimeTracking() {
   }
   
   const handleStartBreak = async (breakId: string | null, breakType: string) => {
+    if (isStartingBreak) {
+      console.log("⚠️ ALREADY STARTING BREAK - Ignoring duplicate click")
+      return
+    }
+    
+    setIsStartingBreak(true)
     console.log("🚀 STARTING BREAK:", { breakId, breakType })
+    
     try {
       const response = await fetch("/api/breaks/start", {
         method: "POST",
@@ -217,11 +226,19 @@ export default function TimeTracking() {
       }
     } catch (error) {
       console.error("❌ BREAK START EXCEPTION:", error)
+    } finally {
+      setIsStartingBreak(false)
     }
   }
   
   const handleEndBreak = async () => {
     if (!activeBreak) return
+    if (isEndingBreak) {
+      console.log("⚠️ ALREADY ENDING BREAK - Ignoring duplicate click")
+      return
+    }
+    
+    setIsEndingBreak(true)
     console.log("🛑 ENDING BREAK:", activeBreak.id)
     
     try {
@@ -258,6 +275,8 @@ export default function TimeTracking() {
       }
     } catch (error) {
       console.error("❌ BREAK END EXCEPTION:", error)
+    } finally {
+      setIsEndingBreak(false)
     }
   }
   
@@ -613,7 +632,7 @@ export default function TimeTracking() {
                 {!scheduledBreaks.some(b => b.type === "MORNING" && b.scheduledStart) && (
                   <button
                     onClick={() => handleStartBreak(null, "MORNING")}
-                    disabled={scheduledBreaks.some(b => b.type === "MORNING" && b.actualEnd)}
+                    disabled={isStartingBreak || scheduledBreaks.some(b => b.type === "MORNING" && b.actualEnd)}
                     className="w-full flex items-center justify-between rounded-lg border border-orange-500/30 bg-orange-500/10 p-4 hover:bg-orange-500/15 hover:border-orange-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
@@ -624,7 +643,7 @@ export default function TimeTracking() {
                       </div>
                     </div>
                     <div className="text-sm font-medium text-orange-400">
-                      {scheduledBreaks.some(b => b.type === "MORNING" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
+                      {isStartingBreak ? "Starting..." : scheduledBreaks.some(b => b.type === "MORNING" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
                     </div>
                   </button>
                 )}
@@ -633,7 +652,7 @@ export default function TimeTracking() {
                 {!scheduledBreaks.some(b => b.type === "LUNCH" && b.scheduledStart) && (
                   <button
                     onClick={() => handleStartBreak(null, "LUNCH")}
-                    disabled={scheduledBreaks.some(b => b.type === "LUNCH" && b.actualEnd)}
+                    disabled={isStartingBreak || scheduledBreaks.some(b => b.type === "LUNCH" && b.actualEnd)}
                     className="w-full flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 hover:bg-blue-500/15 hover:border-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
@@ -644,7 +663,7 @@ export default function TimeTracking() {
                       </div>
                     </div>
                     <div className="text-sm font-medium text-blue-400">
-                      {scheduledBreaks.some(b => b.type === "LUNCH" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
+                      {isStartingBreak ? "Starting..." : scheduledBreaks.some(b => b.type === "LUNCH" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
                     </div>
                   </button>
                 )}
@@ -653,7 +672,7 @@ export default function TimeTracking() {
                 {!scheduledBreaks.some(b => b.type === "AFTERNOON" && b.scheduledStart) && (
                   <button
                     onClick={() => handleStartBreak(null, "AFTERNOON")}
-                    disabled={scheduledBreaks.some(b => b.type === "AFTERNOON" && b.actualEnd)}
+                    disabled={isStartingBreak || scheduledBreaks.some(b => b.type === "AFTERNOON" && b.actualEnd)}
                     className="w-full flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/10 p-4 hover:bg-purple-500/15 hover:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
@@ -664,7 +683,7 @@ export default function TimeTracking() {
                       </div>
                     </div>
                     <div className="text-sm font-medium text-purple-400">
-                      {scheduledBreaks.some(b => b.type === "AFTERNOON" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
+                      {isStartingBreak ? "Starting..." : scheduledBreaks.some(b => b.type === "AFTERNOON" && b.actualEnd) ? "✓ Taken" : "Start Now →"}
                     </div>
                   </button>
                 )}
@@ -676,7 +695,8 @@ export default function TimeTracking() {
                   </div>
                   <button
                     onClick={() => handleStartBreak(null, "AWAY")}
-                    className="w-full flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/15 hover:border-amber-500/50 transition-all mt-2"
+                    disabled={isStartingBreak}
+                    className="w-full flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/15 hover:border-amber-500/50 transition-all mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">🚶</span>
@@ -686,7 +706,7 @@ export default function TimeTracking() {
                       </div>
                     </div>
                     <div className="text-sm font-medium text-amber-400">
-                      Start Now →
+                      {isStartingBreak ? "Starting..." : "Start Now →"}
                     </div>
                   </button>
                 </div>
