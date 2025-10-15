@@ -180,6 +180,7 @@ model Task {
 model Break {
   id             String      @id @default(uuid())
   staffUserId    String
+  timeEntryId    String?     // Links break to shift session
   type           BreakType
   awayReason     AwayReason?
   scheduledStart String?
@@ -187,10 +188,14 @@ model Break {
   actualStart    DateTime?
   actualEnd      DateTime?
   duration       Int?
+  isLate         Boolean     @default(false)  // Track if returned late
+  lateBy         Int?        // Minutes late returning from break
   notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  timeEntry      TimeEntry?  @relation(fields: [timeEntryId], references: [id], onDelete: SetNull)
 
   @@map("breaks")
 }
@@ -199,15 +204,25 @@ model Break {
 // TIME TRACKING
 // ============================================
 model TimeEntry {
-  id          String     @id @default(uuid())
-  staffUserId String
-  clockIn     DateTime
-  clockOut    DateTime?
-  totalHours  Decimal?   @db.Decimal(5, 2)
-  notes       String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  staffUser   StaffUser  @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id                String          @id @default(uuid())
+  staffUserId       String
+  clockIn           DateTime
+  clockOut          DateTime?
+  totalHours        Decimal?        @db.Decimal(5, 2)
+  
+  // Shift tracking fields
+  expectedClockIn   DateTime?       // From WorkSchedule
+  wasLate           Boolean         @default(false)
+  lateBy            Int?            // Minutes late
+  clockOutReason    ClockOutReason?
+  breaksScheduled   Boolean         @default(false)
+  
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  staffUser         StaffUser       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  breaks            Break[]         // Relation to breaks
 
   @@map("time_entries")
 }
@@ -492,10 +507,10 @@ enum TaskSource {
 }
 
 enum BreakType {
-  MORNING
-  LUNCH
-  AFTERNOON
-  AWAY
+  MORNING        // 15 min scheduled break
+  LUNCH          // 60 min scheduled break
+  AFTERNOON      // 15 min scheduled break
+  AWAY           // Unscheduled (nurse, meeting, etc.)
 }
 
 enum AwayReason {
@@ -504,6 +519,17 @@ enum AwayReason {
   BATHROOM
   MANAGEMENT
   DOLE
+  OTHER
+}
+
+enum ClockOutReason {
+  END_OF_SHIFT
+  EMERGENCY
+  SICK
+  EARLY_LEAVE_APPROVED
+  INTERNET_ISSUE
+  POWER_OUTAGE
+  PERSONAL
   OTHER
 }
 

@@ -1,45 +1,76 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { getStaffUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 // POST /api/breaks/end - End the active break
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-
-    if (!session?.user?.id) {
+    const staffUser = await getStaffUser()
+    if (!staffUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Find active break
-    const activeBreak = await prisma.break.findFirst({
-      where: {
-        userId: session.user.id,
-        endTime: null,
-      },
+    const { breakId } = await request.json()
+    
+    const breakRecord = await prisma.break.findUnique({
+      where: { id: breakId }
     })
-
-    if (!activeBreak) {
-      return NextResponse.json(
-        { error: "No active break found" },
-        { status: 400 }
-      )
+    
+    if (!breakRecord || breakRecord.staffUserId !== staffUser.id) {
+      return NextResponse.json({ error: "Invalid break" }, { status: 403 })
     }
 
-    const endTime = new Date()
-    const actualDuration = Math.floor(
-      (endTime.getTime() - activeBreak.startTime.getTime()) / 1000 / 60
-    ) // in minutes
+    if (!breakRecord.actualStart) {
+      return NextResponse.json({ error: "Break not started yet" }, { status: 400 })
+    }
 
+    if (breakRecord.actualEnd) {
+      return NextResponse.json({ error: "Break already ended" }, { status: 400 })
+    }
+    
+    const now = new Date()
+    const startTime = breakRecord.actualStart
+    const duration = Math.floor((now.getTime() - startTime.getTime()) / 60000)
+    
+    let isLate = false
+    let lateBy = 0
+    
+    // Check if returned late from scheduled break
+    if (breakRecord.scheduledEnd) {
+      const [time, period] = breakRecord.scheduledEnd.split(' ')
+      const [hours, minutes] = time.split(':')
+      let hour = parseInt(hours)
+      if (period === 'PM' && hour !== 12) hour += 12
+      if (period === 'AM' && hour === 12) hour = 0
+      
+      const expectedEnd = new Date(now)
+      expectedEnd.setHours(hour, parseInt(minutes), 0, 0)
+      
+      if (now > expectedEnd) {
+        isLate = true
+        lateBy = Math.floor((now.getTime() - expectedEnd.getTime()) / 60000)
+      }
+    }
+    
     const updatedBreak = await prisma.break.update({
-      where: { id: activeBreak.id },
-      data: {
-        endTime,
-        actualDuration,
-      },
+      where: { id: breakRecord.id },
+      data: { 
+        actualEnd: now, 
+        duration,
+        isLate,
+        lateBy
+      }
     })
-
-    return NextResponse.json({ success: true, break: updatedBreak })
+    
+    return NextResponse.json({ 
+      success: true, 
+      break: updatedBreak, 
+      isLate, 
+      lateBy,
+      message: isLate 
+        ? `Break ended. You returned ${lateBy} minutes late.`
+        : "Break ended. Welcome back!"
+    })
   } catch (error) {
     console.error("Error ending break:", error)
     return NextResponse.json(

@@ -11,6 +11,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get("date")
 
@@ -23,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     const breaks = await prisma.break.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         actualStart: {
           gte: startOfDay,
           lte: endOfDay,
@@ -63,6 +72,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const { type, reason, notes } = body
 
@@ -76,7 +94,7 @@ export async function POST(request: NextRequest) {
     // Check if there's already an active break
     const activeBreak = await prisma.break.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         actualEnd: null,
       },
     })
@@ -90,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     const breakRecord = await prisma.break.create({
       data: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         type,
         awayReason: reason || null,
         actualStart: new Date(),
