@@ -11,7 +11,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { notes } = body
+    const { reason, notes } = body
+
+    if (!reason) {
+      return NextResponse.json({ error: "Clock-out reason is required" }, { status: 400 })
+    }
 
     // Find active time entry
     const activeEntry = await prisma.timeEntry.findFirst({
@@ -28,10 +32,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for active breaks (breaks that have been STARTED but not ended)
+    const activeBreak = await prisma.break.findFirst({
+      where: {
+        timeEntryId: activeEntry.id,
+        actualStart: { not: null }, // Break has been actually started
+        actualEnd: null // But not ended yet
+      }
+    })
+    
+    if (activeBreak) {
+      return NextResponse.json({ 
+        error: "Please end your active break before clocking out" 
+      }, { status: 400 })
+    }
+
     const clockOut = new Date()
-    const clockIn = new Date(activeEntry.clockIn)
-    const diffMs = clockOut.getTime() - clockIn.getTime()
-    const totalHours = diffMs / (1000 * 60 * 60) // Convert to hours
+    const totalHours = (clockOut.getTime() - activeEntry.clockIn.getTime()) / (1000 * 60 * 60)
+    
+    // Calculate break time
+    const breaks = await prisma.break.findMany({
+      where: { timeEntryId: activeEntry.id }
+    })
+    const totalBreakTime = breaks.reduce((sum, b) => sum + (b.duration || 0), 0) / 60
+    const netWorkHours = totalHours - totalBreakTime
 
     // Update time entry
     const timeEntry = await prisma.timeEntry.update({
@@ -40,7 +64,8 @@ export async function POST(request: NextRequest) {
       },
       data: {
         clockOut,
-        totalHours: Number(totalHours.toFixed(2)),
+        totalHours: Number(netWorkHours.toFixed(2)),
+        clockOutReason: reason,
         notes: notes || null,
       },
     })
@@ -48,7 +73,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       timeEntry,
-      message: `Clocked out successfully. Total hours: ${totalHours.toFixed(2)}`,
+      totalHours: netWorkHours.toFixed(2),
+      breakTime: totalBreakTime.toFixed(2),
+      message: `Clocked out successfully. Net work hours: ${netWorkHours.toFixed(2)}`,
     })
   } catch (error) {
     console.error("Error clocking out:", error)
