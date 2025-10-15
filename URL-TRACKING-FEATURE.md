@@ -1,8 +1,28 @@
-# URL Tracking Feature - Browser Activity Monitoring
+# Browser Activity Tracking - Page Title Monitoring
 
 ## Overview
 
-The URL tracking feature monitors and displays browser activity by tracking unique pages visited in Chrome, Edge, Firefox, and Brave browsers. This provides insights into staff browsing patterns and productivity.
+The browser activity tracking feature monitors and displays browser activity by tracking **page titles** of websites visited in Chrome, Edge, Firefox, and Brave browsers. This provides insights into staff browsing patterns and productivity.
+
+---
+
+## ⚠️ CRITICAL LIMITATION
+
+> ### **This Feature Tracks PAGE TITLES, NOT Actual URLs**
+>
+> **What you'll see:**  
+> ✅ "YouTube"  
+> ✅ "GitHub - Where the world builds software"  
+> ✅ "Stack Overflow - Where Developers Learn"
+>
+> **What you WON'T see:**  
+> ❌ "https://youtube.com/watch?v=..."  
+> ❌ "https://github.com/username/repo"  
+> ❌ "https://stackoverflow.com/questions/12345"
+>
+> **Why?** The `active-win` library (used for window detection) **cannot access actual browser URLs** due to browser privacy and security restrictions. It can only read window titles, which contain the page title but not the URL.
+>
+> **Note:** Getting actual URLs would require complex browser extensions or Chrome DevTools Protocol integration (requiring users to launch browsers with special debugging flags), which is not practical for most use cases.
 
 ---
 
@@ -10,10 +30,10 @@ The URL tracking feature monitors and displays browser activity by tracking uniq
 
 ### ✅ Implemented
 
-1. **Real-time URL Detection**
+1. **Real-time Page Title Detection**
    - Detects active browser windows (Chrome, Edge, Firefox, Brave)
-   - Extracts page titles from browser windows
-   - Tracks unique pages visited
+   - Extracts **page titles** from browser windows (not actual URLs)
+   - Tracks unique pages visited by title
    - Updates count in real-time
 
 2. **Smart Filtering**
@@ -23,17 +43,17 @@ The URL tracking feature monitors and displays browser activity by tracking uniq
    - Filters out non-content pages
 
 3. **Live Display in Performance Dashboard**
-   - Shows total count of unique URLs visited
-   - Displays scrollable list of all visited page titles
-   - Globe icon next to each URL
+   - Shows total count of unique pages visited
+   - Displays scrollable list of all visited **page titles**
+   - Globe icon next to each page
    - Hover effects for better UX
    - Clean display without "page:" prefix
 
 4. **Data Storage**
    - In-memory tracking during session (Set data structure)
-   - URLs stored in `visitedUrls` Set in Performance Tracker
+   - Page titles stored in `visitedUrls` Set in Performance Tracker
    - Count sent to API/database as integer
-   - URLs list included in metrics for display
+   - Page titles list included in metrics for display
 
 ---
 
@@ -48,40 +68,44 @@ setInterval(() => {
   
   // Is it a browser?
   if (isBrowser(window.owner.name)) {
-    // Extract URL/title
-    const url = extractUrlFromWindow(window)
+    // Extract page title from window
+    const pageTitle = extractUrlFromWindow(window)
     
-    // New unique URL?
-    if (url && url !== currentUrl) {
-      visitedUrls.add(url)
+    // New unique page?
+    if (pageTitle && pageTitle !== currentUrl) {
+      visitedUrls.add(pageTitle)
       metrics.urlsVisited = visitedUrls.size
     }
   }
 }, 2000)
 ```
 
-### 2. **URL Extraction Logic**
+### 2. **Page Title Extraction Logic**
 
 Located in: `electron/services/performanceTracker.js`
 
+> **Note:** The method is named `extractUrlFromWindow()` for legacy reasons, but it actually extracts **page titles**, not URLs.
+
 ```javascript
 extractUrlFromWindow(window) {
-  // 1. Check for direct URL property (rarely available)
+  // 1. Check for direct URL property (almost never available)
+  // The active-win library does NOT provide actual URLs for privacy/security
   if (window.url) return window.url
   
-  // 2. Extract from window title
+  // 2. Extract page title from window title
   let title = window.title.trim()
   
-  // 3. Clean browser suffixes
+  // 3. Clean browser suffixes from title
   // Removes: " - Google Chrome", " - Microsoft Edge", etc.
   
-  // 4. Skip common non-pages
+  // 4. Skip common non-content page titles
   // Skips: "New Tab", "New tab and X more pages", "Untitled", etc.
   
-  // 5. Check for URL patterns in title
-  // Matches: https://... or http://...
+  // 5. Check if title contains actual URL patterns (rare)
+  // Matches: https://... or http://... if present in title
   
-  // 6. Return cleaned title with "page:" prefix
+  // 6. Return cleaned page title with "page:" prefix
+  // Example: "page:YouTube" or "page:GitHub - Where the world builds software"
   return `page:${title.substring(0, 100)}`
 }
 ```
@@ -89,22 +113,28 @@ extractUrlFromWindow(window) {
 ### 3. **Data Flow**
 
 ```
-Browser Window
+Browser Window (Chrome/Edge/Firefox/Brave)
     ↓
-Active Window Detection (active-win)
+Active Window Detection (active-win library)
     ↓
-URL Extraction (page title)
+Extract Window Title (NOT URL - active-win limitation)
     ↓
-Filter & Clean
+Clean Title (remove browser suffixes, etc.)
     ↓
-Add to Set (unique only)
+Filter Non-Content Pages (skip "New Tab", etc.)
+    ↓
+Add Page Title to Set (unique only)
     ↓
 Update Metrics Count
     ↓
-Send to Dashboard (every 5s)
+Send to Dashboard (every 5s via IPC)
     ↓
-Display in Browser Activity Card
+Display in Browser Activity Card (shows page titles)
 ```
+
+**What You'll See:**
+- ✅ Page titles: "YouTube", "GitHub - Where the world builds software"
+- ❌ NOT actual URLs: "https://youtube.com", "https://github.com"
 
 ---
 
@@ -215,47 +245,64 @@ logVisitedUrls: () => ipcRenderer.invoke('log-visited-urls')
 
 ## Current Limitations
 
-### ⚠️ Known Issues
+### ⚠️ Critical Limitation: Page Titles Only, NOT URLs
 
-1. **Page Titles, Not URLs**
-   - Currently captures **page titles** (e.g., "YouTube - Google Chrome")
-   - Does NOT capture actual URLs (e.g., "https://youtube.com")
-   - This is due to browser privacy/security - the `active-win` library cannot access actual URLs
+**This feature tracks PAGE TITLES, not actual URLs.**
 
-2. **Multi-Tab Detection**
+| What You Get | What You DON'T Get |
+|--------------|-------------------|
+| ✅ "YouTube" | ❌ "https://youtube.com" |
+| ✅ "GitHub - Where the world builds software" | ❌ "https://github.com/username/repo" |
+| ✅ "Electronics, Cars, Fashion... \| eBay" | ❌ "https://ebay.com/itm/12345" |
+
+**Why?** The `active-win` library (which detects active windows) **cannot access actual browser URLs** due to browser privacy and security restrictions. It can only read the **window title**, which contains the page title.
+
+### ⚠️ Other Known Issues
+
+1. **Multi-Tab Detection**
    - When multiple tabs are open, may show "YouTube and 3 more pages"
-   - Only tracks the active tab's title
-   - Cannot see individual URLs of background tabs
+   - Only tracks the active/focused tab's title
+   - Cannot see individual titles of background tabs
+   - Tab count in title may vary by browser
 
-3. **In-Memory Only**
-   - URLs are stored in memory during Electron session
-   - Lost when app restarts
+2. **In-Memory Only (Not Persistent)**
+   - Page titles are stored in memory during Electron session
+   - **Lost when app restarts** - tracking starts fresh
    - Not yet persisted to database (see Future Enhancements)
+   - No historical data available after restart
 
-4. **Browser-Specific Variations**
+3. **Browser-Specific Title Variations**
    - Edge sometimes adds "Personal - " prefix
    - Different browsers format titles differently
    - Some cleanup logic may need refinement
+   - Title truncation at 100 characters
+
+4. **Limited to Active Window**
+   - Only tracks when browser is the **active** window
+   - Background browsing is not detected
+   - Requires browser to be in focus for 2+ seconds
 
 ---
 
 ## Console Debugging
 
-### View Visited URLs in Console
+### View Visited Page Titles in Console
 
-URLs are automatically logged to console whenever a new URL is detected:
+Page titles are automatically logged to console whenever a new page is detected:
 
 ```
 === VISITED URLs ===
 Total unique URLs visited: 7
 
 URLs List:
-  1. staff software | ShoreAgents | Supabase
-  2. Electronics, Cars, Fashion, Collectibles & More | eBay and 5 more pages
-  3. YouTube and 3 more pages
-  4. Booking.com | Official site | The best hotels, flights, car rentals & accommodations
+  1. page:staff software | ShoreAgents | Supabase
+  2. page:Electronics, Cars, Fashion, Collectibles & More | eBay and 5 more pages
+  3. page:YouTube and 3 more pages
+  4. page:Booking.com | Official site | The best hotels, flights, car rentals & accommodations
 ===================
 ```
+
+> **Note:** Despite the log title saying "VISITED URLs", these are actually **page titles** with a "page:" prefix, not actual URLs. The naming is kept for backwards compatibility.
 
 ### Manual Logging
 
@@ -277,57 +324,29 @@ performanceTracker.logVisitedUrls()
 
 #### 1. **Database Persistence**
 
-Add to Prisma schema:
+Add to Prisma schema to persist page titles:
 ```prisma
 model PerformanceMetric {
   // ... existing fields ...
   urlsVisited       Int       @default(0)
-  visitedUrlsList   Json?     // Store array of URLs
+  visitedUrlsList   Json?     // Store array of page titles (not actual URLs)
+  // Example: ["page:YouTube", "page:GitHub - Where the world builds software"]
 }
 ```
 
 Update API route to save/retrieve `visitedUrlsList`.
 
-#### 2. **Actual URL Tracking via Chrome DevTools Protocol**
+**Note:** This would store **page titles**, not actual URLs (there is no practical way to get actual URLs without complex browser extensions or requiring users to launch browsers with special debugging flags).
 
-Instead of page titles, capture real URLs:
+#### 2. **Page Analytics**
 
-```javascript
-// Install: npm install chrome-remote-interface
-const CDP = require('chrome-remote-interface')
+- **Time spent per page/site** (based on page titles)
+- **Most visited pages**
+- **Productivity categorization** (work-related vs. non-work based on titles)
+- **Pattern recognition** (e.g., group all "YouTube" titled pages)
+- **Domain extraction from titles** (attempt to identify domains from page titles)
 
-async function getActiveTabs() {
-  const client = await CDP()
-  const { Target } = client
-  const targets = await Target.getTargets()
-  
-  // Get real URLs from tabs
-  const urls = targets
-    .filter(t => t.type === 'page')
-    .map(t => t.url)
-  
-  return urls
-}
-```
-
-**Pros:**
-- ✅ Real URLs like `https://youtube.com`
-- ✅ More accurate tracking
-- ✅ Can see all open tabs
-
-**Cons:**
-- ⚠️ Requires Chrome to be launched with `--remote-debugging-port`
-- ⚠️ Only works with Chrome/Edge (not Firefox/Brave)
-- ⚠️ Slightly more complex setup
-
-#### 3. **URL Analytics**
-
-- **Time spent per URL/domain**
-- **Most visited sites**
-- **Productivity categorization** (work-related vs. non-work)
-- **URL patterns** (e.g., group all YouTube URLs)
-
-#### 4. **Domain Grouping**
+#### 3. **Domain Grouping**
 
 Group by domain instead of individual pages:
 ```
@@ -336,7 +355,7 @@ github.com (8 pages)
 stackoverflow.com (5 pages)
 ```
 
-#### 5. **Privacy Controls**
+#### 4. **Privacy Controls**
 
 - **Blacklist URLs** (don't track certain sites)
 - **Whitelist mode** (only track approved domains)
@@ -496,34 +515,48 @@ const skipStartsWith = [
 ### Electron IPC Methods
 
 ```typescript
-// Get current metrics (includes visitedUrlsList)
+// Get current metrics (includes visitedUrlsList - array of page titles)
 const metrics = await window.electron.performance.getCurrentMetrics()
+console.log(metrics.visitedUrlsList)
+// Example: ["page:YouTube", "page:GitHub - Where the world builds software"]
 
-// Log URLs to console
+// Log page titles to console
 await window.electron.performance.logVisitedUrls()
 
 // Subscribe to real-time updates
 const unsubscribe = window.electron.performance.onMetricsUpdate((data) => {
-  console.log('Visited URLs:', data.metrics.visitedUrlsList)
+  console.log('Visited Pages:', data.metrics.visitedUrlsList)
+  // These are page TITLES, not URLs
 })
 ```
 
 ### Performance Tracker Methods
 
 ```javascript
-// Get metrics with URLs array
+// Get metrics with page titles array
 performanceTracker.getMetrics()
-// Returns: { ..., visitedUrlsList: ['page:YouTube', 'page:GitHub', ...] }
+// Returns: { 
+//   ..., 
+//   visitedUrlsList: [
+//     'page:YouTube', 
+//     'page:GitHub - Where the world builds software',
+//     'page:Stack Overflow - Where Developers Learn'
+//   ]
+// }
 
 // Get metrics for API (formatted)
 performanceTracker.getMetricsForAPI()
-// Returns: { ..., urlsVisited: 7, visitedUrlsList: [...] }
+// Returns: { 
+//   ..., 
+//   urlsVisited: 7,  // Count
+//   visitedUrlsList: ['page:...', 'page:...']  // Array of page titles
+// }
 
 // Log to console
 performanceTracker.logVisitedUrls()
 
-// Access raw Set
-performanceTracker.visitedUrls // Set of URLs
+// Access raw Set of page titles
+performanceTracker.visitedUrls // Set<string> - page titles with "page:" prefix
 ```
 
 ---
@@ -531,17 +564,19 @@ performanceTracker.visitedUrls // Set of URLs
 ## Version History
 
 ### Version 1.0 (Current)
-- ✅ Real-time URL detection from browser titles
-- ✅ Smart filtering of non-content pages
+- ✅ Real-time **page title** detection from browser windows
+- ✅ Smart filtering of non-content pages (New Tab, etc.)
 - ✅ Live display in dashboard
 - ✅ Console debugging tools
 - ✅ Multi-browser support (Chrome, Edge, Firefox, Brave)
+- ⚠️ **Limitation:** Tracks page titles only, NOT actual URLs
 
-### Future Versions
-- 🔜 Database persistence
-- 🔜 Actual URL tracking via CDP
-- 🔜 URL analytics and categorization
-- 🔜 Privacy controls
+### Future Versions (Planned)
+- 🔜 Database persistence of page titles
+- 🔜 Page analytics and categorization
+- 🔜 Time spent per page/domain
+- 🔜 Domain grouping and pattern recognition
+- 🔜 Privacy controls and filtering
 
 ---
 
@@ -567,5 +602,6 @@ For issues or questions about URL tracking:
 ---
 
 **Last Updated:** October 15, 2025  
-**Status:** ✅ Production Ready (with limitations)
+**Status:** ✅ Production Ready (Page Title Tracking Only)  
+**Limitation:** ⚠️ Tracks page titles, NOT actual URLs - this is a technical limitation of the `active-win` library
 
