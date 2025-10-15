@@ -25,11 +25,6 @@ export async function PUT(
 
     const { id: breakId } = await params
 
-    // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
-      where: { authUserId: session.user.id }
-    })
-
     if (!staffUser) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
