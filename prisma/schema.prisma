@@ -122,6 +122,7 @@ model Task {
 model Break {
   id             String      @id @default(uuid())
   staffUserId    String
+  timeEntryId    String?     // Links break to shift session
   type           BreakType
   awayReason     AwayReason?
   scheduledStart String?
@@ -129,6 +130,8 @@ model Break {
   actualStart    DateTime?
   actualEnd      DateTime?
   duration       Int?
+  isLate         Boolean     @default(false)  // Track if returned late
+  lateBy         Int?        // Minutes late returning from break
   notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -491,10 +494,10 @@ enum TaskSource {
 }
 
 enum BreakType {
-  MORNING
-  LUNCH
-  AFTERNOON
-  AWAY
+  MORNING        // 15 min scheduled break
+  LUNCH          // 60 min scheduled break
+  AFTERNOON      // 15 min scheduled break
+  AWAY           // Unscheduled (nurse, meeting, etc.)
 }
 
 enum AwayReason {
@@ -503,6 +506,17 @@ enum AwayReason {
   BATHROOM
   MANAGEMENT
   DOLE
+  OTHER
+}
+
+enum ClockOutReason {
+  END_OF_SHIFT
+  EMERGENCY
+  SICK
+  EARLY_LEAVE_APPROVED
+  INTERNET_ISSUE
+  POWER_OUTAGE
+  PERSONAL
   OTHER
 }
 
