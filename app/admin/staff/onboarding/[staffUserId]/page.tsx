@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   Loader2, 
   CheckCircle2, 
@@ -89,6 +90,8 @@ export default function AdminOnboardingDetailPage() {
   const [completing, setCompleting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [viewFileModal, setViewFileModal] = useState<{ url: string; title: string } | null>(null)
+  const [imageLoading, setImageLoading] = useState(true)
   
   const [staff, setStaff] = useState<any>(null)
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
@@ -185,7 +188,7 @@ export default function AdminOnboardingDetailPage() {
       const data = await response.json()
       console.log("✅ VERIFY SUCCESS:", data)
       
-      setSuccess(`Section ${action.toLowerCase()} successfully!`)
+      setSuccess(`Document ${action.toLowerCase()} successfully!`)
       setFeedback({ ...feedback, [section]: "" })
       await fetchOnboardingDetails()
     } catch (err: any) {
@@ -339,7 +342,7 @@ export default function AdminOnboardingDetailPage() {
           </Alert>
         )}
 
-        {/* Complete Onboarding Button - Only show when ALL sections APPROVED */}
+        {/* Complete Onboarding Button - Only show when ALL documents APPROVED */}
         {onboarding.personalInfoStatus === "APPROVED" &&
          onboarding.govIdStatus === "APPROVED" &&
          onboarding.documentsStatus === "APPROVED" &&
@@ -493,7 +496,7 @@ export default function AdminOnboardingDetailPage() {
           </Card>
         )}
 
-        {/* Section 1: Personal Information */}
+        {/* Document 1: Personal Information */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -558,7 +561,7 @@ export default function AdminOnboardingDetailPage() {
                   <Button
                     onClick={() => handleVerify("personalInfo", "APPROVED")}
                     disabled={processing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-28"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
@@ -567,6 +570,7 @@ export default function AdminOnboardingDetailPage() {
                     onClick={() => handleVerify("personalInfo", "REJECTED")}
                     disabled={processing}
                     variant="destructive"
+                    className="w-28"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
@@ -577,7 +581,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Section 2: Government IDs */}
+        {/* Document 2: Government IDs */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -628,7 +632,7 @@ export default function AdminOnboardingDetailPage() {
                   <Button
                     onClick={() => handleVerify("govId", "APPROVED")}
                     disabled={processing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-28"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
@@ -637,6 +641,7 @@ export default function AdminOnboardingDetailPage() {
                     onClick={() => handleVerify("govId", "REJECTED")}
                     disabled={processing}
                     variant="destructive"
+                    className="w-28"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
@@ -647,7 +652,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Section 3: Documents */}
+        {/* Document 3: Documents */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -663,15 +668,16 @@ export default function AdminOnboardingDetailPage() {
               <div>
                 <p className="text-sm text-slate-400 mb-1">Valid ID</p>
                 {onboarding.validIdUrl ? (
-                  <a 
-                    href={onboarding.validIdUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.validIdUrl, title: "Valid ID" })
+                    }}
                     className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                   >
                     <CheckCircle2 className="h-3 w-3" />
                     View Document
-                  </a>
+                  </button>
                 ) : (
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
@@ -680,15 +686,16 @@ export default function AdminOnboardingDetailPage() {
               <div>
                 <p className="text-sm text-slate-400 mb-1">Birth Certificate</p>
                 {onboarding.birthCertUrl ? (
-                  <a 
-                    href={onboarding.birthCertUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.birthCertUrl, title: "Birth Certificate" })
+                    }}
                     className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                   >
                     <CheckCircle2 className="h-3 w-3" />
                     View Document
-                  </a>
+                  </button>
                 ) : (
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
@@ -697,15 +704,16 @@ export default function AdminOnboardingDetailPage() {
               <div>
                 <p className="text-sm text-slate-400 mb-1">NBI Clearance</p>
                 {onboarding.nbiClearanceUrl ? (
-                  <a 
-                    href={onboarding.nbiClearanceUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.nbiClearanceUrl, title: "NBI Clearance" })
+                    }}
                     className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                   >
                     <CheckCircle2 className="h-3 w-3" />
                     View Document
-                  </a>
+                  </button>
                 ) : (
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
@@ -714,15 +722,16 @@ export default function AdminOnboardingDetailPage() {
               <div>
                 <p className="text-sm text-slate-400 mb-1">Police Clearance</p>
                 {onboarding.policeClearanceUrl ? (
-                  <a 
-                    href={onboarding.policeClearanceUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.policeClearanceUrl, title: "Police Clearance" })
+                    }}
                     className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                   >
                     <CheckCircle2 className="h-3 w-3" />
                     View Document
-                  </a>
+                  </button>
                 ) : (
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
@@ -732,19 +741,24 @@ export default function AdminOnboardingDetailPage() {
                 <p className="text-sm text-slate-400 mb-1">ID Photo (2x2)</p>
                 {onboarding.idPhotoUrl ? (
                   <div className="space-y-2">
-                    <a 
-                      href={onboarding.idPhotoUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <button 
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.idPhotoUrl, title: "ID Photo" })
+                      }}
                       className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                     >
                       <CheckCircle2 className="h-3 w-3" />
                       View Photo
-                    </a>
+                    </button>
                     <img 
                       src={onboarding.idPhotoUrl} 
                       alt="ID Photo" 
-                      className="w-24 h-24 object-cover rounded border border-slate-600"
+                      className="w-24 h-24 object-cover rounded border border-slate-600 cursor-pointer"
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.idPhotoUrl, title: "ID Photo" })
+                      }}
                     />
                   </div>
                 ) : (
@@ -773,7 +787,7 @@ export default function AdminOnboardingDetailPage() {
                   <Button
                     onClick={() => handleVerify("documents", "APPROVED")}
                     disabled={processing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-28"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
@@ -782,6 +796,7 @@ export default function AdminOnboardingDetailPage() {
                     onClick={() => handleVerify("documents", "REJECTED")}
                     disabled={processing}
                     variant="destructive"
+                    className="w-28"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
@@ -792,7 +807,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Section 4: Signature */}
+        {/* Document 4: Signature */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -807,22 +822,29 @@ export default function AdminOnboardingDetailPage() {
             {onboarding.signatureUrl ? (
               <div className="mb-4">
                 <p className="text-sm text-slate-400 mb-2">Signature Preview:</p>
-                <div className="border-2 border-slate-600 rounded-lg p-4 bg-white inline-block">
+                <div 
+                  className="border-2 border-slate-600 rounded-lg p-4 bg-white inline-block cursor-pointer"
+                  onClick={() => {
+                    setImageLoading(true)
+                    setViewFileModal({ url: onboarding.signatureUrl, title: "Signature" })
+                  }}
+                >
                   <img 
                     src={onboarding.signatureUrl} 
                     alt="Staff Signature" 
                     className="max-h-32"
                   />
                 </div>
-                <a 
-                  href={onboarding.signatureUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <button 
+                  onClick={() => {
+                    setImageLoading(true)
+                    setViewFileModal({ url: onboarding.signatureUrl, title: "Signature" })
+                  }}
                   className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
                 >
                   <CheckCircle2 className="h-3 w-3" />
                   View Full Size
-                </a>
+                </button>
               </div>
             ) : (
               <p className="text-slate-500 text-sm mb-4">Signature not uploaded yet</p>
@@ -848,7 +870,7 @@ export default function AdminOnboardingDetailPage() {
                   <Button
                     onClick={() => handleVerify("signature", "APPROVED")}
                     disabled={processing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-28"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
@@ -857,6 +879,7 @@ export default function AdminOnboardingDetailPage() {
                     onClick={() => handleVerify("signature", "REJECTED")}
                     disabled={processing}
                     variant="destructive"
+                    className="w-28"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
@@ -867,7 +890,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Section 5: Emergency Contact */}
+        {/* Document 5: Emergency Contact */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -914,7 +937,7 @@ export default function AdminOnboardingDetailPage() {
                   <Button
                     onClick={() => handleVerify("emergencyContact", "APPROVED")}
                     disabled={processing}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-28"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
@@ -923,6 +946,7 @@ export default function AdminOnboardingDetailPage() {
                     onClick={() => handleVerify("emergencyContact", "REJECTED")}
                     disabled={processing}
                     variant="destructive"
+                    className="w-28"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
@@ -933,6 +957,48 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* File View Modal */}
+      <Dialog open={!!viewFileModal} onOpenChange={() => {
+        setViewFileModal(null)
+        setImageLoading(true)
+      }}>
+        <DialogContent className="max-w-5xl bg-slate-800 border-slate-700 p-0">
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle className="text-white">{viewFileModal?.title}</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="h-[60vh] relative px-6 pb-6 flex items-center justify-center">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-12 w-12 animate-spin text-purple-600" />
+                  <span className="text-slate-300 text-sm">Loading file...</span>
+                </div>
+              </div>
+            )}
+            {viewFileModal?.url && (
+              viewFileModal.url.endsWith('.pdf') ? (
+                <iframe
+                  src={`${viewFileModal.url}?t=${Date.now()}#toolbar=0`}
+                  className="w-full h-full"
+                  title={viewFileModal.title}
+                  onLoad={() => setImageLoading(false)}
+                />
+              ) : (
+                <img
+                  src={`${viewFileModal.url}?t=${Date.now()}`}
+                  alt={viewFileModal.title}
+                  className="max-w-full max-h-full object-contain"
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => setImageLoading(false)}
+                />
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
