@@ -116,8 +116,61 @@ export default function BreaksTracking() {
     if (kioskParam === 'true' && typeParam) {
       console.log('[BreaksTracking] Kiosk mode detected, type:', typeParam)
       setIsKioskMode(true)
-      // In kiosk mode, fetch the active break from API
-      fetchBreaks()
+      
+      // In kiosk mode, retry fetching the active break multiple times
+      // because it might take a moment for the break to be created in DB
+      let retryCount = 0
+      const maxRetries = 10
+      const retryInterval = 500 // ms
+      let foundBreak = false
+      
+      const tryFetchBreak = async () => {
+        try {
+          const today = new Date().toISOString().split('T')[0]
+          const response = await fetch(`/api/breaks?date=${today}`)
+          
+          if (response.ok) {
+            const data = await response.json()
+            const active = data.breaks?.find((b: Break) => !b.endTime) || null
+            
+            if (active) {
+              console.log('[BreaksTracking] Found active break:', active.type)
+              foundBreak = true
+              setActiveBreak(active)
+              const config = breakConfig[active.type as BreakType]
+              const elapsed = Math.floor((Date.now() - new Date(active.startTime).getTime()) / 1000)
+              setTimeElapsed(elapsed)
+              setTimeRemaining(Math.max(0, (config.duration * 60) - elapsed))
+              setIsLoading(false)
+            } else if (retryCount < maxRetries) {
+              retryCount++
+              console.log(`[BreaksTracking] No active break found, retry ${retryCount}/${maxRetries}`)
+              setTimeout(tryFetchBreak, retryInterval)
+            } else {
+              console.error('[BreaksTracking] Failed to find active break after max retries')
+              setIsLoading(false)
+            }
+          } else {
+            console.error('[BreaksTracking] Failed to fetch breaks:', response.status)
+            if (retryCount < maxRetries) {
+              retryCount++
+              setTimeout(tryFetchBreak, retryInterval)
+            } else {
+              setIsLoading(false)
+            }
+          }
+        } catch (err) {
+          console.error('[BreaksTracking] Error in tryFetchBreak:', err)
+          if (retryCount < maxRetries) {
+            retryCount++
+            setTimeout(tryFetchBreak, retryInterval)
+          } else {
+            setIsLoading(false)
+          }
+        }
+      }
+      
+      tryFetchBreak()
     } else {
       fetchBreaks()
     }
