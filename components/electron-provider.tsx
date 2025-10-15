@@ -19,6 +19,7 @@ declare global {
       }
       sync: {
         start: (sessionToken: string) => Promise<any>
+        stop: () => Promise<any>
         getStatus: () => Promise<any>
         forceSync: () => Promise<any>
       }
