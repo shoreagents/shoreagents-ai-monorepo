@@ -85,7 +85,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`glass fixed left-0 top-0 z-40 h-screen w-72 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
+        className={`glass fixed left-0 top-0 z-40 h-screen w-64 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -104,11 +104,11 @@ export default function Sidebar() {
                 <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
                   {getUserInitials(session?.user?.name)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-white truncate">
+                <div className="flex-1">
+                  <div className="font-semibold text-white">
                     {status === "loading" ? "Loading..." : session?.user?.name || "Guest"}
                   </div>
-                  <div className="text-xs text-white/60 truncate" title={session?.user?.email || "Not logged in"}>
+                  <div className="text-xs text-white/60">
                     {session?.user?.email || "Not logged in"}
                   </div>
                 </div>
