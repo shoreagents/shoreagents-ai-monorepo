@@ -32,11 +32,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for active breaks
+    // Check for active breaks (breaks that have been STARTED but not ended)
     const activeBreak = await prisma.break.findFirst({
       where: {
         timeEntryId: activeEntry.id,
-        actualEnd: null
+        actualStart: { not: null }, // Break has been actually started
+        actualEnd: null // But not ended yet
       }
     })
     

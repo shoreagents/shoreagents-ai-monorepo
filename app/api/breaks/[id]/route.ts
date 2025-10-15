@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// PUT /api/breaks/[id] - End a break
-export async function PUT(
+// PUT & PATCH /api/breaks/[id] - End a break
+async function endBreak(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  params: Promise<{ id: string }>
 ) {
   try {
     const session = await auth()
@@ -77,5 +77,20 @@ export async function PUT(
       { status: 500 }
     )
   }
+}
+
+// Export both PUT and PATCH
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return endBreak(request, params)
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return endBreak(request, params)
 }
 

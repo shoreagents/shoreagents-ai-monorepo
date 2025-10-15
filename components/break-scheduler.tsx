@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Coffee, Lock } from "lucide-react"
 
@@ -14,11 +14,25 @@ interface BreakSchedulerProps {
 
 export function BreakScheduler({ isOpen, timeEntryId, onScheduled, onSkip }: BreakSchedulerProps) {
   const [breaks, setBreaks] = useState([
-    { type: 'MORNING', label: 'Morning Break', scheduledStart: '10:00', scheduledEnd: '10:15' },
-    { type: 'LUNCH', label: 'Lunch Break', scheduledStart: '12:00', scheduledEnd: '13:00' },
-    { type: 'AFTERNOON', label: 'Afternoon Break', scheduledStart: '15:00', scheduledEnd: '15:15' }
+    { type: 'MORNING', label: 'Morning Break', duration: 15, scheduledStart: '10:00' },
+    { type: 'LUNCH', label: 'Lunch Break', duration: 60, scheduledStart: '12:00' },
+    { type: 'AFTERNOON', label: 'Afternoon Break', duration: 15, scheduledStart: '15:00' }
   ])
   const [loading, setLoading] = useState(false)
+  
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+    
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000)
+    const endHour = endDate.getHours()
+    const endMin = endDate.getMinutes()
+    
+    const period = endHour >= 12 ? 'PM' : 'AM'
+    const hour12 = endHour === 0 ? 12 : endHour > 12 ? endHour - 12 : endHour
+    return `${hour12}:${String(endMin).padStart(2, '0')} ${period}`
+  }
   
   const handleSchedule = async () => {
     setLoading(true)
@@ -31,7 +45,7 @@ export function BreakScheduler({ isOpen, timeEntryId, onScheduled, onSkip }: Bre
           breaks: breaks.map(b => ({
             type: b.type,
             scheduledStart: convertTo12Hour(b.scheduledStart),
-            scheduledEnd: convertTo12Hour(b.scheduledEnd)
+            scheduledEnd: calculateEndTime(b.scheduledStart, b.duration)
           }))
         })
       })
@@ -68,8 +82,8 @@ export function BreakScheduler({ isOpen, timeEntryId, onScheduled, onSkip }: Bre
               <Coffee className="h-8 w-8 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">Schedule Your Breaks</h2>
-              <p className="text-sm text-slate-400">For today's shift</p>
+              <DialogTitle className="text-2xl font-bold text-white">Schedule Your Breaks</DialogTitle>
+              <DialogDescription className="text-sm text-slate-400">For today's shift</DialogDescription>
             </div>
           </div>
           
@@ -91,31 +105,29 @@ export function BreakScheduler({ isOpen, timeEntryId, onScheduled, onSkip }: Bre
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-semibold text-white">{b.label}</span>
                   <span className="text-xs text-slate-400">
-                    {b.type === 'LUNCH' ? '60 min' : '15 min'}
+                    {b.duration} min duration
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="time"
-                    value={b.scheduledStart}
-                    onChange={(e) => {
-                      const updated = [...breaks]
-                      updated[i].scheduledStart = e.target.value
-                      setBreaks(updated)
-                    }}
-                    className="flex-1 bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                  <span className="text-slate-400">to</span>
-                  <input
-                    type="time"
-                    value={b.scheduledEnd}
-                    onChange={(e) => {
-                      const updated = [...breaks]
-                      updated[i].scheduledEnd = e.target.value
-                      setBreaks(updated)
-                    }}
-                    className="flex-1 bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
+                <div className="space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <label className="text-sm text-slate-400 w-16">Start:</label>
+                    <input
+                      type="time"
+                      value={b.scheduledStart}
+                      onChange={(e) => {
+                        const updated = [...breaks]
+                        updated[i].scheduledStart = e.target.value
+                        setBreaks(updated)
+                      }}
+                      className="flex-1 bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex gap-2 items-center text-sm">
+                    <span className="text-slate-500 w-16">Ends:</span>
+                    <span className="text-slate-300">
+                      {calculateEndTime(b.scheduledStart, b.duration)} (auto)
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

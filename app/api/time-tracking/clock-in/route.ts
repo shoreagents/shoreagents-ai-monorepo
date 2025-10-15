@@ -27,12 +27,35 @@ export async function POST(request: NextRequest) {
 
     const now = new Date()
     
+    // Check if user already clocked in today (prevent multiple clock-ins per day)
+    const startOfDay = new Date(now)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(now)
+    endOfDay.setHours(23, 59, 59, 999)
+    
+    const todaysEntry = await prisma.timeEntry.findFirst({
+      where: {
+        staffUserId: staffUser.id,
+        clockIn: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      }
+    })
+    
+    if (todaysEntry) {
+      return NextResponse.json(
+        { error: "You have already clocked in today. Only one session per day is allowed." },
+        { status: 400 }
+      )
+    }
+    
     // Get today's work schedule
     const today = now.toLocaleDateString('en-US', { weekday: 'long' })
     const workSchedule = await prisma.workSchedule.findFirst({
       where: {
         profile: { staffUserId: staffUser.id },
-        dayName: today
+        dayOfWeek: today
       },
       include: { profile: true }
     })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Clock, LogOut } from "lucide-react"
 
@@ -19,11 +19,11 @@ export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftMod
   const configs = {
     'late-clock-in': {
       title: 'You Are Late for Your Shift',
-      message: `Your shift started at ${data?.expectedTime}. You are ${data?.lateBy} minutes late.`,
+      message: `Your shift started at ${data?.expectedTime ? new Date(data.expectedTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'your scheduled time'}. You are ${data?.lateBy} minutes late.`,
       icon: AlertCircle,
       iconColor: 'text-red-400',
       bgColor: 'bg-red-500/10',
-      actionLabel: 'Clock In Now',
+      actionLabel: 'Start Shift',
       canDismiss: false
     },
     'break-reminder': {
@@ -70,8 +70,8 @@ export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftMod
           </div>
           
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">{config.title}</h2>
-            <p className="text-slate-400">{config.message}</p>
+            <DialogTitle className="text-2xl font-bold text-white mb-2">{config.title}</DialogTitle>
+            <DialogDescription className="text-slate-400">{config.message}</DialogDescription>
           </div>
           
           {type === 'clock-out' && (
