@@ -121,10 +121,7 @@ export default function OnboardingStatusPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-          <p className="text-slate-400 mt-2">Loading status...</p>
-        </div>
+        <div className="loader"></div>
       </div>
     )
   }
@@ -208,6 +205,42 @@ export default function OnboardingStatusPage() {
           <p className="text-slate-400">Track your onboarding progress and review feedback</p>
         </div>
 
+        {/* Status Messages */}
+        {status.isComplete && (
+          <Alert className="mb-6 bg-green-900/50 border-green-700">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <AlertDescription className="text-green-200">
+              <strong>All Set!</strong> Your onboarding has been completed and verified by management. Welcome to the team!
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {rejectedCount > 0 && (
+          <Alert className="mb-6 bg-red-900/50 border-red-700">
+            <XCircle className="h-4 w-4 text-red-500" />
+            <AlertDescription className="text-red-200">
+              <strong>Action Required:</strong> {rejectedCount} section{rejectedCount > 1 ? 's' : ''} {rejectedCount > 1 ? 'need' : 'needs'} your attention. Please review the feedback below and resubmit.
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                size="sm"
+                className="ml-3 border-red-600 text-red-300 hover:bg-red-900"
+              >
+                Go to Onboarding
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!status.isComplete && rejectedCount === 0 && status.completionPercent === 100 && (
+          <Alert className="mb-6 bg-blue-900/50 border-blue-700">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-blue-200">
+              <strong>Awaiting Verification:</strong> You've submitted all required information! Our management team is reviewing your onboarding. You'll be notified once verification is complete.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Progress Overview */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
@@ -253,45 +286,9 @@ export default function OnboardingStatusPage() {
           </CardContent>
         </Card>
 
-        {/* Status Message */}
-        {status.isComplete && (
-          <Alert className="mb-6 bg-green-900/50 border-green-700">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-200">
-              <strong>All Set!</strong> Your onboarding has been completed and verified by management. Welcome to the team!
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {rejectedCount > 0 && (
-          <Alert className="mb-6 bg-red-900/50 border-red-700">
-            <XCircle className="h-4 w-4 text-red-500" />
-            <AlertDescription className="text-red-200">
-              <strong>Action Required:</strong> {rejectedCount} section{rejectedCount > 1 ? 's' : ''} {rejectedCount > 1 ? 'need' : 'needs'} your attention. Please review the feedback below and resubmit.
-              <Button
-                onClick={() => router.push("/onboarding")}
-                variant="outline"
-                size="sm"
-                className="ml-3 border-red-600 text-red-300 hover:bg-red-900"
-              >
-                Go to Onboarding
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!status.isComplete && rejectedCount === 0 && status.completionPercent === 100 && (
-          <Alert className="mb-6 bg-blue-900/50 border-blue-700">
-            <Info className="h-4 w-4 text-blue-500" />
-            <AlertDescription className="text-blue-200">
-              <strong>Awaiting Verification:</strong> You've submitted all required information! Our management team is reviewing your onboarding. You'll be notified once verification is complete.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Section Details */}
+        {/* Verification Details */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white mb-4">Section Details</h2>
+          <h2 className="text-xl font-bold text-white mb-4">Verification Details</h2>
           
           {sections.map((section) => {
             const Icon = section.icon
@@ -347,19 +344,12 @@ export default function OnboardingStatusPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6">
           <Button
             onClick={() => router.push("/onboarding")}
             className="bg-purple-600 hover:bg-purple-700"
           >
             {rejectedCount > 0 ? "Fix Rejected Sections" : "View Onboarding Form"}
-          </Button>
-          <Button
-            onClick={() => router.push("/")}
-            variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-          >
-            Back to Dashboard
           </Button>
         </div>
       </div>

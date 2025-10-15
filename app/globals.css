@@ -217,3 +217,74 @@
 .animate-bounce-in {
   animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+/* Waving hand animation */
+@keyframes wave {
+  0% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(14deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  30% {
+    transform: rotate(14deg);
+  }
+  40% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-wave {
+  animation: wave 2s ease-in-out infinite;
+}
+
+/* File input separator styling */
+input[type="file"]::file-selector-button {
+  margin-right: 1rem;
+  padding-right: 1rem;
+  border-right: 1px solid rgb(148 163 184 / 0.3);
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  margin-right: 1rem;
+  padding-right: 1rem;
+  border-right: 1px solid rgb(148 163 184 / 0.3);
+}
+
+/* Custom loader animation */
+.loader {
+  width: 200px;
+  height: 22px;
+  border-radius: 20px;
+  color: #9333ea;
+  border: 2px solid;
+  position: relative;
+}
+
+.loader::before {
+  content: "";
+  position: absolute;
+  margin: 2px;
+  inset: 0 100% 0 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: loader-fill 2s infinite;
+}
+
+@keyframes loader-fill {
+  100% {
+    inset: 0;
+  }
+}
