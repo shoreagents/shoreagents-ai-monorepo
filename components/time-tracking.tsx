@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Clock, LogIn, LogOut, Calendar, TrendingUp } from "lucide-react"
+import { Clock, LogIn, LogOut, Calendar, TrendingUp, AlertCircle, Coffee } from "lucide-react"
+import { ShiftModal } from "@/components/shift-modal"
+import { BreakScheduler } from "@/components/break-scheduler"
 
 interface TimeEntry {
   id: string
@@ -11,6 +13,9 @@ interface TimeEntry {
   clockOut: string | null
   totalHours: number | null
   createdAt: string
+  wasLate?: boolean
+  lateBy?: number
+  expectedClockIn?: string
 }
 
 interface TimeStats {
@@ -26,6 +31,13 @@ export default function TimeTracking() {
   const [currentSessionTime, setCurrentSessionTime] = useState("00:00:00")
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState<TimeStats>({ today: 0, week: 0, month: 0 })
+  
+  // New state for shift management
+  const [showLateModal, setShowLateModal] = useState(false)
+  const [showBreakScheduler, setShowBreakScheduler] = useState(false)
+  const [showClockOutModal, setShowClockOutModal] = useState(false)
+  const [lateMinutes, setLateMinutes] = useState(0)
+  const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchStatus()
@@ -117,10 +129,25 @@ export default function TimeTracking() {
         method: "POST",
       })
 
+      const data = await response.json()
+      
       if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || "Failed to clock in")
+        alert(data.error || "Failed to clock in")
         return
+      }
+
+      console.log("✅ Clock-in response:", data)
+      
+      // Check if staff was late
+      if (data.wasLate && data.lateBy > 0) {
+        setLateMinutes(data.lateBy)
+        setShowLateModal(true)
+      }
+      
+      // Check if break scheduler should be shown
+      if (data.showBreakScheduler && data.timeEntry?.id) {
+        setPendingTimeEntryId(data.timeEntry.id)
+        setShowBreakScheduler(true)
       }
 
       await fetchStatus()
@@ -132,26 +159,45 @@ export default function TimeTracking() {
   }
 
   const handleClockOut = async () => {
+    // Show clock-out modal with reason selector
+    setShowClockOutModal(true)
+  }
+  
+  const handleClockOutConfirm = async (reason: string) => {
     try {
       const response = await fetch("/api/time-tracking/clock-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ reason, notes: "" }),
       })
 
+      const data = await response.json()
+      
       if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || "Failed to clock out")
+        alert(data.error || "Failed to clock out")
         return
       }
 
+      console.log("✅ Clock-out response:", data)
+      
+      setShowClockOutModal(false)
       await fetchStatus()
       await fetchTimeEntries()
       setCurrentSessionTime("00:00:00")
+      
+      // Show success message with net work hours
+      if (data.totalHours) {
+        alert(`Clocked out successfully!\nNet work hours: ${data.totalHours}h\nBreak time: ${data.breakTime || 0}h`)
+      }
     } catch (error) {
       console.error("Error clocking out:", error)
       alert("Failed to clock out")
     }
+  }
+  
+  const handleBreakScheduled = () => {
+    setShowBreakScheduler(false)
+    setPendingTimeEntryId(null)
   }
 
   const formatDateTime = (dateString: string) => {
@@ -235,6 +281,25 @@ export default function TimeTracking() {
                     {isClockedIn ? "Clocked In" : "Clocked Out"}
                   </span>
                 </div>
+                
+                {/* Shift Status (Late/On Time) */}
+                {isClockedIn && activeEntry?.wasLate && (
+                  <div className="mb-2 flex items-center justify-center gap-2 rounded-lg bg-red-500/10 px-3 py-1 border border-red-500/20">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <span className="text-sm font-medium text-red-400">
+                      Clocked in {activeEntry.lateBy} min late
+                    </span>
+                  </div>
+                )}
+                
+                {isClockedIn && activeEntry && !activeEntry.wasLate && (
+                  <div className="mb-2 flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-1 border border-green-500/20">
+                    <span className="text-sm font-medium text-green-400">
+                      ✓ On Time
+                    </span>
+                  </div>
+                )}
+                
                 {isClockedIn && (
                   <div className="text-4xl font-bold tabular-nums text-indigo-400">
                     {currentSessionTime}
@@ -384,6 +449,31 @@ export default function TimeTracking() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Shift Management Modals */}
+      <ShiftModal
+        isOpen={showLateModal}
+        type="late-clock-in"
+        data={{ lateBy: lateMinutes, expectedTime: activeEntry?.expectedClockIn }}
+        onAction={() => setShowLateModal(false)}
+      />
+      
+      {pendingTimeEntryId && (
+        <BreakScheduler
+          isOpen={showBreakScheduler}
+          timeEntryId={pendingTimeEntryId}
+          onScheduled={handleBreakScheduled}
+          onSkip={handleBreakScheduled}
+        />
+      )}
+      
+      <ShiftModal
+        isOpen={showClockOutModal}
+        type="clock-out"
+        data={{}}
+        onAction={handleClockOutConfirm}
+        onDismiss={() => setShowClockOutModal(false)}
+      />
     </div>
   )
 }
