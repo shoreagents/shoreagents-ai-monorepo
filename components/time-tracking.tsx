@@ -217,6 +217,14 @@ export default function TimeTracking() {
     return () => clearInterval(interval)
   }, [isClockedIn, scheduledBreaks, activeBreak])
 
+  // Reset clocking out state immediately when clock-out completes
+  useEffect(() => {
+    if (!isClockedIn && isClockingOut) {
+      console.log('[Time Tracking] Clock-out complete, resetting state immediately')
+      setIsClockingOut(false)
+    }
+  }, [isClockedIn, isClockingOut])
+
   // WebSocket handles all data fetching automatically
   
   // Auto clock-out functions
@@ -651,11 +659,8 @@ export default function TimeTracking() {
         return
       }
       
-      // Set loading state
+      // Set loading state FIRST
       setIsClockingOut(true)
-      
-      // Close confirmation modal immediately
-      setShowClockOutModal(false)
       
       // Show immediate feedback
       toast({
@@ -664,11 +669,16 @@ export default function TimeTracking() {
         duration: 2000
       })
       
-      // Use WebSocket to clock out (non-blocking)
-      await clockOut(reason, "")
+      // Close confirmation modal - user will see main button loading state
+      setShowClockOutModal(false)
       
-      // Reset loading state after completion
-      setIsClockingOut(false)
+      // Use WebSocket to clock out + ensure loading state is visible for at least 1 second
+      const [, ] = await Promise.all([
+        clockOut(reason, ""),
+        new Promise(resolve => setTimeout(resolve, 1000))
+      ])
+      
+      // The useEffect will reset isClockingOut immediately when isClockedIn changes to false
       
     } catch (error) {
       console.log("⚠️ Error clocking out:", error)
@@ -1093,24 +1103,22 @@ export default function TimeTracking() {
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                 {scheduledBreaks
-                  // Filter out scheduled breaks if there's a completed/active version
-                  .filter((breakItem: any) => {
+                  // Filter: Only show one break per scheduled time - prioritize completed/active over scheduled
+                  .filter((breakItem: any, index: number, array: any[]) => {
                     // If this break has been started or completed, always show it
                     if (breakItem.actualStart || breakItem.actualEnd) {
                       return true
                     }
                     
                     // This is a scheduled break (not started yet)
-                    // Check if there's a completed or active break for the same scheduled time
-                    const hasCompletedVersion = scheduledBreaks.some((other: any) => 
+                    // Hide if there's ANY other break with same type that has been started/completed
+                    const hasActiveOrCompletedVersion = array.some((other: any) => 
                       other.id !== breakItem.id &&
-                      other.scheduledStart === breakItem.scheduledStart && 
                       other.type === breakItem.type &&
                       (other.actualStart || other.actualEnd)
                     )
                     
-                    // If there's a completed/active version, hide this scheduled one
-                    return !hasCompletedVersion
+                    return !hasActiveOrCompletedVersion
                   })
                   .map((breakItem) => {
                   const isOnBreak = breakItem.actualStart && !breakItem.actualEnd
