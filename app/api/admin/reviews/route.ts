@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAdminUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/admin/reviews - Get ALL reviews (admin view)
+// GET /api/admin/reviews - Get ALL reviews (admin view) with filters
 export async function GET(request: NextRequest) {
   try {
     const user = await getAdminUser()
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const staffId = searchParams.get("staffId")
     const clientId = searchParams.get("clientId")
     const status = searchParams.get("status")
+    const type = searchParams.get("type")
 
     const where: any = {}
 
@@ -37,6 +38,11 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
+    // Filter by type
+    if (type) {
+      where.type = type
+    }
+
     const reviews = await prisma.review.findMany({
       where,
       include: {
@@ -45,11 +51,13 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             email: true,
-            avatar: true
+            avatar: true,
+            startDate: true,
+            companyId: true
           }
         }
       },
-      orderBy: { submittedDate: "desc" },
+      orderBy: { createdAt: "desc" },
     })
 
     return NextResponse.json({ reviews, count: reviews.length })
@@ -59,7 +67,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/reviews - Approve/Finalize a review
+// PUT /api/admin/reviews - Process review (mark as reviewed)
 export async function PUT(request: NextRequest) {
   try {
     const user = await getAdminUser()
@@ -69,39 +77,48 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { reviewId, action } = body
+    const { reviewId, managementNotes, reviewedBy } = body
 
-    if (!reviewId || !action) {
-      return NextResponse.json({ error: "Missing reviewId or action" }, { status: 400 })
+    if (!reviewId) {
+      return NextResponse.json({ error: "Missing reviewId" }, { status: 400 })
     }
 
     // Get the review
     const review = await prisma.review.findUnique({
-      where: { id: reviewId }
+      where: { id: reviewId },
+      include: {
+        staffUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     })
 
     if (!review) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
     }
 
-    // Update status based on action
-    let newStatus: "PENDING_APPROVAL" | "APPROVED" | "FINALIZED" | "ARCHIVED"
-
-    if (action === "approve") {
-      newStatus = "APPROVED"
-    } else if (action === "finalize") {
-      newStatus = "FINALIZED" // This makes it visible to staff
-    } else if (action === "archive") {
-      newStatus = "ARCHIVED"
-    } else {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    // Only process if status is SUBMITTED
+    if (review.status !== "SUBMITTED") {
+      return NextResponse.json({ 
+        error: "Review must be in SUBMITTED status to process" 
+      }, { status: 400 })
     }
 
+    // Update review: SUBMITTED → UNDER_REVIEW
     const updatedReview = await prisma.review.update({
       where: { id: reviewId },
-      data: { status: newStatus },
+      data: { 
+        status: "UNDER_REVIEW",
+        managementNotes: managementNotes || null,
+        reviewedBy: reviewedBy || user.email,
+        reviewedDate: new Date()
+      },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -112,9 +129,18 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    // TODO: Create notification for staff
+    // await createNotification({
+    //   type: "REVIEW_PROCESSED",
+    //   recipientUserId: review.staffUser.id,
+    //   title: "Your Performance Review is Ready",
+    //   message: `Your ${review.type} review has been completed`,
+    //   link: `/reviews`
+    // })
+
     return NextResponse.json({ success: true, review: updatedReview })
   } catch (error) {
-    console.error("Error updating review:", error)
-    return NextResponse.json({ error: "Failed to update review" }, { status: 500 })
+    console.error("Error processing review:", error)
+    return NextResponse.json({ error: "Failed to process review" }, { status: 500 })
   }
 }
