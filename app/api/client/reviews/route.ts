@@ -108,21 +108,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
     }
 
-    // Check if review is pending (handle both PENDING and PENDING_APPROVAL statuses)
-    if (existingReview.status !== "PENDING" && existingReview.status !== "PENDING_APPROVAL") {
+    // Check if review is pending
+    if (existingReview.status !== "PENDING") {
       return NextResponse.json({ error: "Review already submitted" }, { status: 400 })
     }
 
-    // Verify staff is assigned to this client
-    const assignment = await prisma.staffAssignment.findFirst({
-      where: {
-        staffUserId: existingReview.staffUserId,
-        companyId: clientUser.company.id,
-        isActive: true
-      }
-    })
-
-    if (!assignment) {
+    // Verify staff is assigned to this client (check companyId directly on staffUser)
+    if (existingReview.staffUser.companyId !== clientUser.company.id) {
       return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
     }
 
