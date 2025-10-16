@@ -92,9 +92,11 @@ export default function AdminOnboardingDetailPage() {
   const [success, setSuccess] = useState("")
   const [viewFileModal, setViewFileModal] = useState<{ url: string; title: string } | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
+  const [confirmCompleteModal, setConfirmCompleteModal] = useState(false)
   
   const [staff, setStaff] = useState<any>(null)
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [feedback, setFeedback] = useState<Record<string, string>>({})
   const [companies, setCompanies] = useState<any[]>([])
   
@@ -149,6 +151,7 @@ export default function AdminOnboardingDetailPage() {
       })
       setStaff(data.staff)
       setOnboarding(data.onboarding)
+      setProfile(data.profile)
     } catch (err) {
       setError("Failed to load onboarding details")
     } finally {
@@ -215,7 +218,15 @@ export default function AdminOnboardingDetailPage() {
       return
     }
     
-    if (!confirm("Complete this staff member's onboarding and assign to selected company? This will create their profile and work schedule.")) {
+    setConfirmCompleteModal(true)
+  }
+
+  const confirmCompleteOnboarding = async () => {
+    setConfirmCompleteModal(false)
+    
+    // Double-check that onboarding is not already complete
+    if (onboarding?.isComplete || profile) {
+      setError("This staff member's onboarding has already been completed.")
       return
     }
     
@@ -238,6 +249,25 @@ export default function AdminOnboardingDetailPage() {
       ...employmentData 
     })
     
+    // Log validation data for debugging
+    console.log("📋 VALIDATION DATA:", {
+      selectedCompanyId,
+      currentRole,
+      salary: parseFloat(salary),
+      employmentStatus,
+      startDate,
+      shiftTime,
+      hmo,
+      onboardingStatus: {
+        personalInfoStatus: onboarding?.personalInfoStatus,
+        govIdStatus: onboarding?.govIdStatus,
+        documentsStatus: onboarding?.documentsStatus,
+        signatureStatus: onboarding?.signatureStatus,
+        emergencyContactStatus: onboarding?.emergencyContactStatus,
+        isComplete: onboarding?.isComplete
+      }
+    })
+    
     try {
       const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/complete`, {
         method: "POST",
@@ -247,8 +277,28 @@ export default function AdminOnboardingDetailPage() {
       
       if (!response.ok) {
         const data = await response.json()
-        console.error("❌ COMPLETE FAILED:", data.error)
-        throw new Error(data.error || "Failed to complete")
+        console.error("❌ COMPLETE FAILED:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          data: data,
+          employmentData: employmentData
+        })
+        
+        // Provide more specific error messages based on status codes
+        let errorMessage = data.error || "Failed to complete onboarding"
+        
+        if (response.status === 400) {
+          errorMessage = `Bad Request: ${data.error || "Invalid data provided. Please check all fields."}`
+        } else if (response.status === 404) {
+          errorMessage = `Not Found: ${data.error || "Staff member or company not found."}`
+        } else if (response.status === 409) {
+          errorMessage = `Conflict: ${data.error || "Staff profile already exists or duplicate entry."}`
+        } else if (response.status === 500) {
+          errorMessage = `Server Error: ${data.error || "Internal server error. Please try again later."}`
+        }
+        
+        throw new Error(errorMessage)
       }
       
       const data = await response.json()
@@ -260,7 +310,30 @@ export default function AdminOnboardingDetailPage() {
       await fetchOnboardingDetails()
       setTimeout(() => router.push("/admin/staff/onboarding"), 3000)
     } catch (err: any) {
-      setError(err.message)
+      console.error("❌ COMPLETE FAILED:", err.message)
+      
+      // Handle specific error cases
+      if (err.message.includes("Staff profile already exists")) {
+        setError("This staff member's profile has already been created. The onboarding may have been completed previously.")
+        // Refresh the data to get the updated status
+        await fetchOnboardingDetails()
+      } else if (err.message.includes("already exists")) {
+        setError("This staff member's onboarding has already been completed. Please refresh the page to see the updated status.")
+        await fetchOnboardingDetails()
+      } else if (err.message.includes("Bad Request")) {
+        setError(`Invalid data provided: ${err.message}. Please check all fields and try again.`)
+      } else if (err.message.includes("Not Found")) {
+        setError(`Resource not found: ${err.message}. Please refresh the page and try again.`)
+      } else if (err.message.includes("Conflict")) {
+        setError(`Conflict detected: ${err.message}. This may indicate a duplicate entry.`)
+        await fetchOnboardingDetails()
+      } else if (err.message.includes("Server Error")) {
+        setError(`Server error: ${err.message}. Please try again later or contact support.`)
+      } else if (err.message.includes("Failed to complete onboarding")) {
+        setError(`Failed to complete onboarding: ${err.message}. Please check the console for more details and try again.`)
+      } else {
+        setError(err.message || "An unexpected error occurred. Please try again.")
+      }
     } finally {
       setCompleting(false)
     }
@@ -331,7 +404,22 @@ export default function AdminOnboardingDetailPage() {
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              {error.includes("Failed to complete onboarding") && !completing && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setError("")
+                    setConfirmCompleteModal(true)
+                  }}
+                  className="ml-4 border-red-600 text-red-400 hover:bg-red-900/30"
+                >
+                  Retry
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
         
@@ -342,16 +430,75 @@ export default function AdminOnboardingDetailPage() {
           </Alert>
         )}
 
-        {/* Complete Onboarding Button - Only show when ALL documents APPROVED */}
+        {/* Onboarding Already Complete */}
+        {(onboarding.isComplete || profile) && (
+          <Card className="mb-6 bg-green-900/30 border-green-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-400" />
+                Onboarding Complete
+              </CardTitle>
+              <CardDescription className="text-slate-300">
+                This staff member's onboarding has been successfully completed and their profile has been created.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-green-200">
+                    <p className="font-medium">✅ Profile Created Successfully</p>
+                    <p className="text-sm text-slate-400">Staff member is ready to start work</p>
+                  </div>
+                  <Button
+                    onClick={() => router.push("/admin/staff/onboarding")}
+                    variant="outline"
+                    className="border-green-600 text-green-400 hover:bg-green-900/30"
+                  >
+                    Back to List
+                  </Button>
+                </div>
+                
+                {profile && (
+                  <div className="bg-slate-700 p-3 rounded-lg">
+                    <p className="text-sm text-slate-400 mb-2">Profile Details:</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-slate-400">Role:</span>
+                        <span className="text-white ml-2">{profile.currentRole}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Status:</span>
+                        <span className="text-white ml-2">{profile.employmentStatus}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Salary:</span>
+                        <span className="text-white ml-2">₱{profile.salary}/month</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Start Date:</span>
+                        <span className="text-white ml-2">
+                          {profile.startDate ? new Date(profile.startDate).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Complete Onboarding Button - Only show when ALL documents APPROVED and no profile exists */}
         {onboarding.personalInfoStatus === "APPROVED" &&
          onboarding.govIdStatus === "APPROVED" &&
          onboarding.documentsStatus === "APPROVED" &&
          onboarding.signatureStatus === "APPROVED" &&
          onboarding.emergencyContactStatus === "APPROVED" &&
-         !onboarding.isComplete && (
+         !onboarding.isComplete &&
+         !profile && (
           <Card className="mb-6 bg-green-900/30 border-green-700">
             <CardHeader>
-              <CardTitle className="text-white">✅ Complete Onboarding & Setup Employment</CardTitle>
+              <CardTitle className="text-white">Complete Onboarding & Setup Employment</CardTitle>
               <CardDescription className="text-slate-300">
                 All documents verified. Fill in employment details to complete onboarding.
               </CardDescription>
@@ -359,43 +506,45 @@ export default function AdminOnboardingDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 
-                {/* Company Assignment */}
-                <div className="space-y-2">
-                  <Label htmlFor="company" className="text-white">
-                    Assign to Company/Client *
-                  </Label>
-                  <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                    <SelectTrigger id="company" className="bg-slate-800 border-slate-700 text-white">
-                      <SelectValue placeholder="Select a company..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      {companies.map((company) => (
-                        <SelectItem 
-                          key={company.id} 
-                          value={company.id}
-                          className="text-white hover:bg-slate-700"
-                        >
-                          {company.companyName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Company Assignment */}
+                  <div className="space-y-2">
+                    <Label htmlFor="company" className="text-white">
+                      Assign to Company/Client *
+                    </Label>
+                    <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                      <SelectTrigger id="company" className="w-full bg-slate-800 border-slate-700 text-white">
+                        <SelectValue placeholder="Select a company..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        {companies.map((company) => (
+                          <SelectItem 
+                            key={company.id} 
+                            value={company.id}
+                            className="text-white hover:bg-slate-700"
+                          >
+                            {company.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Employment Status */}
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-white">
-                    Employment Status *
-                  </Label>
-                  <Select value={employmentStatus} onValueChange={setEmploymentStatus}>
-                    <SelectTrigger id="status" className="bg-slate-800 border-slate-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="PROBATION" className="text-white hover:bg-slate-700">Probation</SelectItem>
-                      <SelectItem value="REGULAR" className="text-white hover:bg-slate-700">Regular</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {/* Employment Status */}
+                  <div className="space-y-2">
+                    <Label htmlFor="status" className="text-white">
+                      Employment Status *
+                    </Label>
+                    <Select value={employmentStatus} onValueChange={setEmploymentStatus}>
+                      <SelectTrigger id="status" className="w-full bg-slate-800 border-slate-700 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        <SelectItem value="PROBATION" className="text-white hover:bg-slate-700">Probation</SelectItem>
+                        <SelectItem value="REGULAR" className="text-white hover:bg-slate-700">Regular</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -409,7 +558,7 @@ export default function AdminOnboardingDetailPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white"
+                      className="bg-slate-800 border-slate-700 text-white [color-scheme:dark]"
                     />
                   </div>
 
@@ -740,27 +889,16 @@ export default function AdminOnboardingDetailPage() {
               <div>
                 <p className="text-sm text-slate-400 mb-1">ID Photo (2x2)</p>
                 {onboarding.idPhotoUrl ? (
-                  <div className="space-y-2">
-                    <button 
-                      onClick={() => {
-                        setImageLoading(true)
-                        setViewFileModal({ url: onboarding.idPhotoUrl, title: "ID Photo" })
-                      }}
-                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      View Photo
-                    </button>
-                    <img 
-                      src={onboarding.idPhotoUrl} 
-                      alt="ID Photo" 
-                      className="w-24 h-24 object-cover rounded border border-slate-600 cursor-pointer"
-                      onClick={() => {
-                        setImageLoading(true)
-                        setViewFileModal({ url: onboarding.idPhotoUrl, title: "ID Photo" })
-                      }}
-                    />
-                  </div>
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.idPhotoUrl, title: "ID Photo" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Photo
+                  </button>
                 ) : (
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
@@ -823,11 +961,7 @@ export default function AdminOnboardingDetailPage() {
               <div className="mb-4">
                 <p className="text-sm text-slate-400 mb-2">Signature Preview:</p>
                 <div 
-                  className="border-2 border-slate-600 rounded-lg p-4 bg-white inline-block cursor-pointer"
-                  onClick={() => {
-                    setImageLoading(true)
-                    setViewFileModal({ url: onboarding.signatureUrl, title: "Signature" })
-                  }}
+                  className="border-2 border-slate-600 rounded-lg p-4 bg-white inline-block"
                 >
                   <img 
                     src={onboarding.signatureUrl} 
@@ -835,16 +969,6 @@ export default function AdminOnboardingDetailPage() {
                     className="max-h-32"
                   />
                 </div>
-                <button 
-                  onClick={() => {
-                    setImageLoading(true)
-                    setViewFileModal({ url: onboarding.signatureUrl, title: "Signature" })
-                  }}
-                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
-                >
-                  <CheckCircle2 className="h-3 w-3" />
-                  View Full Size
-                </button>
               </div>
             ) : (
               <p className="text-slate-500 text-sm mb-4">Signature not uploaded yet</p>
@@ -996,6 +1120,46 @@ export default function AdminOnboardingDetailPage() {
                 />
               )
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Modal */}
+      <Dialog open={confirmCompleteModal} onOpenChange={setConfirmCompleteModal}>
+        <DialogContent className="max-w-md bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Complete Onboarding</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-slate-300 mb-4">
+              Are you sure you want to complete this staff member's onboarding and assign them to the selected company?
+            </p>
+            <div className="bg-slate-700 p-3 rounded-lg mb-4">
+              <p className="text-sm text-slate-400 mb-1">This will:</p>
+              <ul className="text-sm text-slate-300 space-y-1">
+                <li>• Create their profile and personal records</li>
+                <li>• Set up their work schedule</li>
+                <li>• Assign them to {companies.find(c => c.id === selectedCompanyId)?.companyName || 'selected company'}</li>
+                <li>• Set their role as {currentRole}</li>
+                <li>• Set their salary to ₱{salary}/month</li>
+              </ul>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmCompleteModal(false)}
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmCompleteOnboarding}
+                disabled={completing}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {completing ? "Processing..." : "Complete Onboarding"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

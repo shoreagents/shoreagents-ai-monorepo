@@ -187,7 +187,7 @@ export async function POST(
     console.log("🔐 CREATING PERSONAL RECORD:", personalRecordData)
     
     try {
-      const personalRecord = await prisma.staffPersonalRecord.create({
+      const personalRecord = await prisma.staff_personal_records.create({
         data: personalRecordData
       })
       console.log("✅ PERSONAL RECORD CREATED:", { 
@@ -261,6 +261,11 @@ export async function POST(
 
   } catch (error) {
     console.error("Complete onboarding error:", error)
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return NextResponse.json(
       { error: "Failed to complete onboarding" },
       { status: 500 }
