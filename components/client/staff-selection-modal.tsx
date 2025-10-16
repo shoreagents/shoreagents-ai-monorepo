@@ -1,15 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { X, Video, Loader2, Search } from "lucide-react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { Search, Video, X, Loader2 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/use-toast"
+import { useWebSocket } from "@/lib/websocket-provider"
 
-interface StaffUser {
+interface Staff {
   id: string
   name: string
   email: string
   avatar?: string
-  role: string
 }
 
 interface StaffSelectionModalProps {
@@ -17,182 +21,175 @@ interface StaffSelectionModalProps {
   onClose: () => void
 }
 
-export default function StaffSelectionModal({ isOpen, onClose }: StaffSelectionModalProps) {
-  const router = useRouter()
-  const [staff, setStaff] = useState<StaffUser[]>([])
-  const [filteredStaff, setFilteredStaff] = useState<StaffUser[]>([])
+export function StaffSelectionModal({ isOpen, onClose }: StaffSelectionModalProps) {
+  const [staff, setStaff] = useState<Staff[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
-  const [calling, setCalling] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [callingStaffId, setCallingStaffId] = useState<string | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
+  const { emit } = useWebSocket()
 
   useEffect(() => {
-    if (isOpen) {
-      fetchStaff()
-    }
-  }, [isOpen])
+    if (!isOpen) return
 
-  useEffect(() => {
-    if (searchQuery) {
-      setFilteredStaff(
-        staff.filter(s => 
-          s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.email.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      )
-    } else {
-      setFilteredStaff(staff)
+    const fetchStaff = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch("/api/client/staff")
+        if (!response.ok) {
+          throw new Error("Failed to fetch staff")
+        }
+        const data = await response.json()
+        setStaff(data.staff)
+      } catch (error) {
+        console.error("Error fetching staff:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load staff members. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [searchQuery, staff])
 
-  const fetchStaff = async () => {
+    fetchStaff()
+  }, [isOpen, toast])
+
+  const filteredStaff = staff.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleCall = async (staffMember: Staff) => {
+    setCallingStaffId(staffMember.id)
     try {
-      const response = await fetch("/api/client/staff")
-      if (!response.ok) throw new Error("Failed to fetch staff")
-      
-      const data = await response.json()
-      setStaff(data.staff)
-      setFilteredStaff(data.staff)
-    } catch (error) {
-      console.error("Error fetching staff:", error)
-      alert("Failed to load staff members")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCallStaff = async (staffMember: StaffUser) => {
-    setCalling(staffMember.id)
-    
-    try {
+      // Create Daily.co room
       const response = await fetch("/api/daily/create-room", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          staffId: staffMember.id,
-          staffName: staffMember.name
-        })
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ staffId: staffMember.id }),
       })
 
-      if (!response.ok) throw new Error("Failed to create room")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create video room")
+      }
 
-      const data = await response.json()
-      
-      // Redirect to call room
-      router.push(`/client/call/${data.roomName}?url=${encodeURIComponent(data.roomUrl)}&staff=${encodeURIComponent(data.staffName)}`)
-      onClose()
+      const { roomUrl } = await response.json()
+
+      // Get current user info (you'll need to pass this as a prop or fetch from session)
+      const currentUser = {
+        id: "client-user-id", // Replace with actual client user ID
+        name: "Stephen Batcheler", // Replace with actual client name
+      }
+
+      // Send WebSocket invitation to staff
+      console.log("[StaffSelection] Sending call invitation to:", staffMember.id)
+      emit("call:invite", {
+        staffId: staffMember.id,
+        roomUrl: roomUrl,
+        callerName: currentUser.name,
+        callerId: currentUser.id,
+      })
+
+      onClose() // Close modal before redirecting
+
+      // Navigate to video room
+      router.push(
+        `/client/call/${roomUrl.split("/").pop()}?url=${encodeURIComponent(roomUrl)}&staff=${encodeURIComponent(staffMember.name)}`
+      )
     } catch (error) {
-      console.error("Error creating call:", error)
-      alert("Failed to start call. Please try again.")
-      setCalling(null)
+      console.error("Error initiating call:", error)
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to start call. Please check your connection.",
+        variant: "destructive",
+      })
+    } finally {
+      setCallingStaffId(null)
     }
-  }
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
   }
 
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md max-h-[80vh] rounded-2xl bg-white shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-md rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-2xl ring-1 ring-purple-500/50">
         {/* Header */}
-        <div className="flex items-center justify-between bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Start Video Call</h2>
-            <p className="text-sm text-white/80">Select a staff member to call</p>
+            <h2 className="text-2xl font-bold text-white">Start Video Call</h2>
+            <p className="text-sm text-purple-200">Select a staff member to call</p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-2 hover:bg-white/20 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/70 hover:text-white">
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search staff..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+          <Input
+            placeholder="Search staff..."
+            className="w-full rounded-lg border border-slate-700 bg-slate-700/50 py-2 pl-10 pr-4 text-white placeholder:text-slate-400 focus:border-purple-500 focus:ring-purple-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         {/* Staff List */}
-        <div className="overflow-y-auto max-h-[400px] p-4">
+        <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            <div className="flex items-center justify-center py-8 text-purple-300">
+              <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              Loading staff...
             </div>
           ) : filteredStaff.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {searchQuery ? "No staff found matching your search" : "No staff members available"}
-            </div>
+            <p className="text-center text-slate-400 py-8">No staff found.</p>
           ) : (
-            <div className="space-y-2">
-              {filteredStaff.map((staffMember) => (
-                <div
-                  key={staffMember.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    {staffMember.avatar ? (
-                      <img
-                        src={staffMember.avatar}
-                        alt={staffMember.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400 text-white font-semibold">
-                        {getInitials(staffMember.name)}
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-medium text-gray-900">{staffMember.name}</div>
-                      <div className="text-sm text-gray-500">{staffMember.email}</div>
-                    </div>
+            filteredStaff.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded-lg bg-slate-700/70 p-3 transition-colors hover:bg-slate-600/70"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={s.avatar} alt={s.name} />
+                    <AvatarFallback className="bg-purple-500 text-white">
+                      {s.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-white">{s.name}</p>
+                    <p className="text-sm text-slate-300">{s.email}</p>
                   </div>
-                  <button
-                    onClick={() => handleCallStaff(staffMember)}
-                    disabled={calling === staffMember.id}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-medium text-white hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {calling === staffMember.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Calling...
-                      </>
-                    ) : (
-                      <>
-                        <Video className="h-4 w-4" />
-                        Call
-                      </>
-                    )}
-                  </button>
                 </div>
-              ))}
-            </div>
+                <Button
+                  onClick={() => handleCall(s)}
+                  disabled={callingStaffId === s.id}
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+                >
+                  {callingStaffId === s.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Video className="h-4 w-4 mr-2" />
+                  )}
+                  {callingStaffId === s.id ? "Calling..." : "Call"}
+                </Button>
+              </div>
+            ))
           )}
         </div>
       </div>
     </div>
   )
 }
-

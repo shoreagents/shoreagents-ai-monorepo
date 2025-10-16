@@ -180,6 +180,54 @@ app.prepare().then(() => {
       }
     })
 
+    // Video call events
+    socket.on('call:invite', (data) => {
+      console.log('[WebSocket] Call invitation:', data)
+      // Send call invitation to specific staff member
+      const staffSocket = Array.from(connectedUsers.entries())
+        .find(([_, user]) => user.userId === data.staffId)
+      
+      if (staffSocket) {
+        io.to(staffSocket[0]).emit('call:incoming', {
+          roomUrl: data.roomUrl,
+          callerName: data.callerName,
+          callerId: data.callerId,
+          timestamp: Date.now()
+        })
+        console.log(`[WebSocket] Call sent to staff: ${data.staffId}`)
+      } else {
+        console.log(`[WebSocket] Staff not connected: ${data.staffId}`)
+      }
+    })
+
+    socket.on('call:accept', (data) => {
+      console.log('[WebSocket] Call accepted:', data)
+      // Notify caller that staff accepted
+      const callerSocket = Array.from(connectedUsers.entries())
+        .find(([_, user]) => user.userId === data.callerId)
+      
+      if (callerSocket) {
+        io.to(callerSocket[0]).emit('call:accepted', {
+          staffId: data.staffId,
+          staffName: data.staffName
+        })
+      }
+    })
+
+    socket.on('call:reject', (data) => {
+      console.log('[WebSocket] Call rejected:', data)
+      // Notify caller that staff rejected
+      const callerSocket = Array.from(connectedUsers.entries())
+        .find(([_, user]) => user.userId === data.callerId)
+      
+      if (callerSocket) {
+        io.to(callerSocket[0]).emit('call:rejected', {
+          staffId: data.staffId,
+          staffName: data.staffName
+        })
+      }
+    })
+
     // Handle disconnection
     socket.on('disconnect', () => {
       const user = connectedUsers.get(socket.id)

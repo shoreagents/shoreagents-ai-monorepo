@@ -6,6 +6,7 @@ import Sidebar from "@/components/sidebar"
 import { Toaster } from "@/components/ui/toaster"
 import ElectronProvider from "@/components/electron-provider"
 import { WebSocketProvider } from "@/lib/websocket-provider"
+import IncomingCallNotification from "@/components/staff/incoming-call-notification"
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -32,6 +33,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         </div>
       </main>
       <Toaster />
+      <IncomingCallNotification />
     </>
   ) : (
     // For login, admin, and client pages - no sidebar
