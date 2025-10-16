@@ -74,6 +74,7 @@ export default function TimeTracking() {
   const [startingBreakType, setStartingBreakType] = useState<string | null>(null)
   const [isEndingBreak, setIsEndingBreak] = useState(false)
   const [isClockingIn, setIsClockingIn] = useState(false)
+  const [isClockingOut, setIsClockingOut] = useState(false)
   const [forceCloseBreakModal, setForceCloseBreakModal] = useState(false)
   const [breakModalForceClosed, setBreakModalForceClosed] = useState(false)
   
@@ -93,6 +94,14 @@ export default function TimeTracking() {
   const [showEndBreakModal, setShowEndBreakModal] = useState(false)
 
   // WebSocket automatically handles data fetching, no need for manual API calls
+  
+  // Check for late clock-in and show modal
+  useEffect(() => {
+    if (isClockedIn && activeEntry?.wasLate && activeEntry?.lateBy) {
+      setLateMinutes(activeEntry.lateBy)
+      setShowLateModal(true)
+    }
+  }, [isClockedIn, activeEntry?.wasLate, activeEntry?.lateBy])
   
   // Auto clock-out effect - runs when clocked in
   useEffect(() => {
@@ -155,6 +164,25 @@ export default function TimeTracking() {
   useEffect(() => {
     if (!isClockedIn || !scheduledBreaks.length || activeBreak) return
     
+    const parseTimeString = (timeStr: string) => {
+      try {
+        const [time, period] = timeStr.split(' ')
+        const [hours, minutes] = time.split(':')
+        let hour = parseInt(hours)
+        const minute = parseInt(minutes || '0')
+        
+        if (period?.toUpperCase() === 'PM' && hour !== 12) hour += 12
+        if (period?.toUpperCase() === 'AM' && hour === 12) hour = 0
+        
+        const date = new Date()
+        date.setHours(hour, minute, 0, 0)
+        return date
+      } catch (error) {
+        console.error('Error parsing time:', timeStr, error)
+        return null
+      }
+    }
+    
     const checkScheduledBreaks = () => {
       const now = new Date()
       const currentTime = now.toLocaleTimeString("en-US", {
@@ -165,7 +193,7 @@ export default function TimeTracking() {
       
       console.log("🕐 CHECKING SCHEDULED BREAKS - Current time:", currentTime)
       
-      // Find a break that should start now
+      // Find a break that should start now (within 1 minute window)
       const breakToStart = scheduledBreaks.find(b => {
         // Skip if already started or completed
         if (b.actualStart || b.actualEnd) {
@@ -173,20 +201,20 @@ export default function TimeTracking() {
           return false
         }
         
-        // Normalize both times for comparison (remove leading zeros, spaces)
-        const scheduledTime = b.scheduledStart.trim()
-        const normalizedCurrent = currentTime.trim()
+        const scheduledTime = parseTimeString(b.scheduledStart)
+        if (!scheduledTime) return false
         
-        console.log(`  🔍 Comparing: "${scheduledTime}" === "${normalizedCurrent}"`)
+        // Check if we're within 1 minute of the scheduled time (before or after)
+        const timeDiff = now.getTime() - scheduledTime.getTime()
+        const withinWindow = timeDiff >= 0 && timeDiff <= 60000 // 0 to 60 seconds
         
-        // Check if scheduledStart matches current time
-        const shouldStart = scheduledTime === normalizedCurrent
+        console.log(`  🔍 ${b.type} at ${b.scheduledStart}: ${withinWindow ? '✅ WITHIN WINDOW' : '⏳ Not yet'} (diff: ${Math.floor(timeDiff / 1000)}s)`)
         
-        if (shouldStart) {
+        if (withinWindow) {
           console.log("🚨 BREAK SHOULD START NOW:", b.type, "at", currentTime)
         }
         
-        return shouldStart
+        return withinWindow
       })
       
       if (breakToStart) {
@@ -642,6 +670,9 @@ export default function TimeTracking() {
         return
       }
       
+      // Set loading state
+      setIsClockingOut(true)
+      
       // Close confirmation modal immediately
       setShowClockOutModal(false)
       
@@ -653,10 +684,14 @@ export default function TimeTracking() {
       })
       
       // Use WebSocket to clock out (non-blocking)
-      clockOut(reason, "")
+      await clockOut(reason, "")
+      
+      // Reset loading state after completion
+      setIsClockingOut(false)
       
     } catch (error) {
       console.log("⚠️ Error clocking out:", error)
+      setIsClockingOut(false)
       toast({
         title: "Clock Out Failed",
         description: "An error occurred. Please try again.",
@@ -720,6 +755,14 @@ export default function TimeTracking() {
       hour: "2-digit",
       minute: "2-digit",
     })
+  }
+
+  const formatHoursToHMS = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours)
+    const minutes = Math.floor((decimalHours - hours) * 60)
+    const seconds = Math.floor(((decimalHours - hours) * 60 - minutes) * 60)
+    
+    return `${hours}h ${minutes}m ${seconds}s`
   }
 
   if (isLoading) {
@@ -798,7 +841,7 @@ export default function TimeTracking() {
                   </div>
                 )}
                 
-                {isClockedIn && activeEntry && !activeEntry.wasLate && (
+                {isClockedIn && activeEntry && activeEntry.wasLate === false && (
                   <div className="mb-2 flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-1 border border-green-500/20">
                     <span className="text-sm font-medium text-green-400">
                       ✓ On Time
@@ -816,7 +859,7 @@ export default function TimeTracking() {
                {/* Clock In/Out Button */}
                <Button
                  onClick={isClockedIn ? handleClockOut : handleClockIn}
-                 disabled={isClockingIn}
+                 disabled={isClockingIn || isClockingOut}
                  size="lg"
                  className={`h-20 w-full max-w-sm text-lg font-semibold ${
                    isClockedIn
@@ -828,6 +871,11 @@ export default function TimeTracking() {
                    <>
                      <Clock className="mr-2 h-6 w-6 animate-spin" />
                      Clocking In...
+                   </>
+                 ) : isClockingOut ? (
+                   <>
+                     <Clock className="mr-2 h-6 w-6 animate-spin" />
+                     Clocking Out...
                    </>
                  ) : isClockedIn ? (
                    <>
@@ -845,11 +893,6 @@ export default function TimeTracking() {
               {isClockedIn && activeEntry && (
                 <div className="text-center text-sm text-slate-400">
                   Started at {formatTime(activeEntry.clockIn)}
-                  {countdownDisplay && (
-                    <div className="text-xs text-amber-400 mt-1 font-medium">
-                      ⏰ {countdownDisplay} until shift end
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1072,18 +1115,6 @@ export default function TimeTracking() {
                   const isOnBreak = breakItem.actualStart && !breakItem.actualEnd
                   const isCompleted = breakItem.actualEnd
                   
-                  // Debug logging for break status
-                  console.log('🔍 BREAK DATA DEBUG:', {
-                    id: breakItem.id,
-                    type: breakItem.type,
-                    scheduledStart: breakItem.scheduledStart,
-                    scheduledEnd: breakItem.scheduledEnd,
-                    actualStart: breakItem.actualStart,
-                    actualEnd: breakItem.actualEnd,
-                    isOnBreak,
-                    isCompleted
-                  })
-                  
                   // Parse time strings like "10:00 AM" into Date objects
                   const parseTimeString = (timeStr: string) => {
                     if (!timeStr || timeStr === 'Invalid Date') {
@@ -1118,6 +1149,26 @@ export default function TimeTracking() {
                       return new Date()
                     }
                   }
+                  
+                  // Check if break has expired (scheduled end time has passed and break wasn't taken)
+                  const scheduledEndTime = parseTimeString(breakItem.scheduledEnd)
+                  const now = new Date()
+                  const isExpired = !isCompleted && !isOnBreak && now > scheduledEndTime
+                  
+                  // Debug logging for break status
+                  console.log('🔍 BREAK DATA DEBUG:', {
+                    id: breakItem.id,
+                    type: breakItem.type,
+                    scheduledStart: breakItem.scheduledStart,
+                    scheduledEnd: breakItem.scheduledEnd,
+                    actualStart: breakItem.actualStart,
+                    actualEnd: breakItem.actualEnd,
+                    isOnBreak,
+                    isCompleted,
+                    isExpired,
+                    currentTime: now.toLocaleTimeString(),
+                    scheduledEndTime: scheduledEndTime.toLocaleTimeString()
+                  })
                   
                   // For completed breaks, show actual times; for scheduled breaks, show scheduled times
                   const startTime = isCompleted ? breakItem.actualStart : breakItem.scheduledStart
@@ -1161,13 +1212,15 @@ export default function TimeTracking() {
                           ? "border-green-500/20 bg-green-500/5"
                           : isOnBreak
                           ? "border-yellow-500/30 bg-yellow-500/10 animate-pulse"
+                          : isExpired
+                          ? "border-red-500/20 bg-red-500/5 opacity-60"
                           : "border-indigo-500/20 bg-indigo-500/5"
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{breakEmojis[breakItem.type] || "☕"}</span>
+                        <span className={`text-2xl ${isExpired ? "grayscale opacity-50" : ""}`}>{breakEmojis[breakItem.type] || "☕"}</span>
                         <div>
-                          <div className="font-medium text-white">
+                          <div className={`font-medium ${isExpired ? "text-slate-400 line-through" : "text-white"}`}>
                             {breakLabels[breakItem.type] || breakItem.type}
                             {breakItem.type === "AWAY" && breakItem.awayReason && (
                               <span className="ml-2 text-sm text-amber-400">
@@ -1175,7 +1228,7 @@ export default function TimeTracking() {
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-slate-400">
+                          <div className={`text-sm ${isExpired ? "text-slate-500" : "text-slate-400"}`}>
                             {startDate.toLocaleTimeString("en-US", {
                               hour: "numeric",
                               minute: "2-digit"
@@ -1196,7 +1249,7 @@ export default function TimeTracking() {
                           )}
                         </div>
                       </div>
-                      {!isCompleted && !isOnBreak && (
+                      {!isCompleted && !isOnBreak && !isExpired && (
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs font-medium text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                             🤖 Auto-starts at {parseTimeString(breakItem.scheduledStart).toLocaleTimeString("en-US", {
@@ -1206,6 +1259,16 @@ export default function TimeTracking() {
                           </span>
                           <span className="text-[10px] text-slate-400">
                             System will prompt you
+                          </span>
+                        </div>
+                      )}
+                      {isExpired && (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs font-medium text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                            ⏰ Expired
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Break window has passed
                           </span>
                         </div>
                       )}
@@ -1232,8 +1295,8 @@ export default function TimeTracking() {
               <Calendar className="h-4 w-4 text-indigo-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {stats.today}h
+              <div className="text-2xl font-bold text-white tabular-nums">
+                {formatHoursToHMS(stats.today)}
               </div>
               <p className="text-xs text-slate-400">
                 Hours worked today
@@ -1249,8 +1312,8 @@ export default function TimeTracking() {
               <TrendingUp className="h-4 w-4 text-emerald-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {stats.week}h
+              <div className="text-2xl font-bold text-white tabular-nums">
+                {formatHoursToHMS(stats.week)}
               </div>
               <p className="text-xs text-slate-400">
                 Last 7 days
@@ -1266,8 +1329,8 @@ export default function TimeTracking() {
               <Clock className="h-4 w-4 text-purple-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {stats.month}h
+              <div className="text-2xl font-bold text-white tabular-nums">
+                {formatHoursToHMS(stats.month)}
               </div>
               <p className="text-xs text-slate-400">
                 Last 30 days
@@ -1296,8 +1359,20 @@ export default function TimeTracking() {
                     className="flex items-center justify-between rounded-lg bg-slate-900/50 p-4"
                   >
                     <div className="flex-1">
-                      <div className="font-medium text-white">
-                        {formatDate(entry.clockIn)}
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-white">
+                          {formatDate(entry.clockIn)}
+                        </div>
+                        {entry.wasLate && (
+                          <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                            Late {entry.lateBy}m
+                          </span>
+                        )}
+                        {entry.wasLate === false && (
+                          <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                            ✓ On Time
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-slate-400">
                         {formatTime(entry.clockIn)} -{" "}

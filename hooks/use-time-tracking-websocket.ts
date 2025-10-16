@@ -225,27 +225,64 @@ export function useTimeTrackingWebSocket() {
   }, [isConnected, isWebSocketUpdate])
 
   // WebSocket event handlers
-  const handleClockInSuccess = useCallback((data: any) => {
+  const handleClockInSuccess = useCallback(async (data: any) => {
     console.log('[WebSocket] Clock in success:', data)
+    
+    // Update state immediately
     setState(prev => ({
       ...prev,
       isClockedIn: true,
       activeEntry: data.timeEntry,
+      // Add new entry to the top of the history
+      timeEntries: [data.timeEntry, ...prev.timeEntries.filter(e => e.id !== data.timeEntry.id)],
       weeklySchedule: data.workSchedules || prev.weeklySchedule,
       showBreakScheduler: data.showBreakScheduler || false,
       pendingTimeEntryId: data.timeEntry?.id || null
     }))
+    
+    // Refresh stats from API to get accurate calculations
+    try {
+      const entriesResponse = await fetch('/api/time-tracking')
+      const entriesData = await entriesResponse.json()
+      
+      if (entriesData.stats) {
+        setState(prev => ({
+          ...prev,
+          stats: entriesData.stats
+        }))
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error refreshing stats after clock in:', error)
+    }
   }, [])
 
-  const handleClockOutSuccess = useCallback((data: any) => {
+  const handleClockOutSuccess = useCallback(async (data: any) => {
     console.log('[WebSocket] Clock out success:', data)
+    
+    // Update state immediately
     setState(prev => ({
       ...prev,
       isClockedIn: false,
       activeEntry: null,
-      timeEntries: [data.timeEntry, ...prev.timeEntries],
-      stats: data.stats || prev.stats
+      // Remove the old entry (if it exists) and add the updated one with clockOut time
+      timeEntries: [data.timeEntry, ...prev.timeEntries.filter(e => e.id !== data.timeEntry.id)],
+      weeklySchedule: data.workSchedules || prev.weeklySchedule
     }))
+    
+    // Refresh stats from API to get accurate calculations
+    try {
+      const entriesResponse = await fetch('/api/time-tracking')
+      const entriesData = await entriesResponse.json()
+      
+      if (entriesData.stats) {
+        setState(prev => ({
+          ...prev,
+          stats: entriesData.stats
+        }))
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error refreshing stats after clock out:', error)
+    }
   }, [])
 
   const handleBreakStarted = useCallback((data: any) => {
