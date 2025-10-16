@@ -127,7 +127,8 @@ class PerformanceTracker {
    */
   pause() {
     this.isPaused = true
-    this.log('Tracking paused')
+    this.log('⏸️ PERFORMANCE TRACKING PAUSED')
+    console.log('[PerformanceTracker] isPaused set to:', this.isPaused)
   }
 
   /**
@@ -136,7 +137,8 @@ class PerformanceTracker {
   resume() {
     this.isPaused = false
     this.lastActivityTime = Date.now()
-    this.log('Tracking resumed')
+    this.log('▶️ PERFORMANCE TRACKING RESUMED')
+    console.log('[PerformanceTracker] isPaused set to:', this.isPaused)
   }
 
   /**

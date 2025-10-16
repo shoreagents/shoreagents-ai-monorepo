@@ -58,13 +58,27 @@ app.prepare().then(() => {
 
     // Break events
     socket.on('break:start', (data) => {
-      console.log('[WebSocket] Break started:', data)
+      console.log('[WebSocket] Break start event:', data)
+      // Broadcast to all clients for real-time updates
       io.emit('break:started', data)
     })
 
     socket.on('break:end', (data) => {
-      console.log('[WebSocket] Break ended:', data)
+      console.log('[WebSocket] Break end event:', data)
+      // Broadcast to all clients for real-time updates
       io.emit('break:ended', data)
+    })
+
+    socket.on('break:pause', (data) => {
+      console.log('[WebSocket] Break pause event:', data)
+      // Broadcast to all clients for real-time updates
+      io.emit('break:paused', data)
+    })
+
+    socket.on('break:resume', (data) => {
+      console.log('[WebSocket] Break resume event:', data)
+      // Broadcast to all clients for real-time updates
+      io.emit('break:resumed', data)
     })
 
     // Task events
@@ -83,15 +97,24 @@ app.prepare().then(() => {
       io.emit('task:deleted', data)
     })
 
-    // Time tracking events
+    // Time tracking events - just broadcast, client handles API calls
     socket.on('time:clockin', (data) => {
-      console.log('[WebSocket] Clock in:', data)
+      console.log('[WebSocket] Clock in event:', data)
+      // Broadcast to all clients for real-time updates
       io.emit('time:clockedin', data)
     })
 
     socket.on('time:clockout', (data) => {
-      console.log('[WebSocket] Clock out:', data)
+      console.log('[WebSocket] Clock out event:', data)
+      // Broadcast to all clients for real-time updates
       io.emit('time:clockedout', data)
+    })
+
+    // Data update events - broadcast when data changes
+    socket.on('time:data-update', (data) => {
+      console.log('[WebSocket] Time data update:', data)
+      // Broadcast to all clients for real-time updates
+      io.emit('time:data-updated', data)
     })
 
     // Performance metrics events

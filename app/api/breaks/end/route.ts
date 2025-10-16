@@ -10,25 +10,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
-      where: { authUserId: session.user.id }
-    })
-
-    if (!staffUser) {
-      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
-    }
-
-    // Find active break
+    // Find active break (only breaks that have been started but not ended)
     const activeBreak = await prisma.break.findFirst({
       where: {
         staffUserId: staffUser.id,
-        actualEnd: null,
+        actualStart: { not: null }, // Must have been started
+        actualEnd: null, // Not ended yet
       },
     })
     
-    if (!breakRecord || breakRecord.staffUserId !== staffUser.id) {
-      return NextResponse.json({ error: "Invalid break" }, { status: 403 })
+    if (!activeBreak) {
+      return NextResponse.json({ error: "No active break found" }, { status: 404 })
     }
 
     const endTime = new Date()
@@ -37,31 +29,23 @@ export async function POST(request: NextRequest) {
       (endTime.getTime() - startTime.getTime()) / 1000 / 60
     ) // in minutes
 
-    if (breakRecord.actualEnd) {
-      return NextResponse.json({ error: "Break already ended" }, { status: 400 })
-    }
-    
-    const now = new Date()
-    const startTime = breakRecord.actualStart
-    const duration = Math.floor((now.getTime() - startTime.getTime()) / 60000)
-    
     let isLate = false
     let lateBy = 0
     
     // Check if returned late from scheduled break
-    if (breakRecord.scheduledEnd) {
-      const [time, period] = breakRecord.scheduledEnd.split(' ')
+    if (activeBreak.scheduledEnd) {
+      const [time, period] = activeBreak.scheduledEnd.split(' ')
       const [hours, minutes] = time.split(':')
       let hour = parseInt(hours)
       if (period === 'PM' && hour !== 12) hour += 12
       if (period === 'AM' && hour === 12) hour = 0
       
-      const expectedEnd = new Date(now)
+      const expectedEnd = new Date(endTime)
       expectedEnd.setHours(hour, parseInt(minutes), 0, 0)
       
-      if (now > expectedEnd) {
+      if (endTime > expectedEnd) {
         isLate = true
-        lateBy = Math.floor((now.getTime() - expectedEnd.getTime()) / 60000)
+        lateBy = Math.floor((endTime.getTime() - expectedEnd.getTime()) / 60000)
       }
     }
     
@@ -70,7 +54,15 @@ export async function POST(request: NextRequest) {
       data: {
         actualEnd: endTime,
         duration,
+        isLate,
+        lateBy: lateBy || null,
       },
+    })
+
+    return NextResponse.json({
+      success: true,
+      break: updatedBreak,
+      message: "Break ended successfully"
     })
   } catch (error) {
     console.error("Error ending break:", error)

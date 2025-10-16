@@ -4,9 +4,12 @@ import { getStaffUser } from "@/lib/auth-helpers"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("🔍 Clock-in API called")
     const staffUser = await getStaffUser()
+    console.log("👤 Staff user:", staffUser ? "Found" : "Not found")
 
     if (!staffUser) {
+      console.log("❌ Unauthorized - no staff user found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -91,13 +94,45 @@ export async function POST(request: NextRequest) {
         lateBy
       },
     })
+    
+    // Check if breaks have already been scheduled for TODAY
+    // Check ALL time entries from today (including the one we just created)
+    const allTodaysTimeEntries = await prisma.timeEntry.findMany({
+      where: {
+        staffUserId: staffUser.id,
+        clockIn: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      },
+      select: { id: true }
+    })
+    
+    // Check if any breaks exist for today's time entries
+    const existingBreaksToday = allTodaysTimeEntries.length > 0 
+      ? await prisma.break.findFirst({
+          where: {
+            timeEntryId: {
+              in: allTodaysTimeEntries.map(te => te.id)
+            }
+          }
+        })
+      : null
+    
+    // Only show break scheduler if no breaks have been scheduled today at all
+    const shouldShowBreakScheduler = !existingBreaksToday
+    
+    console.log(`[Clock-In] Breaks today: ${existingBreaksToday ? 'YES' : 'NO'}, Show scheduler: ${shouldShowBreakScheduler}`)
 
     return NextResponse.json({
       success: true,
-      timeEntry,
+      timeEntry: {
+        ...timeEntry,
+        breaksScheduled: !!existingBreaksToday // Mark as scheduled if breaks exist today
+      },
       wasLate,
       lateBy,
-      showBreakScheduler: !timeEntry.breaksScheduled,
+      showBreakScheduler: shouldShowBreakScheduler,
       message: wasLate 
         ? `Clocked in ${lateBy} minutes late`
         : "Clocked in successfully",

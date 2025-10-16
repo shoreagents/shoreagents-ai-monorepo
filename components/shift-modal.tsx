@@ -1,20 +1,30 @@
 "use client"
 
+import * as React from "react"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Clock, LogOut } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface ShiftModalProps {
   isOpen: boolean
-  type: 'late-clock-in' | 'break-reminder' | 'clock-out'
+  type: 'late-clock-in' | 'break-reminder' | 'clock-out' | 'clock-out-early'
   data?: any
   onAction: (selectedReason?: string) => void
   onDismiss?: () => void
 }
 
 export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftModalProps) {
+  const { toast } = useToast()
   const [selectedReason, setSelectedReason] = useState("")
+  
+  // Reset selected reason when modal opens or type changes
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedReason("")
+    }
+  }, [isOpen, type])
   
   const configs = {
     'late-clock-in': {
@@ -36,12 +46,25 @@ export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftMod
       canDismiss: true
     },
     'clock-out': {
-      title: 'Are You Clocking Out?',
-      message: 'Please select a reason for clocking out. This will end your shift.',
+      title: 'Clock Out Confirmation',
+      message: data?.clockOutTime 
+        ? `You are clocking out at ${new Date(data.clockOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}. Please select a reason to continue.`
+        : 'Please select a reason for clocking out. This will end your shift.',
       icon: LogOut,
       iconColor: 'text-indigo-400',
       bgColor: 'bg-indigo-500/10',
       actionLabel: 'Confirm Clock Out',
+      canDismiss: true
+    },
+    'clock-out-early': {
+      title: '⚠️ Clocking Out Early',
+      message: data?.scheduledEnd 
+        ? `Your shift is scheduled until ${new Date(data.scheduledEnd).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. You are clocking out ${data?.earlyBy} minutes early. Please select a reason.`
+        : 'You are clocking out before your scheduled shift ends. Please select a reason.',
+      icon: AlertCircle,
+      iconColor: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      actionLabel: 'Confirm Early Clock Out',
       canDismiss: true
     }
   }
@@ -50,11 +73,15 @@ export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftMod
   const Icon = config.icon
   
   const handleAction = () => {
-    if (type === 'clock-out' && !selectedReason) {
-      alert('Please select a clock-out reason')
+    if ((type === 'clock-out' || type === 'clock-out-early') && !selectedReason) {
+      toast({
+        title: "Reason Required",
+        description: "Please select a clock-out reason to continue.",
+        variant: "destructive"
+      })
       return
     }
-    onAction(type === 'clock-out' ? selectedReason : undefined)
+    onAction((type === 'clock-out' || type === 'clock-out-early') ? selectedReason : undefined)
   }
   
   return (
@@ -74,7 +101,7 @@ export function ShiftModal({ isOpen, type, data, onAction, onDismiss }: ShiftMod
             <DialogDescription className="text-slate-400">{config.message}</DialogDescription>
           </div>
           
-          {type === 'clock-out' && (
+          {(type === 'clock-out' || type === 'clock-out-early') && (
             <select 
               value={selectedReason}
               onChange={(e) => setSelectedReason(e.target.value)}
