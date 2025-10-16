@@ -1,4 +1,5 @@
 "use client"
+// Updated: 2025-10-16 - Force rebuild
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -219,10 +220,9 @@ export default function SubmitReviewPage({
               {currentCategory.questions.map((question) => (
                 <ReviewQuestionCard
                   key={question.id}
-                  question={question.question}
-                  category={question.category}
-                  rating={ratings[question.id] || 0}
-                  onRatingChange={(rating) => handleRatingChange(question.id, rating)}
+                  question={question}
+                  value={ratings[question.id] || null}
+                  onChange={handleRatingChange}
                 />
               ))}
             </div>

@@ -1,4 +1,5 @@
 "use client"
+// Updated: 2025-10-16 - Force rebuild
 
 import { Star } from "lucide-react"
 import { ReviewQuestion } from "@/lib/review-templates"
@@ -9,7 +10,8 @@ interface ReviewQuestionCardProps {
   onChange: (questionId: string, value: number) => void
 }
 
-export function ReviewQuestionCard({ question, value, onChange }: ReviewQuestionCardProps) {
+function ReviewQuestionCard({ question, value, onChange }: ReviewQuestionCardProps) {
+  console.log('ReviewQuestionCard props:', { question, value, onChange: typeof onChange })
   return (
     <div className="rounded-lg border border-border bg-card p-6">
       <div className="mb-4">
