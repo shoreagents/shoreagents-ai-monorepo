@@ -121,7 +121,13 @@ export default function ClientTasksPage() {
       const response = await fetch('/api/client/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(singleTask),
+        body: JSON.stringify({
+          staffUserId: singleTask.userId,
+          title: singleTask.title,
+          description: singleTask.description,
+          priority: singleTask.priority,
+          deadline: singleTask.deadline
+        }),
       })
       if (!response.ok) throw new Error('Failed to create task')
       await fetchTasks()
@@ -364,20 +370,20 @@ export default function ClientTasksPage() {
                     Add Task
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md bg-white dark:bg-slate-900">
                   <DialogHeader>
-                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogTitle className="text-slate-900 dark:text-white text-xl font-semibold">Create New Task</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div>
-                      <Label>Assign To</Label>
+                      <Label className="text-slate-900 dark:text-slate-200 font-medium mb-2 block">Assign To</Label>
                       <Select value={singleTask.userId} onValueChange={(v) => setSingleTask({...singleTask, userId: v})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select staff member" />
+                        <SelectTrigger className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600">
+                          <SelectValue placeholder="Select staff member" className="text-slate-500" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
                           {staff.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
+                            <SelectItem key={s.id} value={s.id} className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
                               {s.name}
                             </SelectItem>
                           ))}
@@ -385,47 +391,50 @@ export default function ClientTasksPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Task Title</Label>
+                      <Label className="text-slate-900 dark:text-slate-200 font-medium mb-2 block">Task Title</Label>
                       <Input
                         value={singleTask.title}
                         onChange={(e) => setSingleTask({...singleTask, title: e.target.value})}
                         placeholder="e.g., Update client report"
+                        className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 placeholder:text-slate-500"
                       />
                     </div>
                     <div>
-                      <Label>Description</Label>
+                      <Label className="text-slate-900 dark:text-slate-200 font-medium mb-2 block">Description</Label>
                       <Textarea
                         value={singleTask.description}
                         onChange={(e) => setSingleTask({...singleTask, description: e.target.value})}
                         placeholder="Task details..."
                         rows={3}
+                        className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Priority</Label>
+                        <Label className="text-slate-900 dark:text-slate-200 font-medium mb-2 block">Priority</Label>
                         <Select value={singleTask.priority} onValueChange={(v: TaskPriority) => setSingleTask({...singleTask, priority: v})}>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="LOW">Low</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="HIGH">High</SelectItem>
-                            <SelectItem value="URGENT">Urgent</SelectItem>
+                          <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                            <SelectItem value="LOW" className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">Low</SelectItem>
+                            <SelectItem value="MEDIUM" className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">Medium</SelectItem>
+                            <SelectItem value="HIGH" className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">High</SelectItem>
+                            <SelectItem value="URGENT" className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">Urgent</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>Deadline</Label>
+                        <Label className="text-slate-900 dark:text-slate-200 font-medium mb-2 block">Deadline</Label>
                         <Input
                           type="date"
                           value={singleTask.deadline}
                           onChange={(e) => setSingleTask({...singleTask, deadline: e.target.value})}
+                          className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600"
                         />
                       </div>
                     </div>
-                    <Button onClick={createSingleTask} className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={createSingleTask} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                       Create Task
                     </Button>
                   </div>
@@ -615,12 +624,12 @@ export default function ClientTasksPage() {
 
                         <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
                           <Avatar className="h-6 w-6 ring-2 ring-blue-100">
-                            <AvatarImage src={task.user.avatar || ''} alt={task.user.name} />
+                            <AvatarImage src={task.staffUser?.avatar || ''} alt={task.staffUser?.name || 'Staff'} />
                             <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                              {task.user.name.split(' ').map(n => n[0]).join('')}
+                              {task.staffUser?.name?.split(' ').map(n => n[0]).join('') || 'S'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-xs text-gray-800 font-medium">{task.user.name}</span>
+                          <span className="text-xs text-gray-800 font-medium">{task.staffUser?.name || 'Unknown'}</span>
                         </div>
                       </div>
                     </Card>
@@ -666,12 +675,12 @@ export default function ClientTasksPage() {
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8 ring-2 ring-blue-100">
-                              <AvatarImage src={task.user.avatar || ''} alt={task.user.name} />
+                              <AvatarImage src={task.staffUser?.avatar || ''} alt={task.staffUser?.name || 'Staff'} />
                               <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                                {task.user.name.split(' ').map(n => n[0]).join('')}
+                                {task.staffUser?.name?.split(' ').map(n => n[0]).join('') || 'S'}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm text-gray-900 font-medium">{task.user.name}</span>
+                            <span className="text-sm text-gray-900 font-medium">{task.staffUser?.name || 'Unknown'}</span>
                           </div>
                         </td>
                         <td className="p-4">
