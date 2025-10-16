@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
             accountManager: true
           }
         },
-        personalRecord: true
+        staff_personal_records: true
       }
     })
 
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
         sickUsed: staffUser.profile.sickUsed,
         hmo: staffUser.profile.hmo,
       } : null,
-      personalRecords: staffUser.personalRecord || null,
+      personalRecords: staffUser.staff_personal_records || null,
       workSchedules: staffUser.profile?.workSchedule || []
     })
 
