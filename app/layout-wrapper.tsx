@@ -19,7 +19,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <>
         <Sidebar />
         <main className="lg:pl-64">
-          <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-900 p-4 lg:p-8">
+          <div className="min-h-screen bg-slate-950">
             {children}
           </div>
         </main>
