@@ -21,7 +21,7 @@ import {
   getTrendIcon,
   getTrendColor
 } from "@/lib/review-utils"
-import { ReviewType } from "@/lib/review-templates"
+import { ReviewType, MONTH_1_TEMPLATE, MONTH_3_TEMPLATE, MONTH_5_TEMPLATE, RECURRING_TEMPLATE } from "@/lib/review-templates"
 
 interface Review {
   id: string
@@ -32,6 +32,7 @@ interface Review {
   submittedDate?: string
   overallScore?: number
   performanceLevel?: string
+  ratings?: number[]
   strengths?: string
   improvements?: string
   additionalComments?: string
@@ -44,6 +45,17 @@ export default function StaffReviewsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+
+  // Get template for review type
+  const getTemplate = (type: ReviewType) => {
+    switch (type) {
+      case "MONTH_1": return MONTH_1_TEMPLATE
+      case "MONTH_3": return MONTH_3_TEMPLATE
+      case "MONTH_5": return MONTH_5_TEMPLATE
+      case "RECURRING": return RECURRING_TEMPLATE
+      default: return MONTH_1_TEMPLATE
+    }
+  }
 
   useEffect(() => {
     fetchReviews()
@@ -312,6 +324,53 @@ export default function StaffReviewsPage() {
                 <div className="mt-6">
                   <p className="text-sm text-slate-400">Overall Score</p>
                   <p className="text-5xl font-bold text-white">{selectedReview.overallScore}%</p>
+                </div>
+              )}
+
+              {/* Ratings Breakdown */}
+              {selectedReview.ratings && selectedReview.ratings.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">📊 Detailed Ratings</h3>
+                  <div className="space-y-4">
+                    {getTemplate(selectedReview.type).categories.map((category, catIndex) => (
+                      <div key={category.name} className="rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10">
+                        <h4 className="text-sm font-semibold text-slate-300 mb-3">{category.name}</h4>
+                        <div className="space-y-3">
+                          {category.questions.map((question, qIndex) => {
+                            // Calculate the index in the flat ratings array
+                            let ratingIndex = 0
+                            for (let i = 0; i < catIndex; i++) {
+                              ratingIndex += getTemplate(selectedReview.type).categories[i].questions.length
+                            }
+                            ratingIndex += qIndex
+                            
+                            const rating = selectedReview.ratings![ratingIndex] || 0
+                            
+                            return (
+                              <div key={question.id} className="flex items-start justify-between gap-4">
+                                <p className="text-sm text-slate-400 flex-1">{question.question}</p>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`h-4 w-4 ${
+                                        star <= rating
+                                          ? "fill-amber-400 text-amber-400"
+                                          : "text-slate-600"
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="ml-2 text-sm font-semibold text-white w-6 text-right">
+                                    {rating}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
