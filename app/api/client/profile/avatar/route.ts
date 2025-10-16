@@ -1,101 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { supabaseAdmin } from "@/lib/supabase"
 
-export async function POST(req: NextRequest) {
+// PUT /api/client/profile/avatar - Update client user avatar
+export async function PUT(req: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get client user by authUserId (matches management pattern)
+    const body = await req.json()
+    const { avatar } = body
+
+    // Get ClientUser
     const clientUser = await prisma.clientUser.findUnique({
-      where: { authUserId: session.user.id }
+      where: { email: session.user.email }
     })
 
     if (!clientUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get file from form data
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-    
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 })
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: "File must be an image" }, { status: 400 })
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File must be less than 5MB" }, { status: 400 })
-    }
-
-    // Delete existing avatar if it exists
-    if (clientUser.avatar) {
-      try {
-        // Extract the file path from the existing URL
-        const urlParts = clientUser.avatar.split('/client/')
-        if (urlParts.length > 1) {
-          const oldFilePath = urlParts[1].split('?')[0] // Remove query params
-          await supabaseAdmin.storage
-            .from('client')
-            .remove([oldFilePath])
-        }
-      } catch (error) {
-        console.log("Note: Could not delete old avatar:", error)
-      }
-    }
-
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    // Generate unique filename with timestamp to avoid caching issues
-    const timestamp = Date.now()
-    const filePath = `client_avatar/${clientUser.authUserId}/avatar_${timestamp}.jpg`
-    
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('client')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        upsert: false, // No need to upsert since filename is unique
-      })
-
-    if (uploadError) {
-      console.error("Supabase upload error:", uploadError)
-      return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('client')
-      .getPublicUrl(filePath)
-
-    // Update database with avatar URL
+    // Update avatar
     await prisma.clientUser.update({
       where: { id: clientUser.id },
-      data: { avatar: publicUrl }
+      data: { avatar }
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      url: publicUrl 
-    })
-
-  } catch (error) {
-    console.error("Avatar upload error:", error)
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error("❌ Error updating avatar:", error)
     return NextResponse.json(
-      { error: "Failed to upload avatar" },
+      { error: "Failed to update avatar", details: error?.message },
       { status: 500 }
     )
   }
 }
-

@@ -349,13 +349,20 @@ model Document {
 model Company {
   id               String          @id @default(uuid())
   companyName      String
+  tradingName      String?         // Trading name if different from company name
   industry         String?
   location         String?
   billingEmail     String?
+  bio              String?         // Company description
+  website          String?
+  phone            String?
+  contractStart    DateTime?       // When they started with us
+  isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   organizationId   String          @unique @default(cuid())
   logo             String?
+  coverPhoto       String?         // Company cover banner
   accountManagerId String?
   clientUsers      ClientUser[]    @relation("CompanyUsers")
   accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
@@ -366,19 +373,43 @@ model Company {
 }
 
 model ClientUser {
-  id         String     @id @default(uuid())
-  authUserId String     @unique
+  id         String         @id @default(uuid())
+  authUserId String         @unique
   name       String
-  role       ClientRole @default(MANAGER)
+  role       ClientRole     @default(MANAGER)
   avatar     String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  email      String     @unique
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  email      String         @unique
   companyId  String
   coverPhoto String?
-  company    Company    @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  company    Company        @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  profile    ClientProfile?
 
   @@map("client_users")
+}
+
+model ClientProfile {
+  id                    String     @id @default(uuid())
+  clientUserId          String     @unique
+  position              String?    // Their job title (CEO, Manager, etc.)
+  department            String?    // Department (Operations, Marketing, etc.)
+  directPhone           String?    // Direct line
+  mobilePhone           String?    // Mobile number
+  timezone              String?    // Their timezone
+  bio                   String?    // Personal bio
+  notifyTaskCreate      Boolean    @default(true)
+  notifyTaskComplete    Boolean    @default(true)
+  notifyReviews         Boolean    @default(true)
+  notifyWeeklyReports   Boolean    @default(true)
+  tasksCreated          Int        @default(0) // Auto-increment
+  reviewsSubmitted      Int        @default(0) // Auto-increment
+  lastLoginAt           DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+  clientUser            ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@map("client_profiles")
 }
 
 model StaffOnboarding {

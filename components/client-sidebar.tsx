@@ -22,6 +22,7 @@ import {
   Clock,
   LogOut,
   ChevronDown,
+  Building2,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -35,6 +36,7 @@ type ClientUserWithCompany = {
     id: string
     companyName: string
     organizationId: string
+    logo?: string | null
   }
 }
 
@@ -65,6 +67,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
   const navItems = [
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
     { href: "/client/profile", label: "Profile", icon: User },
+    { href: "/client/company", label: "Company", icon: Building2 },
     { href: "/client/staff", label: "Staff", icon: Users },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/news-feed", label: "News Feed", icon: Bell },
@@ -83,8 +86,23 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-50 flex flex-col">
       {/* Company Header */}
       <div className="p-6 border-b border-gray-200 flex-shrink-0">
-        <h2 className="text-xl font-semibold text-gray-900">{user.company.companyName}</h2>
-        <p className="text-sm text-gray-600 mt-1">Client Portal</p>
+        <div className="flex items-center gap-3 mb-2">
+          {user.company.logo ? (
+            <img 
+              src={user.company.logo} 
+              alt={user.company.companyName}
+              className="w-10 h-10 rounded-lg object-cover border-2 border-blue-200"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center border-2 border-blue-200">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-gray-900 truncate">{user.company.companyName}</h2>
+            <p className="text-xs text-gray-600">Client Portal</p>
+          </div>
+        </div>
       </div>
 
       {/* User Profile Section */}
