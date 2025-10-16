@@ -228,7 +228,6 @@ export default function AdminOnboardingDetailPage() {
       const data = await response.json()
       console.log("✅ VERIFY SUCCESS:", data)
       
-      setSuccess(`Document ${action.toLowerCase()} successfully!`)
       setFeedback({ ...feedback, [section]: "" })
       await fetchOnboardingDetails()
     } catch (err: any) {
@@ -480,34 +479,27 @@ export default function AdminOnboardingDetailPage() {
         </div>
 
         {/* Alerts */}
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>{error}</span>
-              {error.includes("Failed to complete onboarding") && !completing && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setError("")
-                    setConfirmCompleteModal(true)
-                  }}
-                  className="ml-4 border-red-600 text-red-400 hover:bg-red-900/30"
-                >
-                  Retry
-                </Button>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert className="mb-4 bg-green-900/50 border-green-700">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-200">{success}</AlertDescription>
-          </Alert>
-        )}
+         {error && (
+           <Alert variant="destructive" className="mb-4">
+             <AlertCircle className="h-4 w-4" />
+             <AlertDescription className="flex items-center justify-between">
+               <span>{error}</span>
+               {error.includes("Failed to complete onboarding") && !completing && (
+                 <Button
+                   size="sm"
+                   variant="outline"
+                   onClick={() => {
+                     setError("")
+                     setConfirmCompleteModal(true)
+                   }}
+                   className="ml-4 border-red-600 text-red-400 hover:bg-red-900/30"
+                 >
+                   Retry
+                 </Button>
+               )}
+             </AlertDescription>
+           </Alert>
+         )}
 
          {/* Onboarding Already Complete */}
          {(onboarding.isComplete || profile) && (
