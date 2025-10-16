@@ -14,6 +14,15 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const { type } = body
 
@@ -37,7 +46,7 @@ export async function POST(
     const existingReaction = await prisma.postReaction.findFirst({
       where: {
         postId: params.id,
-        userId: session.user.id,
+        staffUserId: staffUser.id,
       },
     })
 
@@ -62,7 +71,7 @@ export async function POST(
     const reaction = await prisma.postReaction.create({
       data: {
         postId: params.id,
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         type,
       },
     })

@@ -14,12 +14,16 @@ async function endBreak(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id: breakId } = await params
-
-    // Get staff user first
+    // Get the StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id }
     })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
+    const { id: breakId } = await params
 
     if (!staffUser) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })

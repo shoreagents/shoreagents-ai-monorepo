@@ -8,79 +8,61 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================
-// MANAGEMENT USERS (Shore Agents Staff)
-// Links to Supabase auth.users
-// ============================================
 model ManagementUser {
-  id           String         @id @default(uuid())
-  authUserId   String         @unique  // Links to Supabase auth.users.id
-  email        String         @unique
-  name         String
-  role         ManagementRole @default(MANAGER)
-  avatar       String?
-  coverPhoto   String?
-  phone        String?
-  department   String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  // Relations - Can manage multiple companies
+  id               String         @id @default(uuid())
+  authUserId       String         @unique
+  name             String
+  role             ManagementRole @default(MANAGER)
+  avatar           String?
+  phone            String?
+  department       String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  email            String         @unique
+  coverPhoto       String?
   managedCompanies Company[]
 
   @@map("management_users")
 }
 
-// ============================================
-// STAFF USERS (BPO Workers)
-// Links to Supabase auth.users
-// ============================================
 model StaffUser {
-  id                  String               @id @default(uuid())
-  authUserId          String               @unique  // Links to Supabase auth.users.id
-  email               String               @unique
-  name                String
-  role                StaffRole            @default(STAFF)
-  avatar              String?
-  coverPhoto          String?
-  companyId           String?              // Links to Company
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  
-  // Relations
-  company             Company?             @relation("CompanyStaff", fields: [companyId], references: [id])
-  profile             StaffProfile?
-  tasks               Task[]
-  breaks              Break[]
-  timeEntries         TimeEntry[]
-  performanceMetrics  PerformanceMetric[]
-  reviewsReceived     Review[]
-  tickets             Ticket[]
-  ticketResponses     TicketResponse[]
-  documents           Document[]
-  activityPosts       ActivityPost[]
-  postReactions       PostReaction[]
-  postComments        PostComment[]
-  gamificationProfile GamificationProfile?
-  kudosGiven          Kudos[]              @relation("KudosGiven")
-  kudosReceived       Kudos[]              @relation("KudosReceived")
-  onboarding          StaffOnboarding?
-  personalRecord      StaffPersonalRecord?
+  id                     String                  @id @default(uuid())
+  authUserId             String                  @unique
+  name                   String
+  role                   StaffRole               @default(STAFF)
+  avatar                 String?
+  coverPhoto             String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  email                  String                  @unique
+  companyId              String?
+  activityPosts          ActivityPost[]
+  breaks                 Break[]
+  documents              Document[]
+  gamificationProfile    GamificationProfile?
+  kudosGiven             Kudos[]                 @relation("KudosGiven")
+  kudosReceived          Kudos[]                 @relation("KudosReceived")
+  performanceMetrics     PerformanceMetric[]
+  postComments           PostComment[]
+  postReactions          PostReaction[]
+  reviewsReceived        Review[]
+  onboarding             StaffOnboarding?
+  staff_personal_records staff_personal_records?
+  profile                StaffProfile?
+  company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
+  tasks                  Task[]
+  ticketResponses        TicketResponse[]
+  tickets                Ticket[]
+  timeEntries            TimeEntry[]
 
   @@map("staff_users")
 }
 
-// ============================================
-// STAFF PROFILE (BPO Worker Details)
-// ============================================
 model StaffProfile {
   id                 String           @id @default(uuid())
   staffUserId        String           @unique
   phone              String?
   location           String?
-  gender             String?
-  civilStatus        String?
-  dateOfBirth        DateTime?
   employmentStatus   EmploymentStatus @default(PROBATION)
   startDate          DateTime
   daysEmployed       Int              @default(0)
@@ -95,7 +77,9 @@ model StaffProfile {
   hmo                Boolean          @default(true)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
-  
+  civilStatus        String?
+  dateOfBirth        DateTime?
+  gender             String?
   staffUser          StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   workSchedule       WorkSchedule[]
 
@@ -116,45 +100,6 @@ model WorkSchedule {
   @@map("work_schedules")
 }
 
-// ============================================
-// STAFF PERSONAL RECORDS (HR Data)
-// ============================================
-model StaffPersonalRecord {
-  id                    String    @id @default(uuid())
-  staffUserId           String    @unique
-  
-  // Government/Tax Numbers
-  sss                   String?
-  tin                   String?
-  philhealthNo          String?
-  pagibigNo             String?
-  
-  // Emergency Contact
-  emergencyContactName  String?
-  emergencyContactNo    String?
-  emergencyRelationship String?
-  
-  // Government Document URLs (from onboarding)
-  validIdUrl            String?
-  birthCertUrl          String?
-  nbiClearanceUrl       String?
-  policeClearanceUrl    String?
-  sssDocUrl             String?
-  tinDocUrl             String?
-  philhealthDocUrl      String?
-  pagibigDocUrl         String?
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  staffUser             StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  
-  @@map("staff_personal_records")
-}
-
-// ============================================
-// TASKS
-// ============================================
 model Task {
   id          String       @id @default(uuid())
   staffUserId String
@@ -174,9 +119,6 @@ model Task {
   @@map("tasks")
 }
 
-// ============================================
-// BREAKS
-// ============================================
 model Break {
   id             String      @id @default(uuid())
   staffUserId    String
@@ -193,43 +135,35 @@ model Break {
   notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  
+  isLate         Boolean     @default(false)
+  lateBy         Int?
+  timeEntryId    String?
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  timeEntry      TimeEntry?  @relation(fields: [timeEntryId], references: [id], onDelete: SetNull)
+  time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
   @@map("breaks")
 }
 
-// ============================================
-// TIME TRACKING
-// ============================================
 model TimeEntry {
-  id                String          @id @default(uuid())
-  staffUserId       String
-  clockIn           DateTime
-  clockOut          DateTime?
-  totalHours        Decimal?        @db.Decimal(5, 2)
-  
-  // Shift tracking fields
-  expectedClockIn   DateTime?       // From WorkSchedule
-  wasLate           Boolean         @default(false)
-  lateBy            Int?            // Minutes late
-  clockOutReason    ClockOutReason?
-  breaksScheduled   Boolean         @default(false)
-  
-  notes             String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
-  staffUser         StaffUser       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  breaks            Break[]         // Relation to breaks
+  id              String          @id @default(uuid())
+  staffUserId     String
+  clockIn         DateTime
+  clockOut        DateTime?
+  totalHours      Decimal?        @db.Decimal(5, 2)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  breaksScheduled Boolean         @default(false)
+  clockOutReason  ClockOutReason?
+  expectedClockIn DateTime?
+  lateBy          Int?
+  wasLate         Boolean         @default(false)
+  breaks          Break[]
+  staffUser       StaffUser       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("time_entries")
 }
 
-// ============================================
-// PERFORMANCE METRICS
-// ============================================
 model PerformanceMetric {
   id                String    @id @default(uuid())
   staffUserId       String
@@ -255,9 +189,6 @@ model PerformanceMetric {
   @@map("performance_metrics")
 }
 
-// ============================================
-// REVIEWS
-// ============================================
 model Review {
   id               String       @id @default(uuid())
   staffUserId      String
@@ -279,9 +210,6 @@ model Review {
   @@map("reviews")
 }
 
-// ============================================
-// SUPPORT TICKETS
-// ============================================
 model Ticket {
   id           String           @id @default(uuid())
   ticketId     String           @unique
@@ -309,15 +237,12 @@ model TicketResponse {
   message     String
   role        String
   createdAt   DateTime  @default(now())
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_responses")
 }
 
-// ============================================
-// ACTIVITY FEED
-// ============================================
 model ActivityPost {
   id          String         @id @default(uuid())
   staffUserId String
@@ -359,9 +284,6 @@ model PostComment {
   @@map("post_comments")
 }
 
-// ============================================
-// GAMIFICATION
-// ============================================
 model GamificationProfile {
   id               String      @id @default(uuid())
   staffUserId      String      @unique
@@ -392,20 +314,17 @@ model UserBadge {
 }
 
 model Kudos {
-  id          String    @id @default(uuid())
-  fromId      String
-  toId        String
-  message     String
-  createdAt   DateTime  @default(now())
-  from        StaffUser @relation("KudosGiven", fields: [fromId], references: [id], onDelete: Cascade)
-  to          StaffUser @relation("KudosReceived", fields: [toId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  fromId    String
+  toId      String
+  message   String
+  createdAt DateTime  @default(now())
+  from      StaffUser @relation("KudosGiven", fields: [fromId], references: [id], onDelete: Cascade)
+  to        StaffUser @relation("KudosReceived", fields: [toId], references: [id], onDelete: Cascade)
 
   @@map("kudos")
 }
 
-// ============================================
-// DOCUMENTS
-// ============================================
 model Document {
   id            String           @id @default(uuid())
   title         String
@@ -425,49 +344,117 @@ model Document {
   @@map("documents")
 }
 
-// ============================================
-// COMPANY (Organizations)
-// ============================================
 model Company {
-  id               String            @id @default(uuid())
-  organizationId   String            @unique @default(cuid())
+  id               String          @id @default(uuid())
   companyName      String
-  logo             String?
   industry         String?
   location         String?
   billingEmail     String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  organizationId   String          @unique @default(cuid())
+  logo             String?
   accountManagerId String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  
-  // Relations
-  accountManager   ManagementUser?   @relation(fields: [accountManagerId], references: [id])
-  clientUsers      ClientUser[]      @relation("CompanyUsers")
-  staffUsers       StaffUser[]       @relation("CompanyStaff")
+  clientUsers      ClientUser[]    @relation("CompanyUsers")
+  accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
+  staffUsers       StaffUser[]     @relation("CompanyStaff")
 
   @@map("company")
 }
 
 model ClientUser {
-  id                   String            @id @default(uuid())
-  authUserId           String            @unique  // Links to Supabase auth.users.id
-  companyId            String
-  email                String            @unique
-  name                 String
-  role                 ClientRole        @default(MANAGER)
-  avatar               String?
-  coverPhoto           String?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  
-  company              Company           @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  id         String     @id @default(uuid())
+  authUserId String     @unique
+  name       String
+  role       ClientRole @default(MANAGER)
+  avatar     String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  email      String     @unique
+  companyId  String
+  coverPhoto String?
+  company    Company    @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("client_users")
 }
 
-// ============================================
-// ENUMS
-// ============================================
+model StaffOnboarding {
+  id                         String           @id @default(uuid())
+  staffUserId                String           @unique
+  sss                        String?
+  tin                        String?
+  philhealthNo               String?
+  pagibigNo                  String?
+  firstName                  String?
+  middleName                 String?
+  lastName                   String?
+  gender                     String?
+  civilStatus                String?
+  dateOfBirth                DateTime?
+  contactNo                  String?
+  email                      String?
+  emergencyContactName       String?
+  emergencyContactNo         String?
+  emergencyRelationship      String?
+  validIdUrl                 String?
+  birthCertUrl               String?
+  nbiClearanceUrl            String?
+  birForm2316Url             String?
+  idPhotoUrl                 String?
+  signatureUrl               String?
+  policeClearanceUrl         String?
+  certificateEmpUrl          String?
+  sssDocUrl                  String?
+  tinDocUrl                  String?
+  philhealthDocUrl           String?
+  pagibigDocUrl              String?
+  personalInfoStatus         OnboardingStatus @default(PENDING)
+  govIdStatus                OnboardingStatus @default(PENDING)
+  documentsStatus            OnboardingStatus @default(PENDING)
+  signatureStatus            OnboardingStatus @default(PENDING)
+  emergencyContactStatus     OnboardingStatus @default(PENDING)
+  personalInfoFeedback       String?
+  govIdFeedback              String?
+  documentsFeedback          String?
+  signatureFeedback          String?
+  emergencyContactFeedback   String?
+  personalInfoVerifiedAt     DateTime?
+  govIdVerifiedAt            DateTime?
+  documentsVerifiedAt        DateTime?
+  signatureVerifiedAt        DateTime?
+  emergencyContactVerifiedAt DateTime?
+  verifiedBy                 String?
+  isComplete                 Boolean          @default(false)
+  completionPercent          Int              @default(0)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_onboarding")
+}
+
+model staff_personal_records {
+  id                    String    @id
+  staffUserId           String    @unique
+  sss                   String?
+  tin                   String?
+  philhealthNo          String?
+  pagibigNo             String?
+  emergencyContactName  String?
+  emergencyContactNo    String?
+  emergencyRelationship String?
+  validIdUrl            String?
+  birthCertUrl          String?
+  nbiClearanceUrl       String?
+  policeClearanceUrl    String?
+  sssDocUrl             String?
+  tinDocUrl             String?
+  philhealthDocUrl      String?
+  pagibigDocUrl         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
 
 enum ManagementRole {
   ADMIN
@@ -637,78 +624,13 @@ enum OnboardingStatus {
   REJECTED
 }
 
-// ============================================
-// STAFF ONBOARDING (Document Management)
-// ============================================
-model StaffOnboarding {
-  id                    String           @id @default(uuid())
-  staffUserId           String           @unique
-  
-  // Government IDs & Numbers
-  sss                   String?
-  tin                   String?
-  philhealthNo          String?
-  pagibigNo             String?
-  
-  // Personal Info
-  firstName             String?
-  middleName            String?
-  lastName              String?
-  gender                String?
-  civilStatus           String?
-  dateOfBirth           DateTime?
-  contactNo             String?
-  email                 String?
-  
-  // Emergency Contact
-  emergencyContactName  String?
-  emergencyContactNo    String?
-  emergencyRelationship String?
-  
-  // Document Upload URLs (Supabase Storage)
-  validIdUrl            String?
-  birthCertUrl          String?
-  nbiClearanceUrl       String?
-  birForm2316Url        String?
-  idPhotoUrl            String?
-  signatureUrl          String?
-  policeClearanceUrl    String?
-  certificateEmpUrl     String?
-  sssDocUrl             String?
-  tinDocUrl             String?
-  philhealthDocUrl      String?
-  pagibigDocUrl         String?
-  
-  // Verification Status (per section)
-  personalInfoStatus    OnboardingStatus @default(PENDING)
-  govIdStatus           OnboardingStatus @default(PENDING)
-  documentsStatus       OnboardingStatus @default(PENDING)
-  signatureStatus       OnboardingStatus @default(PENDING)
-  emergencyContactStatus OnboardingStatus @default(PENDING)
-  
-  // Admin Feedback
-  personalInfoFeedback  String?
-  govIdFeedback         String?
-  documentsFeedback     String?
-  signatureFeedback     String?
-  emergencyContactFeedback String?
-  
-  // Verification timestamps
-  personalInfoVerifiedAt DateTime?
-  govIdVerifiedAt        DateTime?
-  documentsVerifiedAt    DateTime?
-  signatureVerifiedAt    DateTime?
-  emergencyContactVerifiedAt DateTime?
-  verifiedBy             String?
-  
-  // Overall completion
-  isComplete            Boolean  @default(false)
-  completionPercent     Int      @default(0)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  staffUser             StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  
-  @@map("staff_onboarding")
+enum ClockOutReason {
+  END_OF_SHIFT
+  EMERGENCY
+  SICK
+  EARLY_LEAVE_APPROVED
+  INTERNET_ISSUE
+  POWER_OUTAGE
+  PERSONAL
+  OTHER
 }

@@ -38,18 +38,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File must be less than 5MB" }, { status: 400 })
     }
 
+    // Delete existing cover photo if it exists
+    if (staffUser.coverPhoto) {
+      try {
+        // Extract the file path from the existing URL
+        const urlParts = staffUser.coverPhoto.split('/staff/')
+        if (urlParts.length > 1) {
+          const oldFilePath = urlParts[1].split('?')[0] // Remove query params
+          await supabaseAdmin.storage
+            .from('staff')
+            .remove([oldFilePath])
+        }
+      } catch (error) {
+        console.log("Note: Could not delete old cover photo:", error)
+      }
+    }
+
     // Convert file to buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Supabase Storage - staff bucket with staff_cover subfolder
-    const filePath = `staff_cover/${staffUser.authUserId}/cover.jpg`
+    // Generate unique filename with timestamp to avoid caching issues
+    const timestamp = Date.now()
+    const filePath = `staff_cover/${staffUser.authUserId}/cover_${timestamp}.jpg`
     
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('staff')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: true, // Replace if exists
+        upsert: false, // No need to upsert since filename is unique
       })
 
     if (uploadError) {

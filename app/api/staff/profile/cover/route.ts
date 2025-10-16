@@ -45,11 +45,19 @@ export async function POST(req: NextRequest) {
     // Upload to Supabase Storage - staff bucket with staff_cover subfolder
     const filePath = `staff_cover/${staffUser.authUserId}/cover.jpg`
     
+    // Delete old file if it exists (ensures clean replacement)
+    if (staffUser.coverPhoto) {
+      await supabaseAdmin.storage
+        .from('staff')
+        .remove([filePath])
+    }
+
+    // Upload new file
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('staff')
       .upload(filePath, buffer, {
         contentType: file.type,
-        upsert: true, // Replace if exists
+        upsert: true,
       })
 
     if (uploadError) {
@@ -57,20 +65,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
     }
 
-    // Get public URL
+    // Get public URL with cache-busting timestamp
+    const timestamp = Date.now()
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('staff')
       .getPublicUrl(filePath)
+    
+    const urlWithTimestamp = `${publicUrl}?t=${timestamp}`
 
     // Update database with cover photo URL
     await prisma.staffUser.update({
       where: { id: staffUser.id },
-      data: { coverPhoto: publicUrl }
+      data: { coverPhoto: urlWithTimestamp }
     })
 
     return NextResponse.json({ 
       success: true, 
-      url: publicUrl 
+      url: urlWithTimestamp 
     })
 
   } catch (error) {

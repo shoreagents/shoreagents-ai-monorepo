@@ -7,10 +7,10 @@
 module.exports = {
   // Tracking intervals (in milliseconds)
   TRACKING_INTERVAL: 5000, // Collect metrics every 5 seconds
-  SYNC_INTERVAL: 300000, // Sync to API every 5 minutes (300,000ms)
+  SYNC_INTERVAL: 10000, // Sync to API every 10 seconds (real-time)
   
   // Idle detection
-  IDLE_THRESHOLD: 300, // Consider user idle after 5 minutes (300 seconds)
+  IDLE_THRESHOLD: 30, // Consider user idle after 30 seconds (matches activity tracker)
   
   // Mouse tracking
   MOUSE_MOVEMENT_THROTTLE: 100, // Throttle mouse movement tracking to every 100ms
@@ -44,6 +44,5 @@ module.exports = {
   // Daily reset time
   DAILY_RESET_HOUR: 0, // Reset counters at midnight (0:00)
 }
-
 
 

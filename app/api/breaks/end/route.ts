@@ -10,19 +10,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { breakId } = await request.json()
-    
-    const breakRecord = await prisma.break.findUnique({
-      where: { id: breakId }
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
+    // Find active break
+    const activeBreak = await prisma.break.findFirst({
+      where: {
+        staffUserId: staffUser.id,
+        actualEnd: null,
+      },
     })
     
     if (!breakRecord || breakRecord.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: "Invalid break" }, { status: 403 })
     }
 
-    if (!breakRecord.actualStart) {
-      return NextResponse.json({ error: "Break not started yet" }, { status: 400 })
-    }
+    const endTime = new Date()
+    const startTime = activeBreak.actualStart || new Date()
+    const duration = Math.floor(
+      (endTime.getTime() - startTime.getTime()) / 1000 / 60
+    ) // in minutes
 
     if (breakRecord.actualEnd) {
       return NextResponse.json({ error: "Break already ended" }, { status: 400 })
@@ -53,23 +66,11 @@ export async function POST(request: NextRequest) {
     }
     
     const updatedBreak = await prisma.break.update({
-      where: { id: breakRecord.id },
-      data: { 
-        actualEnd: now, 
+      where: { id: activeBreak.id },
+      data: {
+        actualEnd: endTime,
         duration,
-        isLate,
-        lateBy
-      }
-    })
-    
-    return NextResponse.json({ 
-      success: true, 
-      break: updatedBreak, 
-      isLate, 
-      lateBy,
-      message: isLate 
-        ? `Break ended. You returned ${lateBy} minutes late.`
-        : "Break ended. Welcome back!"
+      },
     })
   } catch (error) {
     console.error("Error ending break:", error)
