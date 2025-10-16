@@ -49,7 +49,6 @@ interface Review {
     name: string
     email: string
     avatar?: string
-    startDate: string
   }
 }
 
@@ -75,16 +74,18 @@ export default function AdminReviewDetailPage({
 
   const fetchReview = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/reviews?staffId=${id}`)
+      const response = await fetch(`/api/admin/reviews?reviewId=${id}`)
       if (!response.ok) throw new Error("Failed to fetch review")
       
       const data = await response.json()
-      const foundReview = data.reviews.find((r: Review) => r.id === id)
       
-      if (!foundReview) throw new Error("Review not found")
-      
-      setReview(foundReview)
-      setManagementNotes(foundReview.managementNotes || "")
+      // If we get a single review back (filtered by reviewId)
+      if (data.reviews && data.reviews.length > 0) {
+        setReview(data.reviews[0])
+        setManagementNotes(data.reviews[0].managementNotes || "")
+      } else {
+        throw new Error("Review not found")
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load review")
     } finally {
@@ -354,12 +355,6 @@ export default function AdminReviewDetailPage({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Start Date:</span>
-                <span className="font-medium text-foreground">
-                  {formatReviewDate(review.staffUser.startDate)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Period:</span>
                 <span className="font-medium text-foreground">{review.evaluationPeriod}</span>
               </div>

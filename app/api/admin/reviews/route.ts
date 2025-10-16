@@ -12,35 +12,42 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
+    const reviewId = searchParams.get("reviewId")
     const staffId = searchParams.get("staffId")
     const clientId = searchParams.get("clientId")
     const status = searchParams.get("status")
     const type = searchParams.get("type")
 
-    const where: any = {}
+    let where: any = {}
 
-    // Filter by specific staff
-    if (staffId) {
-      where.staffUserId = staffId
-    }
+    // If reviewId is provided, ONLY filter by that (most specific filter)
+    if (reviewId) {
+      where = { id: reviewId }
+    } else {
+      // Apply other filters only if reviewId is not provided
+      // Filter by specific staff
+      if (staffId) {
+        where.staffUserId = staffId
+      }
 
-    // Filter by client/company
-    if (clientId) {
-      const staffUsers = await prisma.staffUser.findMany({
-        where: { companyId: clientId },
-        select: { id: true }
-      })
-      where.staffUserId = { in: staffUsers.map(s => s.id) }
-    }
+      // Filter by client/company
+      if (clientId) {
+        const staffUsers = await prisma.staffUser.findMany({
+          where: { companyId: clientId },
+          select: { id: true }
+        })
+        where.staffUserId = { in: staffUsers.map(s => s.id) }
+      }
 
-    // Filter by status
-    if (status) {
-      where.status = status
-    }
+      // Filter by status
+      if (status) {
+        where.status = status
+      }
 
-    // Filter by type
-    if (type) {
-      where.type = type
+      // Filter by type
+      if (type) {
+        where.type = type
+      }
     }
 
     const reviews = await prisma.review.findMany({
