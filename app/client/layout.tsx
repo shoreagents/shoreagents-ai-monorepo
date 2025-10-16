@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { ClientSidebar } from "@/components/client-sidebar"
 import { Toaster } from "@/components/ui/toaster"
+import FloatingCallButton from "@/components/client/floating-call-button"
 
 export default async function ClientLayout({
   children,
@@ -34,6 +35,7 @@ export default async function ClientLayout({
         {children}
       </main>
       <Toaster />
+      <FloatingCallButton />
     </div>
   )
 }

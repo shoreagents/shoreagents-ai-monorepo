@@ -1,1584 +1,835 @@
-// Shore Agents Review System - Complete Question Templates
+// ============================================
+// FILO WORKS - PERFORMANCE REVIEW TEMPLATES
+// Complete question sets for all 4 review types
+// ============================================
 
-export type ReviewType = "month_1" | "month_3" | "month_5" | "recurring_6m" | "ad_hoc"
+export type ReviewType = "MONTH_1" | "MONTH_3" | "MONTH_5" | "RECURRING"
 
 export interface ReviewQuestion {
   id: string
-  section: string
-  sectionEmoji: string
+  category: string
   question: string
-  type: "rating" | "text" | "select" | "checkbox"
-  description?: string
-  contextNote?: string // "For permanence:" type notes
-  options?: { value: number | string; label: string }[]
   required: boolean
-  showNA?: boolean
-  hasTrend?: boolean // For 6-month reviews
 }
 
-export interface ReviewAnswer {
-  questionId: string
-  value: number | string | string[]
-  trend?: "better" | "same" | "worse" // For 6-month reviews
+export interface ReviewCategory {
+  name: string
+  description: string
+  questions: ReviewQuestion[]
 }
 
-export interface Review {
-  id: number
-  type: ReviewType
-  staffMember: string
-  client: string
-  reviewer: string
-  reviewerTitle?: string
-  submittedDate: string
-  evaluationPeriod: string
-  status: "pending" | "acknowledged" | "archived"
-  answers: Record<string, ReviewAnswer>
-  overallScore: number
-  acknowledgedDate?: string
-  previousScore?: number // For recurring reviews
+export interface ReviewTemplate {
+  reviewType: ReviewType
+  title: string
+  description: string
+  categories: ReviewCategory[]
+  totalQuestions: number
 }
 
-// 🔵 MONTH 1: Comprehensive Onboarding Assessment (18 questions)
-export const MONTH_1_QUESTIONS: ReviewQuestion[] = [
-  // SECTION 1: RELIABILITY & AVAILABILITY
-  {
-    id: "m1_reliability",
-    section: "Reliability & Availability",
-    sectionEmoji: "📊",
-    question: "How reliable has this team member been with their schedule?",
-    description: "Showing up when expected, available during agreed hours",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always available, perfectly reliable" },
-      { value: 4, label: "Very reliable, rare exceptions" },
-      { value: 3, label: "Generally reliable, occasional issues" },
-      { value: 2, label: "Frequently unreliable" },
-      { value: 1, label: "Major reliability problems" },
-    ],
-    required: true,
-  },
-  {
-    id: "m1_responsiveness",
-    section: "Reliability & Availability",
-    sectionEmoji: "📊",
-    question: "How responsive are they to your messages and requests?",
-    description: "Email, Slack, phone - do they reply promptly?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely responsive, replies immediately" },
-      { value: 4, label: "Very responsive, replies within expected timeframe" },
-      { value: 3, label: "Adequate response time, sometimes slow" },
-      { value: 2, label: "Often slow to respond" },
-      { value: 1, label: "Very unresponsive, hard to reach" },
-    ],
-    required: true,
-  },
+export interface ScoreCalculation {
+  totalQuestions: number
+  totalEarned: number
+  totalPossible: number
+  percentage: number
+  level: 'critical' | 'needs_improvement' | 'good' | 'excellent'
+  color: string
+}
 
-  // SECTION 2: COMMUNICATION QUALITY
-  {
-    id: "m1_written_english",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How would you rate their written English communication?",
-    description: "Emails, messages, documentation - grammar, clarity, professionalism",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - native level, no issues" },
-      { value: 4, label: "Very good - professional and clear" },
-      { value: 3, label: "Good - generally clear, minor issues" },
-      { value: 2, label: "Fair - frequent errors or unclear" },
-      { value: 1, label: "Poor - difficult to understand" },
-    ],
-    required: true,
-  },
-  {
-    id: "m1_spoken_english",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How would you rate their spoken English communication?",
-    description: "Phone calls, video meetings - clarity, accent, fluency",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - perfectly clear, easy to understand" },
-      { value: 4, label: "Very good - clear with minimal accent" },
-      { value: 3, label: "Good - understandable, some accent" },
-      { value: 2, label: "Fair - requires repetition often" },
-      { value: 1, label: "Poor - difficult to understand" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m1_understanding",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How well do they understand your instructions and requirements?",
-    description: "Do they 'get it' the first time or need lots of clarification?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Understands immediately, rarely needs clarification" },
-      { value: 4, label: "Usually understands, minimal clarification needed" },
-      { value: 3, label: "Sometimes needs clarification" },
-      { value: 2, label: "Frequently misunderstands" },
-      { value: 1, label: "Consistently struggles to understand" },
-    ],
-    required: true,
-  },
+// ============================================
+// MONTH 1 REVIEW (18 Questions)
+// Early Probationary Assessment
+// ============================================
 
-  // SECTION 3: WORK QUALITY & PERFORMANCE
-  {
-    id: "m1_work_quality",
-    section: "Work Quality & Performance",
-    sectionEmoji: "✨",
-    question: "How would you rate the quality of their work?",
-    description: "Accuracy, attention to detail, meeting your standards",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - exceeds expectations, very few errors" },
-      { value: 4, label: "Very good - meets expectations, minor errors" },
-      { value: 3, label: "Good - acceptable quality, some errors" },
-      { value: 2, label: "Fair - below expectations, frequent errors" },
-      { value: 1, label: "Poor - unacceptable quality" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m1_productivity",
-    section: "Work Quality & Performance",
-    sectionEmoji: "✨",
-    question: "How productive are they?",
-    description: "Volume of work completed, efficiency",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very productive - completes more than expected" },
-      { value: 4, label: "Productive - meets expectations" },
-      { value: 3, label: "Adequate - completing assigned work" },
-      { value: 2, label: "Below expectations - slow output" },
-      { value: 1, label: "Very unproductive" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m1_deadlines",
-    section: "Work Quality & Performance",
-    sectionEmoji: "✨",
-    question: "Do they complete tasks on time?",
-    description: "Meeting deadlines and turnaround expectations",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always on time or early" },
-      { value: 4, label: "Usually on time" },
-      { value: 3, label: "Sometimes needs extensions" },
-      { value: 2, label: "Frequently late" },
-      { value: 1, label: "Rarely meets deadlines" },
-    ],
-    required: true,
-    showNA: true,
-  },
+export const MONTH_1_TEMPLATE: ReviewTemplate = {
+  reviewType: "MONTH_1",
+  title: "Month 1 Probationary Review",
+  description: "Initial assessment after 30 days of employment",
+  totalQuestions: 18,
+  
+  categories: [
+    {
+      name: "Work Quality",
+      description: "Quality and accuracy of work delivered",
+      questions: [
+        {
+          id: "m1_wq_01",
+          category: "Work Quality",
+          question: "How would you rate the overall quality of work delivered?",
+          required: true
+        },
+        {
+          id: "m1_wq_02",
+          category: "Work Quality",
+          question: "Does the staff member complete tasks according to specifications?",
+          required: true
+        },
+        {
+          id: "m1_wq_03",
+          category: "Work Quality",
+          question: "How accurate and error-free is their work?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Productivity",
+      description: "Speed and efficiency of task completion",
+      questions: [
+        {
+          id: "m1_prod_01",
+          category: "Productivity",
+          question: "Does the staff member meet deadlines consistently?",
+          required: true
+        },
+        {
+          id: "m1_prod_02",
+          category: "Productivity",
+          question: "How efficient are they in completing assigned tasks?",
+          required: true
+        },
+        {
+          id: "m1_prod_03",
+          category: "Productivity",
+          question: "Do they require excessive supervision to complete work?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Communication",
+      description: "Effectiveness of communication and responsiveness",
+      questions: [
+        {
+          id: "m1_comm_01",
+          category: "Communication",
+          question: "How effective is their written communication?",
+          required: true
+        },
+        {
+          id: "m1_comm_02",
+          category: "Communication",
+          question: "Do they ask clarifying questions when requirements are unclear?",
+          required: true
+        },
+        {
+          id: "m1_comm_03",
+          category: "Communication",
+          question: "How responsive are they to messages and requests?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Learning & Adaptation",
+      description: "Ability to learn and adapt to processes",
+      questions: [
+        {
+          id: "m1_learn_01",
+          category: "Learning & Adaptation",
+          question: "How quickly do they learn new tasks and processes?",
+          required: true
+        },
+        {
+          id: "m1_learn_02",
+          category: "Learning & Adaptation",
+          question: "Do they apply feedback and corrections effectively?",
+          required: true
+        },
+        {
+          id: "m1_learn_03",
+          category: "Learning & Adaptation",
+          question: "How well have they adapted to company culture and processes?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Professionalism",
+      description: "Professional conduct and reliability",
+      questions: [
+        {
+          id: "m1_prof_01",
+          category: "Professionalism",
+          question: "How professional are their interactions with you and the team?",
+          required: true
+        },
+        {
+          id: "m1_prof_02",
+          category: "Professionalism",
+          question: "How is their attendance and punctuality?",
+          required: true
+        },
+        {
+          id: "m1_prof_03",
+          category: "Professionalism",
+          question: "Do they take initiative when appropriate?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Overall Assessment",
+      description: "General evaluation and expectations",
+      questions: [
+        {
+          id: "m1_overall_01",
+          category: "Overall Assessment",
+          question: "Overall, how satisfied are you with this staff member so far?",
+          required: true
+        },
+        {
+          id: "m1_overall_02",
+          category: "Overall Assessment",
+          question: "Do they show potential for long-term success in this role?",
+          required: true
+        },
+        {
+          id: "m1_overall_03",
+          category: "Overall Assessment",
+          question: "Would you recommend continuing their employment beyond probation?",
+          required: true
+        }
+      ]
+    }
+  ]
+}
 
-  // SECTION 4: PROFESSIONAL QUALITIES
-  {
-    id: "m1_initiative",
-    section: "Professional Qualities",
-    sectionEmoji: "🎯",
-    question: "How proactive and self-sufficient are they?",
-    description: "Do they take initiative or wait to be told everything?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very proactive - anticipates needs, takes initiative" },
-      { value: 4, label: "Proactive - shows initiative regularly" },
-      { value: 3, label: "Adequate - does what's asked" },
-      { value: 2, label: "Reactive - needs constant direction" },
-      { value: 1, label: "Passive - no initiative" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m1_feedback_response",
-    section: "Professional Qualities",
-    sectionEmoji: "🎯",
-    question: "How well do they handle feedback or corrections?",
-    description: "Professional response when you point out issues",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - welcomes feedback, implements immediately" },
-      { value: 4, label: "Very good - accepts feedback professionally" },
-      { value: 3, label: "Good - generally receptive" },
-      { value: 2, label: "Fair - sometimes defensive" },
-      { value: 1, label: "Poor - defensive or resistant" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m1_professionalism",
-    section: "Professional Qualities",
-    sectionEmoji: "🎯",
-    question: "How professional are they in interactions with you and your team?",
-    description: "Demeanor, communication style, representing your business",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely professional at all times" },
-      { value: 4, label: "Very professional" },
-      { value: 3, label: "Generally professional, minor lapses" },
-      { value: 2, label: "Occasionally unprofessional" },
-      { value: 1, label: "Unprofessional behavior concerns" },
-    ],
-    required: true,
-  },
+// ============================================
+// MONTH 3 REVIEW (27 Questions)
+// Mid-Probation Comprehensive Assessment
+// ============================================
 
-  // SECTION 5: OVERALL ASSESSMENT
-  {
-    id: "m1_expectations",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "Compared to your expectations for someone in their first month, how are they performing?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Far exceeding expectations" },
-      { value: 4, label: "Exceeding expectations" },
-      { value: 3, label: "Meeting expectations" },
-      { value: 2, label: "Below expectations" },
-      { value: 1, label: "Far below expectations" },
-    ],
-    required: true,
-  },
-  {
-    id: "m1_strengths",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "What are they doing really well?",
-    description: "What are you most happy with? (2-3 specific things)",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m1_improvements",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "What areas need improvement?",
-    description: "Where would you like to see them develop? (2-3 specific things)",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m1_training_needs",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "Is there any specific training or support we should provide to help them serve you better?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "m1_satisfaction",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "Overall, how satisfied are you with this team member so far?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very satisfied - great fit" },
-      { value: 4, label: "Satisfied - working well" },
-      { value: 3, label: "Neutral - acceptable but room for improvement" },
-      { value: 2, label: "Dissatisfied - significant concerns" },
-      { value: 1, label: "Very dissatisfied - not working out" },
-    ],
-    required: true,
-  },
-  {
-    id: "m1_likelihood_continue",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "Based on this first month, how likely are you to continue working with this team member?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Definitely want to continue" },
-      { value: 4, label: "Likely to continue" },
-      { value: 3, label: "Unsure / depends on improvement" },
-      { value: 2, label: "Unlikely to continue" },
-      { value: 1, label: "Want to make a change" },
-    ],
-    required: true,
-  },
-  {
-    id: "m1_additional_comments",
-    section: "Overall Assessment",
-    sectionEmoji: "📈",
-    question: "Any additional comments or feedback for Shore Agents?",
-    type: "text",
-    required: false,
-  },
-]
+export const MONTH_3_TEMPLATE: ReviewTemplate = {
+  reviewType: "MONTH_3",
+  title: "Month 3 Mid-Probation Review",
+  description: "Comprehensive assessment after 90 days of employment",
+  totalQuestions: 27,
+  
+  categories: [
+    {
+      name: "Performance Improvement",
+      description: "Progress since Month 1 review",
+      questions: [
+        {
+          id: "m3_perf_01",
+          category: "Performance Improvement",
+          question: "Has work quality improved since the Month 1 review?",
+          required: true
+        },
+        {
+          id: "m3_perf_02",
+          category: "Performance Improvement",
+          question: "Have they addressed feedback from the Month 1 review?",
+          required: true
+        },
+        {
+          id: "m3_perf_03",
+          category: "Performance Improvement",
+          question: "Are they mastering their core job responsibilities?",
+          required: true
+        },
+        {
+          id: "m3_perf_04",
+          category: "Performance Improvement",
+          question: "Do they now require less supervision than before?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Work Quality & Output",
+      description: "Current quality and consistency of work",
+      questions: [
+        {
+          id: "m3_qual_01",
+          category: "Work Quality & Output",
+          question: "How would you rate the current quality of their work?",
+          required: true
+        },
+        {
+          id: "m3_qual_02",
+          category: "Work Quality & Output",
+          question: "Is their work consistently accurate and error-free?",
+          required: true
+        },
+        {
+          id: "m3_qual_03",
+          category: "Work Quality & Output",
+          question: "Do they meet or exceed your quality standards?",
+          required: true
+        },
+        {
+          id: "m3_qual_04",
+          category: "Work Quality & Output",
+          question: "How thorough and detail-oriented are they?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Productivity & Efficiency",
+      description: "Speed and effectiveness of task completion",
+      questions: [
+        {
+          id: "m3_prod_01",
+          category: "Productivity & Efficiency",
+          question: "How would you rate their overall productivity?",
+          required: true
+        },
+        {
+          id: "m3_prod_02",
+          category: "Productivity & Efficiency",
+          question: "Do they consistently meet deadlines?",
+          required: true
+        },
+        {
+          id: "m3_prod_03",
+          category: "Productivity & Efficiency",
+          question: "Can they handle multiple tasks effectively?",
+          required: true
+        },
+        {
+          id: "m3_prod_04",
+          category: "Productivity & Efficiency",
+          question: "How efficient are they with their time management?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Skills & Competency",
+      description: "Technical skills and capability growth",
+      questions: [
+        {
+          id: "m3_skill_01",
+          category: "Skills & Competency",
+          question: "Have they developed new skills in the past 3 months?",
+          required: true
+        },
+        {
+          id: "m3_skill_02",
+          category: "Skills & Competency",
+          question: "How quickly do they learn new tasks?",
+          required: true
+        },
+        {
+          id: "m3_skill_03",
+          category: "Skills & Competency",
+          question: "Do they demonstrate growing expertise in their role?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Communication & Collaboration",
+      description: "Teamwork and communication effectiveness",
+      questions: [
+        {
+          id: "m3_comm_01",
+          category: "Communication & Collaboration",
+          question: "How effective is their communication with you and the team?",
+          required: true
+        },
+        {
+          id: "m3_comm_02",
+          category: "Communication & Collaboration",
+          question: "Do they proactively provide updates on their work?",
+          required: true
+        },
+        {
+          id: "m3_comm_03",
+          category: "Communication & Collaboration",
+          question: "How well do they collaborate with other team members?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Reliability & Trust",
+      description: "Dependability and trustworthiness",
+      questions: [
+        {
+          id: "m3_reli_01",
+          category: "Reliability & Trust",
+          question: "Can you trust them with important or sensitive tasks?",
+          required: true
+        },
+        {
+          id: "m3_reli_02",
+          category: "Reliability & Trust",
+          question: "Do they follow through on commitments consistently?",
+          required: true
+        },
+        {
+          id: "m3_reli_03",
+          category: "Reliability & Trust",
+          question: "How is their attendance, punctuality, and availability?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Overall Assessment",
+      description: "Readiness for continued employment",
+      questions: [
+        {
+          id: "m3_overall_01",
+          category: "Overall Assessment",
+          question: "Overall, how satisfied are you with their performance?",
+          required: true
+        },
+        {
+          id: "m3_overall_02",
+          category: "Overall Assessment",
+          question: "Are they on track to complete probation successfully?",
+          required: true
+        },
+        {
+          id: "m3_overall_03",
+          category: "Overall Assessment",
+          question: "Would you recommend them for regularization at Month 6?",
+          required: true
+        }
+      ]
+    }
+  ]
+}
 
-// 🟢 MONTH 3: Performance Check-In & Improvement Tracking (26 questions)
-export const MONTH_3_QUESTIONS: ReviewQuestion[] = [
-  // SECTION 1: RELIABILITY & CONSISTENCY
-  {
-    id: "m3_reliability",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "How reliable has this team member been over the past 3 months?",
-    description: "Consistent attendance, availability, schedule adherence",
-    type: "rating",
-    options: [
-      { value: 5, label: "Completely reliable, zero issues" },
-      { value: 4, label: "Very reliable, rare exceptions" },
-      { value: 3, label: "Generally reliable with occasional issues" },
-      { value: 2, label: "Frequent reliability problems" },
-      { value: 1, label: "Unreliable, ongoing issues" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_responsiveness",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "How responsive are they to your messages and requests?",
-    description: "Response time, communication availability",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely responsive, immediate replies" },
-      { value: 4, label: "Very responsive, timely replies" },
-      { value: 3, label: "Adequate response time" },
-      { value: 2, label: "Often slow to respond" },
-      { value: 1, label: "Unresponsive, hard to reach" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_consistency",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "How consistent is their performance week-to-week?",
-    description: "Steady output or up-and-down quality?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very consistent, reliable quality every week" },
-      { value: 4, label: "Mostly consistent, minor fluctuations" },
-      { value: 3, label: "Somewhat inconsistent" },
-      { value: 2, label: "Very inconsistent performance" },
-      { value: 1, label: "Unpredictable, unreliable" },
-    ],
-    required: true,
-  },
+// ============================================
+// MONTH 5 REVIEW (24 Questions)
+// Pre-Regularization Final Assessment
+// ============================================
 
-  // SECTION 2: COMMUNICATION QUALITY
-  {
-    id: "m3_written_communication",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How would you rate their written English communication?",
-    description: "Emails, messages, documentation - has it improved since Month 1?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - native level, professional" },
-      { value: 4, label: "Very good - clear and professional" },
-      { value: 3, label: "Good - acceptable with minor issues" },
-      { value: 2, label: "Fair - frequent errors" },
-      { value: 1, label: "Poor - communication problems" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_spoken_communication",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How would you rate their spoken English communication?",
-    description: "Phone calls, video meetings - clarity and confidence",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - perfectly clear" },
-      { value: 4, label: "Very good - clear communication" },
-      { value: 3, label: "Good - understandable" },
-      { value: 2, label: "Fair - struggles with clarity" },
-      { value: 1, label: "Poor - difficult to understand" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m3_proactive_communication",
-    section: "Communication Quality",
-    sectionEmoji: "💬",
-    question: "How well do they communicate proactively?",
-    description: "Do they keep you informed, flag issues early, provide updates?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - keeps me informed without prompting" },
-      { value: 4, label: "Very good - usually communicates proactively" },
-      { value: 3, label: "Adequate - communicates when asked" },
-      { value: 2, label: "Poor - have to chase them for updates" },
-      { value: 1, label: "Very poor - doesn't communicate proactively" },
-    ],
-    required: true,
-  },
+export const MONTH_5_TEMPLATE: ReviewTemplate = {
+  reviewType: "MONTH_5",
+  title: "Month 5 Pre-Regularization Review",
+  description: "Final assessment before permanent employment status",
+  totalQuestions: 24,
+  
+  categories: [
+    {
+      name: "Performance Trajectory",
+      description: "Overall progress throughout probation",
+      questions: [
+        {
+          id: "m5_traj_01",
+          category: "Performance Trajectory",
+          question: "How has their performance evolved over the past 5 months?",
+          required: true
+        },
+        {
+          id: "m5_traj_02",
+          category: "Performance Trajectory",
+          question: "Have they consistently improved throughout probation?",
+          required: true
+        },
+        {
+          id: "m5_traj_03",
+          category: "Performance Trajectory",
+          question: "Do they now meet or exceed your original expectations?",
+          required: true
+        },
+        {
+          id: "m5_traj_04",
+          category: "Performance Trajectory",
+          question: "How well have they integrated into your operations?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Current Performance Level",
+      description: "Current work quality and consistency",
+      questions: [
+        {
+          id: "m5_curr_01",
+          category: "Current Performance Level",
+          question: "How would you rate their current work quality?",
+          required: true
+        },
+        {
+          id: "m5_curr_02",
+          category: "Current Performance Level",
+          question: "How productive and efficient are they now?",
+          required: true
+        },
+        {
+          id: "m5_curr_03",
+          category: "Current Performance Level",
+          question: "Can you rely on them to work independently?",
+          required: true
+        },
+        {
+          id: "m5_curr_04",
+          category: "Current Performance Level",
+          question: "How consistent is their performance week to week?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Value & Impact",
+      description: "Contribution to business operations",
+      questions: [
+        {
+          id: "m5_value_01",
+          category: "Value & Impact",
+          question: "How valuable are they to your day-to-day operations?",
+          required: true
+        },
+        {
+          id: "m5_value_02",
+          category: "Value & Impact",
+          question: "Have they made a positive impact on your business?",
+          required: true
+        },
+        {
+          id: "m5_value_03",
+          category: "Value & Impact",
+          question: "Do they add value beyond just completing tasks?",
+          required: true
+        },
+        {
+          id: "m5_value_04",
+          category: "Value & Impact",
+          question: "Would you struggle if they were suddenly unavailable?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Long-Term Potential",
+      description: "Future growth and development potential",
+      questions: [
+        {
+          id: "m5_future_01",
+          category: "Long-Term Potential",
+          question: "Do you see long-term potential in this staff member?",
+          required: true
+        },
+        {
+          id: "m5_future_02",
+          category: "Long-Term Potential",
+          question: "Would you recommend them for increased responsibilities?",
+          required: true
+        },
+        {
+          id: "m5_future_03",
+          category: "Long-Term Potential",
+          question: "Could they potentially take on more complex work?",
+          required: true
+        },
+        {
+          id: "m5_future_04",
+          category: "Long-Term Potential",
+          question: "Do you want them as part of your team long-term?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Readiness for Regularization",
+      description: "Final assessment for permanent status",
+      questions: [
+        {
+          id: "m5_ready_01",
+          category: "Readiness for Regularization",
+          question: "Should this staff member be granted regular employment status?",
+          required: true
+        },
+        {
+          id: "m5_ready_02",
+          category: "Readiness for Regularization",
+          question: "Do you have any remaining concerns about their performance?",
+          required: true
+        },
+        {
+          id: "m5_ready_03",
+          category: "Readiness for Regularization",
+          question: "How confident are you in their ability to succeed long-term?",
+          required: true
+        },
+        {
+          id: "m5_ready_04",
+          category: "Readiness for Regularization",
+          question: "Overall recommendation: Regularize or Extend Probation?",
+          required: true
+        }
+      ]
+    }
+  ]
+}
 
-  // SECTION 3: WORK QUALITY & INDEPENDENCE
-  {
-    id: "m3_work_quality",
-    section: "Work Quality & Independence",
-    sectionEmoji: "✨",
-    question: "How would you rate the quality of their work?",
-    description: "Accuracy, attention to detail, meeting standards",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - consistently exceeds standards" },
-      { value: 4, label: "Very good - consistently meets standards" },
-      { value: 3, label: "Good - acceptable quality, some errors" },
-      { value: 2, label: "Fair - below standards, frequent errors" },
-      { value: 1, label: "Poor - unacceptable quality" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_quality_improvement",
-    section: "Work Quality & Independence",
-    sectionEmoji: "✨",
-    question: "Has the quality improved since Month 1?",
-    description: "Are they learning from feedback and getting better?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Significant improvement, learning fast" },
-      { value: 4, label: "Noticeable improvement" },
-      { value: 3, label: "Some improvement" },
-      { value: 2, label: "Little to no improvement" },
-      { value: 1, label: "Quality has declined" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m3_productivity",
-    section: "Work Quality & Independence",
-    sectionEmoji: "✨",
-    question: "How productive are they?",
-    description: "Volume of work, efficiency, output",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very productive - exceeds expectations" },
-      { value: 4, label: "Productive - meets expectations" },
-      { value: 3, label: "Adequate productivity" },
-      { value: 2, label: "Below expectations" },
-      { value: 1, label: "Very unproductive" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_independence",
-    section: "Work Quality & Independence",
-    sectionEmoji: "✨",
-    question: "How independently can they work now?",
-    description: "Do they still need lots of hand-holding or working autonomously?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Fully independent - minimal supervision needed" },
-      { value: 4, label: "Mostly independent - occasional guidance needed" },
-      { value: 3, label: "Somewhat independent - regular supervision needed" },
-      { value: 2, label: "Still requires significant hand-holding" },
-      { value: 1, label: "Cannot work independently" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_deadlines",
-    section: "Work Quality & Independence",
-    sectionEmoji: "✨",
-    question: "Do they meet deadlines and commitments?",
-    description: "Delivering on time consistently",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always on time or early" },
-      { value: 4, label: "Usually on time" },
-      { value: 3, label: "Sometimes late" },
-      { value: 2, label: "Frequently late" },
-      { value: 1, label: "Rarely meets deadlines" },
-    ],
-    required: true,
-  },
+// ============================================
+// RECURRING REVIEW (18 Questions)
+// Ongoing Performance Assessment (Post-Regularization)
+// ============================================
 
-  // SECTION 4: PROBLEM-SOLVING & INITIATIVE
-  {
-    id: "m3_problem_solving",
-    section: "Problem-Solving & Initiative",
-    sectionEmoji: "🎯",
-    question: "How well do they handle problems or unexpected issues?",
-    description: "Can they troubleshoot or do they panic/freeze?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent problem solver - resolves independently" },
-      { value: 4, label: "Good - usually figures it out" },
-      { value: 3, label: "Adequate - needs some guidance" },
-      { value: 2, label: "Struggles - needs significant help" },
-      { value: 1, label: "Cannot handle problems" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m3_proactivity",
-    section: "Problem-Solving & Initiative",
-    sectionEmoji: "🎯",
-    question: "How proactive are they?",
-    description: "Taking initiative, anticipating needs, suggesting improvements",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very proactive - constantly bringing ideas and solutions" },
-      { value: 4, label: "Proactive - regularly takes initiative" },
-      { value: 3, label: "Adequate - does what's asked" },
-      { value: 2, label: "Reactive - only does what's explicitly told" },
-      { value: 1, label: "Passive - no initiative whatsoever" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_critical_thinking",
-    section: "Problem-Solving & Initiative",
-    sectionEmoji: "🎯",
-    question: "Do they ask smart questions or figure things out?",
-    description: "Critical thinking and resourcefulness",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - researches first, asks insightful questions" },
-      { value: 4, label: "Good - appropriate questions when needed" },
-      { value: 3, label: "Adequate - asks basic questions" },
-      { value: 2, label: "Poor - asks too many obvious questions OR never asks" },
-      { value: 1, label: "Very poor - constantly needs hand-holding" },
-    ],
-    required: true,
-  },
+export const RECURRING_TEMPLATE: ReviewTemplate = {
+  reviewType: "RECURRING",
+  title: "Recurring Performance Review",
+  description: "Ongoing assessment for regular employees (every 6 months)",
+  totalQuestions: 18,
+  
+  categories: [
+    {
+      name: "Work Quality",
+      description: "Quality and consistency of work output",
+      questions: [
+        {
+          id: "rec_qual_01",
+          category: "Work Quality",
+          question: "How would you rate the overall quality of their work?",
+          required: true
+        },
+        {
+          id: "rec_qual_02",
+          category: "Work Quality",
+          question: "Is their work consistently accurate and error-free?",
+          required: true
+        },
+        {
+          id: "rec_qual_03",
+          category: "Work Quality",
+          question: "Do they meet your quality standards and expectations?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Productivity",
+      description: "Efficiency and task completion",
+      questions: [
+        {
+          id: "rec_prod_01",
+          category: "Productivity",
+          question: "How productive and efficient are they?",
+          required: true
+        },
+        {
+          id: "rec_prod_02",
+          category: "Productivity",
+          question: "Do they consistently meet deadlines?",
+          required: true
+        },
+        {
+          id: "rec_prod_03",
+          category: "Productivity",
+          question: "Can they effectively manage multiple priorities?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Communication",
+      description: "Communication effectiveness",
+      questions: [
+        {
+          id: "rec_comm_01",
+          category: "Communication",
+          question: "How effective is their communication?",
+          required: true
+        },
+        {
+          id: "rec_comm_02",
+          category: "Communication",
+          question: "Do they proactively provide updates and feedback?",
+          required: true
+        },
+        {
+          id: "rec_comm_03",
+          category: "Communication",
+          question: "How responsive are they to messages and requests?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Reliability",
+      description: "Dependability and trustworthiness",
+      questions: [
+        {
+          id: "rec_reli_01",
+          category: "Reliability",
+          question: "How reliable and dependable are they?",
+          required: true
+        },
+        {
+          id: "rec_reli_02",
+          category: "Reliability",
+          question: "Do they consistently follow through on commitments?",
+          required: true
+        },
+        {
+          id: "rec_reli_03",
+          category: "Reliability",
+          question: "How is their attendance and availability?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Growth & Development",
+      description: "Skill development and improvement",
+      questions: [
+        {
+          id: "rec_grow_01",
+          category: "Growth & Development",
+          question: "Have they developed new skills in this period?",
+          required: true
+        },
+        {
+          id: "rec_grow_02",
+          category: "Growth & Development",
+          question: "Do they show initiative in improving their work?",
+          required: true
+        },
+        {
+          id: "rec_grow_03",
+          category: "Growth & Development",
+          question: "Are they open to feedback and learning?",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "Overall Assessment",
+      description: "General performance evaluation",
+      questions: [
+        {
+          id: "rec_overall_01",
+          category: "Overall Assessment",
+          question: "Overall, how satisfied are you with their performance?",
+          required: true
+        },
+        {
+          id: "rec_overall_02",
+          category: "Overall Assessment",
+          question: "Would you recommend them for continued employment?",
+          required: true
+        },
+        {
+          id: "rec_overall_03",
+          category: "Overall Assessment",
+          question: "How valuable are they to your operations?",
+          required: true
+        }
+      ]
+    }
+  ]
+}
 
-  // SECTION 5: PROFESSIONAL GROWTH
-  {
-    id: "m3_feedback_implementation",
-    section: "Professional Growth",
-    sectionEmoji: "🤝",
-    question: "How well do they implement feedback?",
-    description: "When you correct or coach them, do they improve?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - implements immediately, learns quickly" },
-      { value: 4, label: "Good - usually implements feedback" },
-      { value: 3, label: "Adequate - sometimes implements" },
-      { value: 2, label: "Poor - rarely implements feedback" },
-      { value: 1, label: "Very poor - resistant or doesn't change" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_professionalism",
-    section: "Professional Growth",
-    sectionEmoji: "🤝",
-    question: "How professional are they?",
-    description: "Demeanor, communication, representing your business",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely professional at all times" },
-      { value: 4, label: "Very professional" },
-      { value: 3, label: "Generally professional" },
-      { value: 2, label: "Occasionally unprofessional" },
-      { value: 1, label: "Unprofessional behavior" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_business_understanding",
-    section: "Professional Growth",
-    sectionEmoji: "🤝",
-    question: "How well do they understand your business and requirements?",
-    description: "Do they 'get' what you need or still learning the basics?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Deep understanding - anticipates needs" },
-      { value: 4, label: "Good understanding - rarely needs explanation" },
-      { value: 3, label: "Basic understanding - sometimes needs clarification" },
-      { value: 2, label: "Limited understanding - frequent clarification needed" },
-      { value: 1, label: "Poor understanding - doesn't grasp requirements" },
-    ],
-    required: true,
-  },
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-  // SECTION 6: VALUE & SATISFACTION
-  {
-    id: "m3_business_value",
-    section: "Value & Satisfaction",
-    sectionEmoji: "📈",
-    question: "How much value are they providing to your business?",
-    description: "ROI, contribution, impact",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exceptional value - couldn't imagine without them" },
-      { value: 4, label: "Strong value - definitely worth it" },
-      { value: 3, label: "Fair value - meeting basic expectations" },
-      { value: 2, label: "Limited value - not meeting expectations" },
-      { value: 1, label: "Little to no value - not working out" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_improvement_since_m1",
-    section: "Value & Satisfaction",
-    sectionEmoji: "📈",
-    question: "Compared to Month 1, how much have they improved?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Dramatically improved - night and day difference" },
-      { value: 4, label: "Significantly improved" },
-      { value: 3, label: "Moderately improved" },
-      { value: 2, label: "Slightly improved" },
-      { value: 1, label: "No improvement or declined" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m3_satisfaction",
-    section: "Value & Satisfaction",
-    sectionEmoji: "📈",
-    question: "Overall, how satisfied are you with this team member at Month 3?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Very satisfied - exceeding expectations" },
-      { value: 4, label: "Satisfied - meeting expectations" },
-      { value: 3, label: "Neutral - acceptable but could improve" },
-      { value: 2, label: "Dissatisfied - not meeting expectations" },
-      { value: 1, label: "Very dissatisfied - significant concerns" },
-    ],
-    required: true,
-  },
-  {
-    id: "m3_continue_past_probation",
-    section: "Value & Satisfaction",
-    sectionEmoji: "📈",
-    question: "Based on their performance so far, do you want them to continue past probation?",
-    description: "Critical question for regularization decision",
-    type: "rating",
-    options: [
-      { value: 5, label: "Absolutely - want to keep them long-term" },
-      { value: 4, label: "Yes - working out well" },
-      { value: 3, label: "Conditional - need to see improvement in specific areas (specify below)" },
-      { value: 2, label: "Unsure - significant concerns" },
-      { value: 1, label: "No - not working out, prefer to make a change" },
-    ],
-    required: true,
-  },
-
-  // SECTION 7: DETAILED FEEDBACK
-  {
-    id: "m3_strengths",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "What are their greatest strengths?",
-    description: "What are they doing exceptionally well? (2-3 specific things)",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m3_improvements",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "What areas still need improvement?",
-    description: "Where do they need to develop before Month 5? (2-3 specific things)",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m3_conditional_improvements",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "If you selected 'Conditional' or lower in previous question, what specific improvements do you need to see by Month 5?",
-    description: "Be specific - what must change for you to recommend regularization?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "m3_training_support",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "Is there any additional training or support Shore Agents should provide?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "m3_additional_comments",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "Any other comments or feedback?",
-    type: "text",
-    required: false,
-  },
-]
-
-// 🟣 MONTH 5: REGULARIZATION DECISION - THE BIG ONE (27 questions)
-export const MONTH_5_QUESTIONS: ReviewQuestion[] = [
-  // THE BIG QUESTION FIRST
-  {
-    id: "m5_regularization_decision",
-    section: "⭐ Regularization Decision",
-    sectionEmoji: "⭐",
-    question: "Should we regularize this team member for permanent employment with your company?",
-    description: "IMPORTANT: This determines whether this team member becomes permanent",
-    type: "select",
-    options: [
-      { value: "yes_regularize", label: "✅ YES - REGULARIZE - I want them as a permanent team member" },
-      { value: "yes_conditional", label: "⚠️ YES - WITH CONDITIONS - Regularize, but specific improvements needed" },
-      { value: "unsure_extend", label: "🤔 UNSURE - EXTEND PROBATION - Need more time to decide (30-60 days)" },
-      { value: "no_change", label: "❌ NO - DO NOT REGULARIZE - Not the right fit, prefer to make a change" },
-    ],
-    required: true,
-  },
-
-  // SECTION 1: LONG-TERM RELIABILITY
-  {
-    id: "m5_reliability_longterm",
-    section: "Long-Term Reliability",
-    sectionEmoji: "📊",
-    question: "Over 5 months, how reliable has this team member been?",
-    description: "Attendance, punctuality, availability, consistency",
-    contextNote: "Critical for long-term: Can you count on them day in, day out for years?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Completely reliable - no concerns whatsoever" },
-      { value: 4, label: "Very reliable - rare issues, always communicated" },
-      { value: 3, label: "Generally reliable - some issues but manageable" },
-      { value: 2, label: "Reliability concerns - frequent issues" },
-      { value: 1, label: "Unreliable - ongoing problems" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_performance_consistency",
-    section: "Long-Term Reliability",
-    sectionEmoji: "📊",
-    question: "How consistent is their performance?",
-    description: "Week-to-week, month-to-month reliability of quality and output",
-    contextNote: "For permanence: You need consistency you can bank on",
-    type: "rating",
-    options: [
-      { value: 5, label: "Rock solid - consistently excellent" },
-      { value: 4, label: "Very consistent - predictably good" },
-      { value: 3, label: "Somewhat inconsistent - ups and downs" },
-      { value: 2, label: "Very inconsistent - can't predict performance" },
-      { value: 1, label: "Unreliable performance" },
-    ],
-    required: true,
-  },
-
-  // SECTION 2: COMMUNICATION MATURITY
-  {
-    id: "m5_written_communication_now",
-    section: "Communication Maturity",
-    sectionEmoji: "💬",
-    question: "How would you rate their written communication NOW?",
-    description: "After 5 months of experience with your business",
-    contextNote: "For permanence: Can they communicate with YOUR clients without supervision?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - represents your brand perfectly" },
-      { value: 4, label: "Very good - professional and clear" },
-      { value: 3, label: "Good - acceptable, minor improvements needed" },
-      { value: 2, label: "Fair - still needs work" },
-      { value: 1, label: "Poor - communication issues remain" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_spoken_communication_now",
-    section: "Communication Maturity",
-    sectionEmoji: "💬",
-    question: "How would you rate their spoken communication NOW?",
-    description: "If applicable - phone, video, meetings",
-    contextNote: "For permanence: Professional, clear, and confident?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - sounds professional, clear, confident" },
-      { value: 4, label: "Very good - clear and effective" },
-      { value: 3, label: "Good - adequate for the role" },
-      { value: 2, label: "Fair - still improving" },
-      { value: 1, label: "Poor - not at required level" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m5_proactive_communication",
-    section: "Communication Maturity",
-    sectionEmoji: "💬",
-    question: "How proactively do they communicate with you?",
-    description: "Updates, issues, questions, status reports",
-    contextNote: "For permanence: You can't babysit them forever. Do they keep you in the loop?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exemplary - keeps me perfectly informed" },
-      { value: 4, label: "Very good - proactive communication" },
-      { value: 3, label: "Adequate - communicates when needed" },
-      { value: 2, label: "Poor - have to chase them" },
-      { value: 1, label: "Very poor - communication breakdowns" },
-    ],
-    required: true,
-  },
-
-  // SECTION 3: WORK QUALITY & MASTERY
-  {
-    id: "m5_work_quality_now",
-    section: "Work Quality & Mastery",
-    sectionEmoji: "✨",
-    question: "How would you rate their work quality NOW?",
-    description: "Current state after 5 months",
-    contextNote: "For permanence: Is the quality where it needs to be for the long haul?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - consistently exceeds standards" },
-      { value: 4, label: "Very good - reliably meets/exceeds standards" },
-      { value: 3, label: "Good - meets standards, occasional errors" },
-      { value: 2, label: "Fair - below standards too often" },
-      { value: 1, label: "Poor - quality concerns remain" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_improvement_trajectory",
-    section: "Work Quality & Mastery",
-    sectionEmoji: "✨",
-    question: "How much have they improved from Month 1 to now?",
-    description: "Growth trajectory over probation",
-    contextNote: "For permanence: Are they still learning and growing?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Dramatic improvement - completely different person" },
-      { value: 4, label: "Significant improvement - clear growth" },
-      { value: 3, label: "Moderate improvement - getting better" },
-      { value: 2, label: "Minimal improvement - stagnant" },
-      { value: 1, label: "No improvement or declined" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_independence_now",
-    section: "Work Quality & Mastery",
-    sectionEmoji: "✨",
-    question: "How independently do they work NOW?",
-    description: "Current supervision needs",
-    contextNote: "For permanence: Can you trust them to work without constant oversight?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Fully autonomous - I barely need to manage them" },
-      { value: 4, label: "Mostly independent - minimal oversight needed" },
-      { value: 3, label: "Somewhat independent - regular check-ins needed" },
-      { value: 2, label: "Still needs significant supervision" },
-      { value: 1, label: "Cannot work independently" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_productivity_roi",
-    section: "Work Quality & Mastery",
-    sectionEmoji: "✨",
-    question: "How productive are they compared to your expectations?",
-    description: "Output, efficiency, getting things done",
-    contextNote: "For permanence: Are you getting good ROI?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exceptional - far exceeds expectations" },
-      { value: 4, label: "Strong - meets/exceeds expectations" },
-      { value: 3, label: "Adequate - meets basic expectations" },
-      { value: 2, label: "Below - not productive enough" },
-      { value: 1, label: "Poor - productivity is a problem" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_deadline_reliability",
-    section: "Work Quality & Mastery",
-    sectionEmoji: "✨",
-    question: "Do they consistently meet deadlines?",
-    description: "Reliable delivery of work on time",
-    contextNote: "For permanence: Can you rely on them for time-sensitive work?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always - never misses deadlines" },
-      { value: 4, label: "Usually - very reliable" },
-      { value: 3, label: "Sometimes - occasional delays" },
-      { value: 2, label: "Frequently - often needs extensions" },
-      { value: 1, label: "Rarely - deadline issues" },
-    ],
-    required: true,
-  },
-
-  // SECTION 4: PROBLEM-SOLVING & OWNERSHIP
-  {
-    id: "m5_problem_solving",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "How well do they handle problems independently?",
-    description: "Troubleshooting, critical thinking, resourcefulness",
-    contextNote: "For permanence: Will they be a problem-solver or a problem-creator?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - solves problems without my involvement" },
-      { value: 4, label: "Good - usually figures it out, minimal help needed" },
-      { value: 3, label: "Adequate - needs guidance but tries" },
-      { value: 2, label: "Poor - struggles, needs hand-holding" },
-      { value: 1, label: "Very poor - can't problem-solve" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_ownership",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "How much ownership do they take over their work?",
-    description: "Accountability, responsibility, pride in work",
-    contextNote: "For permanence: Do they care about YOUR success?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Total ownership - treats it like their own business" },
-      { value: 4, label: "Strong ownership - cares about outcomes" },
-      { value: 3, label: "Adequate - does the job" },
-      { value: 2, label: "Low ownership - just going through motions" },
-      { value: 1, label: "No ownership - doesn't care" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_proactivity_innovation",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "How proactive are they in improving processes or suggesting ideas?",
-    description: "Initiative, innovation, contribution beyond tasks",
-    contextNote: "For permanence: Will they help your business grow or just maintain status quo?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Highly proactive - constantly improving things" },
-      { value: 4, label: "Proactive - regularly brings ideas" },
-      { value: 3, label: "Adequate - occasionally suggests improvements" },
-      { value: 2, label: "Reactive - only does what's asked" },
-      { value: 1, label: "Passive - no initiative" },
-    ],
-    required: true,
-  },
-
-  // SECTION 5: PROFESSIONALISM & CULTURE FIT
-  {
-    id: "m5_brand_representation",
-    section: "Professionalism & Culture Fit",
-    sectionEmoji: "🤝",
-    question: "How well do they represent your business/brand?",
-    description: "Professionalism with your clients, partners, stakeholders",
-    contextNote: "For permanence: Can they be the face of your company?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exemplary - I trust them completely with anyone" },
-      { value: 4, label: "Very professional - represents us well" },
-      { value: 3, label: "Professional - adequate representation" },
-      { value: 2, label: "Concerns - not always appropriate" },
-      { value: 1, label: "Poor - cannot represent our brand" },
-    ],
-    required: true,
-    showNA: true,
-  },
-  {
-    id: "m5_feedback_coachability",
-    section: "Professionalism & Culture Fit",
-    sectionEmoji: "🤝",
-    question: "How well do they respond to feedback and coaching?",
-    description: "Coachability, growth mindset, ego management",
-    contextNote: "For permanence: Can they continue growing with your business?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - loves feedback, implements immediately" },
-      { value: 4, label: "Good - receptive and improves" },
-      { value: 3, label: "Adequate - accepts feedback" },
-      { value: 2, label: "Poor - sometimes defensive" },
-      { value: 1, label: "Very poor - resistant to feedback" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_culture_fit",
-    section: "Professionalism & Culture Fit",
-    sectionEmoji: "🤝",
-    question: "How well do they fit with your team/company culture?",
-    description: "Values alignment, team dynamics, cultural match",
-    contextNote: "For permanence: Will they thrive in your environment long-term?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Perfect fit - embodies our values" },
-      { value: 4, label: "Strong fit - meshes well" },
-      { value: 3, label: "Adequate fit - works okay" },
-      { value: 2, label: "Poor fit - some friction" },
-      { value: 1, label: "Bad fit - cultural mismatch" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_business_understanding",
-    section: "Professionalism & Culture Fit",
-    sectionEmoji: "🤝",
-    question: "How much do they understand YOUR business now?",
-    description: "Industry knowledge, company goals, strategic understanding",
-    contextNote: "For permanence: Do they understand WHY they do what they do?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Deep understanding - gets the big picture" },
-      { value: 4, label: "Good understanding - knows what matters" },
-      { value: 3, label: "Basic understanding - knows their role" },
-      { value: 2, label: "Limited understanding - still learning basics" },
-      { value: 1, label: "Poor understanding - doesn't get it" },
-    ],
-    required: true,
-  },
-
-  // SECTION 6: LONG-TERM VALUE ASSESSMENT
-  {
-    id: "m5_overall_value",
-    section: "Long-Term Value Assessment",
-    sectionEmoji: "💼",
-    question: "What is the overall value they bring to your business?",
-    description: "ROI, impact, contribution",
-    contextNote: "For permanence: Is the investment worth it for the long term?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exceptional value - invaluable team member" },
-      { value: 4, label: "Strong value - definitely worth the investment" },
-      { value: 3, label: "Fair value - meeting expectations" },
-      { value: 2, label: "Limited value - not meeting expectations" },
-      { value: 1, label: "Little/no value - not working out" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_impact_if_left",
-    section: "Long-Term Value Assessment",
-    sectionEmoji: "💼",
-    question: "How much would it impact your business if they left?",
-    description: "Honest assessment of their importance",
-    contextNote: "For permanence: Are they becoming integral to your operations?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Major impact - would be very difficult to replace" },
-      { value: 4, label: "Significant impact - would prefer to keep them" },
-      { value: 3, label: "Moderate impact - replaceable but inconvenient" },
-      { value: 2, label: "Minor impact - wouldn't significantly affect us" },
-      { value: 1, label: "No impact - wouldn't miss them" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_growth_potential",
-    section: "Long-Term Value Assessment",
-    sectionEmoji: "💼",
-    question: "Do you see growth potential in this person?",
-    description: "Can they take on more responsibility over time?",
-    contextNote: "For permanence: Is this someone you can invest in for years?",
-    type: "rating",
-    options: [
-      { value: 5, label: "High potential - can grow significantly with us" },
-      { value: 4, label: "Good potential - can take on more over time" },
-      { value: 3, label: "Some potential - probably stay at current level" },
-      { value: 2, label: "Limited potential - likely peaked" },
-      { value: 1, label: "No potential - can't see them growing" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_imagine_longterm",
-    section: "Long-Term Value Assessment",
-    sectionEmoji: "💼",
-    question: "Can you imagine them still on your team 1-2 years from now?",
-    description: "Gut check - long-term fit",
-    contextNote: "For permanence: This is THE question. Trust your gut.",
-    type: "rating",
-    options: [
-      { value: 5, label: "Absolutely - want them long-term" },
-      { value: 4, label: "Yes - see them staying" },
-      { value: 3, label: "Maybe - depends on continued improvement" },
-      { value: 2, label: "Probably not - likely won't work long-term" },
-      { value: 1, label: "No - can't see it working" },
-    ],
-    required: true,
-  },
-  {
-    id: "m5_overall_satisfaction",
-    section: "Long-Term Value Assessment",
-    sectionEmoji: "💼",
-    question: "Overall satisfaction with this team member after 5 months:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely satisfied - exceeded expectations" },
-      { value: 4, label: "Very satisfied - met expectations" },
-      { value: 3, label: "Satisfied - acceptable performance" },
-      { value: 2, label: "Dissatisfied - below expectations" },
-      { value: 1, label: "Very dissatisfied - not working out" },
-    ],
-    required: true,
-  },
-
-  // SECTION 7: FINAL DECISION DETAILS
-  {
-    id: "m5_greatest_strengths",
-    section: "Final Decision Details",
-    sectionEmoji: "📝",
-    question: "What are their 3 GREATEST STRENGTHS?",
-    description: "What makes them valuable? Why would you keep them?",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m5_biggest_weaknesses",
-    section: "Final Decision Details",
-    sectionEmoji: "📝",
-    question: "What are their 3 BIGGEST WEAKNESSES or areas that still need work?",
-    description: "Be honest - what concerns remain?",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "m5_year1_development",
-    section: "Final Decision Details",
-    sectionEmoji: "📝",
-    question: "If you're recommending regularization, what development areas should they focus on in Year 1?",
-    description: "What should they work on once they're permanent?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "m5_not_recommending_why",
-    section: "Final Decision Details",
-    sectionEmoji: "📝",
-    question: "If you're NOT recommending regularization, please explain specifically why:",
-    description: "What are the dealbreakers? What didn't work?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "m5_final_comments",
-    section: "Final Decision Details",
-    sectionEmoji: "📝",
-    question: "Any final comments, concerns, or recommendations for Shore Agents?",
-    type: "text",
-    required: false,
-  },
-]
-
-// 🔄 6-MONTH RECURRING: Ongoing Check-Ins (24 questions + trend tracking)
-export const RECURRING_6M_QUESTIONS: ReviewQuestion[] = [
-  {
-    id: "r6m_instant_truth",
-    section: "⚡ The Instant Truth",
-    sectionEmoji: "⚡",
-    question: "Overall, how has this team member performed over the past 6 months?",
-    type: "select",
-    options: [
-      { value: "getting_better", label: "🚀 GETTING BETTER - Performance improving" },
-      { value: "consistently_strong", label: "✅ CONSISTENTLY STRONG - Steady, reliable" },
-      { value: "plateaued", label: "😐 PLATEAUED - Not growing" },
-      { value: "slipping", label: "⚠️ SLIPPING - Performance declining" },
-      { value: "serious_problems", label: "🚨 SERIOUS PROBLEMS - Major issues" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_trend",
-    section: "📈 Trend Check",
-    sectionEmoji: "📈",
-    question: "Since the last evaluation, has their performance:",
-    type: "select",
-    options: [
-      { value: "significantly_improved", label: "Significantly improved" },
-      { value: "slightly_improved", label: "Slightly improved" },
-      { value: "stayed_same", label: "Stayed the same" },
-      { value: "slightly_declined", label: "Slightly declined" },
-      { value: "significantly_declined", label: "Significantly declined" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_attendance",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "Attendance and availability over the past 6 months:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Perfect, zero issues" },
-      { value: 4, label: "Very reliable, rare exceptions" },
-      { value: 3, label: "Generally reliable, occasional issues" },
-      { value: 2, label: "Reliability concerns" },
-      { value: 1, label: "Unreliable" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_consistency",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "How consistent is their performance week-to-week?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Rock solid consistency" },
-      { value: 4, label: "Very consistent" },
-      { value: 3, label: "Somewhat inconsistent" },
-      { value: 2, label: "Very inconsistent" },
-      { value: 1, label: "All over the place" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_response_time",
-    section: "Reliability & Consistency",
-    sectionEmoji: "📊",
-    question: "Response time to your messages and requests:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always immediate" },
-      { value: 4, label: "Very responsive" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Often slow" },
-      { value: 1, label: "Unresponsive" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_work_quality",
-    section: "Work Quality & Output",
-    sectionEmoji: "✨",
-    question: "Quality of work delivered:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exceptional quality" },
-      { value: 4, label: "Strong quality" },
-      { value: 3, label: "Acceptable quality" },
-      { value: 2, label: "Below standards" },
-      { value: 1, label: "Poor quality" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_productivity",
-    section: "Work Quality & Output",
-    sectionEmoji: "✨",
-    question: "Productivity and output volume:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Highly productive" },
-      { value: 4, label: "Productive" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Below expectations" },
-      { value: 1, label: "Unproductive" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_deadlines",
-    section: "Work Quality & Output",
-    sectionEmoji: "✨",
-    question: "Meeting deadlines consistently:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Always on time" },
-      { value: 4, label: "Usually on time" },
-      { value: 3, label: "Sometimes late" },
-      { value: 2, label: "Frequently late" },
-      { value: 1, label: "Rarely on time" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_communication_quality",
-    section: "Communication & Proactivity",
-    sectionEmoji: "💬",
-    question: "Communication quality (written and verbal):",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent" },
-      { value: 4, label: "Good" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Poor" },
-      { value: 1, label: "Major issues" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_proactive_communication",
-    section: "Communication & Proactivity",
-    sectionEmoji: "💬",
-    question: "Proactive communication (updates, flagging issues):",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - always in the loop" },
-      { value: 4, label: "Good - usually proactive" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Poor - have to chase" },
-      { value: 1, label: "Leaves me in the dark" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_independence",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "How independently do they work?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Fully autonomous" },
-      { value: 4, label: "Mostly independent" },
-      { value: 3, label: "Needs regular oversight" },
-      { value: 2, label: "Requires hand-holding" },
-      { value: 1, label: "Cannot work independently" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_problem_solving",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "Problem-solving ability:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent" },
-      { value: 4, label: "Good" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Poor" },
-      { value: 1, label: "Cannot problem-solve" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_initiative",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "Initiative and proactivity:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Highly proactive" },
-      { value: 4, label: "Proactive" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Reactive" },
-      { value: 1, label: "Passive" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_ownership",
-    section: "Problem-Solving & Ownership",
-    sectionEmoji: "🎯",
-    question: "Ownership and accountability:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Total ownership" },
-      { value: 4, label: "Strong ownership" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Low ownership" },
-      { value: 1, label: "No accountability" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_professionalism",
-    section: "Professionalism & Growth",
-    sectionEmoji: "🤝",
-    question: "Professionalism in all interactions:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exemplary" },
-      { value: 4, label: "Very professional" },
-      { value: 3, label: "Generally professional" },
-      { value: 2, label: "Occasional issues" },
-      { value: 1, label: "Unprofessional" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_feedback_response",
-    section: "Professionalism & Growth",
-    sectionEmoji: "🤝",
-    question: "How well do they respond to feedback?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Excellent - implements immediately" },
-      { value: 4, label: "Good - receptive" },
-      { value: 3, label: "Adequate" },
-      { value: 2, label: "Defensive" },
-      { value: 1, label: "Resistant" },
-    ],
-    required: true,
-    hasTrend: true,
-  },
-  {
-    id: "r6m_growth",
-    section: "Professionalism & Growth",
-    sectionEmoji: "🤝",
-    question: "Are they growing and developing in the role?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Significant growth" },
-      { value: 4, label: "Steady growth" },
-      { value: 3, label: "Some growth" },
-      { value: 2, label: "Stagnant" },
-      { value: 1, label: "Declining" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_current_value",
-    section: "Value & Relationship Health",
-    sectionEmoji: "💼",
-    question: "Current value they provide to your business:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Exceptional value" },
-      { value: 4, label: "Strong value" },
-      { value: 3, label: "Fair value" },
-      { value: 2, label: "Limited value" },
-      { value: 1, label: "Little/no value" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_satisfaction",
-    section: "Value & Relationship Health",
-    sectionEmoji: "💼",
-    question: "Your current satisfaction with this team member:",
-    type: "rating",
-    options: [
-      { value: 5, label: "Extremely satisfied" },
-      { value: 4, label: "Very satisfied" },
-      { value: 3, label: "Satisfied" },
-      { value: 2, label: "Dissatisfied" },
-      { value: 1, label: "Very dissatisfied" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_likelihood_continue",
-    section: "Value & Relationship Health",
-    sectionEmoji: "💼",
-    question: "How likely are you to continue working with this team member?",
-    type: "rating",
-    options: [
-      { value: 5, label: "Definitely continuing" },
-      { value: 4, label: "Likely continuing" },
-      { value: 3, label: "Uncertain" },
-      { value: 2, label: "Unlikely" },
-      { value: 1, label: "Want to make a change" },
-    ],
-    required: true,
-  },
-  {
-    id: "r6m_one_thing_to_change",
-    section: "Value & Relationship Health",
-    sectionEmoji: "💼",
-    question: "If you could change ONE thing about this team member, what would it be?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "r6m_doing_well",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "What are they doing REALLY WELL right now?",
-    description: "Top 2-3 strengths",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "r6m_needs_improvement",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "What specific areas need improvement?",
-    description: "Top 2-3 development areas",
-    type: "text",
-    required: true,
-  },
-  {
-    id: "r6m_support_needed",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "What support do you need from Shore Agents?",
-    type: "text",
-    required: false,
-  },
-  {
-    id: "r6m_other_comments",
-    section: "Detailed Feedback",
-    sectionEmoji: "📝",
-    question: "Any other concerns, feedback, or comments?",
-    type: "text",
-    required: false,
-  },
-]
-
-// Helper function to get questions by review type
-export function getQuestionsForReview(type: ReviewType): ReviewQuestion[] {
+/**
+ * Get review template by type
+ */
+export function getReviewTemplate(type: ReviewType): ReviewTemplate {
   switch (type) {
-    case "month_1":
-      return MONTH_1_QUESTIONS
-    case "month_3":
-      return MONTH_3_QUESTIONS
-    case "month_5":
-      return MONTH_5_QUESTIONS
-    case "recurring_6m":
-      return RECURRING_6M_QUESTIONS
-    case "ad_hoc":
-      return MONTH_1_QUESTIONS // Or custom
+    case "MONTH_1":
+      return MONTH_1_TEMPLATE
+    case "MONTH_3":
+      return MONTH_3_TEMPLATE
+    case "MONTH_5":
+      return MONTH_5_TEMPLATE
+    case "RECURRING":
+      return RECURRING_TEMPLATE
     default:
-      return MONTH_1_QUESTIONS
+      return MONTH_1_TEMPLATE
   }
 }
 
-// Helper to get review type label
+/**
+ * Calculate review score from ratings array
+ */
+export function calculateReviewScore(ratings: number[]): ScoreCalculation {
+  const totalQuestions = ratings.length
+  const totalEarned = ratings.reduce((sum, rating) => sum + rating, 0)
+  const totalPossible = totalQuestions * 5
+  const percentage = Math.round((totalEarned / totalPossible) * 100)
+  
+  let level: ScoreCalculation['level']
+  let color: string
+  
+  if (percentage < 50) {
+    level = 'critical'
+    color = 'red'
+  } else if (percentage < 70) {
+    level = 'needs_improvement'
+    color = 'yellow'
+  } else if (percentage < 85) {
+    level = 'good'
+    color = 'green'
+  } else {
+    level = 'excellent'
+    color = 'blue'
+  }
+  
+  return {
+    totalQuestions,
+    totalEarned,
+    totalPossible,
+    percentage,
+    level,
+    color
+  }
+}
+
+/**
+ * Get all questions from template as flat array
+ */
+export function getAllQuestions(template: ReviewTemplate): ReviewQuestion[] {
+  return template.categories.flatMap(category => category.questions)
+}
+
+/**
+ * Get review due date based on start date and type
+ */
+export function getReviewDueDate(startDate: Date, type: ReviewType): Date {
+  const dueDate = new Date(startDate)
+  
+  switch (type) {
+    case "MONTH_1":
+      dueDate.setDate(dueDate.getDate() + 30)
+      break
+    case "MONTH_3":
+      dueDate.setDate(dueDate.getDate() + 90)
+      break
+    case "MONTH_5":
+      dueDate.setDate(dueDate.getDate() + 150)
+      break
+    case "RECURRING":
+      dueDate.setDate(dueDate.getDate() + 180)
+      break
+  }
+  
+  return dueDate
+}
+
+/**
+ * Check if review should be created (7 days before due date)
+ */
+export function shouldCreateReview(startDate: Date, type: ReviewType): boolean {
+  const now = new Date()
+  const dueDate = getReviewDueDate(startDate, type)
+  const createDate = new Date(dueDate)
+  createDate.setDate(createDate.getDate() - 7) // 7 days before due
+  
+  // Check if today is on or after the create date AND before the due date
+  return now >= createDate && now < dueDate
+}
+
+/**
+ * Get review type label
+ */
 export function getReviewTypeLabel(type: ReviewType): string {
   const labels = {
-    month_1: "🔵 Month 1 Review",
-    month_3: "🟢 Month 3 Review",
-    month_5: "🟣 Month 5 - Regularization Decision",
-    recurring_6m: "🔄 6-Month Check-In",
-    ad_hoc: "💬 Performance Feedback",
+    MONTH_1: "Month 1 Review",
+    MONTH_3: "Month 3 Review",
+    MONTH_5: "Month 5 - Regularization",
+    RECURRING: "6-Month Check-In"
   }
-  return labels[type] || "Review"
-}
-
-// Calculate overall score from answers
-export function calculateOverallScore(answers: Record<string, any>): number {
-  const ratingAnswers = Object.values(answers).filter(
-    (answer: any) => 
-      answer && 
-      typeof answer.value === "number" && 
-      answer.value >= 1 && 
-      answer.value <= 5
-  ).map((answer: any) => answer.value) as number[]
-
-  if (ratingAnswers.length === 0) return 0
-
-  const sum = ratingAnswers.reduce((acc, val) => acc + val, 0)
-  return parseFloat((sum / ratingAnswers.length).toFixed(1))
-}
-
-// Group questions by section
-export function groupQuestionsBySection(questions: ReviewQuestion[]): Map<string, ReviewQuestion[]> {
-  const grouped = new Map<string, ReviewQuestion[]>()
-  
-  questions.forEach(question => {
-    const key = `${question.sectionEmoji} ${question.section}`
-    if (!grouped.has(key)) {
-      grouped.set(key, [])
-    }
-    grouped.get(key)!.push(question)
-  })
-  
-  return grouped
+  return labels[type] || type
 }

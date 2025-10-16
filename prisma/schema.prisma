@@ -195,16 +195,32 @@ model Review {
   id               String       @id @default(uuid())
   staffUserId      String
   type             ReviewType
-  status           ReviewStatus @default(PENDING_APPROVAL)
+  status           ReviewStatus @default(PENDING)
   client           String
-  reviewer         String
+  reviewer         String       // Client user email
   reviewerTitle    String?
-  submittedDate    DateTime     @default(now())
+  submittedDate    DateTime?    // When client submits (nullable for PENDING)
+  dueDate          DateTime     // When review is due
   evaluationPeriod String
-  overallScore     Decimal      @db.Decimal(3, 1)
-  previousScore    Decimal?     @db.Decimal(3, 1)
-  answers          Json
+  
+  // Scoring
+  ratings          Json?        // Array of 1-5 ratings for each question
+  overallScore     Decimal?     @db.Decimal(5, 2)  // Percentage (0-100)
+  performanceLevel String?      // critical, needs_improvement, good, excellent
+  
+  // Open-ended responses
+  strengths        String?      @db.Text
+  improvements     String?      @db.Text
+  additionalComments String?    @db.Text
+  
+  // Management review
+  managementNotes  String?      @db.Text
+  reviewedBy       String?      // Management user who processed
+  reviewedDate     DateTime?
+  
+  // Staff acknowledgment
   acknowledgedDate DateTime?
+  
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   staffUser        StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
@@ -561,19 +577,17 @@ enum ClockOutReason {
 }
 
 enum ReviewType {
-  MONTH_1
-  MONTH_3
-  MONTH_5
-  RECURRING_6M
-  AD_HOC
+  MONTH_1      // 30 days after startDate
+  MONTH_3      // 90 days after startDate
+  MONTH_5      // 150 days after startDate - Regularization decision
+  RECURRING    // Every 6 months post-regularization
 }
 
 enum ReviewStatus {
-  PENDING_APPROVAL
-  APPROVED
-  FINALIZED
-  ACKNOWLEDGED
-  ARCHIVED
+  PENDING      // Waiting for client to complete
+  SUBMITTED    // Client completed, waiting for management
+  UNDER_REVIEW // Management reviewing
+  COMPLETED    // Staff acknowledged
 }
 
 enum TicketCategory {
