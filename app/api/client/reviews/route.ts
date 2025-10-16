@@ -108,7 +108,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
     }
 
-    if (existingReview.status !== "PENDING") {
+    // Check if review is pending (handle both PENDING and PENDING_APPROVAL statuses)
+    if (existingReview.status !== "PENDING" && existingReview.status !== "PENDING_APPROVAL") {
       return NextResponse.json({ error: "Review already submitted" }, { status: 400 })
     }
 
