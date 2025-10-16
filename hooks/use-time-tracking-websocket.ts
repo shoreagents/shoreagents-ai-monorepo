@@ -119,6 +119,21 @@ export function useTimeTrackingWebSocket() {
       const data = await response.json()
       
       if (response.ok) {
+        // Pause activity tracking in Electron
+        if (typeof window !== 'undefined' && (window as any).electron?.breaks?.start) {
+          console.log('[WebSocket] Calling Electron to pause activity tracking for', breakType, 'break')
+          // Duration in minutes: LUNCH = 60, MORNING/AFTERNOON = 15, AWAY = 15
+          const duration = breakType === 'LUNCH' ? 60 : 15
+          await (window as any).electron.breaks.start({
+            type: breakType,
+            duration: duration,
+            breakId: data.break?.id
+          })
+          console.log('[WebSocket] ✅ Activity tracking paused in Electron')
+        } else {
+          console.log('[WebSocket] Electron API not available (running in browser)')
+        }
+        
         // Emit WebSocket event for real-time updates
         emit('break:start', data)
       } else {
@@ -146,6 +161,15 @@ export function useTimeTrackingWebSocket() {
       const data = await response.json()
       
       if (response.ok) {
+        // Resume activity tracking in Electron
+        if (typeof window !== 'undefined' && (window as any).electron?.breaks?.end) {
+          console.log('[WebSocket] Calling Electron to resume activity tracking')
+          await (window as any).electron.breaks.end()
+          console.log('[WebSocket] ✅ Activity tracking resumed in Electron')
+        } else {
+          console.log('[WebSocket] Electron API not available (running in browser)')
+        }
+        
         // Emit WebSocket event for real-time updates
         emit('break:end', data)
       } else {

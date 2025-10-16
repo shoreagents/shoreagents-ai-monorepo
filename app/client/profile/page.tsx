@@ -125,17 +125,23 @@ export default function ClientProfilePage() {
         await deleteClientFile(data.clientUser.avatar)
       }
 
-      // Upload new avatar
-      const avatarUrl = await uploadClientFile(file, data.clientUser.id, 'avatar')
+      // Upload new avatar using server-side API
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'avatar')
 
-      // Update client user in database
-      const response = await fetch('/api/client/profile/avatar', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: avatarUrl }),
+      const response = await fetch('/api/client/upload', {
+        method: 'POST',
+        body: formData,
       })
 
-      if (!response.ok) throw new Error('Failed to update avatar')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload avatar')
+      }
+
+      const result = await response.json()
+      console.log('Avatar uploaded successfully:', result.url)
       
       await fetchProfile()
     } catch (error) {
@@ -157,17 +163,23 @@ export default function ClientProfilePage() {
         await deleteClientFile(data.clientUser.coverPhoto)
       }
 
-      // Upload new cover photo
-      const coverUrl = await uploadClientFile(file, data.clientUser.id, 'cover')
+      // Upload new cover photo using server-side API
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'cover')
 
-      // Update client user in database
-      const response = await fetch('/api/client/profile/cover', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coverPhoto: coverUrl }),
+      const response = await fetch('/api/client/upload', {
+        method: 'POST',
+        body: formData,
       })
 
-      if (!response.ok) throw new Error('Failed to update cover photo')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload cover photo')
+      }
+
+      const result = await response.json()
+      console.log('Cover photo uploaded successfully:', result.url)
       
       await fetchProfile()
     } catch (error) {

@@ -118,6 +118,7 @@ export default function TimeTracking() {
   useEffect(() => {
     // If force close is set, close the modal and mark it as force-closed
     if (forceCloseBreakModal) {
+      console.log('[Break Modal] Force closing modal')
       setBreakModalOpen(false)
       setBreakModalForceClosed(true)
       return
@@ -125,16 +126,19 @@ export default function TimeTracking() {
     
     // If modal was force-closed, don't reopen it until a new break starts
     if (breakModalForceClosed) {
+      console.log('[Break Modal] Modal was force-closed, waiting for new break')
       return
     }
     
     // Only open modal if there's an active break and modal is not already open
     if (activeBreak && !breakModalOpen) {
+      console.log('[Break Modal] Active break detected, opening modal:', activeBreak.type)
       setBreakModalOpen(true)
       setBreakModalForceClosed(false) // Reset force-closed flag when new break starts
     } 
     // Only close modal if there's no active break and modal is open
     else if (!activeBreak && breakModalOpen) {
+      console.log('[Break Modal] No active break, closing modal')
       setBreakModalOpen(false)
     }
   }, [activeBreak, breakModalOpen, forceCloseBreakModal, breakModalForceClosed])
@@ -413,11 +417,17 @@ export default function TimeTracking() {
     console.log("🚀 STARTING BREAK:", { breakId, breakType, awayReason })
     
     try {
+      // Reset any force-closed state to allow modal to open
+      setBreakModalForceClosed(false)
+      
       // Use WebSocket to start break
       await startBreak(breakType, awayReason)
       
-      // The WebSocket event will handle the state update and modal opening
-      // No need to show a toast here as the modal will appear immediately
+      // Ensure modal opens after break starts (with small delay for state update)
+      setTimeout(() => {
+        console.log("📢 Forcing break modal to open after break start")
+        setBreakModalOpen(true)
+      }, 100)
       
     } catch (error) {
       console.log("⚠️ Error starting break:", error)
