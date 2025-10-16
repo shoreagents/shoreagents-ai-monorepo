@@ -550,7 +550,7 @@ export default function OnboardingPage() {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-3 gap-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="firstName" className="text-slate-300">First Name *</Label>
                     <Input
                       id="firstName"

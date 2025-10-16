@@ -11,15 +11,18 @@ interface BreakModalProps {
     id: string
     type: string
     startTime: string
+    actualStart: string // Actual start time from database
     duration: number // expected duration in minutes
+    awayReason?: string // For AWAY breaks
   } | null
   onEnd: () => void
+  onEndDirect: () => void // Direct end without confirmation
   onPause: () => void
   onResume: () => void
   onClose: () => void // Close modal without ending break
 }
 
-export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClose }: BreakModalProps) {
+export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onResume, onClose }: BreakModalProps) {
   const [isPaused, setIsPaused] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [pausedAt, setPausedAt] = useState<number | null>(null)
@@ -29,9 +32,16 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
   const [originalStartTime, setOriginalStartTime] = useState<number | null>(null)
   const [hasUsedPause, setHasUsedPause] = useState(false)
   const [showReturnPopup, setShowReturnPopup] = useState(false) // NEW: Show "I'm Back" popup
+  const [isInitializing, setIsInitializing] = useState(true) // NEW: Loading state while setting up timer
   
   const expectedDurationMinutes = breakData?.duration || 15
   const expectedDurationSeconds = expectedDurationMinutes * 60
+  
+  console.log("🔍 BREAK MODAL DURATION DEBUG:")
+  console.log("  - breakData:", breakData)
+  console.log("  - breakData?.duration:", breakData?.duration)
+  console.log("  - expectedDurationMinutes:", expectedDurationMinutes)
+  console.log("  - expectedDurationSeconds:", expectedDurationSeconds)
   
   const breakEmojis: Record<string, string> = {
     MORNING: "☕",
@@ -45,6 +55,14 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
     LUNCH: "Lunch Break",
     AFTERNOON: "Afternoon Break",
     AWAY: "Away from Desk"
+  }
+  
+  const awayReasonLabels: Record<string, string> = {
+    BATHROOM: "🚻 Restroom",
+    NURSE: "🏥 Nurse",
+    MEETING: "👥 Meeting",
+    MANAGEMENT: "👔 Management",
+    OTHER: "📝 Other"
   }
   
   const breakColors: Record<string, { bg: string; border: string; progress: string }> = {
@@ -72,18 +90,42 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
   
   const theme = breakColors[breakData?.type || 'MORNING'] || breakColors.MORNING
   
+  // Reset initialization state when break data changes
+  useEffect(() => {
+    if (breakData) {
+      // Always reset when break data changes to ensure fresh start
+      setIsInitializing(true)
+      setOriginalStartTime(null) // Reset to force recalculation
+      setElapsedSeconds(0) // Reset elapsed time
+      setTotalPausedDuration(0) // Reset paused duration
+      setElapsedWhenPaused(0) // Reset paused state
+      setHasUsedPause(false) // Reset pause usage
+      console.log("🔄 BREAK DATA CHANGED - Resetting all timer state")
+    }
+  }, [breakData?.id]) // Reset when break ID changes
+
   // Lock in the original start time when break first starts
   useEffect(() => {
     if (breakData && !originalStartTime) {
-      const startTime = new Date(breakData.startTime || new Date()).getTime()
+      // Use the actual break start time from the database to calculate correct elapsed time
+      // This ensures the timer continues from where it should be, even after page reload
+      const startTime = new Date(breakData.actualStart).getTime()
       setOriginalStartTime(startTime)
-      console.log("🔒 LOCKED ORIGINAL START TIME:", new Date(startTime).toLocaleTimeString())
+      
+      // Calculate elapsed time based on actual start time
+      const now = Date.now()
+      const actualElapsed = Math.floor((now - startTime) / 1000)
+      setElapsedSeconds(Math.max(0, actualElapsed)) // Ensure it's never negative
+      
+      setIsInitializing(false) // Timer is ready to start
+      console.log("🔒 LOCKED ORIGINAL START TIME (from database):", new Date(startTime).toLocaleTimeString())
+      console.log("🔒 CALCULATED ELAPSED TIME:", actualElapsed, "seconds")
     }
   }, [breakData, originalStartTime])
   
   // Timer effect
   useEffect(() => {
-    if (!isOpen || !breakData || !originalStartTime) return
+    if (!isOpen || !breakData || !originalStartTime || isInitializing) return
     
     console.log("⏰ TIMER STARTED - Original start:", new Date(originalStartTime).toLocaleTimeString(), "| Total paused:", totalPausedDuration, "seconds")
     
@@ -100,12 +142,15 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
         
         console.log(`⏱️ TICK #${debugCount} - True Elapsed: ${trueElapsed}s (actual: ${actualElapsed}s - paused: ${totalPausedDuration}s), Remaining: ${expectedDurationSeconds - trueElapsed}s`)
         
-                // Show "I'm Back" popup when duration is reached
-                if (trueElapsed >= expectedDurationSeconds) {
-                  console.log("⏰ BREAK TIME COMPLETE - Showing return popup")
-                  clearInterval(interval)
-                  setShowReturnPopup(true)
-                }
+        // Show "I'm Back" popup when duration is reached
+        if (trueElapsed >= expectedDurationSeconds) {
+          console.log("⏰ BREAK TIME COMPLETE - Showing return popup")
+          console.log(`⏰ Auto-end triggered: ${trueElapsed}s >= ${expectedDurationSeconds}s`)
+          clearInterval(interval)
+          setShowReturnPopup(true)
+        }
+      } else {
+        console.log("⏸️ Timer tick skipped - break is paused")
       }
     }, 1000)
     
@@ -122,7 +167,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
     setElapsedWhenPaused(elapsedSeconds)
     setPausedAt(Date.now())
     onPause()
-    onClose()
+    // Don't close modal - keep it open to show paused state and resume button
   }
   
   const handleResume = () => {
@@ -138,21 +183,13 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
   }
   
   const handleEnd = () => {
-    // Show confirmation
-    if (confirm("⚠️ Are you sure you want to END this break?\n\nThis will be logged as your break and you cannot start another one of this type today.")) {
-      // Reset all state
-      setOriginalStartTime(null)
-      setTotalPausedDuration(0)
-      setElapsedWhenPaused(0)
-      setElapsedSeconds(0)
-      setHasUsedPause(false)
-      setShowReturnPopup(false)
-      onEnd()
-    }
+    // Call the parent's end break handler (which will show the TSX confirmation modal)
+    onEnd()
   }
   
   const handleImBack = () => {
     console.log("✅ STAFF CONFIRMED RETURN - Actual return time:", new Date().toLocaleTimeString())
+    console.log("🔄 Calling onEndDirect() to end break automatically")
     // Reset all state
     setOriginalStartTime(null)
     setTotalPausedDuration(0)
@@ -160,20 +197,22 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
     setElapsedSeconds(0)
     setHasUsedPause(false)
     setShowReturnPopup(false)
-    onEnd()
+    // Direct end without confirmation since user already confirmed they're back
+    onEndDirect()
   }
   
+  // Format elapsed time - ensure it's never negative
+  const safeElapsedSeconds = Math.max(0, elapsedSeconds)
+  const elapsedMinutes = Math.floor(safeElapsedSeconds / 60)
+  const elapsedSecondsDisplay = safeElapsedSeconds % 60
+  
   // Calculate remaining time
-  const remainingSeconds = Math.max(0, expectedDurationSeconds - elapsedSeconds)
+  const remainingSeconds = Math.max(0, expectedDurationSeconds - safeElapsedSeconds)
   const remainingMinutes = Math.floor(remainingSeconds / 60)
   const remainingSecondsDisplay = remainingSeconds % 60
   
-  // Calculate progress percentage
-  const progressPercent = Math.min(100, (elapsedSeconds / expectedDurationSeconds) * 100)
-  
-  // Format elapsed time
-  const elapsedMinutes = Math.floor(elapsedSeconds / 60)
-  const elapsedSecondsDisplay = elapsedSeconds % 60
+  // Calculate progress percentage - use safe elapsed seconds
+  const progressPercent = Math.min(100, (safeElapsedSeconds / expectedDurationSeconds) * 100)
   
   // Don't render if no break data (after all hooks)
   if (!breakData) {
@@ -251,6 +290,11 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
                 <h2 className="text-3xl font-bold text-white mb-2">
                   {breakLabels[breakData.type] || "Break Time"}
                 </h2>
+                {breakData.type === "AWAY" && breakData.awayReason && (
+                  <div className="text-lg text-amber-300 mb-2">
+                    {awayReasonLabels[breakData.awayReason] || breakData.awayReason}
+                  </div>
+                )}
                 {isPaused ? (
                   <div className="flex items-center justify-center gap-2 text-yellow-400 animate-pulse">
                     <Pause className="h-5 w-5" />
@@ -267,19 +311,30 @@ export function BreakModal({ isOpen, breakData, onEnd, onPause, onResume, onClos
             <div className="p-8 bg-black/20">
               <div className="text-center mb-6">
                 <div className="flex items-center justify-center gap-3 mb-2">
-                  <div className="text-center">
-                    <div className="text-6xl font-mono font-bold text-white">
-                      {String(remainingMinutes).padStart(2, '0')}
+                  {isInitializing ? (
+                    <div className="text-center">
+                      <div className="text-6xl font-mono font-bold text-slate-400 animate-pulse">
+                        --:--
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1 font-semibold">LOADING...</div>
                     </div>
-                    <div className="text-xs text-slate-400 mt-1 font-semibold">MINUTES</div>
-                  </div>
-                  <div className="text-5xl text-white mb-4">:</div>
-                  <div className="text-center">
-                    <div className="text-6xl font-mono font-bold text-white">
-                      {String(remainingSecondsDisplay).padStart(2, '0')}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1 font-semibold">SECONDS</div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="text-center">
+                        <div className="text-6xl font-mono font-bold text-white">
+                          {String(remainingMinutes).padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1 font-semibold">MINUTES</div>
+                      </div>
+                      <div className="text-5xl text-white mb-4">:</div>
+                      <div className="text-center">
+                        <div className="text-6xl font-mono font-bold text-white">
+                          {String(remainingSecondsDisplay).padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1 font-semibold">SECONDS</div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="text-sm text-slate-400">
                   Time Remaining

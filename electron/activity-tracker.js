@@ -216,7 +216,7 @@ class ActivityTracker {
     } else if (!this.performanceTracker) {
       console.warn('[ActivityTracker] Performance tracker not initialized')
     } else if (this.performanceTracker.isPaused) {
-      console.warn('[ActivityTracker] Performance tracker is paused')
+      console.log(`[ActivityTracker] ⏸️ Performance tracker is PAUSED - ignoring ${eventType} event`)
     }
     
     // Send debug event to renderer for temporary debugging
@@ -313,12 +313,6 @@ class ActivityTracker {
     const inactiveSeconds = Math.floor(inactiveTime / 1000)
 
     console.log(`[ActivityTracker] Inactivity detected: ${inactiveSeconds} seconds`)
-    
-    // Mark the start of inactivity period for idle time tracking
-    if (this.inactivityStartTime === null) {
-      this.inactivityStartTime = this.lastActivityTime
-      console.log(`[ActivityTracker] Started tracking idle time from: ${new Date(this.inactivityStartTime).toLocaleTimeString()}`)
-    }
 
     // Trigger screenshot capture on inactivity
     if (this.screenshotService && typeof this.screenshotService.triggerCapture === 'function') {
@@ -357,14 +351,21 @@ class ActivityTracker {
     const htmlContent = this.getInactivityDialogHTML(inactiveSeconds)
     this.inactivityDialog.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`)
 
+    // Track when dialog appeared to count from 0
+    // Also use this as the start time for idle time tracking so it matches what user sees
+    this.dialogAppearTime = Date.now()
+    this.inactivityStartTime = this.dialogAppearTime
+    console.log(`[ActivityTracker] Started tracking idle time from dialog appearance: ${new Date(this.inactivityStartTime).toLocaleTimeString()}`)
+
     // Update counter every second
     this.dialogUpdateInterval = setInterval(() => {
       if (this.inactivityDialog && !this.inactivityDialog.isDestroyed()) {
         const now = Date.now()
-        const currentInactiveSeconds = Math.floor((now - this.lastActivityTime) / 1000)
+        // Count from when dialog appeared, not from last activity
+        const dialogElapsedSeconds = Math.floor((now - this.dialogAppearTime) / 1000)
         
         // Send update to dialog
-        this.inactivityDialog.webContents.send('update-counter', currentInactiveSeconds)
+        this.inactivityDialog.webContents.send('update-counter', dialogElapsedSeconds)
       } else {
         this.clearDialogUpdateInterval()
       }
@@ -375,6 +376,7 @@ class ActivityTracker {
       this.clearDialogUpdateInterval()
       this.inactivityDialog = null
       this.dialogShown = false
+      this.dialogAppearTime = null
     })
 
     // Listen for button clicks from the dialog
@@ -424,6 +426,7 @@ class ActivityTracker {
     
     this.inactivityDialog = null
     this.dialogShown = false
+    this.dialogAppearTime = null
   }
 
   /**
@@ -561,7 +564,7 @@ class ActivityTracker {
     <div class="icon">⚠️</div>
     <h1>No Activity Detected</h1>
     <p class="message">You have been inactive for</p>
-    <div class="counter" id="counter">${initialSeconds}s</div>
+    <div class="counter" id="counter">0s</div>
     <p class="counter-label">Are you still there?</p>
     
     
@@ -572,7 +575,7 @@ class ActivityTracker {
     
     // Listen for counter updates
     window.electronAPI.onUpdateCounter((seconds) => {
-      counterElement.textContent = seconds + 's';
+      counterElement.textContent = window.electronAPI.formatTime(seconds);
     });
     
     function handleImHere() {

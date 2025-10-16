@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getStaffUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
-import { BreakType } from "@prisma/client"
+import { BreakType, AwayReason } from "@prisma/client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { breakId, type } = body
+    const { breakId, type, awayReason } = body
     
     // Check if user already has an active break
     const activeBreak = await prisma.break.findFirst({
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
           staffUserId: staffUser.id,
           timeEntryId: activeTimeEntry.id,
           type: type as BreakType,
-          actualStart: now
+          actualStart: now,
+          awayReason: type === "AWAY" ? (awayReason as AwayReason) : null
         }
       })
       

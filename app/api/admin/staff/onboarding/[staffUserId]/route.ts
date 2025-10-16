@@ -28,7 +28,8 @@ export async function GET(
     const staffUser = await prisma.staffUser.findUnique({
       where: { id: staffUserId },
       include: {
-        onboarding: true
+        onboarding: true,
+        profile: true
       }
     })
 
@@ -44,7 +45,8 @@ export async function GET(
         avatar: staffUser.avatar,
         createdAt: staffUser.createdAt
       },
-      onboarding: staffUser.onboarding 
+      onboarding: staffUser.onboarding,
+      profile: staffUser.profile
     })
 
   } catch (error) {

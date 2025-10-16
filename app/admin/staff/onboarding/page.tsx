@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Eye, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Loader2, Eye, CheckCircle2, Clock, AlertCircle, FileText, Circle, CircleDot, PlayCircle, PauseCircle, Play } from "lucide-react"
 
 interface StaffOnboarding {
   id: string
@@ -58,19 +58,19 @@ export default function AdminOnboardingPage() {
 
   const getStatusBadge = (percent: number, isComplete: boolean) => {
     if (isComplete) {
-      return <Badge className="bg-green-600">✅ Verified & Complete</Badge>
+      return <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Verified & Complete</Badge>
     } else if (percent === 100) {
-      return <Badge className="bg-blue-600">📋 Ready for Verification</Badge>
+      return <Badge className="bg-blue-600"><FileText className="h-3 w-3 mr-1" />Ready for Verification</Badge>
     } else if (percent >= 80) {
-      return <Badge className="bg-blue-500">🔵 Almost Complete</Badge>
+      return <Badge className="bg-blue-500"><CircleDot className="h-3 w-3 mr-1" />Almost Complete</Badge>
     } else if (percent >= 60) {
-      return <Badge className="bg-green-500">🟢 In Progress</Badge>
+      return <Badge className="bg-green-500"><PlayCircle className="h-3 w-3 mr-1" />In Progress</Badge>
     } else if (percent >= 40) {
-      return <Badge className="bg-yellow-500">🟡 Halfway</Badge>
+      return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Halfway</Badge>
     } else if (percent >= 20) {
-      return <Badge className="bg-orange-500">🟠 Started</Badge>
+      return <Badge className="bg-orange-500"><PauseCircle className="h-3 w-3 mr-1" />Started</Badge>
     } else {
-      return <Badge className="bg-red-500">🔴 Just Started</Badge>
+      return <Badge className="bg-red-500"><Play className="h-3 w-3 mr-1" />Just Started</Badge>
     }
   }
 

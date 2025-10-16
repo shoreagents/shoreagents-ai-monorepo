@@ -53,8 +53,10 @@ export function BreakScheduler({ isOpen, timeEntryId, onScheduled, onSkip }: Bre
       const data = await response.json()
       
       if (response.ok) {
+        console.log('✅ Breaks scheduled successfully:', data)
         onScheduled()
       } else {
+        console.error('❌ Failed to schedule breaks:', data)
         alert(data.error || 'Failed to schedule breaks')
       }
     } catch (error) {
