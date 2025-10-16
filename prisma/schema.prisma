@@ -101,20 +101,25 @@ model WorkSchedule {
 }
 
 model Task {
-  id          String       @id @default(uuid())
-  staffUserId String
-  title       String
-  description String?
-  status      TaskStatus   @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  source      TaskSource   @default(SELF)
-  deadline    DateTime?
-  completedAt DateTime?
-  timeSpent   Int?
-  tags        String[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  staffUser   StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid())
+  staffUserId   String
+  companyId     String?      // Links task to company for cross-portal visibility
+  title         String
+  description   String?
+  status        TaskStatus   @default(TODO)
+  priority      TaskPriority @default(MEDIUM)
+  source        TaskSource   @default(SELF)
+  createdByType CreatorType  @default(STAFF) // Who created this task
+  createdById   String?      // ID of creator (StaffUser, ClientUser, or ManagementUser)
+  assignedTo    String?      // Specific staff member if assigned
+  deadline      DateTime?
+  completedAt   DateTime?
+  timeSpent     Int?
+  tags          String[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  staffUser     StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  company       Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@map("tasks")
 }
@@ -135,9 +140,6 @@ model Break {
   notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  isLate         Boolean     @default(false)
-  lateBy         Int?
-  timeEntryId    String?
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -358,6 +360,7 @@ model Company {
   clientUsers      ClientUser[]    @relation("CompanyUsers")
   accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
   staffUsers       StaffUser[]     @relation("CompanyStaff")
+  tasks            Task[]          // All tasks linked to this company
 
   @@map("company")
 }
@@ -493,6 +496,12 @@ enum TaskSource {
   MANAGEMENT
 }
 
+enum CreatorType {
+  STAFF
+  CLIENT
+  ADMIN
+}
+
 enum BreakType {
   MORNING        // 15 min scheduled break
   LUNCH          // 60 min scheduled break
@@ -622,15 +631,4 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
-}
-
-enum ClockOutReason {
-  END_OF_SHIFT
-  EMERGENCY
-  SICK
-  EARLY_LEAVE_APPROVED
-  INTERNET_ISSUE
-  POWER_OUTAGE
-  PERSONAL
-  OTHER
 }

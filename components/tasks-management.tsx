@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "STUCK" | "FOR_REVIEW" | "COMPLETED"
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT"
 type TaskSource = "SELF" | "CLIENT" | "MANAGEMENT"
+type CreatorType = "STAFF" | "CLIENT" | "ADMIN"
 
 interface Task {
   id: string
@@ -16,9 +17,14 @@ interface Task {
   status: TaskStatus
   priority: TaskPriority
   source: TaskSource
+  createdByType?: CreatorType
   deadline: string | null
   completedAt: string | null
   createdAt: string
+  company?: {
+    id: string
+    companyName: string
+  } | null
 }
 
 export default function TasksManagement() {
@@ -142,6 +148,12 @@ export default function TasksManagement() {
     SELF: { label: "Self", color: "bg-purple-500/20 text-purple-400" },
     CLIENT: { label: "Client", color: "bg-blue-500/20 text-blue-400" },
     MANAGEMENT: { label: "Management", color: "bg-amber-500/20 text-amber-400" },
+  }
+
+  const creatorConfig = {
+    STAFF: { label: "👤 Created by Staff", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+    CLIENT: { label: "👔 Created by Client", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+    ADMIN: { label: "⚡ Created by Admin", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
   }
 
   const filteredTasks = tasks.filter((task) => {
@@ -353,6 +365,11 @@ export default function TasksManagement() {
                             {sourceConfig[task.source].label}
                           </span>
                         </div>
+                        {task.createdByType && (
+                          <div className={`mt-2 rounded-lg border px-2 py-1 text-xs font-medium ${creatorConfig[task.createdByType].color}`}>
+                            {creatorConfig[task.createdByType].label}
+                          </div>
+                        )}
                         {task.deadline && (
                           <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
                             <Calendar className="h-3 w-3" />
@@ -395,6 +412,11 @@ export default function TasksManagement() {
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusConfig[task.status].color} text-white`}>
                         {statusConfig[task.status].label}
                       </span>
+                      {task.createdByType && (
+                        <span className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${creatorConfig[task.createdByType].color}`}>
+                          {creatorConfig[task.createdByType].label}
+                        </span>
+                      )}
                       {task.deadline && (
                         <span className="rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-300">
                           Due: {mounted ? formatDate(task.deadline) : task.deadline}
