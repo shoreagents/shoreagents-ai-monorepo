@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ reviews, count: reviews.length })
+    // Convert Decimal fields to numbers for JSON serialization
+    const reviewsWithNumbers = reviews.map(review => ({
+      ...review,
+      overallScore: review.overallScore ? Number(review.overallScore) : null,
+    }))
+
+    return NextResponse.json({ reviews: reviewsWithNumbers, count: reviews.length })
   } catch (error) {
     console.error("Error fetching reviews:", error)
     return NextResponse.json(
