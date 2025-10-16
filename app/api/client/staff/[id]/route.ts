@@ -1,32 +1,46 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Add client user authentication (Wendy, CEO, etc.)
-    // For now, allow access to test the feature
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get ClientUser to verify they have access
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser || !clientUser.company) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     
     const { id: userId } = await params
 
-    // Get staff member details with all relations
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    // Get staff member details with all relations (ONLY from staff_users and staff_profiles)
+    const user = await prisma.staffUser.findUnique({
+      where: { 
+        id: userId,
+        companyId: clientUser.company.id // Ensure staff belongs to client's company
+      },
       include: {
         profile: {
           include: {
             workSchedule: true,
           },
         },
-        staffAssignments: {
-          where: { isActive: true },
-          include: {
-            client: true,
-            manager: {
+        company: {
+          select: {
+            companyName: true,
+            accountManager: {
               select: {
                 name: true,
                 email: true,
@@ -95,9 +109,6 @@ export async function GET(
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
     const todaySchedule = user.profile?.workSchedule.find(s => s.dayOfWeek === today)
 
-    // Get assignment info
-    const assignment = user.staffAssignments[0]
-
     // Calculate task stats
     const taskStats = {
       total: user.tasks.length,
@@ -150,20 +161,20 @@ export async function GET(
       coverPhoto: user.coverPhoto,
       role: user.role,
 
-      // Assignment
-      assignment: assignment ? {
-        role: assignment.role,
-        rate: assignment.rate,
-        startDate: assignment.startDate,
-        client: assignment.client.companyName,
+      // Assignment (from company relationship)
+      assignment: user.company ? {
+        role: user.profile?.currentRole || null,
+        rate: null,
+        startDate: user.profile?.startDate || user.createdAt,
+        client: user.company.companyName,
         manager: {
-          name: assignment.manager?.name,
-          email: assignment.manager?.email,
-          role: assignment.manager?.role,
+          name: user.company.accountManager?.name || null,
+          email: user.company.accountManager?.email || null,
+          role: user.company.accountManager?.role || null,
         },
       } : null,
 
-      // Profile
+      // Profile (NO personal records like SSS/TIN)
       profile: user.profile ? {
         phone: user.profile.phone,
         location: user.profile.location,

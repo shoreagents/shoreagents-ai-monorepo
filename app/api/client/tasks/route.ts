@@ -21,11 +21,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
+    if (!clientUser.company) {
+      console.error("❌ Client user has no company:", clientUser)
+      return NextResponse.json({ error: "Client user not associated with a company" }, { status: 400 })
+    }
+
+    console.log("✅ Client user found with company:", { 
+      clientId: clientUser.id,
+      email: clientUser.email, 
+      companyId: clientUser.company.id,
+      companyName: clientUser.company.companyName 
+    })
+
     // Get all staff members assigned to this company
     const staffUsers = await prisma.staffUser.findMany({
       where: { companyId: clientUser.company.id },
       select: { id: true, name: true, avatar: true, email: true }
     })
+    
+    console.log(`📋 Found ${staffUsers.length} staff members for company ${clientUser.company.companyName}`)
     
     const staffIds = staffUsers.map(s => s.id)
 
@@ -62,10 +76,12 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ tasks, staff: staffUsers })
-  } catch (error) {
-    console.error("Error fetching client tasks:", error)
+  } catch (error: any) {
+    console.error("❌❌❌ Error fetching client tasks:", error)
+    console.error("Error message:", error?.message)
+    console.error("Error stack:", error?.stack)
     return NextResponse.json(
-      { error: "Failed to fetch tasks" },
+      { error: "Failed to fetch tasks", details: error?.message },
       { status: 500 }
     )
   }
@@ -90,6 +106,10 @@ export async function POST(req: NextRequest) {
 
     if (!clientUser) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
+
+    if (!clientUser.company) {
+      return NextResponse.json({ error: "Client user not associated with a company" }, { status: 400 })
     }
 
     const { staffUserId, title, description, priority, deadline } = body
