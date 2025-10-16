@@ -17,12 +17,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Clock-out reason is required" }, { status: 400 })
     }
 
-    // Find active time entry
+    // Find active time entry with breaks in one query
     const activeEntry = await prisma.timeEntry.findFirst({
       where: {
         staffUserId: staffUser.id,
         clockOut: null,
       },
+      include: {
+        breaks: true
+      }
     })
 
     if (!activeEntry) {
@@ -33,13 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for active breaks (breaks that have been STARTED but not ended)
-    const activeBreak = await prisma.break.findFirst({
-      where: {
-        timeEntryId: activeEntry.id,
-        actualStart: { not: null }, // Break has been actually started
-        actualEnd: null // But not ended yet
-      }
-    })
+    const activeBreak = activeEntry.breaks.find(b => b.actualStart && !b.actualEnd)
     
     if (activeBreak) {
       return NextResponse.json({ 
@@ -50,10 +47,8 @@ export async function POST(request: NextRequest) {
     const clockOut = new Date()
     const totalHours = (clockOut.getTime() - activeEntry.clockIn.getTime()) / (1000 * 60 * 60)
     
-    // Calculate break time
-    const breaks = await prisma.break.findMany({
-      where: { timeEntryId: activeEntry.id }
-    })
+    // Calculate break time from the breaks we already fetched
+    const breaks = activeEntry.breaks
     const totalBreakTime = breaks.reduce((sum, b) => sum + (b.duration || 0), 0) / 60
     const netWorkHours = totalHours - totalBreakTime
 
