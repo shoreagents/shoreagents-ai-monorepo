@@ -11,7 +11,6 @@ interface ReviewQuestionCardProps {
 }
 
 function ReviewQuestionCard({ question, value, onChange }: ReviewQuestionCardProps) {
-  console.log('ReviewQuestionCard props:', { question, value, onChange: typeof onChange })
   return (
     <div className="rounded-lg border border-border bg-card p-6">
       <div className="mb-4">
