@@ -402,6 +402,31 @@ export function useTimeTrackingWebSocket() {
     }))
   }, [])
 
+  const handleBreakAutoStartTrigger = useCallback(async (data: any) => {
+    console.log('[WebSocket] Break auto-start trigger:', data)
+    
+    // Only process if it's for this user (check would need staffUserId comparison)
+    // For now, let's auto-start the break via API
+    try {
+      const response = await fetch('/api/breaks/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          breakId: data.breakId,
+          type: data.breakType
+        })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('[WebSocket] Auto-started break:', result)
+        // The handleBreakStarted will be triggered by the WebSocket event from the API
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error auto-starting break:', error)
+    }
+  }, [])
+
   // Set up event listeners
   useEffect(() => {
     if (!socket || !isConnected) return
@@ -412,6 +437,7 @@ export function useTimeTrackingWebSocket() {
     on('break:ended', handleBreakEnded)
     on('break:paused', handleBreakPaused)
     on('break:resumed', handleBreakResumed)
+    on('break:auto-start-trigger', handleBreakAutoStartTrigger)
     on('time:data-updated', handleDataUpdate)
 
     // Don't request initial data here - it's handled by the connection effect
@@ -425,9 +451,10 @@ export function useTimeTrackingWebSocket() {
       off('break:ended', handleBreakEnded)
       off('break:paused', handleBreakPaused)
       off('break:resumed', handleBreakResumed)
+      off('break:auto-start-trigger', handleBreakAutoStartTrigger)
       off('time:data-updated', handleDataUpdate)
     }
-  }, [socket, isConnected, on, off, requestInitialData, handleClockInSuccess, handleClockOutSuccess, handleBreakStarted, handleBreakEnded, handleBreakPaused, handleBreakResumed, handleDataUpdate])
+  }, [socket, isConnected, on, off, requestInitialData, handleClockInSuccess, handleClockOutSuccess, handleBreakStarted, handleBreakEnded, handleBreakPaused, handleBreakResumed, handleBreakAutoStartTrigger, handleDataUpdate])
 
   // Request initial data when connection is established (only once)
   useEffect(() => {

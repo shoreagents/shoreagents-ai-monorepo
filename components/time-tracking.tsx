@@ -164,25 +164,6 @@ export default function TimeTracking() {
   useEffect(() => {
     if (!isClockedIn || !scheduledBreaks.length || activeBreak) return
     
-    const parseTimeString = (timeStr: string) => {
-      try {
-        const [time, period] = timeStr.split(' ')
-        const [hours, minutes] = time.split(':')
-        let hour = parseInt(hours)
-        const minute = parseInt(minutes || '0')
-        
-        if (period?.toUpperCase() === 'PM' && hour !== 12) hour += 12
-        if (period?.toUpperCase() === 'AM' && hour === 12) hour = 0
-        
-        const date = new Date()
-        date.setHours(hour, minute, 0, 0)
-        return date
-      } catch (error) {
-        console.error('Error parsing time:', timeStr, error)
-        return null
-      }
-    }
-    
     const checkScheduledBreaks = () => {
       const now = new Date()
       const currentTime = now.toLocaleTimeString("en-US", {
@@ -193,7 +174,7 @@ export default function TimeTracking() {
       
       console.log("🕐 CHECKING SCHEDULED BREAKS - Current time:", currentTime)
       
-      // Find a break that should start now (within 1 minute window)
+      // Find a break that should start now
       const breakToStart = scheduledBreaks.find(b => {
         // Skip if already started or completed
         if (b.actualStart || b.actualEnd) {
@@ -201,20 +182,20 @@ export default function TimeTracking() {
           return false
         }
         
-        const scheduledTime = parseTimeString(b.scheduledStart)
-        if (!scheduledTime) return false
+        // Normalize both times for comparison (remove leading zeros, spaces)
+        const scheduledTime = b.scheduledStart.trim()
+        const normalizedCurrent = currentTime.trim()
         
-        // Check if we're within 1 minute of the scheduled time (before or after)
-        const timeDiff = now.getTime() - scheduledTime.getTime()
-        const withinWindow = timeDiff >= 0 && timeDiff <= 60000 // 0 to 60 seconds
+        console.log(`  🔍 Comparing: "${scheduledTime}" === "${normalizedCurrent}"`)
         
-        console.log(`  🔍 ${b.type} at ${b.scheduledStart}: ${withinWindow ? '✅ WITHIN WINDOW' : '⏳ Not yet'} (diff: ${Math.floor(timeDiff / 1000)}s)`)
+        // Check if scheduledStart matches current time
+        const shouldStart = scheduledTime === normalizedCurrent
         
-        if (withinWindow) {
+        if (shouldStart) {
           console.log("🚨 BREAK SHOULD START NOW:", b.type, "at", currentTime)
         }
         
-        return withinWindow
+        return shouldStart
       })
       
       if (breakToStart) {
@@ -1111,7 +1092,27 @@ export default function TimeTracking() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                {scheduledBreaks.map((breakItem) => {
+                {scheduledBreaks
+                  // Filter out scheduled breaks if there's a completed/active version
+                  .filter((breakItem: any) => {
+                    // If this break has been started or completed, always show it
+                    if (breakItem.actualStart || breakItem.actualEnd) {
+                      return true
+                    }
+                    
+                    // This is a scheduled break (not started yet)
+                    // Check if there's a completed or active break for the same scheduled time
+                    const hasCompletedVersion = scheduledBreaks.some((other: any) => 
+                      other.id !== breakItem.id &&
+                      other.scheduledStart === breakItem.scheduledStart && 
+                      other.type === breakItem.type &&
+                      (other.actualStart || other.actualEnd)
+                    )
+                    
+                    // If there's a completed/active version, hide this scheduled one
+                    return !hasCompletedVersion
+                  })
+                  .map((breakItem) => {
                   const isOnBreak = breakItem.actualStart && !breakItem.actualEnd
                   const isCompleted = breakItem.actualEnd
                   
@@ -1273,9 +1274,19 @@ export default function TimeTracking() {
                         </div>
                       )}
                       {isCompleted && (
-                        <span className="text-sm font-medium text-green-400">
-                          ✓ Completed
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-sm font-medium text-green-400">
+                            ✓ Completed
+                          </span>
+                          {breakItem.actualStart && (
+                            <span className="text-[10px] text-slate-400">
+                              Started at {new Date(breakItem.actualStart).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit"
+                              })}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   )

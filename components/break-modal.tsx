@@ -167,7 +167,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
     setElapsedWhenPaused(elapsedSeconds)
     setPausedAt(Date.now())
     onPause()
-    onClose()
+    // Don't close modal - keep it open to show paused state and resume button
   }
   
   const handleResume = () => {

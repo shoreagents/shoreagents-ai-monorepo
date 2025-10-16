@@ -357,6 +357,13 @@ model Company {
   organizationId   String          @unique @default(cuid())
   logo             String?
   accountManagerId String?
+  bio              String?
+  contractStart    DateTime?
+  isActive         Boolean         @default(true)
+  phone            String?
+  tradingName      String?
+  website          String?
+  coverPhoto       String?
   clientUsers      ClientUser[]    @relation("CompanyUsers")
   accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
   staffUsers       StaffUser[]     @relation("CompanyStaff")
@@ -366,17 +373,18 @@ model Company {
 }
 
 model ClientUser {
-  id         String     @id @default(uuid())
-  authUserId String     @unique
-  name       String
-  role       ClientRole @default(MANAGER)
-  avatar     String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  email      String     @unique
-  companyId  String
-  coverPhoto String?
-  company    Company    @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid())
+  authUserId      String           @unique
+  name            String
+  role            ClientRole       @default(MANAGER)
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  email           String           @unique
+  companyId       String
+  coverPhoto      String?
+  client_profiles client_profiles?
+  company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("client_users")
 }
@@ -457,6 +465,27 @@ model staff_personal_records {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
+
+model client_profiles {
+  id                  String     @id
+  clientUserId        String     @unique
+  position            String?
+  department          String?
+  directPhone         String?
+  mobilePhone         String?
+  timezone            String?
+  bio                 String?
+  notifyTaskCreate    Boolean    @default(true)
+  notifyTaskComplete  Boolean    @default(true)
+  notifyReviews       Boolean    @default(true)
+  notifyWeeklyReports Boolean    @default(true)
+  tasksCreated        Int        @default(0)
+  reviewsSubmitted    Int        @default(0)
+  lastLoginAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime
+  client_users        ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
 }
 
 enum ManagementRole {

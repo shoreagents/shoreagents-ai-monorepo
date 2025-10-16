@@ -7,6 +7,10 @@ const { createServer } = require('http')
 const { parse } = require('url')
 const next = require('next')
 const { Server } = require('socket.io')
+const { PrismaClient } = require('@prisma/client')
+
+// Initialize Prisma Client
+const prisma = new PrismaClient()
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = 'localhost'
@@ -198,5 +202,95 @@ app.prepare().then(() => {
     .listen(port, () => {
       console.log(`> Ready on http://${hostname}:${port}`)
       console.log(`> WebSocket server ready on ws://${hostname}:${port}/api/socketio`)
+      
+      // Start break auto-start background job
+      startBreakAutoStartJob(io)
     })
 })
+
+/**
+ * Background job to auto-start scheduled breaks
+ * Checks every minute if any breaks should start
+ */
+function startBreakAutoStartJob(io) {
+  console.log('[Break Auto-Start] Background job started')
+  
+  // Helper function to parse time strings like "1:45 PM"
+  const parseTimeString = (timeStr) => {
+    try {
+      const [time, period] = timeStr.trim().split(' ')
+      const [hours, minutes] = time.split(':')
+      let hour = parseInt(hours)
+      const minute = parseInt(minutes || '0')
+      
+      if (period === 'PM' && hour !== 12) hour += 12
+      if (period === 'AM' && hour === 12) hour = 0
+      
+      return { hour, minute }
+    } catch (error) {
+      console.error('[Break Auto-Start] Error parsing time:', timeStr, error)
+      return null
+    }
+  }
+  
+  // Check every minute
+  setInterval(async () => {
+    try {
+      const now = new Date()
+      const currentHour = now.getHours()
+      const currentMinute = now.getMinutes()
+      
+      // Find all clocked-in users
+      const activeEntries = await prisma.timeEntry.findMany({
+        where: {
+          clockOut: null
+        },
+        select: {
+          id: true,
+          staffUserId: true,
+          clockIn: true
+        }
+      })
+      
+      if (activeEntries.length === 0) return
+      
+      console.log(`[Break Auto-Start] Checking ${activeEntries.length} active sessions`)
+      
+      // For each active session, check scheduled breaks
+      for (const entry of activeEntries) {
+        // Get scheduled breaks for this time entry
+        const scheduledBreaks = await prisma.break.findMany({
+          where: {
+            timeEntryId: entry.id,
+            actualStart: null, // Not started yet
+            actualEnd: null    // Not ended
+          }
+        })
+        
+        for (const breakItem of scheduledBreaks) {
+          if (!breakItem.scheduledStart) continue
+          
+          const scheduledTime = parseTimeString(breakItem.scheduledStart)
+          if (!scheduledTime) continue
+          
+          // Check if it's time to start this break (within 1 minute window)
+          if (scheduledTime.hour === currentHour && scheduledTime.minute === currentMinute) {
+            console.log(`[Break Auto-Start] Time to start break ${breakItem.type} for user ${entry.staffUserId}`)
+            
+            // Emit WebSocket event to trigger break modal
+            io.emit('break:auto-start-trigger', {
+              staffUserId: entry.staffUserId,
+              breakId: breakItem.id,
+              breakType: breakItem.type,
+              scheduledStart: breakItem.scheduledStart,
+              duration: breakItem.duration,
+              timeEntryId: entry.id
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Break Auto-Start] Error checking breaks:', error)
+    }
+  }, 60000) // Check every minute
+}

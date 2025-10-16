@@ -26,7 +26,6 @@ export function EndBreakModal({
   onCancel, 
   isEnding 
 }: EndBreakModalProps) {
-  console.log("🔄 EndBreakModal render - isOpen:", isOpen, "breakData:", !!breakData, "isEnding:", isEnding)
   if (!isOpen || !breakData) return null
 
   const breakEmojis: Record<string, string> = {
