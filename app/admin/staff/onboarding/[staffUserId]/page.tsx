@@ -23,7 +23,8 @@ import {
   FileText,
   PenTool,
   Users,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase
 } from "lucide-react"
 
 interface OnboardingData {
@@ -93,6 +94,23 @@ export default function AdminOnboardingDetailPage() {
   const [viewFileModal, setViewFileModal] = useState<{ url: string; title: string } | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
   const [confirmCompleteModal, setConfirmCompleteModal] = useState(false)
+  const [successModal, setSuccessModal] = useState<{ 
+    show: boolean; 
+    title: string; 
+    message: string; 
+    details: string[] 
+  }>({ show: false, title: "", message: "", details: [] })
+  
+  // Individual loading states for each section and action
+  const [processingStates, setProcessingStates] = useState<{
+    [key: string]: { approve: boolean; reject: boolean }
+  }>({
+    personalInfo: { approve: false, reject: false },
+    govId: { approve: false, reject: false },
+    documents: { approve: false, reject: false },
+    signature: { approve: false, reject: false },
+    emergencyContact: { approve: false, reject: false }
+  })
   
   const [staff, setStaff] = useState<any>(null)
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
@@ -159,8 +177,27 @@ export default function AdminOnboardingDetailPage() {
     }
   }
 
+  // Helper function to get button labels based on current status
+  const getButtonLabels = (section: string) => {
+    const statusField = `${section}Status` as keyof OnboardingData
+    const currentStatus = onboarding?.[statusField]
+    
+    if (currentStatus === "REJECTED") {
+      return { approve: "Reapprove", reject: "Rereject" }
+    }
+    return { approve: "Approve", reject: "Reject" }
+  }
+
   const handleVerify = async (section: string, action: "APPROVED" | "REJECTED") => {
-    setProcessing(true)
+    // Set loading state for specific section and action
+    const actionKey = action === "APPROVED" ? "approve" : "reject"
+    setProcessingStates(prev => ({ 
+      ...prev, 
+      [section]: { 
+        ...prev[section], 
+        [actionKey]: true 
+      } 
+    }))
     setError("")
     setSuccess("")
     
@@ -197,7 +234,14 @@ export default function AdminOnboardingDetailPage() {
     } catch (err: any) {
       setError(err.message)
     } finally {
-      setProcessing(false)
+      // Clear loading state for specific section and action
+      setProcessingStates(prev => ({ 
+        ...prev, 
+        [section]: { 
+          ...prev[section], 
+          [actionKey]: false 
+        } 
+      }))
     }
   }
 
@@ -268,22 +312,29 @@ export default function AdminOnboardingDetailPage() {
       }
     })
     
-    try {
-      const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(employmentData)
-      })
-      
-      if (!response.ok) {
-        const data = await response.json()
-        console.error("❌ COMPLETE FAILED:", {
-          status: response.status,
-          statusText: response.statusText,
-          error: data.error,
-          data: data,
-          employmentData: employmentData
-        })
+     try {
+       const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/complete`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify(employmentData)
+       })
+       
+       console.log("🔍 RESPONSE DETAILS:", {
+         status: response.status,
+         statusText: response.statusText,
+         ok: response.ok,
+         headers: Object.fromEntries(response.headers.entries())
+       })
+       
+       if (!response.ok) {
+         const data = await response.json()
+         console.error("❌ COMPLETE FAILED:", {
+           status: response.status,
+           statusText: response.statusText,
+           error: data.error,
+           data: data,
+           employmentData: employmentData
+         })
         
         // Provide more specific error messages based on status codes
         let errorMessage = data.error || "Failed to complete onboarding"
@@ -301,39 +352,67 @@ export default function AdminOnboardingDetailPage() {
         throw new Error(errorMessage)
       }
       
-      const data = await response.json()
-      console.log("✅ COMPLETE SUCCESS:", data)
+       const data = await response.json()
+       console.log("✅ COMPLETE SUCCESS:", data)
+       
+       if (data.alreadyExists) {
+         setSuccessModal({
+           show: true,
+           title: "Profile Already Exists",
+           message: `${data.staffName || 'Staff'} profile was already created`,
+           details: [
+             `Assigned to ${data.companyName || 'company'}`,
+             "Onboarding was completed previously"
+           ]
+         })
+       } else {
+         setSuccessModal({
+           show: true,
+           title: "Onboarding Complete!",
+           message: `${data.staffName || 'Staff'} assigned to ${data.companyName || 'company'}`,
+           details: [
+             `Role: ${currentRole}`,
+             `Salary: ₱${salary}/month`,
+             "Profile & Personal Records Created",
+             "Work Schedule Set Up"
+           ]
+         })
+       }
       
-      const successMessage = `✅ Onboarding Complete!\n\n• ${data.staffName || 'Staff'} assigned to ${data.companyName || 'company'}\n• Role: ${currentRole}\n• Salary: $${salary}/month\n• Profile & Personal Records Created\n• Work Schedule Set Up`
-      
-      setSuccess(successMessage)
       await fetchOnboardingDetails()
-      setTimeout(() => router.push("/admin/staff/onboarding"), 3000)
     } catch (err: any) {
       console.error("❌ COMPLETE FAILED:", err.message)
       
-      // Handle specific error cases
-      if (err.message.includes("Staff profile already exists")) {
-        setError("This staff member's profile has already been created. The onboarding may have been completed previously.")
-        // Refresh the data to get the updated status
-        await fetchOnboardingDetails()
-      } else if (err.message.includes("already exists")) {
-        setError("This staff member's onboarding has already been completed. Please refresh the page to see the updated status.")
-        await fetchOnboardingDetails()
-      } else if (err.message.includes("Bad Request")) {
-        setError(`Invalid data provided: ${err.message}. Please check all fields and try again.`)
-      } else if (err.message.includes("Not Found")) {
-        setError(`Resource not found: ${err.message}. Please refresh the page and try again.`)
-      } else if (err.message.includes("Conflict")) {
-        setError(`Conflict detected: ${err.message}. This may indicate a duplicate entry.`)
-        await fetchOnboardingDetails()
-      } else if (err.message.includes("Server Error")) {
-        setError(`Server error: ${err.message}. Please try again later or contact support.`)
-      } else if (err.message.includes("Failed to complete onboarding")) {
-        setError(`Failed to complete onboarding: ${err.message}. Please check the console for more details and try again.`)
-      } else {
-        setError(err.message || "An unexpected error occurred. Please try again.")
-      }
+       // Handle specific error cases
+       if (err.message.includes("Staff profile already exists")) {
+         setError("✅ This staff member's profile has already been created. The onboarding was completed successfully!")
+         // Refresh the data to get the updated status
+         await fetchOnboardingDetails()
+       } else if (err.message.includes("already exists")) {
+         setError("✅ This staff member's onboarding has already been completed successfully!")
+         await fetchOnboardingDetails()
+       } else if (err.message.includes("Bad Request")) {
+         if (err.message.includes("Staff profile already exists")) {
+           setError("✅ This staff member's profile has already been created. The onboarding was completed successfully!")
+           await fetchOnboardingDetails()
+         } else {
+           setError(`Invalid data provided: ${err.message}. Please check all fields and try again.`)
+         }
+       } else if (err.message.includes("Not Found")) {
+         setError(`Resource not found: ${err.message}. Please refresh the page and try again.`)
+       } else if (err.message.includes("Conflict")) {
+         setError(`Conflict detected: ${err.message}. This may indicate a duplicate entry.`)
+         await fetchOnboardingDetails()
+       } else if (err.message.includes("Server Error")) {
+         setError(`Server error: ${err.message}. This might be due to duplicate records. Please refresh the page and try again.`)
+       } else if (err.message.includes("Failed to complete onboarding")) {
+         setError(`Failed to complete onboarding: ${err.message}. Please check the console for more details and try again.`)
+       } else if (err.message.includes("Unique constraint failed")) {
+         setError(`Duplicate record detected: ${err.message}. The onboarding may have been partially completed. Please refresh the page to see the current status.`)
+         await fetchOnboardingDetails()
+       } else {
+         setError(err.message || "An unexpected error occurred. Please try again.")
+       }
     } finally {
       setCompleting(false)
     }
@@ -341,11 +420,11 @@ export default function AdminOnboardingDetailPage() {
 
   const getStatusBadge = (status: string) => {
     if (status === "APPROVED") {
-      return <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Approved</Badge>
+      return <Badge className="bg-green-600">Approved</Badge>
     } else if (status === "REJECTED") {
-      return <Badge className="bg-red-600"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
+      return <Badge className="bg-red-600">Rejected</Badge>
     } else if (status === "SUBMITTED") {
-      return <Badge className="bg-yellow-600"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>
+      return <Badge className="bg-yellow-600">Pending Review</Badge>
     } else {
       return <Badge variant="outline" className="border-slate-500 text-slate-500">Pending</Badge>
     }
@@ -430,63 +509,66 @@ export default function AdminOnboardingDetailPage() {
           </Alert>
         )}
 
-        {/* Onboarding Already Complete */}
-        {(onboarding.isComplete || profile) && (
-          <Card className="mb-6 bg-green-900/30 border-green-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-400" />
-                Onboarding Complete
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                This staff member's onboarding has been successfully completed and their profile has been created.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-green-200">
-                    <p className="font-medium">✅ Profile Created Successfully</p>
-                    <p className="text-sm text-slate-400">Staff member is ready to start work</p>
-                  </div>
-                  <Button
-                    onClick={() => router.push("/admin/staff/onboarding")}
-                    variant="outline"
-                    className="border-green-600 text-green-400 hover:bg-green-900/30"
-                  >
-                    Back to List
-                  </Button>
-                </div>
-                
-                {profile && (
-                  <div className="bg-slate-700 p-3 rounded-lg">
-                    <p className="text-sm text-slate-400 mb-2">Profile Details:</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-slate-400">Role:</span>
-                        <span className="text-white ml-2">{profile.currentRole}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Status:</span>
-                        <span className="text-white ml-2">{profile.employmentStatus}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Salary:</span>
-                        <span className="text-white ml-2">₱{profile.salary}/month</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Start Date:</span>
-                        <span className="text-white ml-2">
-                          {profile.startDate ? new Date(profile.startDate).toLocaleDateString() : 'N/A'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+         {/* Onboarding Already Complete */}
+         {(onboarding.isComplete || profile) && (
+           <Card className="mb-6 bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600">
+             <CardHeader>
+               <div className="flex items-start gap-3">
+                 <div className="p-2 bg-green-500/20 rounded-lg">
+                   <CheckCircle2 className="h-6 w-6 text-green-400" />
+                 </div>
+                 <div>
+                   <CardTitle className="text-2xl font-bold text-white mb-2">
+                     Onboarding Complete
+                   </CardTitle>
+                   <CardDescription className="text-slate-300 text-base">
+                     This staff member's onboarding has been successfully completed and their profile has been created.
+                   </CardDescription>
+                 </div>
+               </div>
+             </CardHeader>
+             <CardContent>
+               {profile && (
+                 <div className="space-y-4">
+                   <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                       <Briefcase className="h-5 w-5 text-purple-400" />
+                       Employment Details
+                     </h3>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1">
+                         <p className="text-xs text-slate-400 uppercase tracking-wide">Role</p>
+                         <p className="text-white font-medium">{profile.currentRole}</p>
+                       </div>
+                       <div className="space-y-1">
+                         <p className="text-xs text-slate-400 uppercase tracking-wide">Employment Status</p>
+                         <p className="text-white font-medium">
+                           <Badge className={profile.employmentStatus === "REGULAR" ? "bg-blue-600" : "bg-yellow-600"}>
+                             {profile.employmentStatus}
+                           </Badge>
+                         </p>
+                       </div>
+                       <div className="space-y-1">
+                         <p className="text-xs text-slate-400 uppercase tracking-wide">Monthly Salary</p>
+                         <p className="text-white font-medium text-lg">₱{profile.salary?.toLocaleString()}</p>
+                       </div>
+                       <div className="space-y-1">
+                         <p className="text-xs text-slate-400 uppercase tracking-wide">Start Date</p>
+                         <p className="text-white font-medium">
+                           {profile.startDate ? new Date(profile.startDate).toLocaleDateString('en-US', { 
+                             year: 'numeric', 
+                             month: 'long', 
+                             day: 'numeric' 
+                           }) : 'N/A'}
+                         </p>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </CardContent>
+           </Card>
+         )}
 
         {/* Complete Onboarding Button - Only show when ALL documents APPROVED and no profile exists */}
         {onboarding.personalInfoStatus === "APPROVED" &&
@@ -638,7 +720,14 @@ export default function AdminOnboardingDetailPage() {
                   disabled={completing || !selectedCompanyId || !currentRole || !salary}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  {completing ? "Processing..." : "Complete Onboarding & Create Profile"}
+                  {completing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Complete Onboarding & Create Profile"
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -706,23 +795,30 @@ export default function AdminOnboardingDetailPage() {
                   onChange={(e) => setFeedback({ ...feedback, personalInfo: e.target.value })}
                   className="bg-slate-700 border-slate-600 text-white"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("personalInfo", "APPROVED")}
-                    disabled={processing}
-                    className="bg-green-600 hover:bg-green-700 w-28"
+                    disabled={processingStates.personalInfo.approve || processingStates.personalInfo.reject}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingStates.personalInfo.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("personalInfo").approve}
                   </Button>
                   <Button
                     onClick={() => handleVerify("personalInfo", "REJECTED")}
-                    disabled={processing}
+                    disabled={processingStates.personalInfo.approve || processingStates.personalInfo.reject}
                     variant="destructive"
-                    className="w-28"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingStates.personalInfo.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("personalInfo").reject}
                   </Button>
                 </div>
               </div>
@@ -777,23 +873,30 @@ export default function AdminOnboardingDetailPage() {
                   onChange={(e) => setFeedback({ ...feedback, govId: e.target.value })}
                   className="bg-slate-700 border-slate-600 text-white"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("govId", "APPROVED")}
-                    disabled={processing}
-                    className="bg-green-600 hover:bg-green-700 w-28"
+                    disabled={processingStates.govId.approve || processingStates.govId.reject}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingStates.govId.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("govId").approve}
                   </Button>
                   <Button
                     onClick={() => handleVerify("govId", "REJECTED")}
-                    disabled={processing}
+                    disabled={processingStates.govId.approve || processingStates.govId.reject}
                     variant="destructive"
-                    className="w-28"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingStates.govId.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("govId").reject}
                   </Button>
                 </div>
               </div>
@@ -921,23 +1024,30 @@ export default function AdminOnboardingDetailPage() {
                   onChange={(e) => setFeedback({ ...feedback, documents: e.target.value })}
                   className="bg-slate-700 border-slate-600 text-white"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("documents", "APPROVED")}
-                    disabled={processing}
-                    className="bg-green-600 hover:bg-green-700 w-28"
+                    disabled={processingStates.documents.approve || processingStates.documents.reject}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingStates.documents.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("documents").approve}
                   </Button>
                   <Button
                     onClick={() => handleVerify("documents", "REJECTED")}
-                    disabled={processing}
+                    disabled={processingStates.documents.approve || processingStates.documents.reject}
                     variant="destructive"
-                    className="w-28"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingStates.documents.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("documents").reject}
                   </Button>
                 </div>
               </div>
@@ -990,23 +1100,30 @@ export default function AdminOnboardingDetailPage() {
                   onChange={(e) => setFeedback({ ...feedback, signature: e.target.value })}
                   className="bg-slate-700 border-slate-600 text-white"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("signature", "APPROVED")}
-                    disabled={processing}
-                    className="bg-green-600 hover:bg-green-700 w-28"
+                    disabled={processingStates.signature.approve || processingStates.signature.reject}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingStates.signature.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("signature").approve}
                   </Button>
                   <Button
                     onClick={() => handleVerify("signature", "REJECTED")}
-                    disabled={processing}
+                    disabled={processingStates.signature.approve || processingStates.signature.reject}
                     variant="destructive"
-                    className="w-28"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingStates.signature.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("signature").reject}
                   </Button>
                 </div>
               </div>
@@ -1057,23 +1174,30 @@ export default function AdminOnboardingDetailPage() {
                   onChange={(e) => setFeedback({ ...feedback, emergencyContact: e.target.value })}
                   className="bg-slate-700 border-slate-600 text-white"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("emergencyContact", "APPROVED")}
-                    disabled={processing}
-                    className="bg-green-600 hover:bg-green-700 w-28"
+                    disabled={processingStates.emergencyContact.approve || processingStates.emergencyContact.reject}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingStates.emergencyContact.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("emergencyContact").approve}
                   </Button>
                   <Button
                     onClick={() => handleVerify("emergencyContact", "REJECTED")}
-                    disabled={processing}
+                    disabled={processingStates.emergencyContact.approve || processingStates.emergencyContact.reject}
                     variant="destructive"
-                    className="w-28"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingStates.emergencyContact.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("emergencyContact").reject}
                   </Button>
                 </div>
               </div>
@@ -1157,7 +1281,58 @@ export default function AdminOnboardingDetailPage() {
                 disabled={completing}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {completing ? "Processing..." : "Complete Onboarding"}
+                {completing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Complete Onboarding"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={successModal.show} onOpenChange={(open) => setSuccessModal(prev => ({ ...prev, show: open }))}>
+        <DialogContent className="max-w-lg bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600">
+          <DialogHeader className="pb-2">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <CheckCircle2 className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-white mb-2">
+                  {successModal.title}
+                </DialogTitle>
+                <p className="text-slate-300 text-base">
+                  {successModal.message}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg mb-4">
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Details</h3>
+              <ul className="space-y-2">
+                {successModal.details.map((detail, index) => (
+                  <li key={index} className="flex items-center gap-2 text-slate-300">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                    <span>{detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <div className="flex justify-center">
+              <Button
+                onClick={() => router.push("/admin/staff/onboarding")}
+                className="bg-green-600 hover:bg-green-700 px-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to List
               </Button>
             </div>
           </div>

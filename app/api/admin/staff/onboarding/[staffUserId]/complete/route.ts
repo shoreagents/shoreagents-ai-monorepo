@@ -106,9 +106,20 @@ export async function POST(
 
     // Check if profile already exists
     if (staffUser.profile) {
+      console.log("✅ PROFILE ALREADY EXISTS:", { 
+        profileId: staffUser.profile.id,
+        staffUserId: staffUser.id,
+        staffName: staffUser.name
+      })
+      
       return NextResponse.json({ 
-        error: "Staff profile already exists" 
-      }, { status: 400 })
+        success: true,
+        message: `Profile already exists for ${staffUser.name}. Onboarding was completed previously.`,
+        profileId: staffUser.profile.id,
+        companyName: company.companyName,
+        staffName: staffUser.name,
+        alreadyExists: true
+      })
     }
 
     // Assign staff to company & update legal name from onboarding
@@ -165,8 +176,21 @@ export async function POST(
       totalLeave: vacationLeave
     })
 
+    // Check if personal record already exists
+    const existingPersonalRecord = await prisma.staff_personal_records.findUnique({
+      where: { staffUserId: staffUser.id }
+    })
+
+    if (existingPersonalRecord) {
+      console.log("⚠️ PERSONAL RECORD ALREADY EXISTS:", { 
+        personalRecordId: existingPersonalRecord.id,
+        staffUserId: existingPersonalRecord.staffUserId
+      })
+    }
+
     // Create StaffPersonalRecord with HR data from onboarding
     const personalRecordData = {
+      id: crypto.randomUUID(), // Generate UUID for the id field
       staffUserId: staffUser.id,
       sss: onboarding.sss,
       tin: onboarding.tin,
@@ -183,14 +207,17 @@ export async function POST(
       tinDocUrl: onboarding.tinDocUrl,
       philhealthDocUrl: onboarding.philhealthDocUrl,
       pagibigDocUrl: onboarding.pagibigDocUrl,
+      updatedAt: new Date(), // Provide updatedAt timestamp
     }
-    console.log("🔐 CREATING PERSONAL RECORD:", personalRecordData)
+    console.log("🔐 CREATING/UPDATING PERSONAL RECORD:", personalRecordData)
     
     try {
-      const personalRecord = await prisma.staff_personal_records.create({
-        data: personalRecordData
+      const personalRecord = await prisma.staff_personal_records.upsert({
+        where: { staffUserId: staffUser.id },
+        update: personalRecordData,
+        create: personalRecordData
       })
-      console.log("✅ PERSONAL RECORD CREATED:", { 
+      console.log("✅ PERSONAL RECORD CREATED/UPDATED:", { 
         personalRecordId: personalRecord.id,
         staffUserId: personalRecord.staffUserId
       })

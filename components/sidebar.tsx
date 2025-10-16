@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
@@ -40,9 +41,31 @@ const navItems = [
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [profileData, setProfileData] = useState<any>(null)
+  const [loadingProfile, setLoadingProfile] = useState(true)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchProfileData()
+    }
+  }, [status])
+
+  const fetchProfileData = async () => {
+    try {
+      const response = await fetch("/api/profile")
+      if (response.ok) {
+        const data = await response.json()
+        setProfileData(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile data:", error)
+    } finally {
+      setLoadingProfile(false)
+    }
+  }
 
   const handleLogout = async () => {
     setIsOpen(false)
@@ -101,9 +124,24 @@ export default function Sidebar() {
 
             <div className="glass space-y-3 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
-                  {getUserInitials(session?.user?.name)}
-                </div>
+                {loadingProfile ? (
+                  <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                ) : profileData?.user?.avatar ? (
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-white/20">
+                    <Image
+                      src={profileData.user.avatar}
+                      alt={profileData.user.name || "User"}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
+                    {getUserInitials(session?.user?.name)}
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="font-semibold text-white">
                     {status === "loading" ? "Loading..." : session?.user?.name || "Guest"}
