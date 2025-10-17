@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-// GET /api/admin/tickets - Get all tickets for management view
+// GET /api/client/tickets - Get client's own tickets
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -11,44 +11,65 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
-      where: { authUserId: session.user.id }
+    // Get client user
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id },
     })
 
-    if (!managementUser) {
-      return NextResponse.json({ error: "Management user not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const category = searchParams.get("category")
-    const staffId = searchParams.get("staffId")
-    const creatorType = searchParams.get("creatorType") // "staff", "client", or "management"
+
+    // Get client's company to find their account manager
+    const clientWithCompany = await prisma.clientUser.findUnique({
+      where: { id: clientUser.id },
+      include: {
+        company: {
+          include: {
+            accountManager: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    })
 
     const tickets = await prisma.ticket.findMany({
       where: {
+        clientUserId: clientUser.id,
         ...(status && { status }),
         ...(category && { category }),
-        ...(staffId && { staffUserId: staffId }),
-        ...(creatorType && { createdByType: creatorType.toUpperCase() }),
       },
       include: {
-        staffUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            role: true,
-          },
-        },
         clientUser: {
           select: {
             id: true,
             name: true,
             email: true,
             avatar: true,
+            company: {
+              select: {
+                accountManager: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                    role: true,
+                  },
+                },
+              },
+            },
           },
         },
         responses: {
@@ -86,9 +107,15 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ tickets })
+    // Add account manager info to response
+    const ticketsWithAccountManager = tickets.map((ticket) => ({
+      ...ticket,
+      accountManager: clientWithCompany?.company?.accountManager || null,
+    }))
+
+    return NextResponse.json({ tickets: ticketsWithAccountManager })
   } catch (error) {
-    console.error("Error fetching admin tickets:", error)
+    console.error("Error fetching client tickets:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -96,7 +123,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/tickets - Create a new ticket as management
+// POST /api/client/tickets - Create ticket as client
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -105,17 +132,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
-      where: { authUserId: session.user.id }
+    // Get client user with company and account manager
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id },
+      include: {
+        company: {
+          include: {
+            accountManager: true,
+          },
+        },
+      },
     })
 
-    if (!managementUser) {
-      return NextResponse.json({ error: "Management user not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
     const body = await request.json()
-    const { title, description, category, priority, attachments, staffUserId, managementUserId: targetManagementUserId, clientUserId } = body
+    const { title, description, category, priority, attachments } = body
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -124,42 +158,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate that at least one user ID is provided
-    if (!staffUserId && !targetManagementUserId && !clientUserId) {
-      return NextResponse.json(
-        { error: "At least one of staffUserId, managementUserId, or clientUserId is required" },
-        { status: 400 }
-      )
+    // Generate ticket ID
+    const lastTicket = await prisma.ticket.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { ticketId: true },
+    })
+
+    let ticketNumber = 1
+    if (lastTicket?.ticketId) {
+      const match = lastTicket.ticketId.match(/TKT-(\d+)/)
+      if (match) {
+        ticketNumber = parseInt(match[1]) + 1
+      }
     }
 
-    // Generate unique ticket ID
-    const ticketCount = await prisma.ticket.count()
-    const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
+    const ticketId = `TKT-${ticketNumber.toString().padStart(4, "0")}`
 
+    // Create ticket - auto-assign to account manager
     const ticket = await prisma.ticket.create({
       data: {
-        staffUserId: staffUserId || null,
-        clientUserId: clientUserId || null,
         ticketId,
+        clientUserId: clientUser.id,
         title,
         description,
         category,
         priority: priority || "MEDIUM",
         status: "OPEN",
         attachments: attachments || [],
-        createdByType: "MANAGEMENT",
-        managementUserId: targetManagementUserId || managementUser.id,
+        createdByType: "CLIENT",
+        assignedTo: clientUser.company?.accountManagerId || null,
       },
       include: {
-        staffUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            role: true,
-          },
-        },
         clientUser: {
           select: {
             id: true,
@@ -203,10 +232,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, ticket }, { status: 201 })
   } catch (error) {
-    console.error("Error creating admin ticket:", error)
+    console.error("Error creating client ticket:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     )
   }
 }
+

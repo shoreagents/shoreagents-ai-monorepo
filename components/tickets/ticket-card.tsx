@@ -59,12 +59,23 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
   const categoryColor = categoryConfig[ticket.category]?.color || categoryConfig.OTHER.color
   const priorityColor = priorityConfig[ticket.priority]?.color || priorityConfig.MEDIUM.color
 
-  const initials = ticket.staffUser?.name
+  // Determine which user created the ticket
+  const creator = ticket.staffUser || ticket.clientUser
+  const initials = creator?.name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2)
+
+  // Creator type badge config
+  const creatorTypeConfig: Record<string, { label: string; color: string }> = {
+    STAFF: { label: "Staff", color: "bg-blue-500/20 text-blue-400" },
+    CLIENT: { label: "Client", color: "bg-green-500/20 text-green-400" },
+    MANAGEMENT: { label: "Mgmt", color: "bg-purple-500/20 text-purple-400" },
+  }
+
+  const creatorBadge = creatorTypeConfig[ticket.createdByType] || creatorTypeConfig.STAFF
 
   return (
     <div
@@ -76,9 +87,14 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
         isDragging ? "opacity-50" : ""
       }`}
     >
-      {/* Ticket ID */}
+      {/* Ticket ID & Creator Type Badge */}
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-xs text-slate-500">{ticket.ticketId}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-slate-500">{ticket.ticketId}</span>
+          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${creatorBadge.color}`}>
+            {creatorBadge.label}
+          </span>
+        </div>
         <span className={`rounded px-2 py-0.5 text-xs font-medium ring-1 ${priorityColor}`}>
           {priorityConfig[ticket.priority]?.label}
         </span>
@@ -113,9 +129,9 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
         </div>
 
         {/* Creator Avatar */}
-        {ticket.staffUser && (
+        {creator && (
           <Avatar className="h-6 w-6">
-            <AvatarImage src={ticket.staffUser.avatar} alt={ticket.staffUser.name} />
+            <AvatarImage src={creator.avatar} alt={creator.name} />
             <AvatarFallback className="bg-indigo-500 text-xs text-white">
               {initials}
             </AvatarFallback>

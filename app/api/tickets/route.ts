@@ -50,6 +50,14 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
           },
         },
       },
@@ -128,6 +136,14 @@ export async function POST(request: NextRequest) {
                 name: true,
                 email: true,
                 role: true,
+                avatar: true,
+              },
+            },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
                 avatar: true,
               },
             },

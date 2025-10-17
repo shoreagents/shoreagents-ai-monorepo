@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-// POST /api/tickets/[ticketId]/responses - Add response/comment to ticket
+// POST /api/client/tickets/[ticketId]/responses - Add response/comment to ticket
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ ticketId: string }> }
@@ -31,58 +31,30 @@ export async function POST(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
     }
 
-    // Determine if user is staff, management, or client
-    const staffUser = await prisma.staffUser.findUnique({
-      where: { authUserId: session.user.id },
-    })
-
-    const managementUser = await prisma.managementUser.findUnique({
-      where: { authUserId: session.user.id },
-    })
-
+    // Get client user
     const clientUser = await prisma.clientUser.findUnique({
       where: { authUserId: session.user.id },
     })
 
-    if (!staffUser && !managementUser && !clientUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
-    // Determine user type
-    let createdByType = "STAFF"
-    if (managementUser) createdByType = "MANAGEMENT"
-    if (clientUser) createdByType = "CLIENT"
+    // Verify client owns this ticket
+    if (ticket.clientUserId !== clientUser.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
     // Create response
     const response = await prisma.ticketResponse.create({
       data: {
         ticketId,
         message,
-        createdByType,
-        staffUserId: staffUser?.id || null,
-        managementUserId: managementUser?.id || null,
-        clientUserId: clientUser?.id || null,
+        createdByType: "CLIENT",
+        clientUserId: clientUser.id,
         attachments: attachments || [],
       },
       include: {
-        staffUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            role: true,
-          },
-        },
-        managementUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            role: true,
-          },
-        },
         clientUser: {
           select: {
             id: true,
@@ -96,7 +68,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, response }, { status: 201 })
   } catch (error) {
-    console.error("Error creating ticket response:", error)
+    console.error("Error creating client ticket response:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Determine if user is staff or management
+    // Determine if user is staff, management, or client
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
     })
@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
       where: { authUserId: session.user.id },
     })
 
-    if (!staffUser && !managementUser) {
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id },
+    })
+
+    if (!staffUser && !managementUser && !clientUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
@@ -56,14 +60,15 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(arrayBuffer)
 
       // Determine bucket and folder based on user type
-      const bucket = staffUser ? "staff" : "management"
-      const folder = staffUser ? "staff_ticket" : "management_ticket"
-      const userId = staffUser?.id || managementUser?.id
+      const bucket = staffUser ? "staff" : managementUser ? "management" : "client"
+      const folder = staffUser ? "staff_ticket" : managementUser ? "management_ticket" : "client_ticket"
+      // Use auth user ID (session.user.id) to match Supabase storage policies
+      const authUserId = session.user.id
 
       // Generate unique filename
       const timestamp = Date.now()
       const fileExt = file.name.split(".").pop()
-      const fileName = `${folder}/${userId}/${timestamp}_${file.name}`
+      const fileName = `${folder}/${authUserId}/${timestamp}_${file.name}`
 
       // Upload to Supabase
       const { data, error } = await supabase.storage

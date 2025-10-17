@@ -23,6 +23,7 @@ import {
   LogOut,
   ChevronDown,
   Building2,
+  Headphones,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -77,6 +78,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
     { href: "/client/monitoring", label: "Monitoring", icon: Monitor },
     { href: "/client/reviews", label: "Reviews", icon: FileText },
+    { href: "/client/tickets", label: "Support Tickets", icon: Headphones },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
     { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
