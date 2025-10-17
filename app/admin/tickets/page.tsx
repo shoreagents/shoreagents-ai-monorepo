@@ -306,6 +306,8 @@ function CreateTicketModal({
     priority: "MEDIUM" as TicketPriority,
   })
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
   const [staffUsers, setStaffUsers] = useState<any[]>([])
   const [managementUsers, setManagementUsers] = useState<any[]>([])
   const [clientUsers, setClientUsers] = useState<any[]>([])
@@ -351,6 +353,35 @@ function CreateTicketModal({
     setLoading(true)
 
     try {
+      // Upload attachments first if any
+      let attachmentUrls: string[] = []
+      
+      if (attachments.length > 0) {
+        setUploading(true)
+        const uploadFormData = new FormData()
+        attachments.forEach((file) => {
+          uploadFormData.append("files", file)
+        })
+
+        const uploadRes = await fetch("/api/tickets/attachments", {
+          method: "POST",
+          body: uploadFormData,
+        })
+
+        setUploading(false)
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          attachmentUrls = uploadData.urls || []
+        } else {
+          toast({
+            title: "Warning",
+            description: "Some attachments failed to upload",
+            variant: "destructive",
+          })
+        }
+      }
+
       const payload = {
         staffUserId: formData.assigneeType === "staff" ? formData.staffUserId : undefined,
         managementUserId: formData.assigneeType === "management" ? formData.managementUserId : undefined,
@@ -359,6 +390,7 @@ function CreateTicketModal({
         description: formData.description,
         category: formData.category,
         priority: formData.priority,
+        attachments: attachmentUrls,
       }
 
       const response = await fetch("/api/admin/tickets", {
@@ -370,8 +402,8 @@ function CreateTicketModal({
       if (!response.ok) throw new Error("Failed to create ticket")
 
       toast({
-        title: "Success",
-        description: "Ticket created successfully",
+        title: "✅ Success!",
+        description: `Ticket created${attachmentUrls.length > 0 ? ` with ${attachmentUrls.length} image${attachmentUrls.length > 1 ? 's' : ''}` : ''}`,
       })
 
       onSuccess()
@@ -383,6 +415,7 @@ function CreateTicketModal({
       })
     } finally {
       setLoading(false)
+      setUploading(false)
     }
   }
 
@@ -605,22 +638,113 @@ function CreateTicketModal({
             </div>
           </div>
 
+          {/* Image Attachments */}
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-slate-300">
+              Attachments (Optional)
+            </label>
+            
+            {/* Attachment Preview */}
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-lg bg-slate-800/50 p-3 ring-1 ring-white/10"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded bg-indigo-500/20">
+                      <svg className="h-5 w-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                      <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20 text-red-400 transition-colors hover:bg-red-500/30"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            {attachments.length < 5 && (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/30 px-4 py-8 transition-all hover:border-indigo-500/50 hover:bg-slate-800/50">
+                <svg className="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-slate-300">
+                    Click to upload images
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    PNG, JPG up to 5MB (max 5 files)
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      const files = Array.from(e.target.files).slice(0, 5 - attachments.length)
+                      setAttachments(prev => [...prev, ...files].slice(0, 5))
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+            )}
+            
+            {uploading && (
+              <div className="flex items-center gap-2 rounded-lg bg-indigo-500/10 p-3 ring-1 ring-indigo-500/30">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div>
+                <span className="text-sm font-medium text-indigo-400">
+                  Uploading {attachments.length} image{attachments.length > 1 ? 's' : ''}...
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
             <Button
               type="button"
               onClick={onClose}
-              disabled={loading}
-              className="rounded-lg bg-slate-700 px-6 py-2 font-medium text-white transition-all hover:bg-slate-600"
+              disabled={loading || uploading}
+              className="rounded-lg bg-slate-700 px-6 py-2.5 font-medium text-white transition-all hover:bg-slate-600"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={loading}
-              className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white transition-all hover:bg-indigo-700 disabled:opacity-50"
+              disabled={loading || uploading}
+              className="rounded-lg bg-indigo-600 px-6 py-2.5 font-medium text-white transition-all hover:bg-indigo-700 disabled:opacity-50"
             >
-              {loading ? "Creating..." : "Create Ticket"}
+              {uploading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Uploading...
+                </>
+              ) : loading ? (
+                "Creating..."
+              ) : (
+                <>
+                  {attachments.length > 0 && `Create with ${attachments.length} image${attachments.length > 1 ? 's' : ''}`}
+                  {attachments.length === 0 && "Create Ticket"}
+                </>
+              )}
             </Button>
           </div>
         </form>

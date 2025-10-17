@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 interface TicketCardProps {
   ticket: Ticket
   isDragging?: boolean
+  onClick?: () => void
 }
 
 const categoryConfig: Record<string, { icon: any; color: string }> = {
@@ -41,13 +42,14 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   URGENT: { label: "Urgent", color: "bg-red-500/20 text-red-400 animate-pulse" },
 }
 
-export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
+export default function TicketCard({ ticket, isDragging, onClick }: TicketCardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
+    isDragging: isSortableDragging,
   } = useSortable({ id: ticket.id })
 
   const style = {
@@ -55,14 +57,31 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
     transition,
   }
 
+  // Only allow click if not dragging
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isSortableDragging && onClick) {
+      onClick()
+    }
+  }
+
   const CategoryIcon = categoryConfig[ticket.category]?.icon || HelpCircle
   const categoryColor = categoryConfig[ticket.category]?.color || categoryConfig.OTHER.color
   const priorityColor = priorityConfig[ticket.priority]?.color || priorityConfig.MEDIUM.color
 
-  // Determine which user created the ticket
-  const creator = ticket.staffUser || ticket.clientUser
-  const initials = creator?.name
-    .split(" ")
+  // Determine which user to show
+  // Priority: Show CLIENT if exists (ticket FOR them), otherwise creator
+  const displayUser = ticket.clientUser || ticket.staffUser || ticket.managementUser
+  const assignedTo = ticket.managementUser // Who manages this ticket
+  
+  const initials = displayUser?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?"
+  
+  const assignedInitials = assignedTo?.name
+    ?.split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
@@ -83,8 +102,9 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`group cursor-pointer rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10 transition-all hover:bg-slate-800 hover:ring-indigo-400/50 ${
-        isDragging ? "opacity-50" : ""
+      onClick={handleClick}
+      className={`group cursor-grab active:cursor-grabbing rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10 transition-all hover:bg-slate-800 hover:ring-indigo-400/50 ${
+        isDragging || isSortableDragging ? "opacity-50 cursor-grabbing" : ""
       }`}
     >
       {/* Ticket ID & Creator Type Badge */}
@@ -111,32 +131,74 @@ export default function TicketCard({ ticket, isDragging }: TicketCardProps) {
         <span>{ticket.category}</span>
       </div>
 
+      {/* Image Thumbnail Preview */}
+      {ticket.attachments && ticket.attachments.length > 0 && (
+        <div className="mb-3">
+          <div className="relative h-28 rounded-lg overflow-hidden bg-slate-700/50 ring-1 ring-white/10">
+            <img
+              src={ticket.attachments[0]}
+              alt="Attachment preview"
+              className="w-full h-full object-cover"
+            />
+            {ticket.attachments.length > 1 && (
+              <div className="absolute top-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-full">
+                +{ticket.attachments.length - 1}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           {ticket.attachments && ticket.attachments.length > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-indigo-400">
               <Paperclip className="h-3 w-3" />
               {ticket.attachments.length}
             </span>
           )}
           {ticket.responses && ticket.responses.length > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-blue-400">
               <MessageSquare className="h-3 w-3" />
               {ticket.responses.length}
             </span>
           )}
         </div>
 
-        {/* Creator Avatar */}
-        {creator && (
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={creator.avatar} alt={creator.name} />
-            <AvatarFallback className="bg-indigo-500 text-xs text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        )}
+        {/* User Avatars */}
+        <div className="flex items-center gap-1">
+          {/* Client Avatar (For) */}
+          {displayUser && (
+            <div className="relative group/avatar">
+              <Avatar className="h-6 w-6 ring-2 ring-white/20">
+                <AvatarImage src={displayUser.avatar} alt={displayUser.name} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-xs text-white font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                For: {displayUser.name}
+              </div>
+            </div>
+          )}
+          
+          {/* Management Avatar (Assigned To) */}
+          {assignedTo && (
+            <div className="relative group/assigned">
+              <Avatar className="h-6 w-6 ring-2 ring-purple-500/50">
+                <AvatarImage src={assignedTo.avatar} alt={assignedTo.name} />
+                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-xs text-white font-semibold">
+                  {assignedInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                Assigned: {assignedTo.name}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-// GET /api/admin/staff - Get all staff users
+// GET /api/admin/management - Get all management users
 export async function GET() {
   try {
     const session = await auth()
@@ -20,8 +20,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    // Get all staff users
-    const staff = await prisma.staffUser.findMany({
+    // Get all management users
+    const management = await prisma.managementUser.findMany({
       select: {
         id: true,
         name: true,
@@ -34,9 +34,9 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ success: true, staff })
+    return NextResponse.json({ success: true, management })
   } catch (error) {
-    console.error("Error fetching staff users:", error)
+    console.error("Error fetching management users:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

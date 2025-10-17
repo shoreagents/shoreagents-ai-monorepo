@@ -104,12 +104,12 @@ export default function TicketKanban({
                   data-status={column.id}
                 >
                   {columnTickets.map((ticket) => (
-                    <div
+                    <TicketCard 
                       key={ticket.id}
+                      ticket={ticket} 
+                      isDragging={activeId === ticket.id}
                       onClick={() => onTicketClick(ticket)}
-                    >
-                      <TicketCard ticket={ticket} isDragging={activeId === ticket.id} />
-                    </div>
+                    />
                   ))}
 
                   {columnTickets.length === 0 && (
