@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calendar, Clock, Users, Building2, Paperclip, AlertCircle, Sparkles, MessageSquare, CheckSquare, Plus, Trash2, Loader2, Send, Image, Edit2, Check, XCircle, Upload } from "lucide-react"
+import { X, Calendar, Clock, Users, Building2, Paperclip, AlertCircle, Sparkles, MessageSquare, CheckSquare, Plus, Trash2, Loader2, Send, Image, Edit2, Check, XCircle, Upload, Eye } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { getPriorityConfig, getSourceConfig, formatDeadline } from "@/lib/task-utils"
