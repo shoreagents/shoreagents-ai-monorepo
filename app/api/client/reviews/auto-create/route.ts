@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getReviewDueDate, shouldCreateReview, ReviewType } from "@/lib/review-templates"
+import { getReviewDueDate, ReviewType } from "@/lib/review-templates"
 import { getDaysSinceStart } from "@/lib/review-utils"
 
 // POST /api/client/reviews/auto-create - Auto-create reviews for client's staff
@@ -20,78 +20,106 @@ export async function POST(req: NextRequest) {
     })
 
     if (!clientUser) {
-      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+      console.error("❌ Client user not found:", session.user.email)
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
+    }
+
+    if (!clientUser.company) {
+      console.error("❌ Client user has no company:", clientUser.email)
+      return NextResponse.json({ error: "Client user has no company assigned" }, { status: 400 })
     }
 
     console.log(`🔄 Auto-creating reviews for client: ${clientUser.email}`)
+    console.log(`🏢 Company: ${clientUser.company.companyName} (ID: ${clientUser.company.id})`)
 
-    // Get all staff users for this client's company with startDate
+    // Get all staff users for this client's company
     const staffUsers = await prisma.staffUser.findMany({
       where: {
-        companyId: clientUser.company.id,
-        profile: {
-          startDate: { not: null }
-        }
+        companyId: clientUser.company.id
       },
       include: {
         profile: true
       }
     })
 
+    // Filter to only include staff with startDate
+    const staffWithStartDate = staffUsers.filter(staff => staff.profile?.startDate)
+
+    console.log(`👥 Found ${staffUsers.length} total staff users, ${staffWithStartDate.length} with start dates`)
+
     let created = 0
     let skipped = 0
     const results: any[] = []
 
-    for (const staff of staffUsers) {
-      if (!staff.profile?.startDate) continue
+    for (const staff of staffWithStartDate) {
+      if (!staff.profile?.startDate) {
+        console.log(`⚠️  ${staff.name}: No start date in profile`)
+        continue
+      }
       
       const startDate = staff.profile.startDate
       const daysSinceStart = getDaysSinceStart(startDate)
       
-      // Determine review type based on days employed
+      console.log(`\n🔍 Checking ${staff.name}:`)
+      console.log(`   Start Date: ${startDate.toLocaleDateString()}`)
+      console.log(`   Days Since Start: ${daysSinceStart}`)
+      
+      // Check each review type to see if it should be created (7 days before due)
+      const reviewTypes: ReviewType[] = ["MONTH_1", "MONTH_3", "MONTH_5", "RECURRING"]
       let reviewType: ReviewType | null = null
       
-      if (daysSinceStart >= 23 && daysSinceStart <= 30) {
-        reviewType = "MONTH_1"
-      } else if (daysSinceStart >= 83 && daysSinceStart <= 90) {
-        reviewType = "MONTH_3"
-      } else if (daysSinceStart >= 143 && daysSinceStart <= 150) {
-        reviewType = "MONTH_5"
-      } else if (daysSinceStart >= 173) {
-        reviewType = "RECURRING"
+      for (const type of reviewTypes) {
+        const dueDate = getReviewDueDate(startDate, type)
+        const createDate = new Date(dueDate)
+        createDate.setDate(createDate.getDate() - 7) // 7 days before due
+        
+        const now = new Date()
+        
+        console.log(`   ${type}:`)
+        console.log(`     Due Date: ${dueDate.toLocaleDateString()}`)
+        console.log(`     Create Date: ${createDate.toLocaleDateString()}`)
+        console.log(`     Today: ${now.toLocaleDateString()}`)
+        
+        // Check if today is on or after the create date AND before the due date
+        const shouldCreate = now >= createDate && now < dueDate
+        console.log(`     Should Create: ${shouldCreate}`)
+        
+        if (shouldCreate) {
+          // Check if this review type already exists
+          const exists = await prisma.review.findFirst({
+            where: {
+              staffUserId: staff.id,
+              type: type,
+              reviewer: clientUser.email
+            }
+          })
+          
+          console.log(`     Already Exists: ${!!exists}`)
+          
+          if (!exists) {
+            reviewType = type
+            console.log(`📅 ${staff.name}: ${type} review ready for creation!`)
+            break // Only create one review at a time
+          } else {
+            console.log(`⏭️  ${staff.name}: ${type} review already exists`)
+          }
+        } else {
+          const daysUntilCreate = Math.ceil((createDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          if (daysUntilCreate > 0) {
+            console.log(`⏳ ${staff.name}: ${type} review will be created in ${daysUntilCreate} days`)
+          } else {
+            console.log(`⏭️  ${staff.name}: ${type} review due date has passed`)
+          }
+        }
       }
       
       if (!reviewType) {
-        console.log(`⏭️  Skipping ${staff.name} (${daysSinceStart} days - not in review window)`)
+        console.log(`⏭️  Skipping ${staff.name} (${daysSinceStart} days - no review needed or already exists)`)
         skipped++
         continue
       }
 
-      // Check if review should be created (7 days before due)
-      const shouldCreate = shouldCreateReview(startDate, reviewType)
-      
-      if (!shouldCreate) {
-        console.log(`⏭️  Skipping ${staff.name} - ${reviewType} not ready for creation`)
-        skipped++
-        continue
-      }
-
-      // Check if review already exists
-      const existing = await prisma.review.findFirst({
-        where: {
-          staffUserId: staff.id,
-          type: reviewType,
-          reviewer: clientUser.email
-        }
-      })
-
-      if (existing) {
-        console.log(`⏭️  Skipping ${staff.name} - ${reviewType} already exists`)
-        skipped++
-        continue
-      }
-
-      // Create the review
+      // Create the review if it's due (regardless of 7-day window)
       const dueDate = getReviewDueDate(startDate, reviewType)
       const evaluationPeriod = `Day 1 to Day ${daysSinceStart}`
 
@@ -130,9 +158,16 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error in auto-review creation:", error)
+    console.error("❌ Error in auto-review creation:", error)
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

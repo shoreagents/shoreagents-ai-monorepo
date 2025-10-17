@@ -121,7 +121,7 @@ export function getReviewTypeBadge(type: ReviewType): {
       label: "6-Month Check-In",
       color: "text-amber-400",
       bgColor: "bg-amber-500/20",
-      icon: "🔄"
+      icon: "🟠"
     }
   }
   return badges[type]
