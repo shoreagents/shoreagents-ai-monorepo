@@ -39,8 +39,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <Toaster />
     </>
   ) : (
-    // For login, admin, and client pages - no sidebar
-    <>{children}</>
+    // For login, admin, and client pages - no sidebar but include toaster
+    <>
+      {children}
+      <Toaster />
+    </>
   )
   
   return (

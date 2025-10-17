@@ -11,8 +11,18 @@ export async function uploadCompanyFile(
   type: 'logo' | 'cover' | 'asset'
 ): Promise<string> {
   const fileExt = file.name.split('.').pop()
-  const fileName = `${companyId}-${Date.now()}.${fileExt}`
-  const folder = type === 'logo' ? 'company_logo' : type === 'cover' ? 'company_cover' : 'company_asset'
+  const timestamp = Date.now()
+  const fileName = `company_${timestamp}.${fileExt}`
+  
+  let folder: string
+  if (type === 'logo') {
+    folder = `company_logo/${companyId}`
+  } else if (type === 'cover') {
+    folder = `company_cover/${companyId}`
+  } else {
+    folder = `company_asset/${companyId}`
+  }
+  
   const filePath = `${folder}/${fileName}`
 
   const { data, error } = await supabase.storage
@@ -35,18 +45,30 @@ export async function uploadCompanyFile(
 }
 
 export async function deleteCompanyFile(fileUrl: string): Promise<void> {
-  // Extract path from URL
-  const urlParts = fileUrl.split('/storage/v1/object/public/company/')
-  if (urlParts.length < 2) return
+  try {
+    // Extract path from URL
+    const urlParts = fileUrl.split('/storage/v1/object/public/company/')
+    if (urlParts.length < 2) {
+      console.warn('Invalid file URL format:', fileUrl)
+      return
+    }
 
-  const filePath = urlParts[1]
+    const filePath = urlParts[1]
+    console.log('Attempting to delete file:', filePath)
 
-  const { error} = await supabase.storage
-    .from('company')
-    .remove([filePath])
+    const { error } = await supabase.storage
+      .from('company')
+      .remove([filePath])
 
-  if (error) {
-    console.error('Failed to delete file:', error)
+    if (error) {
+      console.error('Failed to delete file:', error)
+      throw error
+    } else {
+      console.log('File deleted successfully:', filePath)
+    }
+  } catch (error) {
+    console.error('Error in deleteCompanyFile:', error)
+    throw error
   }
 }
 
@@ -56,9 +78,10 @@ export async function uploadClientFile(
   type: 'avatar' | 'cover'
 ): Promise<string> {
   const fileExt = file.name.split('.').pop()
-  const fileName = `${clientUserId}-${Date.now()}.${fileExt}`
-  const folder = type === 'avatar' ? 'client_avatars' : 'client_covers'
-  const filePath = `${folder}/${fileName}`
+  const timestamp = Date.now()
+  const folder = type === 'avatar' ? 'client_avatar' : 'client_cover'
+  const fileName = type === 'avatar' ? `avatar_${timestamp}.${fileExt}` : `cover_${timestamp}.${fileExt}`
+  const filePath = `${folder}/${clientUserId}/${fileName}`
 
   const { data, error } = await supabase.storage
     .from('client')

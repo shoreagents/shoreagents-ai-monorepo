@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+// Function to emit performance updates (will be set by server.js)
+declare global {
+  var emitPerformanceUpdate: ((data: any) => void) | undefined
+}
+
 // GET /api/performance - Get performance metrics for current user
 export async function GET(request: NextRequest) {
   try {
@@ -80,7 +85,8 @@ export async function GET(request: NextRequest) {
       tabsSwitched: m.tabsSwitched,
       productivityScore: m.productivityScore,
       screenshotCount: m.clipboardActions, // Use clipboardActions as screenshot count
-      applicationsUsed: [], // Not in schema, set to empty array
+      applicationsUsed: (m as any).applicationsUsed || [], // Get from database
+      visitedUrls: (m as any).visitedUrls || [], // Get from database
     }))
 
     const formattedToday = todayMetric
@@ -102,7 +108,8 @@ export async function GET(request: NextRequest) {
           tabsSwitched: todayMetric.tabsSwitched,
           productivityScore: todayMetric.productivityScore,
           screenshotCount: todayMetric.clipboardActions, // Use clipboardActions as screenshot count
-          applicationsUsed: [],
+          applicationsUsed: (todayMetric as any).applicationsUsed || [], // Get from database
+          visitedUrls: (todayMetric as any).visitedUrls || [], // Get from database
         }
       : null
 
@@ -154,6 +161,8 @@ export async function POST(request: NextRequest) {
       urlsVisited,
       tabsSwitched,
       productivityScore,
+      applicationsUsed,
+      visitedUrls,
     } = body
 
     // Check if there's already a metric for today
@@ -194,7 +203,9 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,
           productivityScore: productivityScore ?? existingMetric.productivityScore,
-        },
+          ...(applicationsUsed !== undefined && { applicationsUsed }),
+          ...(visitedUrls !== undefined && { visitedUrls }),
+        } as any,
       })
     } else {
       // Create new metric
@@ -215,8 +226,26 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited || 0,
           tabsSwitched: tabsSwitched || 0,
           productivityScore: productivityScore || 0,
-        },
+          applicationsUsed: applicationsUsed || [],
+          visitedUrls: visitedUrls || [],
+        } as any,
       })
+    }
+
+    // Emit real-time update to monitoring clients
+    if (global.emitPerformanceUpdate) {
+      try {
+        global.emitPerformanceUpdate({
+          staffUserId: staffUser.id,
+          type: 'latest',
+          metrics: metric,
+          isActive: true,
+          lastActivity: new Date().toISOString()
+        })
+        console.log('[Performance API] Emitted real-time update for staff user:', staffUser.id)
+      } catch (wsError) {
+        console.error('[Performance API] Error emitting real-time update:', wsError)
+      }
     }
 
     return NextResponse.json({ success: true, metric }, { status: 201 })

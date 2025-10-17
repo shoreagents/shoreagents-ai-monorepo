@@ -99,11 +99,24 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update company details
-    const { bio, website, phone, location, billingEmail, tradingName, industry, logo, coverPhoto } = body
+    const { 
+      companyName, 
+      bio, 
+      website, 
+      phone, 
+      location, 
+      billingEmail, 
+      tradingName, 
+      industry, 
+      logo, 
+      coverPhoto, 
+      contractStart
+    } = body
 
     const updatedCompany = await prisma.company.update({
       where: { id: clientUser.company.id },
       data: {
+        ...(companyName !== undefined && { companyName }),
         ...(bio !== undefined && { bio }),
         ...(website !== undefined && { website }),
         ...(phone !== undefined && { phone }),
@@ -112,7 +125,8 @@ export async function PUT(req: NextRequest) {
         ...(tradingName !== undefined && { tradingName }),
         ...(industry !== undefined && { industry }),
         ...(logo !== undefined && { logo }),
-        ...(coverPhoto !== undefined && { coverPhoto })
+        ...(coverPhoto !== undefined && { coverPhoto }),
+        ...(contractStart !== undefined && { contractStart: contractStart ? new Date(contractStart) : null })
       },
       include: {
         staffUsers: {

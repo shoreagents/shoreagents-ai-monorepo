@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ClientSidebar } from "@/components/client-sidebar"
 import { Toaster } from "@/components/ui/toaster"
 import FloatingCallButton from "@/components/client/floating-call-button"
+import { WebSocketProvider } from "@/lib/websocket-provider"
 
 export default async function ClientLayout({
   children,
@@ -29,14 +30,16 @@ export default async function ClientLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <ClientSidebar user={clientUser} />
-      <main className="flex-1 ml-64">
-        {children}
-      </main>
-      <Toaster />
-      <FloatingCallButton />
-    </div>
+    <WebSocketProvider userId={clientUser.id} userName={clientUser.name}>
+      <div className="flex min-h-screen bg-gray-50">
+        <ClientSidebar user={clientUser} />
+        <main className="flex-1 ml-64">
+          {children}
+        </main>
+        <Toaster />
+        <FloatingCallButton />
+      </div>
+    </WebSocketProvider>
   )
 }
 

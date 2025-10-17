@@ -3,26 +3,42 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { supabaseAdmin } from "@/lib/supabase"
 
+// Function to emit performance updates (will be set by server.js)
+declare global {
+  var emitPerformanceUpdate: ((data: any) => void) | undefined
+}
+
 // POST /api/screenshots - Upload a screenshot
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    // Parse FormData first to get staffUserId if provided
+    const formData = await request.formData()
+    const staffUserId = formData.get('staffUserId') as string | null
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    let staffUser = null
+
+    if (staffUserId) {
+      // If staffUserId is provided directly (from Electron app), use it
+      staffUser = await prisma.staffUser.findUnique({
+        where: { id: staffUserId }
+      })
+    } else {
+      // Fallback to session authentication
+      const session = await auth()
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+
+      staffUser = await prisma.staffUser.findUnique({
+        where: { authUserId: session.user.id }
+      })
     }
-
-    // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
-      where: { authUserId: session.user.id }
-    })
 
     if (!staffUser) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Parse FormData
-    const formData = await request.formData()
+    // Get screenshot data from already parsed FormData
     const screenshot = formData.get('screenshot') as File | null
     const timestamp = formData.get('timestamp') as string
 
@@ -98,19 +114,41 @@ export async function POST(request: NextRequest) {
     console.log(`[Screenshots API] Existing metric found: ${existingMetric ? existingMetric.id : 'none'}`)
 
     if (existingMetric) {
-      // Update existing metric
-      const updated = await prisma.performanceMetric.update({
-        where: { id: existingMetric.id },
-        data: {
-          clipboardActions: {
-            increment: 1
-          }
-        }
+      // Use raw SQL to atomically append to the JSON array
+      // This prevents race conditions when multiple screenshots are uploaded simultaneously
+      await prisma.$executeRaw`
+        UPDATE performance_metrics 
+        SET 
+          "clipboardActions" = "clipboardActions" + 1,
+          "screenshotUrls" = COALESCE("screenshotUrls", '[]'::jsonb) || to_jsonb(${urlData.publicUrl}::text)
+        WHERE id = ${existingMetric.id}
+      `
+      
+      // Get the updated metric for the response
+      const updated = await prisma.performanceMetric.findUnique({
+        where: { id: existingMetric.id }
       })
-      console.log(`[Screenshots API] Incremented clipboardActions for metric ${existingMetric.id}: ${existingMetric.clipboardActions} → ${updated.clipboardActions}`)
+      console.log(`[Screenshots API] Incremented clipboardActions for metric ${existingMetric.id}: ${existingMetric.clipboardActions} → ${updated?.clipboardActions || 0}`)
+      console.log(`[Screenshots API] Added screenshot URL: ${urlData.publicUrl}`)
+      console.log(`[Screenshots API] Total screenshot URLs now: ${updated ? (updated as any)?.screenshotUrls?.length || 0 : 0}`)
+      
+      // Emit real-time update for updated metric
+      if (global.emitPerformanceUpdate) {
+        try {
+          global.emitPerformanceUpdate({
+            staffUserId: staffUser.id,
+            type: 'latest',
+            metrics: updated,
+            isActive: true,
+            lastActivity: new Date().toISOString()
+          })
+        } catch (wsError) {
+          console.error('[Screenshots API] Error emitting real-time update:', wsError)
+        }
+      }
     } else {
       // Create new metric with clipboardActions = 1
-      await prisma.performanceMetric.create({
+      const newMetric = await prisma.performanceMetric.create({
         data: {
           staffUserId: staffUser.id,
           date: today,
@@ -127,10 +165,28 @@ export async function POST(request: NextRequest) {
           filesAccessed: 0,
           urlsVisited: 0,
           tabsSwitched: 0,
-          productivityScore: 0
-        }
+          productivityScore: 0,
+          screenshotUrls: [urlData.publicUrl]
+        } as any
       })
       console.log('[Screenshots API] Created new metric with clipboardActions = 1')
+      console.log(`[Screenshots API] Added screenshot URL: ${urlData.publicUrl}`)
+      console.log(`[Screenshots API] Total screenshot URLs: 1`)
+      
+      // Emit real-time update for new metric
+      if (global.emitPerformanceUpdate) {
+        try {
+          global.emitPerformanceUpdate({
+            staffUserId: staffUser.id,
+            type: 'latest',
+            metrics: newMetric,
+            isActive: true,
+            lastActivity: new Date().toISOString()
+          })
+        } catch (wsError) {
+          console.error('[Screenshots API] Error emitting real-time update:', wsError)
+        }
+      }
     }
 
     const capturedAt = timestamp ? new Date(parseInt(timestamp)) : new Date()

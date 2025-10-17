@@ -9,7 +9,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// POST /api/client/upload - Upload client file with proper authentication
+// POST /api/client/company/upload - Upload company file with proper authentication
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
@@ -18,26 +18,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get ClientUser
+    // Get ClientUser and their company
     const clientUser = await prisma.clientUser.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: { company: true }
     })
 
-    if (!clientUser) {
-      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    if (!clientUser || !clientUser.company) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user or no company found" }, { status: 401 })
     }
 
     // Parse form data
     const formData = await req.formData()
     const file = formData.get('file') as File
-    const type = formData.get('type') as 'avatar' | 'cover'
+    const type = formData.get('type') as 'logo' | 'cover'
 
     if (!file || !type) {
       return NextResponse.json({ error: "File and type are required" }, { status: 400 })
     }
 
     // Validate file type
-    if (!['avatar', 'cover'].includes(type)) {
+    if (!['logo', 'cover'].includes(type)) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 })
     }
 
@@ -56,33 +57,33 @@ export async function POST(req: NextRequest) {
     }
 
     // Delete old file if it exists
-    const currentFileUrl = type === 'avatar' ? clientUser.avatar : clientUser.coverPhoto
+    const currentFileUrl = type === 'logo' ? clientUser.company.logo : clientUser.company.coverPhoto
     if (currentFileUrl) {
       try {
         // Extract file path from URL - more robust parsing
         const url = new URL(currentFileUrl)
         const pathParts = url.pathname.split('/')
         
-        // Find the client bucket and extract the file path
-        const clientIndex = pathParts.findIndex(part => part === 'client')
-        if (clientIndex !== -1 && clientIndex < pathParts.length - 1) {
-          const filePath = pathParts.slice(clientIndex + 1).join('/')
+        // Find the company bucket and extract the file path
+        const companyIndex = pathParts.findIndex(part => part === 'company')
+        if (companyIndex !== -1 && companyIndex < pathParts.length - 1) {
+          const filePath = pathParts.slice(companyIndex + 1).join('/')
           
-          console.log('Deleting old client file from path:', filePath)
+          console.log('Deleting old file from path:', filePath)
           const { error: deleteError } = await supabase.storage
-            .from('client')
+            .from('company')
             .remove([filePath])
           
           if (deleteError) {
-            console.warn('Failed to delete old client file:', deleteError)
+            console.warn('Failed to delete old file:', deleteError)
           } else {
-            console.log('Old client file deleted successfully:', filePath)
+            console.log('Old file deleted successfully:', filePath)
           }
         } else {
           console.warn('Could not parse file path from URL:', currentFileUrl)
         }
       } catch (deleteError) {
-        console.warn('Error deleting old client file:', deleteError)
+        console.warn('Error deleting old file:', deleteError)
         // Continue with upload even if delete fails
       }
     }
@@ -90,13 +91,20 @@ export async function POST(req: NextRequest) {
     // Generate file path with proper folder structure
     const fileExt = file.name.split('.').pop()
     const timestamp = Date.now()
-    const folder = type === 'avatar' ? 'client_avatar' : 'client_cover'
-    const fileName = type === 'avatar' ? `avatar_${timestamp}.${fileExt}` : `cover_${timestamp}.${fileExt}`
-    const filePath = `${folder}/${clientUser.id}/${fileName}`
+    const fileName = `company_${timestamp}.${fileExt}`
+    
+    let folder: string
+    if (type === 'logo') {
+      folder = `company_logo/${clientUser.company.id}`
+    } else {
+      folder = `company_cover/${clientUser.company.id}`
+    }
+    
+    const filePath = `${folder}/${fileName}`
 
     // Upload to Supabase storage using service role key
     const { data, error } = await supabase.storage
-      .from('client')
+      .from('company')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: true
@@ -112,16 +120,16 @@ export async function POST(req: NextRequest) {
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('client')
+      .from('company')
       .getPublicUrl(filePath)
 
-    // Update client user in database
-    const updateData = type === 'avatar' 
-      ? { avatar: publicUrl }
+    // Update company in database
+    const updateData = type === 'logo' 
+      ? { logo: publicUrl }
       : { coverPhoto: publicUrl }
 
-    await prisma.clientUser.update({
-      where: { id: clientUser.id },
+    await prisma.company.update({
+      where: { id: clientUser.company.id },
       data: updateData
     })
 
@@ -132,7 +140,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error("❌ Error uploading client file:", error)
+    console.error("❌ Error uploading company file:", error)
     return NextResponse.json(
       { error: "Failed to upload file", details: error?.message },
       { status: 500 }

@@ -103,7 +103,8 @@ class ActivityTracker {
       console.log('[ActivityTracker] Integrated with performance tracker')
     }
     
-    this.startTracking()
+    // Don't start tracking immediately - wait for explicit start call
+    console.log('[ActivityTracker] Initialized but not started - waiting for explicit start')
   }
 
   /**
@@ -112,6 +113,12 @@ class ActivityTracker {
   startTracking() {
     if (this.isTracking) {
       console.log('[ActivityTracker] Already tracking')
+      return
+    }
+
+    // Check if we should be tracking (only for staff users)
+    if (this.shouldDisableTracking()) {
+      console.log('[ActivityTracker] 🚫 Activity tracking disabled - non-staff portal detected')
       return
     }
 
@@ -296,6 +303,13 @@ class ActivityTracker {
    * Check if user has been inactive
    */
   checkInactivity() {
+    // Check if we should still be tracking
+    if (this.shouldDisableTracking()) {
+      console.log('[ActivityTracker] 🚫 Non-staff portal detected during activity tracking - stopping activity tracker')
+      this.stopTracking()
+      return
+    }
+    
     const now = Date.now()
     const timeSinceLastActivity = now - this.lastActivityTime
 
@@ -630,6 +644,38 @@ class ActivityTracker {
   setInactivityTimeout(milliseconds) {
     console.log(`[ActivityTracker] Setting inactivity timeout to ${milliseconds}ms`)
     this.inactivityTimeout = milliseconds
+  }
+
+  /**
+   * Check if tracking should be disabled based on current URL
+   * Only staff portal users should have tracking enabled
+   */
+  shouldDisableTracking() {
+    try {
+      if (!this.mainWindow) {
+        return false // Default to allowing tracking if we can't determine
+      }
+      
+      const currentUrl = this.mainWindow.webContents.getURL()
+      
+      // Check for non-staff portals
+      const isClient = currentUrl.includes('/client')
+      const isAdmin = currentUrl.includes('/admin')
+      const isLoginPage = currentUrl.includes('/login')
+      
+      if (isLoginPage) {
+        return true // Don't track on login pages
+      }
+      
+      if (isClient || isAdmin) {
+        return true // Don't track on client or admin portals
+      }
+      
+      return false // Allow tracking for staff portal
+    } catch (error) {
+      console.error('[ActivityTracker] Error checking URL:', error)
+      return false // Default to allowing tracking if we can't determine
+    }
   }
 
   /**

@@ -36,7 +36,7 @@ export function WebSocketProvider({ children, userId, userName }: WebSocketProvi
 
   useEffect(() => {
     // Initialize Socket.IO client
-    const socketInstance = io({
+    const socketInstance = io('http://localhost:3000', {
       path: '/api/socketio',
       addTrailingSlash: false,
       autoConnect: true,   

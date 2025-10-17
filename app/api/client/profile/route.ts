@@ -93,7 +93,7 @@ export async function PUT(req: NextRequest) {
     if (clientUser.profile) {
       // Update existing profile
       profile = await prisma.clientProfile.update({
-        where: { id: clientUser.profile.id },
+        where: { clientUserId: clientUser.id },
         data: {
           ...(position !== undefined && { position }),
           ...(department !== undefined && { department }),
@@ -127,13 +127,14 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update clientUser fields if provided
-    const { name, avatar, coverPhoto } = body
+    const { name, role, avatar, coverPhoto } = body
 
-    if (name !== undefined || avatar !== undefined || coverPhoto !== undefined) {
+    if (name !== undefined || role !== undefined || avatar !== undefined || coverPhoto !== undefined) {
       await prisma.clientUser.update({
         where: { id: clientUser.id },
         data: {
           ...(name !== undefined && { name }),
+          ...(role !== undefined && { role }),
           ...(avatar !== undefined && { avatar }),
           ...(coverPhoto !== undefined && { coverPhoto })
         }
