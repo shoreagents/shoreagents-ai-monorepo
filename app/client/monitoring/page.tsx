@@ -120,7 +120,7 @@ export default function ClientMonitoringPage() {
   const [showFilters, setShowFilters] = useState(false)
 
   // Use real-time monitoring hook
-  const { data, loading, error, lastUpdate, refresh, isConnected, isUpdating, nextRefreshIn } = useRealtimeMonitoring(selectedDays)
+  const { data, loading, error, lastUpdate, refresh, isConnected, isUpdating } = useRealtimeMonitoring(selectedDays)
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
@@ -612,12 +612,6 @@ export default function ClientMonitoringPage() {
                       <StatusIcon className="h-3 w-3 mr-1" />
                       {activityStatus.status}
                     </Badge>
-                    {staff.isActive && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-xs text-green-600 font-medium">Live</span>
-                      </div>
-                    )}
                   </div>
                   {staff.lastActivity && (
                     <div className="text-xs text-gray-500 mt-1">

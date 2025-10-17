@@ -101,7 +101,6 @@ export function useRealtimeMonitoring(selectedDays: number) {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [nextRefreshIn, setNextRefreshIn] = useState(10)
   
   const { socket, isConnected, emit, on, off } = useWebSocket()
 
@@ -238,34 +237,7 @@ export function useRealtimeMonitoring(selectedDays: number) {
     fetchMonitoringData()
   }, [fetchMonitoringData])
 
-  // Periodic refresh every 10 seconds to ensure data stays current
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isConnected) {
-        console.log('[RealtimeMonitoring] Periodic refresh triggered')
-        fetchMonitoringData(true)
-        setNextRefreshIn(10) // Reset countdown
-      }
-    }, 10000) // 10 seconds
-
-    return () => clearInterval(interval)
-  }, [fetchMonitoringData, isConnected])
-
-  // Countdown timer for next refresh
-  useEffect(() => {
-    if (!isConnected) return
-
-    const countdownInterval = setInterval(() => {
-      setNextRefreshIn(prev => {
-        if (prev <= 1) {
-          return 10 // Reset to 10 when it reaches 0
-        }
-        return prev - 1
-      })
-    }, 1000) // Update every second
-
-    return () => clearInterval(countdownInterval)
-  }, [isConnected])
+  // Note: Periodic refresh removed - using WebSocket for real-time updates only
 
   // Subscribe to WebSocket updates
   useEffect(() => {
@@ -301,7 +273,6 @@ export function useRealtimeMonitoring(selectedDays: number) {
     lastUpdate,
     refresh,
     isConnected,
-    isUpdating,
-    nextRefreshIn
+    isUpdating
   }
 }
