@@ -29,7 +29,7 @@ export async function getAdminUser() {
     return null
   }
 
-  const adminUser = await prisma.adminUser.findUnique({
+  const adminUser = await prisma.managementUser.findUnique({
     where: { email: session.user.email }
   })
 

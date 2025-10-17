@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { calculateReviewScore } from "@/lib/review-templates"
+import { getPerformanceLevel } from "@/lib/review-utils"
 
-// GET /api/client/reviews - Fetch reviews submitted BY client (not reviews OF staff)
+// GET /api/client/reviews - Fetch reviews for client's staff
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -21,14 +23,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // Get all reviews submitted by this client user
-    // Reviews are stored with reviewer email matching the client user's email
+    const { searchParams } = new URL(req.url)
+    const status = searchParams.get("status") // Filter by status
+
+    // Build where clause
+    const where: any = {
+      reviewer: clientUser.email
+    }
+
+    if (status) {
+      where.status = status
+    }
+
+    // Get all reviews submitted BY this client user
     const reviews = await prisma.review.findMany({
-      where: {
-        reviewer: clientUser.email
-      },
+      where,
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -37,10 +48,10 @@ export async function GET(req: NextRequest) {
           }
         }
       },
-      orderBy: { submittedDate: "desc" },
+      orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ reviews })
+    return NextResponse.json({ reviews, count: reviews.length })
   } catch (error) {
     console.error("Error fetching client reviews:", error)
     return NextResponse.json(
@@ -50,7 +61,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/client/reviews - Create new review for staff member
+// POST /api/client/reviews - Submit new review for staff member
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
@@ -70,43 +81,62 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { userId, type, answers, overallScore, evaluationPeriod } = body
+    const { 
+      reviewId,
+      ratings, 
+      strengths, 
+      improvements, 
+      additionalComments 
+    } = body
 
-    if (!userId || !type || !answers || !overallScore) {
+    if (!reviewId || !ratings || !strengths || !improvements) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       )
     }
 
-    // Verify staff is assigned to this client
-    const assignment = await prisma.staffAssignment.findFirst({
-      where: {
-        userId,
-        companyId: clientUser.company.id,
-        isActive: true
+    // Verify review exists and is PENDING
+    const existingReview = await prisma.review.findUnique({
+      where: { id: reviewId },
+      include: {
+        staffUser: true
       }
     })
 
-    if (!assignment) {
+    if (!existingReview) {
+      return NextResponse.json({ error: "Review not found" }, { status: 404 })
+    }
+
+    // Check if review is pending
+    if (existingReview.status !== "PENDING") {
+      return NextResponse.json({ error: "Review already submitted" }, { status: 400 })
+    }
+
+    // Verify staff is assigned to this client (check companyId directly on staffUser)
+    if (existingReview.staffUser.companyId !== clientUser.company.id) {
       return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
     }
 
-    // Create review with PENDING_APPROVAL status
-    const review = await prisma.review.create({
+    // Calculate overall score
+    const scoreCalc = calculateReviewScore(ratings)
+    const performanceLevel = getPerformanceLevel(scoreCalc.percentage)
+
+    // Update review with submission
+    const review = await prisma.review.update({
+      where: { id: reviewId },
       data: {
-        userId,
-        type,
-        status: "PENDING_APPROVAL", // Requires admin approval
-        client: clientUser.client.companyName,
-        reviewer: clientUser.email,
-        reviewerTitle: clientUser.role,
-        evaluationPeriod: evaluationPeriod || `${new Date().toISOString().split('T')[0]}`,
-        overallScore,
-        answers,
+        status: "SUBMITTED",
+        ratings,
+        overallScore: scoreCalc.percentage,
+        performanceLevel,
+        strengths,
+        improvements,
+        additionalComments: additionalComments || null,
+        submittedDate: new Date()
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -117,7 +147,16 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, review }, { status: 201 })
+    // TODO: Create notification for management
+    // await createNotification({
+    //   type: "REVIEW_SUBMITTED",
+    //   recipientRole: "ADMIN",
+    //   title: "New Review Submitted",
+    //   message: `${clientUser.name} completed review for ${review.staffUser.name}`,
+    //   link: `/admin/reviews/${review.id}`
+    // })
+
+    return NextResponse.json({ success: true, review }, { status: 200 })
   } catch (error) {
     console.error("Error creating review:", error)
     return NextResponse.json(

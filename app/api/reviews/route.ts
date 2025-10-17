@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/reviews - Get FINALIZED reviews for current user only
+// GET /api/reviews - Get reviews for staff (only UNDER_REVIEW and COMPLETED)
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -20,15 +20,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
+    // Get reviews - only UNDER_REVIEW and COMPLETED
+    // Staff cannot see PENDING or SUBMITTED reviews
     const reviews = await prisma.review.findMany({
       where: {
         staffUserId: staffUser.id,
-        status: "FINALIZED", // Staff can only see approved/finalized reviews
+        status: {
+          in: ["UNDER_REVIEW", "COMPLETED"]
+        }
       },
-      orderBy: { submittedDate: "desc" },
+      orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ reviews })
+    // Convert Decimal fields to numbers for JSON serialization
+    const reviewsWithNumbers = reviews.map(review => ({
+      ...review,
+      overallScore: review.overallScore ? Number(review.overallScore) : null,
+    }))
+
+    return NextResponse.json({ reviews: reviewsWithNumbers, count: reviews.length })
   } catch (error) {
     console.error("Error fetching reviews:", error)
     return NextResponse.json(
@@ -37,4 +47,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
