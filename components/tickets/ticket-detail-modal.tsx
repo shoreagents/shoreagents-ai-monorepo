@@ -335,42 +335,94 @@ export default function TicketDetailModal({
         </div>
 
         {/* Assigned To - Account Manager */}
-        {ticket.accountManager && (
-          <div className={`mb-6 rounded-xl p-4 ${
+        {/* Relationship Display */}
+        {(ticket.accountManager || ticket.clientUser || ticket.managementUser) && (
+          <div className={`mb-6 rounded-xl p-5 ${
             isDark 
               ? "bg-gradient-to-r from-purple-900/30 to-indigo-900/30 ring-1 ring-purple-500/30" 
               : "bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200"
           }`}>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12 ring-2 ring-white shadow-lg">
-                <AvatarImage src={ticket.accountManager.avatar} alt={ticket.accountManager.name} />
-                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold">
-                  {ticket.accountManager.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className={`text-xs font-medium ${isDark ? "text-purple-300" : "text-purple-600"}`}>
-                  Assigned to
-                </p>
-                <p className={`text-base font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                  {ticket.accountManager.name}
-                </p>
-                <p className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
-                  {ticket.accountManager.role} • {ticket.accountManager.email}
-                </p>
-              </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                isDark 
-                  ? "bg-purple-500/20 text-purple-300" 
-                  : "bg-purple-100 text-purple-700"
-              }`}>
-                Account Manager
-              </div>
+            <div className="flex items-center justify-between gap-4">
+              {/* Account Manager / Assigned To */}
+              {(ticket.accountManager || ticket.managementUser) && (
+                <div className="flex items-center gap-3 flex-1">
+                  <Avatar className="h-14 w-14 ring-2 ring-purple-500/50 shadow-lg">
+                    <AvatarImage src={ticket.accountManager?.avatar || ticket.managementUser?.avatar} alt={ticket.accountManager?.name || ticket.managementUser?.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold text-sm">
+                      {(ticket.accountManager?.name || ticket.managementUser?.name || "")
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className={`text-xs font-semibold ${isDark ? "text-purple-300" : "text-purple-600"} uppercase tracking-wide`}>
+                      Assigned to
+                    </p>
+                    <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {ticket.accountManager?.name || ticket.managementUser?.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isDark 
+                          ? "bg-purple-500/30 text-purple-300" 
+                          : "bg-purple-200 text-purple-700"
+                      }`}>
+                        {ticket.accountManager ? "Account Manager" : "Management"}
+                      </span>
+                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
+                        {ticket.accountManager?.email || ticket.managementUser?.email}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Arrow */}
+              {ticket.clientUser && (ticket.accountManager || ticket.managementUser) && (
+                <div className={`text-3xl font-bold ${isDark ? "text-slate-600" : "text-gray-300"}`}>
+                  →
+                </div>
+              )}
+
+              {/* Client / For */}
+              {ticket.clientUser && (
+                <div className="flex items-center gap-3 flex-1 justify-end">
+                  <div className="text-right">
+                    <p className={`text-xs font-semibold ${isDark ? "text-indigo-300" : "text-indigo-600"} uppercase tracking-wide`}>
+                      Ticket FOR
+                    </p>
+                    <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {ticket.clientUser.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 justify-end">
+                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
+                        {ticket.clientUser.email}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isDark 
+                          ? "bg-indigo-500/30 text-indigo-300" 
+                          : "bg-indigo-200 text-indigo-700"
+                      }`}>
+                        Client
+                      </span>
+                    </div>
+                  </div>
+                  <Avatar className="h-14 w-14 ring-2 ring-indigo-500/50 shadow-lg">
+                    <AvatarImage src={ticket.clientUser.avatar} alt={ticket.clientUser.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-bold text-sm">
+                      {ticket.clientUser.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              )}
             </div>
           </div>
         )}

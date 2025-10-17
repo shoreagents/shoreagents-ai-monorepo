@@ -539,6 +539,35 @@ function CreateTicketModal({
             </div>
           )}
 
+          {/* Relationship Preview */}
+          {formData.clientUserId && formData.assigneeType === "client" && (
+            <div className="rounded-lg bg-gradient-to-r from-purple-500/10 to-indigo-500/10 p-4 ring-1 ring-purple-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold text-sm">
+                    JR
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Assigned to (Account Manager)</div>
+                    <div className="font-semibold text-white">Jineva Rosal</div>
+                  </div>
+                </div>
+                <div className="text-2xl text-slate-600">→</div>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="text-xs text-slate-400">Creating ticket FOR</div>
+                    <div className="font-semibold text-white">
+                      {clientUsers.find(c => c.id === formData.clientUserId)?.name || "Client"}
+                    </div>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-bold text-sm">
+                    {clientUsers.find(c => c.id === formData.clientUserId)?.name?.split(" ").map(n => n[0]).join("").slice(0,2) || "CL"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
