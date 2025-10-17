@@ -9,6 +9,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
+  DragOverEvent,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import TicketCard from "./ticket-card"
@@ -26,6 +28,29 @@ const columns: { id: TicketStatus; label: string; color: string }[] = [
   { id: "RESOLVED", label: "Resolved", color: "bg-emerald-500" },
   { id: "CLOSED", label: "Closed", color: "bg-slate-500" },
 ]
+
+// Droppable Column Component
+function DroppableColumn({ 
+  id, 
+  children 
+}: { 
+  id: string; 
+  children: React.ReactNode 
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-[200px] space-y-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/10 transition-colors ${
+        isOver ? "ring-2 ring-indigo-500 bg-slate-800/50" : ""
+      }`}
+      data-status={id}
+    >
+      {children}
+    </div>
+  )
+}
 
 export default function TicketKanban({
   tickets,
@@ -99,10 +124,7 @@ export default function TicketKanban({
                 items={columnTickets.map((t) => t.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div
-                  className="min-h-[200px] space-y-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/10"
-                  data-status={column.id}
-                >
+                <DroppableColumn id={column.id}>
                   {columnTickets.map((ticket) => (
                     <TicketCard 
                       key={ticket.id}
@@ -117,7 +139,7 @@ export default function TicketKanban({
                       No tickets
                     </div>
                   )}
-                </div>
+                </DroppableColumn>
               </SortableContext>
             </div>
           )
