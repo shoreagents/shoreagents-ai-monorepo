@@ -311,19 +311,35 @@ function CreateTicketModal({
   const [staffUsers, setStaffUsers] = useState<any[]>([])
   const [managementUsers, setManagementUsers] = useState<any[]>([])
   const [clientUsers, setClientUsers] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const { toast } = useToast()
 
   useEffect(() => {
+    // Fetch current user session
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((session) => {
+        if (session?.user) {
+          // Fetch management users first to get current user details
+          fetch("/api/admin/management")
+            .then((res) => res.json())
+            .then((data) => {
+              setManagementUsers(data.management || [])
+              // Find current user in management list
+              const user = (data.management || []).find((m: any) => m.email === session.user.email)
+              if (user) {
+                setCurrentUser(user)
+              }
+            })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
+    
     // Fetch staff users
     fetch("/api/admin/staff")
       .then((res) => res.json())
       .then((data) => setStaffUsers(data.staff || []))
-      .catch(() => {})
-    
-    // Fetch management users
-    fetch("/api/admin/management")
-      .then((res) => res.json())
-      .then((data) => setManagementUsers(data.management || []))
       .catch(() => {})
     
     // Fetch client users
@@ -384,7 +400,9 @@ function CreateTicketModal({
 
       const payload = {
         staffUserId: formData.assigneeType === "staff" ? formData.staffUserId : undefined,
-        managementUserId: formData.assigneeType === "management" ? formData.managementUserId : undefined,
+        managementUserId: formData.assigneeType === "management" 
+          ? formData.managementUserId 
+          : (formData.assigneeType === "client" && currentUser ? currentUser.id : undefined),
         clientUserId: formData.assigneeType === "client" ? formData.clientUserId : undefined,
         title: formData.title,
         description: formData.description,
@@ -540,16 +558,16 @@ function CreateTicketModal({
           )}
 
           {/* Relationship Preview */}
-          {formData.clientUserId && formData.assigneeType === "client" && (
+          {formData.clientUserId && formData.assigneeType === "client" && currentUser && (
             <div className="rounded-lg bg-gradient-to-r from-purple-500/10 to-indigo-500/10 p-4 ring-1 ring-purple-500/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold text-sm">
-                    JR
+                    {currentUser.name?.split(" ").map((n: string) => n[0]).join("").slice(0,2) || "ME"}
                   </div>
                   <div>
-                    <div className="text-xs text-slate-400">Assigned to (Account Manager)</div>
-                    <div className="font-semibold text-white">Jineva Rosal</div>
+                    <div className="text-xs text-slate-400">Assigned to (You)</div>
+                    <div className="font-semibold text-white">{currentUser.name}</div>
                   </div>
                 </div>
                 <div className="text-2xl text-slate-600">→</div>

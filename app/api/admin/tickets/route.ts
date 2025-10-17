@@ -43,6 +43,15 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
+        managementUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
         clientUser: {
           select: {
             id: true,
@@ -152,6 +161,15 @@ export async function POST(request: NextRequest) {
       },
       include: {
         staffUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        managementUser: {
           select: {
             id: true,
             name: true,
