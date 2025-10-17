@@ -54,7 +54,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition || 'transform 200ms cubic-bezier(0.18, 0.67, 0.6, 1.22)',
   }
 
   // Only allow click if not dragging
@@ -103,8 +103,8 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
       {...attributes}
       {...listeners}
       onClick={handleClick}
-      className={`group cursor-grab active:cursor-grabbing rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10 transition-all hover:bg-slate-800 hover:ring-indigo-400/50 ${
-        isDragging || isSortableDragging ? "opacity-50 cursor-grabbing" : ""
+      className={`group cursor-grab active:cursor-grabbing rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10 transition-all duration-200 hover:bg-slate-800 hover:ring-indigo-400/50 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 ${
+        isDragging || isSortableDragging ? "opacity-0 cursor-grabbing" : ""
       }`}
     >
       {/* Ticket ID & Creator Type Badge */}

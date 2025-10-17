@@ -56,6 +56,23 @@ export async function PATCH(
             role: true,
           },
         },
+        managementUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
@@ -75,6 +92,14 @@ export async function PATCH(
                 email: true,
                 avatar: true,
                 role: true,
+              },
+            },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
               },
             },
           },

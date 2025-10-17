@@ -7,10 +7,13 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
   DragOverEvent,
+  closestCenter,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import TicketCard from "./ticket-card"
@@ -32,18 +35,22 @@ const columns: { id: TicketStatus; label: string; color: string }[] = [
 // Droppable Column Component
 function DroppableColumn({ 
   id, 
-  children 
+  children,
+  isActive
 }: { 
   id: string; 
-  children: React.ReactNode 
+  children: React.ReactNode;
+  isActive: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] space-y-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/10 transition-colors ${
-        isOver ? "ring-2 ring-indigo-500 bg-slate-800/50" : ""
+      className={`min-h-[200px] space-y-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/10 transition-all duration-200 ${
+        isActive || isOver
+          ? "ring-4 ring-indigo-400 bg-indigo-500/20 scale-[1.03] shadow-2xl shadow-indigo-500/40 animate-pulse" 
+          : ""
       }`}
       data-status={id}
     >
@@ -58,11 +65,23 @@ export default function TicketKanban({
   onStatusChange,
 }: TicketKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
 
   const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 5, // Reduced for quicker response
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150, // Slight delay to distinguish from scrolling
+        tolerance: 5,
+      },
+    }),
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     })
   )
@@ -71,11 +90,17 @@ export default function TicketKanban({
     setActiveId(event.active.id as string)
   }
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    setOverId(over?.id as string | null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
     if (!over) {
       setActiveId(null)
+      setOverId(null)
       return
     }
 
@@ -89,6 +114,7 @@ export default function TicketKanban({
     }
 
     setActiveId(null)
+    setOverId(null)
   }
 
   const getTicketsByStatus = (status: TicketStatus) => {
@@ -100,7 +126,9 @@ export default function TicketKanban({
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -124,7 +152,7 @@ export default function TicketKanban({
                 items={columnTickets.map((t) => t.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <DroppableColumn id={column.id}>
+                <DroppableColumn id={column.id} isActive={overId === column.id}>
                   {columnTickets.map((ticket) => (
                     <TicketCard 
                       key={ticket.id}
@@ -147,9 +175,12 @@ export default function TicketKanban({
       </div>
 
       {/* Drag Overlay */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}>
         {activeTicket ? (
-          <div className="rotate-3 opacity-80">
+          <div className="rotate-2 scale-105 cursor-grabbing shadow-2xl shadow-indigo-500/50 transition-transform">
             <TicketCard ticket={activeTicket} isDragging />
           </div>
         ) : null}

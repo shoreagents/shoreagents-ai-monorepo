@@ -21,6 +21,7 @@ model ManagementUser {
   email            String           @unique
   coverPhoto       String?
   managedCompanies Company[]
+  tickets          Ticket[]
   ticketResponses  TicketResponse[]
 
   @@map("management_users")
@@ -249,6 +250,7 @@ model Ticket {
   responses        TicketResponse[]
   staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
 }
