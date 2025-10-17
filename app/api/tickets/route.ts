@@ -38,6 +38,16 @@ export async function GET(request: NextRequest) {
                 name: true,
                 email: true,
                 role: true,
+                avatar: true,
+              },
+            },
+            managementUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatar: true,
               },
             },
           },
@@ -98,6 +108,7 @@ export async function POST(request: NextRequest) {
         priority: priority || "MEDIUM",
         status: "OPEN",
         attachments: attachments || [],
+        createdByType: "STAFF",
       },
       include: {
         responses: {
@@ -108,6 +119,16 @@ export async function POST(request: NextRequest) {
                 name: true,
                 email: true,
                 role: true,
+                avatar: true,
+              },
+            },
+            managementUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatar: true,
               },
             },
           },

@@ -9,18 +9,19 @@ datasource db {
 }
 
 model ManagementUser {
-  id               String         @id @default(uuid())
-  authUserId       String         @unique
+  id               String           @id @default(uuid())
+  authUserId       String           @unique
   name             String
-  role             ManagementRole @default(MANAGER)
+  role             ManagementRole   @default(MANAGER)
   avatar           String?
   phone            String?
   department       String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  email            String         @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  email            String           @unique
   coverPhoto       String?
   managedCompanies Company[]
+  ticketResponses  TicketResponse[]
 
   @@map("management_users")
 }
@@ -229,34 +230,39 @@ model Review {
 }
 
 model Ticket {
-  id           String           @id @default(uuid())
-  ticketId     String           @unique
-  staffUserId  String
-  title        String
-  description  String
-  category     TicketCategory
-  priority     TicketPriority   @default(MEDIUM)
-  status       TicketStatus     @default(OPEN)
-  assignedTo   String?
-  resolvedDate DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  attachments  String[]         @default([])
-  responses    TicketResponse[]
-  staffUser    StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id               String           @id @default(uuid())
+  ticketId         String           @unique
+  staffUserId      String
+  title            String
+  description      String
+  category         TicketCategory
+  priority         TicketPriority   @default(MEDIUM)
+  status           TicketStatus     @default(OPEN)
+  assignedTo       String?
+  resolvedDate     DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  attachments      String[]         @default([])
+  createdByType    String           @default("STAFF")
+  managementUserId String?
+  responses        TicketResponse[]
+  staffUser        StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
 }
 
 model TicketResponse {
-  id          String    @id @default(uuid())
-  ticketId    String
-  staffUserId String
-  message     String
-  role        String
-  createdAt   DateTime  @default(now())
-  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id               String          @id @default(uuid())
+  ticketId         String
+  staffUserId      String?
+  managementUserId String?
+  message          String
+  createdByType    String          // "STAFF" or "MANAGEMENT"
+  createdAt        DateTime        @default(now())
+  attachments      String[]        @default([])
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_responses")
 }
