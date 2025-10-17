@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Calendar, Users, AlertCircle, Eye, Paperclip, ArrowUpDown } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getPriorityConfig, formatDeadline, getStatusConfig, getSourceConfig } from "@/lib/task-utils"
+import TaskDetailModal from "./task-detail-modal"
 
 interface Task {
   id: string
@@ -41,6 +42,7 @@ type SortDirection = "asc" | "desc"
 export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) {
   const [sortField, setSortField] = useState<SortField>("createdAt")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -165,7 +167,8 @@ export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) 
               return (
                 <tr
                   key={task.id}
-                  className={`border-b border-slate-800 hover:bg-slate-700/30 transition-colors group ${
+                  onClick={() => setSelectedTask(task)}
+                  className={`border-b border-slate-800 hover:bg-slate-700/30 transition-colors group cursor-pointer ${
                     index % 2 === 0 ? "bg-slate-900/20" : ""
                   }`}
                 >
@@ -276,6 +279,19 @@ export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) 
           </tbody>
         </table>
       </div>
+
+      {/* View Only Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={() => {
+            onRefresh()
+            setSelectedTask(null)
+          }}
+          viewOnly={true}
+        />
+      )}
     </div>
   )
 }

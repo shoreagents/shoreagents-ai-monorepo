@@ -65,9 +65,10 @@ interface TaskDetailModalProps {
   onClose: () => void
   isDarkTheme?: boolean
   onUpdate?: () => void
+  viewOnly?: boolean
 }
 
-export default function TaskDetailModal({ task, onClose, isDarkTheme = false, onUpdate }: TaskDetailModalProps) {
+export default function TaskDetailModal({ task, onClose, isDarkTheme = false, onUpdate, viewOnly = false }: TaskDetailModalProps) {
   const { toast } = useToast()
   const priorityConfig = getPriorityConfig(task.priority as any)
   const sourceConfig = getSourceConfig(task.source as any)
@@ -635,7 +636,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               </span>
               
               {/* Edit Task Button */}
-              {!isEditingTask && (
+              {!isEditingTask && !viewOnly && (
                 <button
                   onClick={() => setIsEditingTask(true)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 ${
@@ -649,13 +650,21 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 </button>
               )}
             </div>
-            <h2 className={`text-3xl font-bold mb-2 ${
-              isDarkTheme 
-                ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
-                : "text-slate-900"
-            }`}>
-              {task.title}
-            </h2>
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className={`text-3xl font-bold ${
+                isDarkTheme 
+                  ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
+                  : "text-slate-900"
+              }`}>
+                {task.title}
+              </h2>
+              {viewOnly && (
+                <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-slate-700 to-slate-600 text-white text-xs font-bold ring-2 ring-slate-500 flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5" />
+                  VIEW ONLY
+                </span>
+              )}
+            </div>
             {task.description && (
               <p className={`text-base ${isDarkTheme ? "text-slate-300" : "text-slate-600"}`}>
                 {task.description}
@@ -1605,11 +1614,12 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
           ) : null}
 
           {/* Add Response Form */}
-          <div className={`rounded-xl p-4 ${
-            isDarkTheme 
-              ? "bg-slate-700/50 ring-1 ring-white/10" 
-              : "bg-white border-2 border-slate-300"
-          }`}>
+          {!viewOnly && (
+            <div className={`rounded-xl p-4 ${
+              isDarkTheme 
+                ? "bg-slate-700/50 ring-1 ring-white/10" 
+                : "bg-white border-2 border-slate-300"
+            }`}>
             <textarea
               value={newResponseContent}
               onChange={(e) => setNewResponseContent(e.target.value)}
@@ -1702,7 +1712,8 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 Post Comment
               </button>
             </div>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Close Button */}
