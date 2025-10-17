@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Search, Filter } from "lucide-react"
-import { Ticket, TicketStatus } from "@/types/ticket"
+import { Ticket, TicketStatus, TicketCategory, TicketPriority } from "@/types/ticket"
 import TicketKanban from "@/components/tickets/ticket-kanban"
 import TicketDetailModal from "@/components/tickets/ticket-detail-modal"
 import ViewToggle from "@/components/tickets/view-toggle"
 import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export default function AdminTicketsPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban")
@@ -15,6 +16,7 @@ export default function AdminTicketsPage() {
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCategory, setFilterCategory] = useState<string>("all")
@@ -140,7 +142,16 @@ export default function AdminTicketsPage() {
           <h1 className="text-3xl font-bold text-white">Ticket Management</h1>
           <p className="mt-1 text-slate-400">Oversee and respond to all support tickets</p>
         </div>
-        <ViewToggle view={view} onViewChange={setView} />
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-all hover:bg-indigo-700"
+          >
+            <Plus className="h-5 w-5" />
+            Create Ticket
+          </Button>
+          <ViewToggle view={view} onViewChange={setView} />
+        </div>
       </div>
 
       {/* Stats */}
@@ -224,6 +235,214 @@ export default function AdminTicketsPage() {
           isManagement={true}
         />
       )}
+
+      {/* Create Ticket Modal */}
+      {showCreateModal && (
+        <CreateTicketModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false)
+            fetchTickets()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Create Ticket Modal Component
+function CreateTicketModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [formData, setFormData] = useState({
+    staffUserId: "",
+    title: "",
+    description: "",
+    category: "OTHER" as TicketCategory,
+    priority: "MEDIUM" as TicketPriority,
+  })
+  const [loading, setLoading] = useState(false)
+  const [staffUsers, setStaffUsers] = useState<any[]>([])
+  const { toast } = useToast()
+
+  useEffect(() => {
+    // Fetch staff users for the dropdown
+    fetch("/api/admin/staff")
+      .then((res) => res.json())
+      .then((data) => setStaffUsers(data.staff || []))
+      .catch(() => {})
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.staffUserId || !formData.title || !formData.description) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch("/api/admin/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) throw new Error("Failed to create ticket")
+
+      toast({
+        title: "Success",
+        description: "Ticket created successfully",
+      })
+
+      onSuccess()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create ticket. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl rounded-xl bg-slate-900 p-6 shadow-2xl ring-1 ring-white/10">
+        <h2 className="mb-4 text-2xl font-bold text-white">Create New Ticket</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Staff User Select */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              Staff Member *
+            </label>
+            <select
+              required
+              value={formData.staffUserId}
+              onChange={(e) =>
+                setFormData({ ...formData, staffUserId: e.target.value })
+              }
+              className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+            >
+              <option value="">Select a staff member...</option>
+              {staffUsers.map((staff) => (
+                <option key={staff.id} value={staff.id}>
+                  {staff.name} ({staff.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              placeholder="Brief summary of the issue..."
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              Description *
+            </label>
+            <textarea
+              required
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              rows={4}
+              className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              placeholder="Detailed description..."
+            />
+          </div>
+
+          {/* Category & Priority */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Category *
+              </label>
+              <select
+                required
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value as TicketCategory })
+                }
+                className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              >
+                <option value="IT">IT / Computer</option>
+                <option value="HR">HR / Payroll</option>
+                <option value="MANAGEMENT">Management</option>
+                <option value="EQUIPMENT">Equipment</option>
+                <option value="STATION">Workstation</option>
+                <option value="SURROUNDINGS">Environment</option>
+                <option value="COMPENSATION">Perks & Requests</option>
+                <option value="TRANSPORT">Transport</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Priority *
+              </label>
+              <select
+                required
+                value={formData.priority}
+                onChange={(e) =>
+                  setFormData({ ...formData, priority: e.target.value as TicketPriority })
+                }
+                className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-lg bg-slate-700 px-6 py-2 font-medium text-white transition-all hover:bg-slate-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white transition-all hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {loading ? "Creating..." : "Create Ticket"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
