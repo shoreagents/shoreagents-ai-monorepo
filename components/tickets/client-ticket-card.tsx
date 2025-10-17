@@ -3,6 +3,8 @@
 import { Ticket } from "@/types/ticket"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, Paperclip, Clock, User } from "lucide-react"
+import { getDepartmentLabel, getDepartmentEmoji } from "@/lib/category-department-map"
+import { getCategoryIcon } from "@/lib/ticket-categories"
 
 interface ClientTicketCardProps {
   ticket: Ticket
@@ -10,20 +12,28 @@ interface ClientTicketCardProps {
 }
 
 export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardProps) {
-  // Priority colors
+  // Priority colors - FUN GRADIENTS!
   const priorityColors = {
-    URGENT: "bg-red-100 text-red-700 border-red-200",
-    HIGH: "bg-orange-100 text-orange-700 border-orange-200",
-    MEDIUM: "bg-blue-100 text-blue-700 border-blue-200",
-    LOW: "bg-gray-100 text-gray-700 border-gray-200",
+    URGENT: "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-500/30 shadow-lg shadow-red-500/20",
+    HIGH: "bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300 border border-orange-500/30 shadow-lg shadow-orange-500/20",
+    MEDIUM: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/20",
+    LOW: "bg-gradient-to-r from-slate-500/20 to-gray-500/20 text-slate-300 border border-slate-500/30 shadow-lg shadow-slate-500/20",
   }
 
-  // Status colors
+  // Priority emojis
+  const priorityEmojis = {
+    URGENT: "🚨",
+    HIGH: "⚡",
+    MEDIUM: "📋",
+    LOW: "💤",
+  }
+
+  // Status colors - VIBRANT!
   const statusColors = {
-    OPEN: "bg-blue-500",
-    IN_PROGRESS: "bg-amber-500",
-    RESOLVED: "bg-green-500",
-    CLOSED: "bg-gray-500",
+    OPEN: "bg-gradient-to-r from-blue-500 to-cyan-500",
+    IN_PROGRESS: "bg-gradient-to-r from-amber-500 to-orange-500",
+    RESOLVED: "bg-gradient-to-r from-emerald-500 to-green-500",
+    CLOSED: "bg-gradient-to-r from-slate-500 to-gray-500",
   }
 
   // Format date
@@ -44,28 +54,28 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
   return (
     <div
       onClick={onClick}
-      className="group relative bg-white rounded-xl shadow-sm border-2 border-gray-100 hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
+      className="group relative rounded-2xl bg-slate-900/50 backdrop-blur-xl shadow-xl border border-white/10 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-300 cursor-pointer overflow-hidden hover:scale-[1.02] transform"
     >
-      {/* Status indicator bar */}
-      <div className={`h-1.5 w-full ${statusColors[ticket.status]}`} />
+      {/* Status indicator bar - GLOWING! */}
+      <div className={`h-2 w-full ${statusColors[ticket.status]} shadow-lg`} />
 
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-500/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
                 {ticket.ticketId}
               </span>
               <span
-                className={`text-xs font-semibold px-2 py-1 rounded border ${
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-sm ${
                   priorityColors[ticket.priority]
                 }`}
               >
-                {ticket.priority}
+                {priorityEmojis[ticket.priority]} {ticket.priority}
               </span>
             </div>
-            <h3 className="text-base font-bold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            <h3 className="text-base font-bold text-white line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-purple-400 transition-all">
               {ticket.title}
             </h3>
           </div>
@@ -73,13 +83,13 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
 
         {/* Category */}
         <div className="mb-3">
-          <span className="inline-flex items-center text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
-            {ticket.category.replace(/_/g, " ")}
+          <span className="inline-flex items-center text-xs font-bold text-purple-300 bg-purple-500/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-purple-500/30 shadow-lg shadow-purple-500/20">
+            {getCategoryIcon(ticket.category)} {ticket.category.replace(/_/g, " ")}
           </span>
         </div>
 
         {/* Description preview */}
-        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+        <p className="text-sm text-slate-300 line-clamp-2 mb-3">
           {ticket.description}
         </p>
 
@@ -103,37 +113,52 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+          <div className="flex items-center gap-4 text-sm text-slate-400">
             {/* Responses count */}
             {ticket.responses && ticket.responses.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="w-4 h-4 text-blue-500" />
-                <span className="font-medium text-gray-700">{ticket.responses.length}</span>
+              <div className="flex items-center gap-1.5 bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-500/30">
+                <MessageSquare className="w-4 h-4 text-blue-400" />
+                <span className="font-bold text-blue-300">{ticket.responses.length}</span>
               </div>
             )}
 
             {/* Attachments count */}
             {ticket.attachments && ticket.attachments.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Paperclip className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-gray-700">{ticket.attachments.length}</span>
+              <div className="flex items-center gap-1.5 bg-emerald-500/20 px-2 py-1 rounded-lg border border-emerald-500/30">
+                <Paperclip className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-emerald-300">{ticket.attachments.length}</span>
               </div>
             )}
 
             {/* Time */}
             <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-xs">{formatDate(ticket.createdAt)}</span>
+              <Clock className="w-4 h-4 text-slate-400" />
+              <span className="text-xs text-slate-400">{formatDate(ticket.createdAt)}</span>
             </div>
           </div>
 
-          {/* Account Manager */}
-          {ticket.accountManager && (
+          {/* Assigned Manager (for Staff tickets) or Account Manager (for Client tickets) */}
+          {ticket.managementUser && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-7 w-7 border-2 border-white shadow-sm">
+              <Avatar className="h-8 w-8 border-2 border-indigo-500/50 shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-500/20">
+                <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-bold">
+                  {ticket.managementUser.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+          {!ticket.managementUser && ticket.accountManager && (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8 border-2 border-purple-500/50 shadow-lg shadow-purple-500/50 ring-2 ring-purple-500/20">
                 <AvatarImage src={ticket.accountManager.avatar} alt={ticket.accountManager.name} />
-                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs">
+                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs font-bold">
                   {ticket.accountManager.name
                     .split(" ")
                     .map((n) => n[0])
@@ -146,9 +171,19 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
           )}
         </div>
 
-        {/* Account Manager tooltip on hover */}
-        {ticket.accountManager && (
-          <div className="absolute bottom-full right-4 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        {/* Management User tooltip on hover - Shows Department */}
+        {ticket.managementUser && (
+          <div className="absolute bottom-full right-4 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+            <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white text-xs py-2 px-3 rounded-lg whitespace-nowrap shadow-2xl border border-indigo-500/30">
+              <div className="font-bold">{getDepartmentEmoji(ticket.managementUser.department)} {getDepartmentLabel(ticket.managementUser.department)}</div>
+              <div className="text-indigo-200">Assigned to {ticket.managementUser.name}</div>
+              <div className="absolute bottom-0 right-6 transform translate-y-1/2 rotate-45 w-2 h-2 bg-indigo-900" />
+            </div>
+          </div>
+        )}
+        {/* Account Manager tooltip on hover (for Client tickets) */}
+        {!ticket.managementUser && ticket.accountManager && (
+          <div className="absolute bottom-full right-4 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             <div className="bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg whitespace-nowrap shadow-lg">
               Assigned to {ticket.accountManager.name}
               <div className="absolute bottom-0 right-6 transform translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900" />
@@ -157,8 +192,8 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
         )}
       </div>
 
-      {/* Hover effect overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 to-blue-50/50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      {/* Hover effect overlay - MAGICAL SHIMMER! */}
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/10 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </div>
   )
 }

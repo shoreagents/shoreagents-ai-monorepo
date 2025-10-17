@@ -15,7 +15,7 @@ model ManagementUser {
   role             ManagementRole   @default(MANAGER)
   avatar           String?
   phone            String?
-  department       String
+  department       Department
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   email            String           @unique
@@ -523,6 +523,18 @@ model staff_personal_records {
 enum ManagementRole {
   ADMIN
   MANAGER
+}
+
+enum Department {
+  CEO_EXECUTIVE
+  IT_DEPARTMENT
+  HR_DEPARTMENT
+  NURSE_DEPARTMENT
+  RECRUITMENT_DEPARTMENT
+  ACCOUNT_MANAGEMENT
+  FINANCE_DEPARTMENT
+  NERDS_DEPARTMENT
+  OPERATIONS
 }
 
 enum StaffRole {
