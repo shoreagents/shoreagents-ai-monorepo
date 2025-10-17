@@ -9,18 +9,19 @@ datasource db {
 }
 
 model ManagementUser {
-  id               String         @id @default(uuid())
-  authUserId       String         @unique
+  id               String           @id @default(uuid())
+  authUserId       String           @unique
   name             String
-  role             ManagementRole @default(MANAGER)
+  role             ManagementRole   @default(MANAGER)
   avatar           String?
   phone            String?
   department       String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  email            String         @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  email            String           @unique
   coverPhoto       String?
   managedCompanies Company[]
+  ticket_responses TicketResponse[]
 
   @@map("management_users")
 }
@@ -186,77 +187,80 @@ model PerformanceMetric {
   productivityScore Int       @default(0)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  applicationsUsed  Json?     @default("[]")
+  visitedUrls       Json?     @default("[]")
+  screenshotUrls    Json?     @default("[]")
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("performance_metrics")
 }
 
 model Review {
-  id               String       @id @default(uuid())
-  staffUserId      String
-  type             ReviewType
-  status           ReviewStatus @default(PENDING)
-  client           String
-  reviewer         String       // Client user email
-  reviewerTitle    String?
-  submittedDate    DateTime?    // When client submits (nullable for PENDING)
-  dueDate          DateTime     // When review is due
-  evaluationPeriod String
-  
-  // Scoring
-  ratings          Json?        // Array of 1-5 ratings for each question
-  overallScore     Decimal?     @db.Decimal(5, 2)  // Percentage (0-100)
-  performanceLevel String?      // critical, needs_improvement, good, excellent
-  
-  // Open-ended responses
-  strengths        String?      @db.Text
-  improvements     String?      @db.Text
-  additionalComments String?    @db.Text
-  
-  // Management review
-  managementNotes  String?      @db.Text
-  reviewedBy       String?      // Management user who processed
-  reviewedDate     DateTime?
-  
-  // Staff acknowledgment
-  acknowledgedDate DateTime?
-  
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  staffUser        StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id                 String       @id @default(uuid())
+  staffUserId        String
+  type               ReviewType
+  status             ReviewStatus @default(PENDING)
+  client             String
+  reviewer           String
+  reviewerTitle      String?
+  submittedDate      DateTime?
+  evaluationPeriod   String
+  overallScore       Decimal?     @db.Decimal(5, 2)
+  acknowledgedDate   DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  dueDate            DateTime
+  ratings            Json?
+  performanceLevel   String?
+  strengths          String?
+  improvements       String?
+  additionalComments String?
+  managementNotes    String?
+  reviewedBy         String?
+  reviewedDate       DateTime?
+  staffUser          StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
 
 model Ticket {
-  id           String           @id @default(uuid())
-  ticketId     String           @unique
-  staffUserId  String
-  title        String
-  description  String
-  category     TicketCategory
-  priority     TicketPriority   @default(MEDIUM)
-  status       TicketStatus     @default(OPEN)
-  assignedTo   String?
-  resolvedDate DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  attachments  String[]         @default([])
-  responses    TicketResponse[]
-  staffUser    StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id               String           @id @default(uuid())
+  ticketId         String           @unique
+  staffUserId      String?
+  title            String
+  description      String
+  category         TicketCategory
+  priority         TicketPriority   @default(MEDIUM)
+  status           TicketStatus     @default(OPEN)
+  assignedTo       String?
+  resolvedDate     DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  attachments      String[]         @default([])
+  createdByType    String           @default("STAFF")
+  managementUserId String?
+  clientUserId     String?
+  responses        TicketResponse[]
+  client_users     ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
 }
 
 model TicketResponse {
-  id          String    @id @default(uuid())
-  ticketId    String
-  staffUserId String
-  message     String
-  role        String
-  createdAt   DateTime  @default(now())
-  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id               String          @id @default(uuid())
+  ticketId         String
+  staffUserId      String?
+  message          String
+  createdAt        DateTime        @default(now())
+  managementUserId String?
+  createdByType    String
+  attachments      String[]        @default([])
+  clientUserId     String?
+  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_responses")
 }
@@ -389,18 +393,20 @@ model Company {
 }
 
 model ClientUser {
-  id         String         @id @default(uuid())
-  authUserId String         @unique
-  name       String
-  role       ClientRole     @default(MANAGER)
-  avatar     String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  email      String         @unique
-  companyId  String
-  coverPhoto String?
-  profile    ClientProfile?
-  company    Company        @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  id               String           @id @default(uuid())
+  authUserId       String           @unique
+  name             String
+  role             ClientRole       @default(MANAGER)
+  avatar           String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  email            String           @unique
+  companyId        String
+  coverPhoto       String?
+  profile          ClientProfile?
+  company          Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  ticket_responses TicketResponse[]
+  tickets          Ticket[]
 
   @@map("client_users")
 }
@@ -577,17 +583,17 @@ enum ClockOutReason {
 }
 
 enum ReviewType {
-  MONTH_1      // 30 days after startDate
-  MONTH_3      // 90 days after startDate
-  MONTH_5      // 150 days after startDate - Regularization decision
-  RECURRING    // Every 6 months post-regularization
+  MONTH_1
+  MONTH_3
+  MONTH_5
+  RECURRING
 }
 
 enum ReviewStatus {
-  PENDING      // Waiting for client to complete
-  SUBMITTED    // Client completed, waiting for management
-  UNDER_REVIEW // Management reviewing
-  COMPLETED    // Staff acknowledged
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  COMPLETED
 }
 
 enum TicketCategory {
@@ -600,6 +606,22 @@ enum TicketCategory {
   SURROUNDINGS
   COMPENSATION
   TRANSPORT
+  ONBOARDING
+  OFFBOARDING
+  CLINIC
+  MEETING_ROOM
+  MAINTENANCE
+  CLEANING
+  FINANCE
+  OPERATIONS
+  ACCOUNT_SUPPORT
+  STAFF_PERFORMANCE
+  PURCHASE_REQUEST
+  BONUS_REQUEST
+  REFERRAL
+  REPORTING_ISSUES
+  SYSTEM_ACCESS
+  GENERAL_INQUIRY
 }
 
 enum TicketPriority {

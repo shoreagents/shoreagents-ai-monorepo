@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
   User, 
   CreditCard, 
@@ -27,8 +28,8 @@ import {
 
 const STEPS = [
   { id: 1, name: "Personal Info", icon: User, field: "personalInfoStatus" },
-  { id: 2, name: "Government IDs", icon: CreditCard, field: "govIdStatus" },
-  { id: 3, name: "Documents", icon: FileText, field: "documentsStatus" },
+  { id: 2, name: "Government IDs & Documents", icon: CreditCard, field: "govIdStatus" },
+  { id: 3, name: "Additional Documents", icon: FileText, field: "documentsStatus" },
   { id: 4, name: "Signature", icon: PenTool, field: "signatureStatus" },
   { id: 5, name: "Emergency Contact", icon: Users, field: "emergencyContactStatus" },
 ]
@@ -57,6 +58,12 @@ interface OnboardingData {
   policeClearanceUrl: string
   idPhotoUrl: string
   signatureUrl: string
+  sssDocUrl: string
+  tinDocUrl: string
+  philhealthDocUrl: string
+  pagibigDocUrl: string
+  birForm2316Url: string
+  certificateEmpUrl: string
   
   // Emergency Contact
   emergencyContactName: string
@@ -70,6 +77,13 @@ interface OnboardingData {
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
+  
+  // Feedback
+  personalInfoFeedback?: string
+  govIdFeedback?: string
+  documentsFeedback?: string
+  signatureFeedback?: string
+  emergencyContactFeedback?: string
 }
 
 interface UploadingState {
@@ -471,8 +485,10 @@ export default function OnboardingPage() {
                 const Icon = step.icon
                 const status = formData[step.field as keyof OnboardingData] as string
                 const isActive = currentStep === step.id
-                const isCompleted = status === "APPROVED" || status === "SUBMITTED"
-                const isClickable = isCompleted || isActive
+                const isCompleted = status === "SUBMITTED"
+                const isApproved = status === "APPROVED"
+                const isRejected = status === "REJECTED"
+                const isClickable = true // Allow navigation to any step
                 
                 return (
                   <div key={step.id} className="flex flex-col items-center flex-1">
@@ -486,22 +502,28 @@ export default function OnboardingPage() {
                       }}
                       disabled={!isClickable}
                       className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-200 ${
-                        isCompleted
+                        isApproved
                           ? "bg-green-600 text-white hover:bg-green-500"
+                          : isCompleted
+                          ? "bg-purple-600 text-white hover:bg-purple-500"
+                          : isRejected
+                          ? "bg-red-600 text-white hover:bg-red-500"
                           : isActive
                           ? "bg-purple-600 text-white hover:bg-purple-500"
-                          : "bg-slate-700 text-slate-400"
-                      } ${isClickable ? "hover:scale-110 cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                          : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                      } hover:scale-110 cursor-pointer`}
                     >
-                      {isCompleted ? (
+                      {isApproved ? (
                         <CheckCircle2 className="h-6 w-6" />
+                      ) : isCompleted ? (
+                        <Icon className="h-5 w-5" />
+                      ) : isRejected ? (
+                        <AlertCircle className="h-6 w-6" />
                       ) : (
                         <Icon className="h-5 w-5" />
                       )}
                     </button>
-                    <span className={`text-xs text-center ${
-                      isClickable ? "text-slate-300" : "text-slate-500"
-                    }`}>
+                    <span className="text-xs text-center text-slate-300">
                       {step.name}
                     </span>
                   </div>
@@ -520,18 +542,125 @@ export default function OnboardingPage() {
         {/* Form */}
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-white">
-              {STEPS[currentStep - 1].name}
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              {currentStep === 1 && "Tell us about yourself"}
-              {currentStep === 2 && "Enter your government ID numbers"}
-              {currentStep === 3 && "Upload your documents below. Don't have them yet? No worries - you can skip and add them later!"}
-              {currentStep === 4 && "Upload your signature image (white background recommended). You can also skip and add it later."}
-              {currentStep === 5 && "Who should we contact in case of emergency?"}
-            </CardDescription>
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-white">
+                  {STEPS[currentStep - 1].name}
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  {currentStep === 1 && "Tell us about yourself"}
+                  {currentStep === 2 && "Enter your government ID numbers and upload supporting documents"}
+                  {currentStep === 3 && "Upload your additional documents below."}
+                  {currentStep === 4 && "Upload your signature image (white background recommended). You can also skip and add it later."}
+                  {currentStep === 5 && "Who should we contact in case of emergency?"}
+                </CardDescription>
+              </div>
+              {/* Status Badge */}
+              {currentStep === 1 && formData.personalInfoStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 1 && formData.personalInfoStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 2 && formData.govIdStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 2 && formData.govIdStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 3 && formData.documentsStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 3 && formData.documentsStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 4 && formData.signatureStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 4 && formData.signatureStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 5 && formData.emergencyContactStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 5 && formData.emergencyContactStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
+            {/* Feedback Display - Full Width */}
+            {currentStep === 1 && formData.personalInfoFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.personalInfoFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 2 && formData.govIdFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.govIdFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 3 && formData.documentsFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.documentsFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 4 && formData.signatureFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.signatureFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 5 && formData.emergencyContactFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.emergencyContactFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -671,7 +800,7 @@ export default function OnboardingPage() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Saving...
                       </span>
-                    ) : "Continue"}
+                    ) : "Save"}
                   </Button>
                 )}
               </div>
@@ -680,52 +809,280 @@ export default function OnboardingPage() {
             {/* Step 2: Government IDs */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="sss" className="text-slate-300">SSS Number (XX-XXXXXXX-X)</Label>
-                  <Input
-                    id="sss"
-                    value={formData.sss || ""}
-                    onChange={(e) => setFormData({ ...formData, sss: e.target.value })}
-                    placeholder="02-3731640-2"
-                    className="bg-slate-700 border-slate-600 text-white"
-                    disabled={formData.govIdStatus === "APPROVED"}
-                  />
+                {/* SSS Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sss" className="text-slate-300 text-sm">SSS Number (XX-XXXXXXX-X)</Label>
+                    <Input
+                      id="sss"
+                      value={formData.sss || ""}
+                      onChange={(e) => setFormData({ ...formData, sss: e.target.value })}
+                      placeholder="02-3731640-2"
+                      className="bg-slate-700 border-slate-600 text-white"
+                      disabled={formData.govIdStatus === "APPROVED"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-sm">SSS Document</Label>
+                    {formData.sssDocUrl ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.sssDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.sssDocUrl!, title: "SSS Document" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.govIdStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="sssDoc-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="sssDoc-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "sssDoc") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.sssDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "sssDoc") }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="tin" className="text-slate-300">TIN (XXX-XXX-XXX-XXX)</Label>
-                  <Input
-                    id="tin"
-                    value={formData.tin || ""}
-                    onChange={(e) => setFormData({ ...formData, tin: e.target.value })}
-                    placeholder="474-887-785-000"
-                    className="bg-slate-700 border-slate-600 text-white"
-                    disabled={formData.govIdStatus === "APPROVED"}
-                  />
+                {/* TIN Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tin" className="text-slate-300 text-sm">TIN ID (XXX-XXX-XXX-XXX)</Label>
+                    <Input
+                      id="tin"
+                      value={formData.tin || ""}
+                      onChange={(e) => setFormData({ ...formData, tin: e.target.value })}
+                      placeholder="474-887-785-000"
+                      className="bg-slate-700 border-slate-600 text-white"
+                      disabled={formData.govIdStatus === "APPROVED"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-sm">BIR Form 1902 (TIN)</Label>
+                    {formData.tinDocUrl ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.tinDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.tinDocUrl!, title: "BIR Form 1902 (TIN)" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.govIdStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="tinDoc-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="tinDoc-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "tinDoc") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.tinDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "tinDoc") }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="philhealth" className="text-slate-300">PhilHealth No (XX-XXXXXXXXX-X)</Label>
-                  <Input
-                    id="philhealth"
-                    value={formData.philhealthNo || ""}
-                    onChange={(e) => setFormData({ ...formData, philhealthNo: e.target.value })}
-                    placeholder="07-025676881-8"
-                    className="bg-slate-700 border-slate-600 text-white"
-                    disabled={formData.govIdStatus === "APPROVED"}
-                  />
+                {/* PhilHealth Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="philhealth" className="text-slate-300 text-sm">PhilHealth Number (XX-XXXXXXXXX-X)</Label>
+                    <Input
+                      id="philhealth"
+                      value={formData.philhealthNo || ""}
+                      onChange={(e) => setFormData({ ...formData, philhealthNo: e.target.value })}
+                      placeholder="07-025676881-8"
+                      className="bg-slate-700 border-slate-600 text-white"
+                      disabled={formData.govIdStatus === "APPROVED"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-sm">PhilHealth Document</Label>
+                    {formData.philhealthDocUrl ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.philhealthDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.philhealthDocUrl!, title: "PhilHealth Document" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.govIdStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="philhealthDoc-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="philhealthDoc-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "philhealthDoc") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.philhealthDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "philhealthDoc") }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="pagibig" className="text-slate-300">Pag-IBIG No (XXXX-XXXX-XXXX)</Label>
-                  <Input
-                    id="pagibig"
-                    value={formData.pagibigNo || ""}
-                    onChange={(e) => setFormData({ ...formData, pagibigNo: e.target.value })}
-                    placeholder="1211-5400-1513"
-                    className="bg-slate-700 border-slate-600 text-white"
-                    disabled={formData.govIdStatus === "APPROVED"}
-                  />
+                {/* Pag-IBIG Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pagibig" className="text-slate-300 text-sm">Pag-IBIG Number (XXXX-XXXX-XXXX)</Label>
+                    <Input
+                      id="pagibig"
+                      value={formData.pagibigNo || ""}
+                      onChange={(e) => setFormData({ ...formData, pagibigNo: e.target.value })}
+                      placeholder="1211-5400-1513"
+                      className="bg-slate-700 border-slate-600 text-white"
+                      disabled={formData.govIdStatus === "APPROVED"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-sm">Pag-IBIG Document</Label>
+                    {formData.pagibigDocUrl ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.pagibigDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.pagibigDocUrl!, title: "Pag-IBIG Document" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.govIdStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="pagibigDoc-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="pagibigDoc-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "pagibigDoc") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.pagibigDoc ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "pagibigDoc") }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-4 mt-8">
@@ -748,7 +1105,7 @@ export default function OnboardingPage() {
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Saving...
                         </span>
-                      ) : "Continue"}
+                      ) : "Save"}
                     </Button>
                   )}
                 </div>
@@ -880,7 +1237,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300">NBI Clearance</Label>
+                  <Label className="text-slate-300">NBI Clearance (Attach receipt if appointment or release date is after start date)</Label>
                     {formData.nbiClearanceUrl ? (
                       <div className="mt-2 space-y-2">
                         {uploading.nbiClearance ? (
@@ -990,6 +1347,116 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label className="text-slate-300">BIR 2316 (Current year from previous employer, if employed)</Label>
+                    {formData.birForm2316Url ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.birForm2316 ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.birForm2316Url!, title: "BIR 2316 (Current year from previous employer, if employed)" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.documentsStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="birForm2316-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="birForm2316-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birForm2316") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.birForm2316 ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birForm2316") }} />
+                        )}
+                      </div>
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-300">COE (If you have a previous employer)</Label>
+                    {formData.certificateEmpUrl ? (
+                      <div className="mt-2 space-y-2">
+                        {uploading.certificateEmp ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            <span className="text-green-200 text-sm flex-1">Already uploaded</span>
+                            <button 
+                              onClick={() => {
+                                setImageLoading(true)
+                                setViewFileModal({ url: formData.certificateEmpUrl!, title: "COE (Certificate of Employment)" })
+                              }}
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              View
+                            </button>
+                            {formData.documentsStatus !== "APPROVED" && (
+                              <>
+                                <span className="text-slate-500">|</span>
+                                <label htmlFor="certificateEmp-upload" className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer">
+                                  Change File
+                                </label>
+                                <input
+                                  id="certificateEmp-upload"
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "certificateEmp") }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {uploading.certificateEmp ? (
+                          <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <span className="text-blue-200 text-sm">Uploading file...</span>
+                          </div>
+                        ) : (
+                          <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "certificateEmp") }} />
+                        )}
+                      </div>
+                    )}
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-slate-300">ID Photo (2x2, white background)</Label>
                     {formData.idPhotoUrl ? (
                       <div className="mt-2 space-y-2">
@@ -1080,7 +1547,7 @@ export default function OnboardingPage() {
                         Saving...
                       </span>
                     ) : (
-                      formData.documentsStatus === "APPROVED" ? "Next" : "Continue"
+                      formData.documentsStatus === "APPROVED" ? "Next" : "Save"
                     )}
                   </Button>
                 </div>
@@ -1289,7 +1756,7 @@ export default function OnboardingPage() {
                           Saving...
                         </span>
                       ) : (
-                        formData.signatureStatus === "APPROVED" ? "Next" : "Continue"
+                        formData.signatureStatus === "APPROVED" ? "Next" : "Save"
                       )}
                     </Button>
                   </div>
@@ -1389,13 +1856,13 @@ export default function OnboardingPage() {
         setViewFileModal(null)
         setImageLoading(true)
       }}>
-        <DialogContent className="max-w-5xl bg-slate-800 border-slate-700 p-0">
+        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? 'w-[100vw] h-[100vh] max-w-none max-h-none !w-screen !h-screen rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
           <div className="p-6">
             <DialogHeader>
               <DialogTitle className="text-white">{viewFileModal?.title}</DialogTitle>
             </DialogHeader>
           </div>
-          <div className="h-[40vh] relative px-6 pb-6 flex items-center justify-center">
+          <div className={`${viewFileModal?.url?.endsWith('.pdf') ? 'h-[calc(100vh-120px)]' : 'h-[40vh]'} relative px-6 pb-6 flex items-center justify-center`}>
             {imageLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
@@ -1407,7 +1874,7 @@ export default function OnboardingPage() {
             {viewFileModal?.url && (
               viewFileModal.url.endsWith('.pdf') ? (
                 <iframe
-                  src={`${viewFileModal.url}?t=${Date.now()}#toolbar=0`}
+                  src={`${viewFileModal.url}?t=${Date.now()}#toolbar=0&scrollbar=0`}
                   className="w-full h-full"
                   title={viewFileModal.title}
                   onLoad={() => setImageLoading(false)}

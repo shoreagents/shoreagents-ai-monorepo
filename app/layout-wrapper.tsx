@@ -6,6 +6,8 @@ import Sidebar from "@/components/sidebar"
 import { Toaster } from "@/components/ui/toaster"
 import ElectronProvider from "@/components/electron-provider"
 import { WebSocketProvider } from "@/lib/websocket-provider"
+import StaffFloatingCallButton from "@/components/staff/floating-call-button"
+import CallNotificationProvider from "@/components/staff/call-notification-provider"
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -15,9 +17,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const isLoginPage = pathname?.startsWith("/login")
   const isAdminPage = pathname?.startsWith("/admin")
   const isClientPage = pathname?.startsWith("/client")
+  const isCallPage = pathname?.startsWith("/call")
   
   // Staff pages = everything else (root level pages)
-  const isStaffPage = !isLoginPage && !isAdminPage && !isClientPage
+  const isStaffPage = !isLoginPage && !isAdminPage && !isClientPage && !isCallPage
   
   // Extract user info from session for WebSocket
   const userId = session?.user?.id
@@ -31,6 +34,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             {children}
         </div>
       </main>
+      <StaffFloatingCallButton />
+      <CallNotificationProvider />
       <Toaster />
     </>
   ) : (

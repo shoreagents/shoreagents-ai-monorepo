@@ -19,6 +19,9 @@ const port = parseInt(process.env.PORT || '3000', 10)
 const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()
 
+// Global socket server for API routes
+global.socketServer = null
+
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
     try {
@@ -41,6 +44,10 @@ app.prepare().then(() => {
     },
   })
 
+  // Make socket server globally accessible
+  global.socketServer = io
+  console.log('✅ Socket server registered globally')
+
   // Store connected users
   const connectedUsers = new Map()
 
@@ -51,7 +58,11 @@ app.prepare().then(() => {
     socket.on('identify', (data) => {
       const { userId, userName } = data
       connectedUsers.set(socket.id, { userId, userName, socketId: socket.id })
-      console.log('[WebSocket] User identified:', userName)
+      console.log('[WebSocket] User identified:', userName, 'UserID:', userId)
+      
+      // Have user join their own room for targeted messages
+      socket.join(`user:${userId}`)
+      console.log(`[WebSocket] User ${userName} joined room: user:${userId}`)
       
       // Broadcast online users count
       io.emit('users:online', {

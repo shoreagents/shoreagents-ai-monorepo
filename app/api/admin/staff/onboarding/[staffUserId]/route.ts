@@ -37,6 +37,25 @@ export async function GET(
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
+    // Calculate admin-specific progress based on APPROVED/REJECTED statuses only
+    let adminProgress = 0
+    if (staffUser.onboarding) {
+      const sections = [
+        staffUser.onboarding.personalInfoStatus,
+        staffUser.onboarding.govIdStatus,
+        staffUser.onboarding.documentsStatus,
+        staffUser.onboarding.signatureStatus,
+        staffUser.onboarding.emergencyContactStatus
+      ]
+
+      // Admin progress: Only count APPROVED/REJECTED sections (20% each)
+      sections.forEach(status => {
+        if (status === "APPROVED" || status === "REJECTED") {
+          adminProgress += 20
+        }
+      })
+    }
+
     return NextResponse.json({ 
       staff: {
         id: staffUser.id,
@@ -45,8 +64,14 @@ export async function GET(
         avatar: staffUser.avatar,
         createdAt: staffUser.createdAt
       },
-      onboarding: staffUser.onboarding,
-      profile: staffUser.profile
+      onboarding: staffUser.onboarding ? {
+        ...staffUser.onboarding,
+        completionPercent: adminProgress // Override with admin-specific progress
+      } : null,
+      profile: staffUser.profile ? {
+        ...staffUser.profile,
+        daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))
+      } : null
     })
 
   } catch (error) {
