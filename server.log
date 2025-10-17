@@ -1,0 +1,94 @@
+
+> my-v0-project@0.1.0 dev
+> cross-env NODE_ENV=development node server.js
+
+> Ready on http://localhost:3000
+> WebSocket server ready on ws://localhost:3000/api/socketio
+[Break Auto-Start] Background job started
+[WebSocket] Client connected: a4xRld9gmYDqv_yUAAAB
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] Client connected: iKi2fhPcb0wJtUWuAAAF
+[WebSocket] Client connected: EI29ikZBfpKEINRhAAAG
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] Client connected: T8QYL63fROSahL3WAAAI
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] Client connected: ytSG1_BxK-2DrStmAAAJ
+[WebSocket] User identified: Stephen Atcheler
+ ○ Compiling /admin/tickets ...
+Request timed out after 3000ms
+
+Retrying 1/3...
+
+[2m[349.24ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[  0.03ms][22m  [2m ↳ [22mQuick bail check
+[2m[108.07ms][22m  [2m ↳ [22mSetup compiler
+[2m[  0.26ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
+[2m[107.80ms][22m    [2m ↳ [22mCreate compiler
+[2m[  0.10ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[  8.07ms][22m  [2m ↳ [22mSetup scanner
+[2m[113.59ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 43.27ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 66.61ms][22m  [2m ↳ [22mBuild utilities
+[2m[  6.12ms][22m  [2m ↳ [22mTransform Tailwind CSS AST into PostCSS AST
+[2m[  2.92ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled /admin/tickets in 10.4s (1308 modules)
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /admin/tickets 200 in 16068ms
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client connected: NR3LlPxCWKQENXTYAAAL
+
+[2m[28.97ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[ 0.00ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 0.04ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[13.02ms][22m  [2m ↳ [22mScan for candidates
+[2m[11.59ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 1.11ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 3.12ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 626ms (1291 modules)
+ GET /api/auth/session 200 in 1134ms
+[WebSocket] Client disconnected: NR3LlPxCWKQENXTYAAAL
+[WebSocket] Client connected: PXdOviQfa0xNQk5PAAAN
+[WebSocket] User identified: Stephen Atcheler
+ GET /api/auth/session 200 in 39ms
+ GET /api/auth/session 200 in 9ms
+ GET /api/auth/session 200 in 13ms
+ GET /api/auth/session 200 in 8ms
+ GET /api/auth/session 200 in 11ms
+ GET /api/admin/tickets 200 in 3232ms
+ ✓ Compiled /api/admin/staff in 235ms (1293 modules)
+ ⨯ No HTTP methods exported in '/Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/app/api/admin/staff/route.ts'. Export a named export for each HTTP method.
+ GET /api/admin/staff 405 in 262ms
+ GET /api/admin/staff 405 in 6ms
+ GET /admin/tickets 200 in 5394ms
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+ GET /api/auth/session 200 in 239ms
+ GET /api/auth/session 200 in 17ms
+ GET /api/auth/session 200 in 13ms
+ GET /api/auth/session 200 in 10ms
+ GET /api/auth/session 200 in 16ms
+ GET /api/auth/session 200 in 13ms
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+
+[2m[134.44ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[  0.03ms][22m  [2m ↳ [22mQuick bail check
+[2m[  0.09ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 56.50ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 14.66ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 46.28ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 16.47ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled in 657ms (472 modules)
+ GET /admin/tickets 200 in 3674ms
+[Break Auto-Start] Checking 4 active sessions

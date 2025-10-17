@@ -606,6 +606,8 @@ enum TicketCategory {
   SURROUNDINGS
   COMPENSATION
   TRANSPORT
+  ONBOARDING
+  OFFBOARDING
 }
 
 enum TicketPriority {

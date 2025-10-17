@@ -213,6 +213,8 @@ export default function AdminTicketsPage() {
           <option value="SURROUNDINGS">Environment</option>
           <option value="COMPENSATION">Perks & Requests</option>
           <option value="TRANSPORT">Transport</option>
+          <option value="ONBOARDING">Onboarding</option>
+          <option value="OFFBOARDING">Offboarding</option>
           <option value="OTHER">Other</option>
         </select>
       </div>
@@ -260,6 +262,8 @@ function CreateTicketModal({
 }) {
   const [formData, setFormData] = useState({
     staffUserId: "",
+    managementUserId: "",
+    assigneeType: "staff" as "staff" | "management",
     title: "",
     description: "",
     category: "OTHER" as TicketCategory,
@@ -267,20 +271,29 @@ function CreateTicketModal({
   })
   const [loading, setLoading] = useState(false)
   const [staffUsers, setStaffUsers] = useState<any[]>([])
+  const [managementUsers, setManagementUsers] = useState<any[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
-    // Fetch staff users for the dropdown
+    // Fetch staff users
     fetch("/api/admin/staff")
       .then((res) => res.json())
       .then((data) => setStaffUsers(data.staff || []))
+      .catch(() => {})
+    
+    // Fetch management users
+    fetch("/api/admin/management")
+      .then((res) => res.json())
+      .then((data) => setManagementUsers(data.management || []))
       .catch(() => {})
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.staffUserId || !formData.title || !formData.description) {
+    const assigneeId = formData.assigneeType === "staff" ? formData.staffUserId : formData.managementUserId
+    
+    if (!assigneeId || !formData.title || !formData.description) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -292,10 +305,19 @@ function CreateTicketModal({
     setLoading(true)
 
     try {
+      const payload = {
+        staffUserId: formData.assigneeType === "staff" ? formData.staffUserId : undefined,
+        managementUserId: formData.assigneeType === "management" ? formData.managementUserId : undefined,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+      }
+
       const response = await fetch("/api/admin/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error("Failed to create ticket")
@@ -323,27 +345,85 @@ function CreateTicketModal({
         <h2 className="mb-4 text-2xl font-bold text-white">Create New Ticket</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Staff User Select */}
+          {/* Assignee Type Selection */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
-              Staff Member *
+              Assign To *
             </label>
-            <select
-              required
-              value={formData.staffUserId}
-              onChange={(e) =>
-                setFormData({ ...formData, staffUserId: e.target.value })
-              }
-              className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
-            >
-              <option value="">Select a staff member...</option>
-              {staffUsers.map((staff) => (
-                <option key={staff.id} value={staff.id}>
-                  {staff.name} ({staff.email})
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="assigneeType"
+                  value="staff"
+                  checked={formData.assigneeType === "staff"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigneeType: "staff", managementUserId: "" })
+                  }
+                  className="h-4 w-4 text-indigo-600"
+                />
+                <span className="text-white">Staff Member</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="assigneeType"
+                  value="management"
+                  checked={formData.assigneeType === "management"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigneeType: "management", staffUserId: "" })
+                  }
+                  className="h-4 w-4 text-indigo-600"
+                />
+                <span className="text-white">Management Team</span>
+              </label>
+            </div>
           </div>
+
+          {/* Assignee Dropdown */}
+          {formData.assigneeType === "staff" ? (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Staff Member *
+              </label>
+              <select
+                required
+                value={formData.staffUserId}
+                onChange={(e) =>
+                  setFormData({ ...formData, staffUserId: e.target.value })
+                }
+                className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              >
+                <option value="">Select a staff member...</option>
+                {staffUsers.map((staff) => (
+                  <option key={staff.id} value={staff.id}>
+                    {staff.name} ({staff.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Management Member *
+              </label>
+              <select
+                required
+                value={formData.managementUserId}
+                onChange={(e) =>
+                  setFormData({ ...formData, managementUserId: e.target.value })
+                }
+                className="w-full rounded-lg bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+              >
+                <option value="">Select a management member...</option>
+                {managementUsers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name} ({manager.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -399,6 +479,8 @@ function CreateTicketModal({
                 <option value="SURROUNDINGS">Environment</option>
                 <option value="COMPENSATION">Perks & Requests</option>
                 <option value="TRANSPORT">Transport</option>
+                <option value="ONBOARDING">Onboarding</option>
+                <option value="OFFBOARDING">Offboarding</option>
                 <option value="OTHER">Other</option>
               </select>
             </div>

@@ -8,6 +8,8 @@ export type TicketCategory =
   | "SURROUNDINGS"
   | "COMPENSATION"
   | "TRANSPORT"
+  | "ONBOARDING"
+  | "OFFBOARDING"
   | "OTHER"
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT"
 
