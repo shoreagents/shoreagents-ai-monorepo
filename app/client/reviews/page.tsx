@@ -6,12 +6,14 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   Calendar,
   Clock,
   User,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Filter
 } from "lucide-react"
 import { 
   getReviewTypeBadge, 
@@ -41,10 +43,12 @@ export default function ClientReviewsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [autoCreating, setAutoCreating] = useState(false)
+  const [filterMonth, setFilterMonth] = useState<string>("all")
+  const [filterYear, setFilterYear] = useState<string>("all")
 
   useEffect(() => {
     fetchReviews()
-  }, [])
+  }, [filterMonth, filterYear])
 
   const fetchReviews = async () => {
     try {
@@ -63,18 +67,50 @@ export default function ClientReviewsPage() {
           console.log(`Auto-created ${autoCreateData.created} reviews`)
         }
       } catch (triggerError) {
-        console.log("Auto-review creation failed:", triggerError)
+        console.error("Auto-review creation failed:", triggerError)
+        if (triggerError instanceof Error) {
+          console.error("Error details:", triggerError.message)
+        }
         // Continue anyway - reviews might already exist
       } finally {
         setAutoCreating(false)
       }
 
-      // Then fetch the reviews
-      const response = await fetch("/api/client/reviews")
-      if (!response.ok) throw new Error("Failed to fetch reviews")
-      
-      const data = await response.json()
-      setReviews(data.reviews || [])
+          // Then fetch the reviews
+          // Always fetch all reviews first
+          const allReviewsResponse = await fetch("/api/client/reviews")
+          if (!allReviewsResponse.ok) throw new Error("Failed to fetch reviews")
+          const allReviewsData = await allReviewsResponse.json()
+          
+          // If filters are active, also fetch filtered completed reviews
+          let filteredCompletedReviews: Review[] = []
+          const currentYear = new Date().getFullYear().toString()
+          const hasMonthFilter = filterMonth && filterMonth !== "all"
+          const hasYearFilter = filterYear && filterYear !== "all"
+          
+          if (hasMonthFilter || hasYearFilter) {
+            const params = new URLSearchParams()
+            if (hasMonthFilter) params.append("month", filterMonth)
+            if (hasYearFilter) params.append("year", filterYear)
+            params.append("status", "SUBMITTED")
+            
+            const filteredResponse = await fetch(`/api/client/reviews?${params.toString()}`)
+            if (filteredResponse.ok) {
+              const filteredData = await filteredResponse.json()
+              filteredCompletedReviews = filteredData.reviews || []
+            }
+          }
+          
+          // Combine: all pending reviews + filtered completed reviews (or all completed if no filter)
+          const allReviews = allReviewsData.reviews || []
+          const pendingReviews = allReviews.filter((r: Review) => r.status === "PENDING")
+          const allCompletedReviews = allReviews.filter((r: Review) => r.status !== "PENDING")
+          
+          // Use filtered completed reviews if filters are active, otherwise use all completed
+          const finalCompletedReviews = filteredCompletedReviews.length > 0 ? filteredCompletedReviews : allCompletedReviews
+          
+          // Combine pending + completed for display
+          setReviews([...pendingReviews, ...finalCompletedReviews])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reviews")
     } finally {
@@ -205,7 +241,13 @@ export default function ClientReviewsPage() {
                             <Calendar className="h-3.5 w-3.5" />
                             <span className="text-xs font-medium">Due Date</span>
                           </div>
-                          <p className="font-semibold text-gray-900 text-xs">{getDueDateText(review.dueDate)}</p>
+                          <p className={`font-semibold text-xs ${
+                            getDueDateText(review.dueDate) === "Due tomorrow" || 
+                            getDueDateText(review.dueDate) === "Due today" ||
+                            getDueDateText(review.dueDate).includes("overdue")
+                              ? "text-red-600" 
+                              : "text-gray-900"
+                          }`}>{getDueDateText(review.dueDate)}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-1.5 text-gray-500 mb-1">
@@ -259,10 +301,59 @@ export default function ClientReviewsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-2xl font-bold text-gray-900">
                   Completed Reviews <span className="text-green-600">({submittedReviews.length})</span>
                 </h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm text-gray-800 font-medium">Filter by:</span>
+                </div>
+                <Select value={filterMonth} onValueChange={setFilterMonth}>
+                  <SelectTrigger className="w-40 text-gray-900">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-gray-900 border border-gray-200">
+                    <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">All Months</SelectItem>
+                    <SelectItem value="1" className="text-gray-900 hover:bg-gray-50">January</SelectItem>
+                    <SelectItem value="2" className="text-gray-900 hover:bg-gray-50">February</SelectItem>
+                    <SelectItem value="3" className="text-gray-900 hover:bg-gray-50">March</SelectItem>
+                    <SelectItem value="4" className="text-gray-900 hover:bg-gray-50">April</SelectItem>
+                    <SelectItem value="5" className="text-gray-900 hover:bg-gray-50">May</SelectItem>
+                    <SelectItem value="6" className="text-gray-900 hover:bg-gray-50">June</SelectItem>
+                    <SelectItem value="7" className="text-gray-900 hover:bg-gray-50">July</SelectItem>
+                    <SelectItem value="8" className="text-gray-900 hover:bg-gray-50">August</SelectItem>
+                    <SelectItem value="9" className="text-gray-900 hover:bg-gray-50">September</SelectItem>
+                    <SelectItem value="10" className="text-gray-900 hover:bg-gray-50">October</SelectItem>
+                    <SelectItem value="11" className="text-gray-900 hover:bg-gray-50">November</SelectItem>
+                    <SelectItem value="12" className="text-gray-900 hover:bg-gray-50">December</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger className="w-28 text-gray-900">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-gray-900 border border-gray-200">
+                    <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">All Years</SelectItem>
+                    <SelectItem value="2024" className="text-gray-900 hover:bg-gray-50">2024</SelectItem>
+                    <SelectItem value="2025" className="text-gray-900 hover:bg-gray-50">2025</SelectItem>
+                    <SelectItem value="2026" className="text-gray-900 hover:bg-gray-50">2026</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(filterMonth && filterMonth !== "all") || (filterYear && filterYear !== "all") ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setFilterMonth("all")
+                      setFilterYear("all")
+                    }}
+                  >
+                    Clear
+                  </Button>
+                ) : null}
               </div>
             </div>
             <div className="space-y-3">
