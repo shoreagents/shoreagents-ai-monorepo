@@ -43,7 +43,7 @@ export async function POST(
       "emergencyContact"
     ]
     
-    const validActions = ["APPROVED", "REJECTED"]
+    const validActions = ["APPROVED", "REJECTED", "feedback"]
 
     if (!validSections.includes(section)) {
       return NextResponse.json({ error: "Invalid section" }, { status: 400 })
@@ -65,15 +65,23 @@ export async function POST(
 
     // Build update data
     const updateData: any = {
-      [`${section}Status`]: action,
-      [`${section}Feedback`]: feedback || null,
-      verifiedBy: managementUser.id,
       updatedAt: new Date()
     }
 
-    // Add verification timestamp if approved
-    if (action === "APPROVED") {
-      updateData[`${section}VerifiedAt`] = new Date()
+    // Handle different action types
+    if (action === "feedback") {
+      // Only update feedback, don't change status
+      updateData[`${section}Feedback`] = feedback || null
+    } else {
+      // Update status and feedback for approve/reject actions
+      updateData[`${section}Status`] = action
+      updateData[`${section}Feedback`] = feedback || null
+      updateData.verifiedBy = managementUser.id
+
+      // Add verification timestamp if approved
+      if (action === "APPROVED") {
+        updateData[`${section}VerifiedAt`] = new Date()
+      }
     }
 
     console.log("💾 UPDATING DATABASE:", updateData)
@@ -91,8 +99,10 @@ export async function POST(
       feedback: feedback || 'none'
     })
 
-    // Recalculate completion percentage
-    await updateCompletionPercent(onboarding.id)
+    // Recalculate completion percentage only for approve/reject actions
+    if (action !== "feedback") {
+      await updateCompletionPercent(onboarding.id)
+    }
     
     const updated = await prisma.staffOnboarding.findUnique({ 
       where: { id: onboarding.id } 
@@ -121,7 +131,7 @@ export async function POST(
 
     return NextResponse.json({ 
       success: true,
-      message: `Section ${action.toLowerCase()} successfully` 
+      message: action === "feedback" ? "Feedback saved successfully" : `Section ${action.toLowerCase()} successfully` 
     })
 
   } catch (error) {
@@ -149,11 +159,12 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.emergencyContactStatus
   ]
 
-  // Count progress: SUBMITTED = 15%, APPROVED = 20% per section
+  // Admin progress: Only count APPROVED/REJECTED sections (20% each)
   let totalProgress = 0
   sections.forEach(status => {
-    if (status === "SUBMITTED") totalProgress += 15
-    if (status === "APPROVED") totalProgress += 20
+    if (status === "APPROVED" || status === "REJECTED") {
+      totalProgress += 20
+    }
   })
 
   const completionPercent = Math.min(totalProgress, 100)

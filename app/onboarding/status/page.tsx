@@ -148,7 +148,7 @@ export default function OnboardingStatusPage() {
     },
     { 
       key: "govId", 
-      title: "Government IDs", 
+      title: "Government Documents", 
       icon: CreditCard, 
       status: status.govIdStatus,
       feedback: status.govIdFeedback,
@@ -304,6 +304,94 @@ export default function OnboardingStatusPage() {
                   <div className="text-xs text-slate-300">Not Submitted</div>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* View Documents */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-3">
+              <FileText className="h-5 w-5 text-blue-400" />
+              View Documents
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Access and review all your uploaded documents
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <User className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Personal Information</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View and edit your personal details</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <CreditCard className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Government IDs</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View SSS, TIN, PhilHealth, Pag-IBIG documents</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <FileText className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Additional Documents</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View ID, certificates, clearances, and more</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <PenTool className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Signature</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View your uploaded signature</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Users className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Emergency Contact</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View emergency contact information</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <FileText className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">All Documents</span>
+                </div>
+                <span className="text-xs text-slate-400 text-center">View complete onboarding form</span>
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -116,6 +116,8 @@ export default function AdminOnboardingDetailPage() {
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [feedback, setFeedback] = useState<Record<string, string>>({})
+  const [editingFeedback, setEditingFeedback] = useState<Record<string, boolean>>({})
+  const [savingFeedback, setSavingFeedback] = useState<Record<string, boolean>>({})
   const [companies, setCompanies] = useState<any[]>([])
   
   // Employment Details (filled by management)
@@ -241,6 +243,30 @@ export default function AdminOnboardingDetailPage() {
           [actionKey]: false 
         } 
       }))
+    }
+  }
+
+  const saveFeedback = async (section: string) => {
+    setSavingFeedback({ ...savingFeedback, [section]: true })
+    try {
+      const response = await fetch(`/api/admin/staff/onboarding/${staffUserId}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: section,
+          action: 'feedback',
+          feedback: feedback[section]
+        })
+      })
+      if (response.ok) {
+        await fetchOnboardingDetails()
+        setEditingFeedback({ ...editingFeedback, [section]: false })
+        setFeedback({ ...feedback, [section]: "" })
+      }
+    } catch (error) {
+      console.error('Error saving feedback:', error)
+    } finally {
+      setSavingFeedback({ ...savingFeedback, [section]: false })
     }
   }
 
@@ -772,21 +798,82 @@ export default function AdminOnboardingDetailPage() {
             </div>
 
             {onboarding.personalInfoFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
-                  <strong>Feedback:</strong> {onboarding.personalInfoFeedback}
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.personalInfoFeedback}
+                    </div>
+                    {!editingFeedback.personalInfo && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, personalInfo: onboarding.personalInfoFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, personalInfo: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.personalInfo && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.personalInfo || ""}
+                        onChange={(e) => setFeedback({ ...feedback, personalInfo: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('personalInfo')}
+                          disabled={savingFeedback.personalInfo}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.personalInfo ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, personalInfo: false })
+                            setFeedback({ ...feedback, personalInfo: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
 
             {onboarding.personalInfoStatus !== "APPROVED" && (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Add feedback (optional)"
-                  value={feedback.personalInfo || ""}
-                  onChange={(e) => setFeedback({ ...feedback, personalInfo: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+              <div className="space-y-3 mt-6">
+                {!onboarding.personalInfoFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.personalInfo || ""}
+                      onChange={(e) => setFeedback({ ...feedback, personalInfo: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
                 <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("personalInfo", "APPROVED")}
@@ -844,27 +931,166 @@ export default function AdminOnboardingDetailPage() {
                 <p className="text-white font-mono">{onboarding.philhealthNo || "Not provided"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400">Pag-IBIG No</p>
+                <p className="text-sm text-slate-400">Pag-IBIG Number</p>
                 <p className="text-white font-mono">{onboarding.pagibigNo || "Not provided"}</p>
               </div>
             </div>
 
+            {/* Government ID Documents */}
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-slate-300 mb-3">Supporting Documents</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-400 mb-1">SSS Document</p>
+                  {onboarding.sssDocUrl ? (
+                    <button 
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.sssDocUrl, title: "SSS Document" })
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      View Document
+                    </button>
+                  ) : (
+                    <p className="text-slate-500 text-sm">Not uploaded</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-400 mb-1">BIR Form 1902 (TIN)</p>
+                  {onboarding.tinDocUrl ? (
+                    <button 
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.tinDocUrl, title: "BIR Form 1902 (TIN)" })
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      View Document
+                    </button>
+                  ) : (
+                    <p className="text-slate-500 text-sm">Not uploaded</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-400 mb-1">PhilHealth Document</p>
+                  {onboarding.philhealthDocUrl ? (
+                    <button 
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.philhealthDocUrl, title: "PhilHealth Document" })
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      View Document
+                    </button>
+                  ) : (
+                    <p className="text-slate-500 text-sm">Not uploaded</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-400 mb-1">Pag-IBIG Document</p>
+                  {onboarding.pagibigDocUrl ? (
+                    <button 
+                      onClick={() => {
+                        setImageLoading(true)
+                        setViewFileModal({ url: onboarding.pagibigDocUrl, title: "Pag-IBIG Document" })
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      View Document
+                    </button>
+                  ) : (
+                    <p className="text-slate-500 text-sm">Not uploaded</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {onboarding.govIdFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
-                  <strong>Feedback:</strong> {onboarding.govIdFeedback}
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.govIdFeedback}
+                    </div>
+                    {!editingFeedback.govId && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, govId: onboarding.govIdFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, govId: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.govId && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.govId || ""}
+                        onChange={(e) => setFeedback({ ...feedback, govId: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('govId')}
+                          disabled={savingFeedback.govId}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.govId ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, govId: false })
+                            setFeedback({ ...feedback, govId: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
 
             {onboarding.govIdStatus !== "APPROVED" && (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Add feedback (optional)"
-                  value={feedback.govId || ""}
-                  onChange={(e) => setFeedback({ ...feedback, govId: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+              <div className="space-y-3 mt-6">
+                {!onboarding.govIdFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.govId || ""}
+                      onChange={(e) => setFeedback({ ...feedback, govId: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
                 <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("govId", "APPROVED")}
@@ -998,24 +1224,121 @@ export default function AdminOnboardingDetailPage() {
                   <p className="text-slate-500 text-sm">Not uploaded</p>
                 )}
               </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">BIR 2316</p>
+                {onboarding.birForm2316Url ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.birForm2316Url, title: "BIR 2316" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400 mb-1">COE</p>
+                {onboarding.certificateEmpUrl ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.certificateEmpUrl, title: "COE" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Document
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
             </div>
 
             {onboarding.documentsFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
-                  <strong>Feedback:</strong> {onboarding.documentsFeedback}
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.documentsFeedback}
+                    </div>
+                    {!editingFeedback.documents && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, documents: onboarding.documentsFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, documents: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.documents && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.documents || ""}
+                        onChange={(e) => setFeedback({ ...feedback, documents: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('documents')}
+                          disabled={savingFeedback.documents}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.documents ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, documents: false })
+                            setFeedback({ ...feedback, documents: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
 
             {onboarding.documentsStatus !== "APPROVED" && (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Add feedback (optional)"
-                  value={feedback.documents || ""}
-                  onChange={(e) => setFeedback({ ...feedback, documents: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+              <div className="space-y-3 mt-6">
+                {!onboarding.documentsFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.documents || ""}
+                      onChange={(e) => setFeedback({ ...feedback, documents: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
                 <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("documents", "APPROVED")}
@@ -1077,21 +1400,82 @@ export default function AdminOnboardingDetailPage() {
             )}
 
             {onboarding.signatureFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
-                  <strong>Feedback:</strong> {onboarding.signatureFeedback}
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.signatureFeedback}
+                    </div>
+                    {!editingFeedback.signature && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, signature: onboarding.signatureFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, signature: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.signature && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.signature || ""}
+                        onChange={(e) => setFeedback({ ...feedback, signature: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('signature')}
+                          disabled={savingFeedback.signature}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.signature ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, signature: false })
+                            setFeedback({ ...feedback, signature: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
 
             {onboarding.signatureStatus !== "APPROVED" && (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Add feedback (optional)"
-                  value={feedback.signature || ""}
-                  onChange={(e) => setFeedback({ ...feedback, signature: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+              <div className="space-y-3 mt-6">
+                {!onboarding.signatureFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.signature || ""}
+                      onChange={(e) => setFeedback({ ...feedback, signature: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
                 <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("signature", "APPROVED")}
@@ -1151,21 +1535,82 @@ export default function AdminOnboardingDetailPage() {
             </div>
 
             {onboarding.emergencyContactFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700">
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
                 <AlertDescription className="text-yellow-200">
-                  <strong>Feedback:</strong> {onboarding.emergencyContactFeedback}
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.emergencyContactFeedback}
+                    </div>
+                    {!editingFeedback.emergencyContact && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, emergencyContact: onboarding.emergencyContactFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, emergencyContact: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.emergencyContact && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.emergencyContact || ""}
+                        onChange={(e) => setFeedback({ ...feedback, emergencyContact: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('emergencyContact')}
+                          disabled={savingFeedback.emergencyContact}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.emergencyContact ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, emergencyContact: false })
+                            setFeedback({ ...feedback, emergencyContact: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
 
             {onboarding.emergencyContactStatus !== "APPROVED" && (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Add feedback (optional)"
-                  value={feedback.emergencyContact || ""}
-                  onChange={(e) => setFeedback({ ...feedback, emergencyContact: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+              <div className="space-y-3 mt-6">
+                {!onboarding.emergencyContactFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.emergencyContact || ""}
+                      onChange={(e) => setFeedback({ ...feedback, emergencyContact: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
                 <div className="flex gap-3 mt-6">
                   <Button
                     onClick={() => handleVerify("emergencyContact", "APPROVED")}
@@ -1203,13 +1648,13 @@ export default function AdminOnboardingDetailPage() {
         setViewFileModal(null)
         setImageLoading(true)
       }}>
-        <DialogContent className="max-w-5xl bg-slate-800 border-slate-700 p-0">
+        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? 'w-[100vw] h-[100vh] max-w-none max-h-none !w-screen !h-screen rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
           <div className="p-6">
             <DialogHeader>
               <DialogTitle className="text-white">{viewFileModal?.title}</DialogTitle>
             </DialogHeader>
           </div>
-          <div className="h-[60vh] relative px-6 pb-6 flex items-center justify-center">
+          <div className={`${viewFileModal?.url?.endsWith('.pdf') ? 'h-[calc(100vh-120px)]' : 'h-[60vh]'} relative px-6 pb-6 flex items-center justify-center`}>
             {imageLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
@@ -1221,7 +1666,7 @@ export default function AdminOnboardingDetailPage() {
             {viewFileModal?.url && (
               viewFileModal.url.endsWith('.pdf') ? (
                 <iframe
-                  src={`${viewFileModal.url}?t=${Date.now()}#toolbar=0`}
+                  src={`${viewFileModal.url}?t=${Date.now()}#toolbar=0&scrollbar=0`}
                   className="w-full h-full"
                   title={viewFileModal.title}
                   onLoad={() => setImageLoading(false)}

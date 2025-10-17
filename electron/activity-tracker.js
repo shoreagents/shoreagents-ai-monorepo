@@ -539,7 +539,7 @@ class ActivityTracker {
       font-size: 16px;
       font-weight: 600;
       border: none;
-      border-radius: 8px;
+      border-radius: 16px;
       cursor: pointer;
       transition: all 0.2s ease;
       font-family: inherit;

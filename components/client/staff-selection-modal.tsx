@@ -73,7 +73,15 @@ export default function StaffSelectionModal({ isOpen, onClose }: StaffSelectionM
         })
       })
 
-      if (!response.ok) throw new Error("Failed to create room")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        console.error("Failed to create room:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(errorData.error || `Failed to create room: ${response.statusText}`)
+      }
 
       const data = await response.json()
       
@@ -82,7 +90,8 @@ export default function StaffSelectionModal({ isOpen, onClose }: StaffSelectionM
       onClose()
     } catch (error) {
       console.error("Error creating call:", error)
-      alert("Failed to start call. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Failed to start call. Please try again."
+      alert(errorMessage)
       setCalling(null)
     }
   }
