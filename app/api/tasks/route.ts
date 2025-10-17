@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Get tasks for this staff user - includes tasks created by staff, client, or admin
-    const tasks = await prisma.task.findMany({
+    // Get legacy tasks (old method with staffUserId)
+    const legacyTasks = await prisma.task.findMany({
       where: {
         staffUserId: staffUser.id,
         ...(status && { status }),
@@ -36,12 +36,72 @@ export async function GET(request: NextRequest) {
             id: true,
             companyName: true,
           }
-        }
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          }
+        },
       },
       orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ tasks })
+    // Get new tasks (via TaskAssignment)
+    const taskAssignments = await prisma.taskAssignment.findMany({
+      where: {
+        staffUserId: staffUser.id,
+      },
+      include: {
+        task: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+              }
+            },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              }
+            },
+            assignedStaff: {
+              include: {
+                staffUser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                    role: true,
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // Extract tasks from assignments and filter by status if needed
+    const newTasks = taskAssignments
+      .map(assignment => assignment.task)
+      .filter(task => !status || task.status === status)
+
+    // Combine and dedupe tasks
+    const allTasks = [...legacyTasks, ...newTasks]
+    const uniqueTasks = Array.from(new Map(allTasks.map(task => [task.id, task])).values())
+    
+    // Sort by createdAt desc
+    uniqueTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    return NextResponse.json({ tasks: uniqueTasks })
   } catch (error) {
     console.error("Error fetching tasks:", error)
     return NextResponse.json(
@@ -51,7 +111,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/tasks - Create a new task (created by staff)
+// POST /api/tasks - Create a new task (created by staff for themselves)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -68,7 +128,7 @@ export async function POST(request: NextRequest) {
       priority,
       deadline,
       tags,
-      source,
+      attachments,
     } = body
 
     if (!title) {
@@ -85,20 +145,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Create task with 3-way sync support
+    // Create task for themselves using new TaskAssignment method
     const task = await prisma.task.create({
       data: {
-        staffUserId: staffUser.id,
-        companyId: staffUser.companyId, // Link to company for cross-portal visibility
+        companyId: staffUser.companyId,
         title,
         description,
         status: status || "TODO",
         priority: priority || "MEDIUM",
         deadline: deadline ? new Date(deadline) : null,
         tags: tags || [],
-        source: source || "SELF",
+        attachments: attachments || [],
+        source: "SELF",
         createdByType: "STAFF",
         createdById: staffUser.id,
+        // Use new assignment method
+        assignedStaff: {
+          create: {
+            staffUserId: staffUser.id,
+          }
+        }
       },
       include: {
         company: {
@@ -106,9 +172,24 @@ export async function POST(request: NextRequest) {
             id: true,
             companyName: true,
           }
+        },
+        assignedStaff: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              }
+            }
+          }
         }
       }
     })
+
+    console.log(`✅ Staff ${staffUser.name} created self-task "${title}"`)
 
     return NextResponse.json({ success: true, task }, { status: 201 })
   } catch (error) {

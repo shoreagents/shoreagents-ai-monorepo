@@ -414,3 +414,4 @@ Beautiful gradient card at the **TOP** of the modal showing:
 
 **Everything is working perfectly! 🚀**
 
+

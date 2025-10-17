@@ -130,3 +130,4 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
   )
 }
 
+

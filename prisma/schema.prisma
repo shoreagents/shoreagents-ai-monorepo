@@ -52,7 +52,8 @@ model StaffUser {
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
-  tasks                  Task[]
+  legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
+  taskAssignments        TaskAssignment[]
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
@@ -104,7 +105,6 @@ model WorkSchedule {
 
 model Task {
   id            String       @id @default(uuid())
-  staffUserId   String
   title         String
   description   String?
   status        TaskStatus   @default(TODO)
@@ -114,16 +114,68 @@ model Task {
   completedAt   DateTime?
   timeSpent     Int?
   tags          String[]
+  attachments   String[]     @default([])
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  assignedTo    String?
+  
+  // Relationships
+  staffUserId   String?      // Keep for backward compatibility with existing tasks
   companyId     String?
+  clientUserId  String?
   createdById   String?
   createdByType CreatorType  @default(STAFF)
-  company       Company?     @relation(fields: [companyId], references: [id])
-  staffUser     StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  staffUser     StaffUser?        @relation("LegacyTaskAssignment", fields: [staffUserId], references: [id], onDelete: Cascade)
+  company       Company?          @relation(fields: [companyId], references: [id])
+  clientUser    ClientUser?       @relation(fields: [clientUserId], references: [id])
+  assignedStaff TaskAssignment[]  // New bulk assignment system
+  responses     TaskResponse[]    // Comments/responses on tasks
+  subtasks      Subtask[]         // Subtasks for breaking down work
 
   @@map("tasks")
+}
+
+model TaskAssignment {
+  id          String    @id @default(uuid())
+  taskId      String
+  staffUserId String
+  createdAt   DateTime  @default(now())
+  
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@unique([taskId, staffUserId])
+  @@map("task_assignments")
+}
+
+model TaskResponse {
+  id              String      @id @default(uuid())
+  taskId          String
+  content         String
+  createdByType   CreatorType
+  createdById     String
+  attachments     String[]    @default([])
+  createdAt       DateTime    @default(now())
+  
+  task            Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@map("task_responses")
+}
+
+model Subtask {
+  id          String    @id @default(uuid())
+  taskId      String
+  title       String
+  completed   Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@map("subtasks")
 }
 
 model Break {
@@ -413,6 +465,7 @@ model ClientUser {
   coverPhoto      String?
   profile         ClientProfile?
   company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  tasks           Task[]
   tickets         Ticket[]
   ticketResponses TicketResponse[]
 

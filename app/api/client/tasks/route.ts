@@ -2,172 +2,200 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/client/tasks - Fetch all tasks for staff assigned to this client's company
-export async function GET(req: NextRequest) {
+// GET /api/client/tasks - Get all tasks created by this client
+export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get ClientUser
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get("status")
+    const staffUserId = searchParams.get("staffUserId")
+
+    // Get client user
     const clientUser = await prisma.clientUser.findUnique({
-      where: { email: session.user.email },
-      include: { company: true }
+      where: { authUserId: session.user.id },
+      include: { company: true },
     })
 
     if (!clientUser) {
-      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
-    if (!clientUser.company) {
-      console.error("❌ Client user has no company:", clientUser)
-      return NextResponse.json({ error: "Client user not associated with a company" }, { status: 400 })
+    // Build where clause
+    const where: any = {
+      clientUserId: clientUser.id,
+      ...(status && { status }),
     }
 
-    console.log("✅ Client user found with company:", { 
-      clientId: clientUser.id,
-      email: clientUser.email, 
-      companyId: clientUser.company.id,
-      companyName: clientUser.company.companyName 
-    })
-
-    // Get all staff members assigned to this company
-    const staffUsers = await prisma.staffUser.findMany({
-      where: { companyId: clientUser.company.id },
-      select: { id: true, name: true, avatar: true, email: true }
-    })
-    
-    console.log(`📋 Found ${staffUsers.length} staff members for company ${clientUser.company.companyName}`)
-    
-    const staffIds = staffUsers.map(s => s.id)
-
-    if (staffIds.length === 0) {
-      return NextResponse.json({ tasks: [], staff: [] })
-    }
-
-    // Fetch all tasks for these staff members (visible across all portals)
+    // Get tasks created by this client
     const tasks = await prisma.task.findMany({
-      where: {
-        staffUserId: {
-          in: staffIds
-        }
-      },
+      where,
       include: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        // Include both legacy and new assignment methods
         staffUser: {
           select: {
             id: true,
             name: true,
             email: true,
-            avatar: true
-          }
+            avatar: true,
+            role: true,
+          },
         },
-        company: {
-          select: {
-            id: true,
-            companyName: true
-          }
-        }
+        assignedStaff: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+          },
+        },
       },
-      orderBy: [
-        { createdAt: 'desc' }
-      ]
+      orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ tasks, staff: staffUsers })
-  } catch (error: any) {
-    console.error("❌❌❌ Error fetching client tasks:", error)
-    console.error("Error message:", error?.message)
-    console.error("Error stack:", error?.stack)
-    return NextResponse.json(
-      { error: "Failed to fetch tasks", details: error?.message },
-      { status: 500 }
-    )
+    // If filtering by staff, do it manually (since it can be in either staffUser or assignedStaff)
+    let filteredTasks = tasks
+    if (staffUserId) {
+      filteredTasks = tasks.filter(
+        (task) =>
+          task.staffUserId === staffUserId ||
+          task.assignedStaff.some((assignment) => assignment.staffUserId === staffUserId)
+      )
+    }
+
+    return NextResponse.json({ tasks: filteredTasks })
+  } catch (error) {
+    console.error("Error fetching client tasks:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-// POST /api/client/tasks - Create new task(s) for staff (created by client)
-export async function POST(req: NextRequest) {
+// POST /api/client/tasks - Create task (single or bulk assignment)
+export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await req.json()
+    const body = await request.json()
+    const { title, description, priority, deadline, tags, staffUserIds, attachments } = body
 
-    // Get ClientUser
+    if (!title) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 })
+    }
+
+    if (!staffUserIds || staffUserIds.length === 0) {
+      return NextResponse.json({ error: "At least one staff member must be assigned" }, { status: 400 })
+    }
+
+    // Get client user
     const clientUser = await prisma.clientUser.findUnique({
-      where: { email: session.user.email },
-      include: { company: true }
+      where: { authUserId: session.user.id },
+      include: { company: true },
     })
 
     if (!clientUser) {
-      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
-    if (!clientUser.company) {
-      return NextResponse.json({ error: "Client user not associated with a company" }, { status: 400 })
-    }
-
-    const { staffUserId, title, description, priority, deadline } = body
-
-    if (!staffUserId || !title) {
-      return NextResponse.json({ error: "Staff user and title are required" }, { status: 400 })
-    }
-
-    // Verify staff is assigned to this client's company
-    const staffUser = await prisma.staffUser.findFirst({
+    // Verify all staff users belong to the client's company
+    const staffUsers = await prisma.staffUser.findMany({
       where: {
-        id: staffUserId,
-        companyId: clientUser.company.id
-      }
+        id: { in: staffUserIds },
+        companyId: clientUser.companyId,
+      },
     })
 
-    if (!staffUser) {
-      return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
+    if (staffUsers.length !== staffUserIds.length) {
+      return NextResponse.json(
+        { error: "One or more staff members do not belong to your company" },
+        { status: 403 }
+      )
     }
 
-    // Create task with 3-way sync support
+    // Create ONE task with multiple assignments
     const task = await prisma.task.create({
       data: {
-        staffUserId: staffUser.id,
-        companyId: clientUser.company.id,
         title,
-        description: description || null,
-        priority: priority || 'MEDIUM',
+        description,
+        status: "TODO",
+        priority: priority || "MEDIUM",
         deadline: deadline ? new Date(deadline) : null,
-        source: 'CLIENT',
-        status: 'TODO',
-        createdByType: 'CLIENT',
+        tags: tags || [],
+        attachments: attachments || [],
+        source: "CLIENT",
+        createdByType: "CLIENT",
         createdById: clientUser.id,
+        clientUserId: clientUser.id,
+        companyId: clientUser.companyId,
+        // Create assignments for all selected staff
+        assignedStaff: {
+          create: staffUserIds.map((staffUserId: string) => ({
+            staffUserId,
+          })),
+        },
       },
       include: {
-        staffUser: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
+        clientUser: {
           select: {
             id: true,
             name: true,
             email: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
-        company: {
-          select: {
-            id: true,
-            companyName: true
-          }
-        }
-      }
+        assignedStaff: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
     })
 
-    return NextResponse.json({ task }, { status: 201 })
+    console.log(`✅ Client ${clientUser.name} created task "${title}" for ${staffUserIds.length} staff member(s)`)
+
+    return NextResponse.json({ success: true, task }, { status: 201 })
   } catch (error) {
-    console.error("Error creating task:", error)
-    return NextResponse.json(
-      { error: "Failed to create task" },
-      { status: 500 }
-    )
+    console.error("Error creating client task:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -23,8 +23,7 @@ export async function PUT(
       priority,
       deadline,
       tags,
-      actualHours,
-      timeTracked,
+      timeSpent,
     } = body
 
     // Get staff user first
@@ -36,47 +35,83 @@ export async function PUT(
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Verify task belongs to user
+    // Verify task belongs to user (check both legacy and new assignment methods)
     const existingTask = await prisma.task.findUnique({
       where: { id },
+      include: {
+        assignedStaff: true,
+      }
     })
 
     if (!existingTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    if (existingTask.staffUserId !== staffUser.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    // Check if staff is assigned (via legacy staffUserId OR new TaskAssignment)
+    const isAssigned = existingTask.staffUserId === staffUser.id || 
+                      existingTask.assignedStaff.some(assignment => assignment.staffUserId === staffUser.id)
+
+    if (!isAssigned) {
+      return NextResponse.json({ error: "Forbidden: Task not assigned to you" }, { status: 403 })
     }
 
     const task = await prisma.task.update({
       where: { id },
       data: {
         ...(title && { title }),
-        ...(description && { description }),
+        ...(description !== undefined && { description }),
         ...(status && { status }),
         ...(priority && { priority }),
         ...(deadline !== undefined && {
           deadline: deadline ? new Date(deadline) : null,
         }),
         ...(tags && { tags }),
-        ...(actualHours !== undefined && { actualHours }),
-        ...(timeTracked !== undefined && { timeTracked }),
+        ...(timeSpent !== undefined && { timeSpent }),
         ...(status === "COMPLETED" && { completedAt: new Date() }),
       },
+      include: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          }
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          }
+        },
+        assignedStaff: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              }
+            }
+          }
+        }
+      }
     })
 
     return NextResponse.json({ success: true, task })
   } catch (error) {
-    console.error("Error updating task:", error)
+    console.error("❌ [Task Update Error]:", error)
+    console.error("Error details:", JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
 }
 
-// DELETE /api/tasks/[id] - Delete a task
+// DELETE /api/tasks/[id] - Delete a task (only if self-created)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -99,22 +134,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Verify task belongs to user
+    // Verify task exists and was self-created (staff can only delete their own tasks)
     const existingTask = await prisma.task.findUnique({
       where: { id },
+      include: {
+        assignedStaff: true,
+      }
     })
 
     if (!existingTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    if (existingTask.staffUserId !== staffUser.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    // Only allow deletion if self-created
+    if (existingTask.source !== "SELF" || existingTask.createdById !== staffUser.id) {
+      return NextResponse.json({ error: "Forbidden: You can only delete self-created tasks" }, { status: 403 })
     }
 
     await prisma.task.delete({
       where: { id },
     })
+
+    console.log(`✅ Staff ${staffUser.name} deleted self-task ${id}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -130,3 +130,4 @@ To verify the fixes:
 - File uploads are limited to images only, max 5MB, max 3 files per response
 - Storage structure: `{bucket}/{folder}/{auth_user_id}/{timestamp}_{filename}`
 
+
