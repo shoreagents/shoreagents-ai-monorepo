@@ -223,7 +223,10 @@ export function useTimeTrackingWebSocket() {
         startTime: statusData.activeBreak.actualStart,
         actualStart: statusData.activeBreak.actualStart,
         duration: statusData.activeBreak.duration || (statusData.activeBreak.type === 'LUNCH' ? 60 : 15),
-        awayReason: statusData.activeBreak.awayReason
+        awayReason: statusData.activeBreak.awayReason,
+        isPaused: statusData.activeBreak.ispaused || false,
+        pausedDuration: statusData.activeBreak.pausedduration || 0,
+        pauseUsed: statusData.activeBreak.pauseused || false
       } : null
       
       console.log('[WebSocket] Active break from API:', statusData.activeBreak)

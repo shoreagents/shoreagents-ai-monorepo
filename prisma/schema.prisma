@@ -15,7 +15,7 @@ model ManagementUser {
   role             ManagementRole   @default(MANAGER)
   avatar           String?
   phone            String?
-  department       String
+  department       Department
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   email            String           @unique
@@ -141,6 +141,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
+  ispaused       Boolean?    @default(false)
+  pausedat       DateTime?   @db.Timestamp(6)
+  pausedduration Int?        @default(0)
+  pauseused      Boolean?    @default(false)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -698,4 +702,16 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum Department {
+  CEO_EXECUTIVE
+  IT_DEPARTMENT
+  HR_DEPARTMENT
+  NURSE_DEPARTMENT
+  RECRUITMENT_DEPARTMENT
+  ACCOUNT_MANAGEMENT
+  FINANCE_DEPARTMENT
+  NERDS_DEPARTMENT
+  OPERATIONS
 }

@@ -25,9 +25,12 @@ export async function POST(request: NextRequest) {
 
     const endTime = new Date()
     const startTime = activeBreak.actualStart || new Date()
-    const duration = Math.floor(
-      (endTime.getTime() - startTime.getTime()) / 1000 / 60
-    ) // in minutes
+    
+    // Calculate total elapsed time minus paused duration
+    const totalElapsedMs = endTime.getTime() - startTime.getTime()
+    const pausedDurationMs = (activeBreak.pausedduration || 0) * 1000 // Convert seconds to ms
+    const actualBreakDurationMs = totalElapsedMs - pausedDurationMs
+    const duration = Math.floor(actualBreakDurationMs / 60000) // in minutes
 
     let isLate = false
     let lateBy = 0

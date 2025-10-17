@@ -82,6 +82,7 @@ class ActivityTracker {
     this.dialogUpdateInterval = null
     this.performanceTracker = null
     this.inactivityStartTime = null // Track when inactivity started
+    this.isOnBreak = false // Flag to disable inactivity dialog during breaks
     
     // Throttling for mouse movements
     this.lastMouseTrack = 0
@@ -186,6 +187,20 @@ class ActivityTracker {
       clearInterval(this.intervalId)
       this.intervalId = null
       console.log('[ActivityTracker] Inactivity checker stopped')
+    }
+  }
+
+  /**
+   * Set break mode to disable inactivity dialog during breaks
+   */
+  setBreakMode(isOnBreak) {
+    this.isOnBreak = isOnBreak
+    if (isOnBreak) {
+      console.log('[ActivityTracker] Break mode enabled - inactivity dialog disabled')
+      // Close any existing dialog when break starts
+      this.closeInactivityDialog()
+    } else {
+      console.log('[ActivityTracker] Break mode disabled - inactivity dialog enabled')
     }
   }
 
@@ -307,6 +322,11 @@ class ActivityTracker {
     if (this.shouldDisableTracking()) {
       console.log('[ActivityTracker] 🚫 Non-staff portal detected during activity tracking - stopping activity tracker')
       this.stopTracking()
+      return
+    }
+    
+    // Don't show inactivity dialog during breaks
+    if (this.isOnBreak) {
       return
     }
     

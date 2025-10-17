@@ -498,6 +498,12 @@ function setupIPC() {
     console.log('[Main] Pausing performance tracking...')
     performanceTracker.pause()
     console.log('[Main] Performance tracking paused')
+    
+    // Set break mode to disable inactivity dialog during breaks
+    console.log('[Main] Setting break mode...')
+    activityTracker.setBreakMode(true)
+    console.log('[Main] Break mode enabled - inactivity dialog disabled')
+    
     updateTrayMenu()
     
     return { success: true, break: breakInfo }
@@ -515,6 +521,12 @@ function setupIPC() {
     console.log('[Main] Resuming performance tracking...')
     performanceTracker.resume()
     console.log('[Main] Performance tracking resumed')
+    
+    // Disable break mode to re-enable inactivity dialog
+    console.log('[Main] Disabling break mode...')
+    activityTracker.setBreakMode(false)
+    console.log('[Main] Break mode disabled - inactivity dialog enabled')
+    
     updateTrayMenu()
     
     return { success: true, break: breakInfo }
@@ -537,6 +549,11 @@ function setupIPC() {
   
   ipcMain.handle('activity-tracker:set-timeout', (event, milliseconds) => {
     activityTracker.setInactivityTimeout(milliseconds)
+    return { success: true }
+  })
+  
+  ipcMain.handle('activity-tracker:set-break-mode', (event, isOnBreak) => {
+    activityTracker.setBreakMode(isOnBreak)
     return { success: true }
   })
   

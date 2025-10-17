@@ -14,25 +14,99 @@ interface BreakModalProps {
     actualStart: string // Actual start time from database
     duration: number // expected duration in minutes
     awayReason?: string // For AWAY breaks
+    isPaused?: boolean // Database pause state
+    pausedDuration?: number // Total paused duration in seconds
+    pauseUsed?: boolean // Whether pause has been used for this break
   } | null
   onEnd: () => void
   onEndDirect: () => void // Direct end without confirmation
   onPause: () => void
-  onResume: () => void
   onClose: () => void // Close modal without ending break
 }
 
-export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onResume, onClose }: BreakModalProps) {
-  const [isPaused, setIsPaused] = useState(false)
+export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onClose }: BreakModalProps) {
+  const [isPaused, setIsPaused] = useState(breakData?.isPaused || false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [pausedAt, setPausedAt] = useState<number | null>(null)
   const [debugCount, setDebugCount] = useState(0)
   const [elapsedWhenPaused, setElapsedWhenPaused] = useState(0)
-  const [totalPausedDuration, setTotalPausedDuration] = useState(0)
+  const [totalPausedDuration, setTotalPausedDuration] = useState(breakData?.pausedDuration || 0)
   const [originalStartTime, setOriginalStartTime] = useState<number | null>(null)
-  const [hasUsedPause, setHasUsedPause] = useState(false)
+  const [hasUsedPause, setHasUsedPause] = useState(breakData?.pauseUsed || false)
+  const [localRemainingTime, setLocalRemainingTime] = useState(() => {
+    // For new breaks, use full duration; for paused breaks, use pausedDuration
+    if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
+      return breakData.pausedDuration
+    }
+    // For new breaks, calculate full duration
+    return breakData?.type === 'LUNCH' ? 3600 : 900
+  })
+  
+  // Update hasUsedPause when breakData changes
+  useEffect(() => {
+    console.log("🔍 BREAK MODAL - pauseUsed changed:", breakData?.pauseUsed)
+    setHasUsedPause(breakData?.pauseUsed || false)
+  }, [breakData?.pauseUsed])
+  
+  // Update isPaused when breakData changes
+  useEffect(() => {
+    console.log("🔍 BREAK MODAL - isPaused changed:", breakData?.isPaused)
+    const wasPaused = isPaused
+    const nowPaused = breakData?.isPaused || false
+    
+    setIsPaused(nowPaused)
+    
+    // If break was just paused, store the current elapsed time
+    if (!wasPaused && nowPaused) {
+      const now = Date.now()
+      const actualElapsed = Math.floor((now - (originalStartTime || 0)) / 1000)
+      const trueElapsed = actualElapsed - totalPausedDuration
+      setElapsedWhenPaused(trueElapsed)
+      console.log("⏸️ BREAK PAUSED - Storing elapsed time:", trueElapsed, "seconds")
+    }
+  }, [breakData?.isPaused, isPaused, originalStartTime, totalPausedDuration])
+  
+  // Update totalPausedDuration when breakData changes
+  useEffect(() => {
+    console.log("🔍 BREAK MODAL - pausedDuration changed:", breakData?.pausedDuration)
+    console.log("🔍 BREAK MODAL - Setting totalPausedDuration to:", breakData?.pausedDuration || 0)
+    setTotalPausedDuration(breakData?.pausedDuration || 0)
+  }, [breakData?.pausedDuration])
+  
+  // Update local remaining time when breakData changes
+  useEffect(() => {
+    console.log("🔍 BREAK MODAL - Updating local remaining time:", breakData?.pausedDuration)
+    if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
+      // For paused breaks, use the remaining time from database
+      setLocalRemainingTime(breakData.pausedDuration)
+    } else {
+      // For new breaks, use full duration
+      const fullDuration = breakData?.type === 'LUNCH' ? 3600 : 900
+      setLocalRemainingTime(fullDuration)
+    }
+  }, [breakData?.pausedDuration, breakData?.type])
+  
+  // Wait for break data to be fully loaded before showing pause button
+  useEffect(() => {
+    if (breakData && breakData.id) {
+      // Add a small delay to ensure all break data is properly loaded
+      const timer = setTimeout(() => {
+        console.log("🔍 BREAK MODAL - Break data loaded:", {
+          id: breakData.id,
+          pauseUsed: breakData.pauseUsed,
+          isPaused: breakData.isPaused
+        })
+        setIsBreakDataLoaded(true)
+      }, 500) // Wait 500ms for data to be fully loaded
+      
+      return () => clearTimeout(timer)
+    } else {
+      setIsBreakDataLoaded(false)
+    }
+  }, [breakData?.id, breakData?.pauseUsed, breakData?.isPaused])
   const [showReturnPopup, setShowReturnPopup] = useState(false) // NEW: Show "I'm Back" popup
   const [isInitializing, setIsInitializing] = useState(true) // NEW: Loading state while setting up timer
+  const [isBreakDataLoaded, setIsBreakDataLoaded] = useState(false) // NEW: Wait for break data to be fully loaded
   
   const expectedDurationMinutes = breakData?.duration || 15
   const expectedDurationSeconds = expectedDurationMinutes * 60
@@ -97,9 +171,15 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
       setIsInitializing(true)
       setOriginalStartTime(null) // Reset to force recalculation
       setElapsedSeconds(0) // Reset elapsed time
-      setTotalPausedDuration(0) // Reset paused duration
+      // Don't reset totalPausedDuration here - let it be set by the pausedDuration useEffect
       setElapsedWhenPaused(0) // Reset paused state
-      setHasUsedPause(false) // Reset pause usage
+      // Always sync hasUsedPause with breakData.pauseUsed
+      setHasUsedPause(breakData.pauseUsed || false)
+      if (breakData.pauseUsed) {
+        console.log("🔄 EXISTING BREAK - Setting hasUsedPause to true (pause was used)")
+      } else {
+        console.log("🔄 NEW BREAK - Setting hasUsedPause to false (pause not used)")
+      }
       console.log("🔄 BREAK DATA CHANGED - Resetting all timer state")
     }
   }, [breakData?.id]) // Reset when break ID changes
@@ -127,28 +207,37 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
   useEffect(() => {
     if (!isOpen || !breakData || !originalStartTime || isInitializing) return
     
-    console.log("⏰ TIMER STARTED - Original start:", new Date(originalStartTime).toLocaleTimeString(), "| Total paused:", totalPausedDuration, "seconds")
+    console.log("⏰ TIMER STARTED - Original start:", new Date(originalStartTime).toLocaleTimeString(), "| Total paused:", totalPausedDuration, "seconds", "| isPaused:", isPaused)
+    console.log("⏰ TIMER - Break data pausedDuration:", breakData?.pausedDuration, "| Local totalPausedDuration:", totalPausedDuration)
     
     const interval = setInterval(() => {
       if (!isPaused) {
         const now = Date.now()
         const actualElapsed = Math.floor((now - originalStartTime) / 1000)
         
-        // Subtract total paused duration to get true elapsed work time
-        const trueElapsed = actualElapsed - totalPausedDuration
-        
-        setElapsedSeconds(trueElapsed)
+        // Count down the local remaining time
+        setLocalRemainingTime(prev => {
+          const newRemaining = Math.max(0, prev - 1)
+          const expectedDuration = breakData?.type === 'LUNCH' ? 3600 : 900 // 60 min for lunch, 15 min for others
+          const trueElapsed = expectedDuration - newRemaining
+          setElapsedSeconds(trueElapsed)
+          
+          // Debug logging inside the callback where trueElapsed is available
+          console.log(`⏱️ TICK #${debugCount} - True Elapsed: ${trueElapsed}s (actual: ${actualElapsed}s - paused: ${totalPausedDuration}s), Remaining: ${expectedDurationSeconds - trueElapsed}s`)
+          console.log(`⏱️ TICK #${debugCount} - Break data pausedDuration: ${breakData?.pausedDuration}, Local totalPausedDuration: ${totalPausedDuration}`)
+          console.log(`⏱️ TICK #${debugCount} - Elapsed when paused: ${elapsedWhenPaused}s`)
+          
+          // Show "I'm Back" popup when duration is reached
+          if (trueElapsed >= expectedDurationSeconds) {
+            console.log("⏰ BREAK TIME COMPLETE - Showing return popup")
+            console.log(`⏰ Auto-end triggered: ${trueElapsed}s >= ${expectedDurationSeconds}s`)
+            clearInterval(interval)
+            setShowReturnPopup(true)
+          }
+          
+          return newRemaining
+        })
         setDebugCount(prev => prev + 1)
-        
-        console.log(`⏱️ TICK #${debugCount} - True Elapsed: ${trueElapsed}s (actual: ${actualElapsed}s - paused: ${totalPausedDuration}s), Remaining: ${expectedDurationSeconds - trueElapsed}s`)
-        
-        // Show "I'm Back" popup when duration is reached
-        if (trueElapsed >= expectedDurationSeconds) {
-          console.log("⏰ BREAK TIME COMPLETE - Showing return popup")
-          console.log(`⏰ Auto-end triggered: ${trueElapsed}s >= ${expectedDurationSeconds}s`)
-          clearInterval(interval)
-          setShowReturnPopup(true)
-        }
       } else {
         console.log("⏸️ Timer tick skipped - break is paused")
       }
@@ -158,7 +247,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
       console.log("🛑 TIMER STOPPED")
       clearInterval(interval)
     }
-  }, [isOpen, breakData?.id, isPaused, totalPausedDuration, originalStartTime])
+  }, [isOpen, breakData?.id, isPaused, totalPausedDuration, originalStartTime, isInitializing])
   
   const handlePause = () => {
     console.log("⏸️ PAUSING at", elapsedSeconds, "seconds (ONE-TIME USE)")
@@ -170,17 +259,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
     // Don't close modal - keep it open to show paused state and resume button
   }
   
-  const handleResume = () => {
-    const pauseDuration = pausedAt ? Math.floor((Date.now() - pausedAt) / 1000) : 0
-    const newTotalPaused = totalPausedDuration + pauseDuration
-    
-    console.log("▶️ RESUMING - Was paused for", pauseDuration, "seconds | Total paused:", newTotalPaused, "seconds")
-    
-    setIsPaused(false)
-    setTotalPausedDuration(newTotalPaused) // Add this pause to total
-    setPausedAt(null)
-    onResume()
-  }
   
   const handleEnd = () => {
     // Call the parent's end break handler (which will show the TSX confirmation modal)
@@ -206,8 +284,8 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
   const elapsedMinutes = Math.floor(safeElapsedSeconds / 60)
   const elapsedSecondsDisplay = safeElapsedSeconds % 60
   
-  // Calculate remaining time
-  const remainingSeconds = Math.max(0, expectedDurationSeconds - safeElapsedSeconds)
+  // Calculate remaining time - use local remaining time (counts down in real-time)
+  const remainingSeconds = Math.max(0, localRemainingTime)
   const remainingMinutes = Math.floor(remainingSeconds / 60)
   const remainingSecondsDisplay = remainingSeconds % 60
   
@@ -298,7 +376,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
                 {isPaused ? (
                   <div className="flex items-center justify-center gap-2 text-yellow-400 animate-pulse">
                     <Pause className="h-5 w-5" />
-                    <p className="text-lg font-semibold">PAUSED - Resume when ready</p>
+                    <p className="text-lg font-semibold">PAUSED - Use the Resume button on the main page</p>
                   </div>
                 ) : (
                   <p className="text-slate-300 text-lg">
@@ -366,7 +444,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
           
           {/* Controls */}
           <div className="p-8 border-t border-white/10">
-            {hasUsedPause && !isPaused && (
+            {hasUsedPause && !isPaused && isBreakDataLoaded && (
               <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded-lg text-center">
                 <p className="text-sm text-yellow-400 font-semibold">
                   ⚠️ You've used your pause. This break cannot be paused again.
@@ -376,7 +454,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
             <div className="flex gap-4 justify-center">
               {!isPaused ? (
                 <>
-                  {!hasUsedPause && (
+                  {!hasUsedPause && isBreakDataLoaded && (
                     <Button
                       onClick={handlePause}
                       size="lg"
@@ -384,6 +462,16 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
                     >
                       <Pause className="mr-2 h-5 w-5" />
                       Pause Break
+                    </Button>
+                  )}
+                  {!isBreakDataLoaded && (
+                    <Button
+                      disabled
+                      size="lg"
+                      className="bg-gray-600 text-white font-semibold px-8 text-lg cursor-not-allowed"
+                    >
+                      <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Loading Break Status...
                     </Button>
                   )}
                   <Button
@@ -398,14 +486,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onR
                 </>
               ) : (
                 <>
-                  <Button
-                    onClick={handleResume}
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 text-lg"
-                  >
-                    <Play className="mr-2 h-5 w-5" />
-                    Resume Break
-                  </Button>
                   <Button
                     onClick={handleEnd}
                     size="lg"

@@ -51,7 +51,12 @@ async function endBreak(
 
     const endTime = new Date()
     const startTime = existingBreak.actualStart || new Date()
-    const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 60000) // minutes
+    
+    // Calculate total elapsed time minus paused duration
+    const totalElapsedMs = endTime.getTime() - startTime.getTime()
+    const pausedDurationMs = (existingBreak.pausedduration || 0) * 1000 // Convert seconds to ms
+    const actualBreakDurationMs = totalElapsedMs - pausedDurationMs
+    const duration = Math.floor(actualBreakDurationMs / 60000) // minutes
 
     // Update the break with end time and duration
     const updatedBreak = await prisma.break.update({

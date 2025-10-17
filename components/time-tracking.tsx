@@ -70,9 +70,11 @@ export default function TimeTracking() {
   const [clockOutSummaryData, setClockOutSummaryData] = useState<any>(null)
   const [lateMinutes, setLateMinutes] = useState(0)
   const [breakModalOpen, setBreakModalOpen] = useState(false)
-  const [breakIsPaused, setBreakIsPaused] = useState(false)
+  const [breakIsPaused, setBreakIsPaused] = useState(activeBreak?.isPaused || false)
+  const [breakPauseUsed, setBreakPauseUsed] = useState(activeBreak?.pauseUsed || false)
   const [startingBreakType, setStartingBreakType] = useState<string | null>(null)
   const [isEndingBreak, setIsEndingBreak] = useState(false)
+  const [isResumingBreak, setIsResumingBreak] = useState(false)
   const [isClockingIn, setIsClockingIn] = useState(false)
   const [isClockingOut, setIsClockingOut] = useState(false)
   const [forceCloseBreakModal, setForceCloseBreakModal] = useState(false)
@@ -101,7 +103,7 @@ export default function TimeTracking() {
       setLateMinutes(activeEntry.lateBy)
       setShowLateModal(true)
     }
-  }, [isClockedIn, activeEntry?.wasLate, activeEntry?.lateBy])
+  }, [isClockedIn, activeEntry?.wasLate || false, activeEntry?.lateBy || 0])
   
   // Auto clock-out effect - runs when clocked in
   useEffect(() => {
@@ -113,6 +115,16 @@ export default function TimeTracking() {
     
     return () => stopAutoClockOutTimer()
   }, [isClockedIn, weeklySchedule])
+  
+  // Sync pause state with database
+  useEffect(() => {
+    if (activeBreak) {
+      setBreakIsPaused(activeBreak.isPaused || false)
+      // No need to sync breakPauseUsed - using database state directly
+    } else {
+      setBreakIsPaused(false)
+    }
+  }, [activeBreak?.isPaused])
   
   // Auto-open break modal when there's an active break
   useEffect(() => {
@@ -130,18 +142,18 @@ export default function TimeTracking() {
       return
     }
     
-    // Only open modal if there's an active break and modal is not already open
-    if (activeBreak && !breakModalOpen) {
-      console.log('[Break Modal] Active break detected, opening modal:', activeBreak.type)
+    // Only open modal if there's an active break, not paused, and modal is not already open
+    if (activeBreak && !breakIsPaused && !breakModalOpen) {
+      console.log('[Break Modal] Active break detected, opening modal:', activeBreak.type, 'breakIsPaused:', breakIsPaused)
       setBreakModalOpen(true)
       setBreakModalForceClosed(false) // Reset force-closed flag when new break starts
     } 
-    // Only close modal if there's no active break and modal is open
-    else if (!activeBreak && breakModalOpen) {
-      console.log('[Break Modal] No active break, closing modal')
+    // Close modal if break is paused or no active break
+    else if ((!activeBreak || breakIsPaused) && breakModalOpen) {
+      console.log('[Break Modal] Closing modal - activeBreak:', !!activeBreak, 'breakIsPaused:', breakIsPaused, 'breakModalOpen:', breakModalOpen)
       setBreakModalOpen(false)
     }
-  }, [activeBreak, breakModalOpen, forceCloseBreakModal, breakModalForceClosed])
+  }, [activeBreak, breakModalOpen, forceCloseBreakModal, breakModalForceClosed, breakIsPaused])
 
   // Update current session timer every second
   useEffect(() => {
@@ -543,32 +555,177 @@ export default function TimeTracking() {
 
   // WebSocket handles break ending automatically
   
-  const handlePauseBreak = () => {
+  const handlePauseBreak = async () => {
     if (!activeBreak) return
     
-    console.log("⏸️ PAUSING BREAK (Modal closes, staff can work)")
-    setBreakIsPaused(true)
-    setBreakModalOpen(false)
+    if (breakPauseUsed) {
+      toast({
+        title: "Pause Already Used",
+        description: "You have already used your one pause for this break.",
+        variant: "destructive",
+        duration: 3000
+      })
+      return
+    }
     
+    // ⚡ IMMEDIATE UI UPDATE - Close modal instantly for better UX
+    setBreakIsPaused(true)
+    setBreakPauseUsed(true)
+    setBreakModalOpen(false)
+    setForceCloseBreakModal(true)
+    
+    console.log("⏸️ PAUSING BREAK (Modal closes immediately, staff can work)")
+    
+    // Show success toast immediately
     toast({
       title: "Break Paused",
       description: "Your break has been paused. You can resume it anytime.",
       duration: 3000
     })
+    
+    // Continue with the actual pause logic in the background (don't await)
+    try {
+      const response = await fetch(`/api/breaks/${activeBreak.id}/pause`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to pause break')
+      }
+      
+      // Resume performance tracking when break is paused (staff can work)
+      if (typeof window !== 'undefined' && (window as any).electron?.performance?.resume) {
+        console.log("🔄 RESUMING PERFORMANCE TRACKING - Staff can work during paused break")
+        await (window as any).electron.performance.resume()
+        console.log("✅ Performance tracking resumed in Electron")
+      } else {
+        console.log("⚠️ Electron performance API not available (running in browser)")
+      }
+      
+      // Disable break mode when break is paused (staff can work)
+      if (typeof window !== 'undefined' && (window as any).electron?.activityTracker?.setBreakMode) {
+        console.log("🔄 DISABLING BREAK MODE - Staff can work during paused break")
+        await (window as any).electron.activityTracker.setBreakMode(false)
+        console.log("✅ Break mode disabled in Electron")
+      } else {
+        console.log("⚠️ Electron activity tracker API not available (running in browser)")
+      }
+      
+      // Emit WebSocket event for break pause
+      if (socket) {
+        socket.emit('break:pause', { breakId: activeBreak.id, staffUserId: activeBreak.staffUserId })
+        console.log("📡 WebSocket event emitted: break:pause")
+      }
+
+      // Request fresh data to get updated break status
+      if (socket) {
+        console.log("🔄 Requesting fresh data after break pause")
+        socket.emit('time:request-data')
+      }
+
+      console.log("✅ PAUSE API SUCCESS - breakIsPaused: true, modal closed, performance tracking resumed")
+    } catch (error) {
+      console.error("Error pausing break:", error)
+      // Show error toast if API fails
+      toast({
+        title: "Pause Error",
+        description: error instanceof Error ? error.message : "Failed to pause break. Please try again.",
+        variant: "destructive",
+        duration: 3000
+      })
+    }
+    
+    // Reset force close flag after a short delay
+    setTimeout(() => {
+      setForceCloseBreakModal(false)
+    }, 1000)
   }
   
-  const handleResumeBreak = () => {
-    if (!activeBreak) return
+  const handleResumeBreak = async () => {
+    if (!activeBreak || isResumingBreak) return
     
-    console.log("▶️ RESUMING BREAK (Modal reopens)")
-    setBreakIsPaused(false)
-    setBreakModalOpen(true)
+    // Set loading state immediately
+    setIsResumingBreak(true)
     
+    console.log("▶️ RESUMING BREAK (Loading state active)")
+    
+    // Show loading toast
     toast({
-      title: "Break Resumed",
-      description: "Your break has been resumed.",
-      duration: 3000
+      title: "Resuming Break...",
+      description: "Please wait while we resume your break.",
+      duration: 2000
     })
+    
+    try {
+      const response = await fetch(`/api/breaks/${activeBreak.id}/resume`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to resume break')
+      }
+      
+      // Pause performance tracking when break is resumed (staff is back on break)
+      if (typeof window !== 'undefined' && (window as any).electron?.performance?.pause) {
+        console.log("⏸️ PAUSING PERFORMANCE TRACKING - Staff is back on break")
+        await (window as any).electron.performance.pause()
+        console.log("✅ Performance tracking paused in Electron")
+      } else {
+        console.log("⚠️ Electron performance API not available (running in browser)")
+      }
+      
+      // Enable break mode when break is resumed (staff is back on break)
+      if (typeof window !== 'undefined' && (window as any).electron?.activityTracker?.setBreakMode) {
+        console.log("⏸️ ENABLING BREAK MODE - Staff is back on break")
+        await (window as any).electron.activityTracker.setBreakMode(true)
+        console.log("✅ Break mode enabled in Electron")
+      } else {
+        console.log("⚠️ Electron activity tracker API not available (running in browser)")
+      }
+      
+      // Emit WebSocket event for break resume
+      if (socket) {
+        socket.emit('break:resume', { breakId: activeBreak.id, staffUserId: activeBreak.staffUserId })
+        console.log("📡 WebSocket event emitted: break:resume")
+      }
+      
+      // Now update UI state and open modal after API success
+      setBreakIsPaused(false)
+      setBreakModalOpen(true)
+
+      console.log("✅ RESUME API SUCCESS - breakIsPaused: false, modal opened, performance tracking paused")
+
+      // Request fresh data to get updated pausedDuration
+      if (socket) {
+        console.log("🔄 Requesting fresh data after break resume")
+        socket.emit('time:request-data')
+      }
+
+      // Show success toast
+      toast({
+        title: "Break Resumed",
+        description: "Your break has been resumed and the timer is running.",
+        duration: 3000
+      })
+      
+    } catch (error) {
+      console.error("Error resuming break:", error)
+      // Show error toast if API fails
+      toast({
+        title: "Resume Error",
+        description: "Failed to resume break. Please try again.",
+        variant: "destructive",
+        duration: 3000
+      })
+    } finally {
+      // Reset loading state after a short delay
+      setTimeout(() => {
+        setIsResumingBreak(false)
+      }, 1000)
+    }
   }
   
   const handleCloseBreakModal = () => {
@@ -956,11 +1113,10 @@ export default function TimeTracking() {
         {/* Full-Screen Break Modal */}
         <BreakModal
           isOpen={breakModalOpen}
-          breakData={activeBreak}
+          breakData={activeBreak ? { ...activeBreak, isPaused: breakIsPaused } : null}
           onEnd={handleEndBreak}
           onEndDirect={handleEndBreakDirect}
           onPause={handlePauseBreak}
-          onResume={handleResumeBreak}
           onClose={handleCloseBreakModal}
         />
 
@@ -989,12 +1145,29 @@ export default function TimeTracking() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={handleResumeBreak}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6"
-                >
-                  ▶️ Resume Break
-                </Button>
+                <div className="flex flex-col items-end gap-3">
+                  {activeBreak.pausedDuration && activeBreak.pausedDuration > 0 && (
+                    <div className="text-sm font-semibold text-yellow-300 bg-yellow-500/20 px-3 py-1 rounded-lg">
+                      Remaining: {Math.floor(activeBreak.pausedDuration / 60)}m {activeBreak.pausedDuration % 60}s
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleResumeBreak}
+                    disabled={isResumingBreak}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResumingBreak ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Resuming...
+                      </>
+                    ) : (
+                      <>
+                        ▶️ Resume Break
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
