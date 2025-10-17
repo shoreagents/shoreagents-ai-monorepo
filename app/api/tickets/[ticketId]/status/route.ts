@@ -11,6 +11,7 @@ export async function PATCH(
     const session = await auth()
 
     if (!session?.user?.id) {
+      console.error(`[Status Update] Unauthorized attempt`)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -18,14 +19,18 @@ export async function PATCH(
     const body = await request.json()
     const { status } = body
 
+    console.log(`[Status Update] Ticket: ${ticketId}, New Status: ${status}`)
+
     if (!status) {
+      console.error(`[Status Update] Missing status in request body`)
       return NextResponse.json({ error: "Status is required" }, { status: 400 })
     }
 
     // Validate status
     const validStatuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"]
     if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      console.error(`[Status Update] Invalid status: ${status}`)
+      return NextResponse.json({ error: `Invalid status: ${status}. Must be one of: ${validStatuses.join(", ")}` }, { status: 400 })
     }
 
     // Check if ticket exists
@@ -34,8 +39,11 @@ export async function PATCH(
     })
 
     if (!ticket) {
+      console.error(`[Status Update] Ticket not found: ${ticketId}`)
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
     }
+
+    console.log(`[Status Update] Current status: ${ticket.status}, Requested: ${status}`)
 
     // Update ticket status
     const updatedTicket = await prisma.ticket.update({
@@ -107,11 +115,12 @@ export async function PATCH(
       },
     })
 
+    console.log(`[Status Update] ✅ Successfully updated ticket ${ticketId} to ${status}`)
     return NextResponse.json({ success: true, ticket: updatedTicket })
   } catch (error) {
-    console.error("Error updating ticket status:", error)
+    console.error(`[Status Update] ❌ Error:`, error)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     )
   }

@@ -80,6 +80,14 @@ export default function AdminTicketsPage() {
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: TicketStatus) => {
+    // Optimistically update UI first for instant feedback
+    const previousTickets = [...tickets]
+    setTickets((prev) =>
+      prev.map((ticket) =>
+        ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
+      )
+    )
+
     try {
       const response = await fetch(`/api/tickets/${ticketId}/status`, {
         method: "PATCH",
@@ -87,20 +95,18 @@ export default function AdminTicketsPage() {
         body: JSON.stringify({ status: newStatus }),
       })
 
-      if (!response.ok) throw new Error("Failed to update status")
-
-      // Update local state
-      setTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
-        )
-      )
+      if (!response.ok) {
+        // Revert on failure
+        setTickets(previousTickets)
+        throw new Error("Failed to update status")
+      }
 
       toast({
         title: "Success",
         description: "Ticket status updated successfully",
       })
     } catch (error) {
+      // Revert already happened above
       toast({
         title: "Error",
         description: "Failed to update ticket status. Please try again.",

@@ -66,6 +66,7 @@ export default function TicketKanban({
 }: TicketKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
+  const [updatingTickets, setUpdatingTickets] = useState<Set<string>>(() => new Set())
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -107,10 +108,22 @@ export default function TicketKanban({
     const ticketId = active.id as string
     const newStatus = over.id as TicketStatus
 
-    // Only update if status actually changed
+    // Only update if status actually changed and not already updating
     const ticket = tickets.find((t) => t.id === ticketId)
-    if (ticket && ticket.status !== newStatus) {
-      await onStatusChange(ticketId, newStatus)
+    if (ticket && ticket.status !== newStatus && !updatingTickets.has(ticketId)) {
+      // Mark as updating
+      setUpdatingTickets(prev => new Set(prev).add(ticketId))
+      
+      try {
+        await onStatusChange(ticketId, newStatus)
+      } finally {
+        // Remove from updating set after completion
+        setUpdatingTickets(prev => {
+          const next = new Set(prev)
+          next.delete(ticketId)
+          return next
+        })
+      }
     }
 
     setActiveId(null)
