@@ -75,6 +75,29 @@ export default function ClientTaskCard({ task, onUpdate, isDragging }: ClientTas
       {/* Priority Bar */}
       <div className={`h-1 w-full rounded-full mb-3 ${priorityConfig.color}`} />
 
+      {/* Image Preview (if attachments exist) */}
+      {task.attachments && task.attachments.length > 0 && (
+        <div className="mb-3 relative rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200">
+          <img
+            src={task.attachments[0]}
+            alt="Task attachment"
+            className="w-full h-32 object-cover"
+            onError={(e) => {
+              // Hide image if it fails to load (not an image file)
+              e.currentTarget.parentElement!.style.display = 'none'
+            }}
+          />
+          {task.attachments.length > 1 && (
+            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-full">
+              +{task.attachments.length - 1} more
+            </div>
+          )}
+          <div className="absolute bottom-2 left-2 text-white text-xs font-semibold flex items-center gap-1 bg-black/50 px-2 py-1 rounded">
+            📎 {task.attachments.length} file{task.attachments.length > 1 ? "s" : ""}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="font-semibold text-slate-900 line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors">
@@ -99,13 +122,6 @@ export default function ClientTaskCard({ task, onUpdate, isDragging }: ClientTas
             <Calendar className="h-3.5 w-3.5" />
           )}
           <span className="font-medium">{deadlineInfo.text}</span>
-        </div>
-      )}
-
-      {/* Attachments indicator */}
-      {task.attachments && task.attachments.length > 0 && (
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
-          <span>📎 {task.attachments.length} attachment{task.attachments.length > 1 ? "s" : ""}</span>
         </div>
       )}
 
@@ -151,6 +167,10 @@ export default function ClientTaskCard({ task, onUpdate, isDragging }: ClientTas
         task={task}
         onClose={() => setShowModal(false)}
         isDarkTheme={false}
+        onUpdate={() => {
+          onUpdate()
+          setShowModal(false)
+        }}
       />,
       document.body
     )}
