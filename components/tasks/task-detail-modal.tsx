@@ -1100,17 +1100,19 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   📅 Deadline {!task.deadline && "(Not Set!)"}
                 </p>
               </div>
-              <button
-                onClick={() => setIsEditingTask(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-110 ${
-                  isDarkTheme
-                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/50"
-                    : "bg-blue-500 hover:bg-blue-600 text-white"
-                }`}
-              >
-                <Edit2 className="h-3 w-3" />
-                {task.deadline ? "EDIT" : "SET DATE"}
-              </button>
+              {!viewOnly && (
+                <button
+                  onClick={() => setIsEditingTask(true)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-110 ${
+                    isDarkTheme
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/50"
+                      : "bg-blue-500 hover:bg-blue-600 text-white"
+                  }`}
+                >
+                  <Edit2 className="h-3 w-3" />
+                  {task.deadline ? "EDIT" : "SET DATE"}
+                </button>
+              )}
             </div>
             <p className={`text-lg font-bold ${
               task.deadline
@@ -1162,17 +1164,19 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
 
         {/* Attachments - DRAG & DROP UPLOAD ZONE */}
         <div 
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`rounded-2xl p-6 mb-6 transition-all cursor-pointer ${
-            uploadingDirectAttachments
+          onDragOver={viewOnly ? undefined : handleDragOver}
+          onDragLeave={viewOnly ? undefined : handleDragLeave}
+          onDrop={viewOnly ? undefined : handleDrop}
+          className={`rounded-2xl p-6 mb-6 transition-all ${
+            viewOnly
+              ? (isDarkTheme ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10" : "bg-slate-50 border-2 border-slate-200")
+              : uploadingDirectAttachments
               ? (isDarkTheme ? "bg-blue-500/20 ring-2 ring-blue-500/50 scale-[1.02]" : "bg-blue-50 border-2 border-blue-400")
               : isDraggingOver
               ? (isDarkTheme ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 ring-2 ring-green-500/50 scale-[1.02] shadow-2xl shadow-green-500/50" : "bg-green-50 border-2 border-green-500")
               : (isDarkTheme 
-                ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10 hover:ring-indigo-500/50" 
-                : "bg-slate-50 border-2 border-slate-200 hover:border-blue-500")
+                ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10 hover:ring-indigo-500/50 cursor-pointer" 
+                : "bg-slate-50 border-2 border-slate-200 hover:border-blue-500 cursor-pointer")
           }`}
         >
           <div className="flex items-center justify-between mb-4">
@@ -1182,22 +1186,24 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               <Paperclip className="h-4 w-4" />
               📎 Attachments ({task.attachments?.length || 0})
             </h3>
-            <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs cursor-pointer transition-all hover:scale-110 ${
-              isDarkTheme
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}>
-              <Upload className="h-4 w-4" />
-              {uploadingDirectAttachments ? "Uploading..." : "Click to Upload"}
-              <input
-                type="file"
-                accept="*/*"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-                disabled={uploadingDirectAttachments}
-              />
-            </label>
+            {!viewOnly && (
+              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs cursor-pointer transition-all hover:scale-110 ${
+                isDarkTheme
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30"
+                  : "bg-blue-500 hover:bg-blue-600 text-white"
+              }`}>
+                <Upload className="h-4 w-4" />
+                {uploadingDirectAttachments ? "Uploading..." : "Click to Upload"}
+                <input
+                  type="file"
+                  accept="*/*"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  disabled={uploadingDirectAttachments}
+                />
+              </label>
+            )}
           </div>
 
           {uploadingDirectAttachments ? (
@@ -1259,13 +1265,15 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               }`}>
                 {isDraggingOver ? "📥 Drop files here!" : "📎 No attachments yet"}
               </p>
-              <p className={`text-xs ${
-                isDraggingOver
-                  ? (isDarkTheme ? "text-green-400" : "text-green-600")
-                  : (isDarkTheme ? "text-slate-500" : "text-slate-500")
-              }`}>
-                {isDraggingOver ? "Release to upload" : "Click 'Click to Upload' or drag & drop files here"}
-              </p>
+              {!viewOnly && (
+                <p className={`text-xs ${
+                  isDraggingOver
+                    ? (isDarkTheme ? "text-green-400" : "text-green-600")
+                    : (isDarkTheme ? "text-slate-500" : "text-slate-500")
+                }`}>
+                  {isDraggingOver ? "Release to upload" : "Click 'Click to Upload' or drag & drop files here"}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1285,17 +1293,19 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               <CheckSquare className="h-5 w-5" />
               🎯 Subtasks
             </h3>
-            <button
-              onClick={() => setShowSubtaskInput(!showSubtaskInput)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 ${
-                isDarkTheme 
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30" 
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
-            >
-              <Plus className="h-4 w-4" />
-              Add Subtask
-            </button>
+            {!viewOnly && (
+              <button
+                onClick={() => setShowSubtaskInput(!showSubtaskInput)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 ${
+                  isDarkTheme 
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30" 
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
+              >
+                <Plus className="h-4 w-4" />
+                Add Subtask
+              </button>
+            )}
           </div>
 
           {/* Progress Bar */}
@@ -1452,8 +1462,13 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                       <input
                         type="checkbox"
                         checked={subtask.completed}
-                        onChange={(e) => toggleSubtask(subtask.id, e.target.checked)}
-                        className={`h-5 w-5 rounded cursor-pointer transition-all ${
+                        onChange={viewOnly ? undefined : (e) => toggleSubtask(subtask.id, e.target.checked)}
+                        disabled={viewOnly}
+                        className={`h-5 w-5 rounded transition-all ${
+                          viewOnly 
+                            ? "cursor-not-allowed opacity-50" 
+                            : "cursor-pointer"
+                        } ${
                           subtask.completed 
                             ? "accent-emerald-500" 
                             : "accent-indigo-600"
@@ -1473,28 +1488,32 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                           ✅ Done
                         </span>
                       )}
-                      <button
-                        onClick={() => startEditingSubtask(subtask)}
-                        className={`p-1.5 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100 ${
-                          isDarkTheme 
-                            ? "text-blue-400 hover:bg-blue-500/20" 
-                            : "text-blue-600 hover:bg-blue-50"
-                        }`}
-                        title="Edit subtask"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteSubtask(subtask.id)}
-                        className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
-                          isDarkTheme 
-                            ? "text-red-400 hover:bg-red-500/20" 
-                            : "text-red-600 hover:bg-red-50"
-                        }`}
-                        title="Delete subtask"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {!viewOnly && (
+                        <>
+                          <button
+                            onClick={() => startEditingSubtask(subtask)}
+                            className={`p-1.5 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100 ${
+                              isDarkTheme 
+                                ? "text-blue-400 hover:bg-blue-500/20" 
+                                : "text-blue-600 hover:bg-blue-50"
+                            }`}
+                            title="Edit subtask"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteSubtask(subtask.id)}
+                            className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
+                              isDarkTheme 
+                                ? "text-red-400 hover:bg-red-500/20" 
+                                : "text-red-600 hover:bg-red-50"
+                            }`}
+                            title="Delete subtask"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
