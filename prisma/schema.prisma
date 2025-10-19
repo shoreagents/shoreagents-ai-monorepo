@@ -51,7 +51,8 @@ model StaffUser {
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
-  tasks                  Task[]
+  legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
+  taskAssignments        TaskAssignment[]
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
@@ -103,7 +104,6 @@ model WorkSchedule {
 
 model Task {
   id            String       @id @default(uuid())
-  staffUserId   String
   title         String
   description   String?
   status        TaskStatus   @default(TODO)
@@ -113,16 +113,68 @@ model Task {
   completedAt   DateTime?
   timeSpent     Int?
   tags          String[]
+  attachments   String[]     @default([])
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  assignedTo    String?
+  
+  // Relationships
+  staffUserId   String?      // Keep for backward compatibility with existing tasks
   companyId     String?
+  clientUserId  String?
   createdById   String?
   createdByType CreatorType  @default(STAFF)
-  company       Company?     @relation(fields: [companyId], references: [id])
-  staffUser     StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  staffUser     StaffUser?        @relation("LegacyTaskAssignment", fields: [staffUserId], references: [id], onDelete: Cascade)
+  company       Company?          @relation(fields: [companyId], references: [id])
+  clientUser    ClientUser?       @relation(fields: [clientUserId], references: [id])
+  assignedStaff TaskAssignment[]  // New bulk assignment system
+  responses     TaskResponse[]    // Comments/responses on tasks
+  subtasks      Subtask[]         // Subtasks for breaking down work
 
   @@map("tasks")
+}
+
+model TaskAssignment {
+  id          String    @id @default(uuid())
+  taskId      String
+  staffUserId String
+  createdAt   DateTime  @default(now())
+  
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@unique([taskId, staffUserId])
+  @@map("task_assignments")
+}
+
+model TaskResponse {
+  id              String      @id @default(uuid())
+  taskId          String
+  content         String
+  createdByType   CreatorType
+  createdById     String
+  attachments     String[]    @default([])
+  createdAt       DateTime    @default(now())
+  
+  task            Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@map("task_responses")
+}
+
+model Subtask {
+  id          String    @id @default(uuid())
+  taskId      String
+  title       String
+  completed   Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@map("subtasks")
 }
 
 model Break {
@@ -352,22 +404,37 @@ model Kudos {
 }
 
 model Document {
-  id            String           @id @default(uuid())
+  id            String            @id @default(uuid())
   title         String
   category      DocumentCategory
   uploadedBy    String
   size          String
   fileUrl       String?
   content       String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   staffUserId   String
-  source        DocumentSource   @default(STAFF)
-  sharedWithAll Boolean          @default(false)
-  sharedWith    String[]         @default([])
-  staffUser     StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  source        DocumentSource    @default(STAFF)
+  sharedWithAll Boolean           @default(false)
+  sharedWith    String[]          @default([])
+  staffUser     StaffUser         @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  comments      DocumentComment[]
 
   @@map("documents")
+}
+
+model DocumentComment {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content    String   @db.Text
+  userId     String
+  userType   String   // STAFF, CLIENT, ADMIN
+  userName   String
+  userAvatar String?
+  createdAt  DateTime @default(now())
+
+  @@map("document_comments")
 }
 
 model Company {
@@ -521,6 +588,18 @@ enum ManagementRole {
   MANAGER
 }
 
+enum Department {
+  CEO_EXECUTIVE
+  IT_DEPARTMENT
+  HR_DEPARTMENT
+  NURSE_DEPARTMENT
+  RECRUITMENT_DEPARTMENT
+  ACCOUNT_MANAGEMENT
+  FINANCE_DEPARTMENT
+  NERDS_DEPARTMENT
+  OPERATIONS
+}
+
 enum StaffRole {
   STAFF
   TEAM_LEAD
@@ -601,12 +680,23 @@ enum ReviewStatus {
 }
 
 enum TicketCategory {
+  // Staff & Management shared
   IT
   HR
   MANAGEMENT
   EQUIPMENT
-  OTHER
   STATION
+  CLINIC
+  MEETING_ROOM
+  OTHER
+  
+  // Management-only
+  ONBOARDING
+  OFFBOARDING
+  MAINTENANCE
+  CLEANING
+  FINANCE
+  OPERATIONS
   SURROUNDINGS
   COMPENSATION
   TRANSPORT
@@ -688,6 +778,7 @@ enum DocumentCategory {
 enum DocumentSource {
   STAFF
   CLIENT
+  ADMIN
 }
 
 enum ClientRole {

@@ -3,27 +3,19 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import DailyIframe, { DailyCall } from "@daily-co/daily-js"
-import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  MonitorUp,
-  PhoneOff,
-  Loader2
-} from "lucide-react"
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Loader2 } from "lucide-react"
 
 interface VideoCallRoomProps {
   roomUrl: string
-  staffName: string
+  staffName?: string
+  callerName?: string
 }
 
-export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps) {
+export default function VideoCallRoom({ roomUrl, staffName, callerName }: VideoCallRoomProps) {
   const router = useRouter()
   const callFrameRef = useRef<DailyCall | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const hasInitialized = useRef(false)
-  
+
   const [isJoining, setIsJoining] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
@@ -50,7 +42,7 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
         }
 
         // Wait a moment to ensure cleanup is complete
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
 
         if (!mounted) return
 
@@ -66,8 +58,8 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
             left: 0,
             width: "100%",
             height: "100%",
-            border: "0"
-          }
+            border: "0",
+          },
         })
 
         if (!mounted) {
@@ -177,13 +169,17 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
     )
   }
 
+  const displayName = staffName || callerName || "Video Call"
+
   return (
     <div className="fixed inset-0 z-50 bg-gray-900">
       {/* Call Header */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/50 to-transparent p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-white text-2xl font-bold">Call with {staffName}</h1>
+            <h1 className="text-white text-2xl font-bold">
+              {staffName ? `Call with ${displayName}` : `Call from ${displayName}`}
+            </h1>
             <p className="text-white/80 text-sm">Video Call in Progress</p>
           </div>
           {isJoining && (
@@ -205,26 +201,18 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
           <button
             onClick={toggleMute}
             className={`flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-              isMuted
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-white/20 hover:bg-white/30"
+              isMuted ? "bg-red-500 hover:bg-red-600" : "bg-white/20 hover:bg-white/30"
             } backdrop-blur-sm`}
             title={isMuted ? "Unmute" : "Mute"}
           >
-            {isMuted ? (
-              <MicOff className="h-6 w-6 text-white" />
-            ) : (
-              <Mic className="h-6 w-6 text-white" />
-            )}
+            {isMuted ? <MicOff className="h-6 w-6 text-white" /> : <Mic className="h-6 w-6 text-white" />}
           </button>
 
           {/* Camera On/Off */}
           <button
             onClick={toggleCamera}
             className={`flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-              isCameraOff
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-white/20 hover:bg-white/30"
+              isCameraOff ? "bg-red-500 hover:bg-red-600" : "bg-white/20 hover:bg-white/30"
             } backdrop-blur-sm`}
             title={isCameraOff ? "Turn Camera On" : "Turn Camera Off"}
           >
@@ -239,9 +227,7 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
           <button
             onClick={toggleScreenShare}
             className={`flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-              isScreenSharing
-                ? "bg-purple-500 hover:bg-purple-600"
-                : "bg-white/20 hover:bg-white/30"
+              isScreenSharing ? "bg-purple-500 hover:bg-purple-600" : "bg-white/20 hover:bg-white/30"
             } backdrop-blur-sm`}
             title="Share Screen"
           >
@@ -261,4 +247,3 @@ export default function VideoCallRoom({ roomUrl, staffName }: VideoCallRoomProps
     </div>
   )
 }
-

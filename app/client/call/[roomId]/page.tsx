@@ -1,60 +1,24 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import VideoCallRoom from "@/components/client/video-call-room"
 import { Loader2 } from "lucide-react"
 
-export default function CallRoomPage({
-  params
-}: {
-  params: Promise<{ roomId: string }>
-}) {
-  const router = useRouter()
+function CallRoomPageContent() {
   const searchParams = useSearchParams()
-  const resolvedParams = use(params)
-  
-  const [roomUrl, setRoomUrl] = useState<string | null>(null)
-  const [staffName, setStaffName] = useState<string>("Staff Member")
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Get room URL and staff name from query params
-    const url = searchParams.get("url")
-    const staff = searchParams.get("staff")
-
-    if (!url) {
-      console.error("No room URL provided")
-      router.push("/client")
-      return
-    }
-
-    setRoomUrl(decodeURIComponent(url))
-    if (staff) {
-      setStaffName(decodeURIComponent(staff))
-    }
-    setLoading(false)
-  }, [searchParams, router])
-
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-white mx-auto mb-4" />
-          <p className="text-white text-lg">Preparing call...</p>
-        </div>
-      </div>
-    )
-  }
+  const roomUrl = searchParams.get("url")
+  const staffName = searchParams.get("staff")
 
   if (!roomUrl) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
-          <p className="text-red-500 text-xl mb-4">❌ Invalid call link</p>
+          <h1 className="text-3xl font-bold mb-4">Error: Missing Call Information</h1>
+          <p className="text-lg">Please ensure you have a valid room URL.</p>
           <button
-            onClick={() => router.push("/client")}
-            className="px-6 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100"
+            onClick={() => (window.location.href = "/client")}
+            className="mt-6 px-6 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100"
           >
             Return to Dashboard
           </button>
@@ -63,6 +27,20 @@ export default function CallRoomPage({
     )
   }
 
-  return <VideoCallRoom roomUrl={roomUrl} staffName={staffName} />
+  return <VideoCallRoom roomUrl={roomUrl} staffName={staffName || undefined} />
 }
 
+export default function CallRoomPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 text-white">
+          <Loader2 className="h-10 w-10 animate-spin mr-4" />
+          <span className="text-xl">Loading video call...</span>
+        </div>
+      }
+    >
+      <CallRoomPageContent />
+    </Suspense>
+  )
+}

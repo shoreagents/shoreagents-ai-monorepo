@@ -8,6 +8,19 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 
+// Map display names to database enum values
+const departmentMap: Record<string, string> = {
+  "CEO / Executive": "CEO_EXECUTIVE",
+  "IT Department": "IT_DEPARTMENT",
+  "HR Department": "HR_DEPARTMENT",
+  "Nurse Department": "NURSE_DEPARTMENT",
+  "Recruitment Department": "RECRUITMENT_DEPARTMENT",
+  "Account Management": "ACCOUNT_MANAGEMENT",
+  "Finance Department": "FINANCE_DEPARTMENT",
+  "Nerds (Software Team)": "NERDS_DEPARTMENT",
+  "Operations": "OPERATIONS",
+}
+
 export default function ManagementSignUpPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -51,7 +64,7 @@ export default function ManagementSignUpPage() {
           email,
           password,
           phone,
-          department,
+          department: departmentMap[department] || department, // Map to enum value
           role,
         }),
       })
@@ -157,13 +170,15 @@ export default function ManagementSignUpPage() {
                 required
               >
                 <option value="">Select Department</option>
-                <option value="CEO / Executive">CEO / Executive</option>
-                <option value="IT Department">IT Department</option>
-                <option value="HR Department">HR Department</option>
-                <option value="Recruitment Department">Recruitment Department</option>
-                <option value="Account Management">Account Management</option>
-                <option value="Finance Department">Finance Department</option>
-                <option value="Operations">Operations</option>
+                <option value="CEO / Executive">👔 CEO / Executive</option>
+                <option value="IT Department">💻 IT Department</option>
+                <option value="HR Department">👤 HR Department</option>
+                <option value="Nurse Department">🏥 Nurse Department</option>
+                <option value="Recruitment Department">🎯 Recruitment Department</option>
+                <option value="Account Management">📊 Account Management</option>
+                <option value="Finance Department">💰 Finance Department</option>
+                <option value="Nerds (Software Team)">🤓 Nerds (Software Team)</option>
+                <option value="Operations">⚙️ Operations</option>
               </select>
             </div>
           </div>

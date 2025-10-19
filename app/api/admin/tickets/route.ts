@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAdminUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 
-// GET /api/admin/tickets - Get ALL tickets (admin view)
+// GET /api/admin/tickets - Get all tickets for management view
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAdminUser()
+    const session = await auth()
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Verify user is management
+    const managementUser = await prisma.managementUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!managementUser) {
+      return NextResponse.json({ error: "Management user not found" }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const staffId = searchParams.get("staffId")
-    const category = searchParams.get("category")
     const status = searchParams.get("status")
-
-    const where: any = {}
-
-    // Filter by specific staff
-    if (staffId) {
-      where.staffUserId = staffId
-    }
-
-    // Filter by category
-    if (category) {
-      where.category = category
-    }
-
-    // Filter by status
-    if (status) {
-      where.status = status
-    }
+    const category = searchParams.get("category")
+    const staffId = searchParams.get("staffId")
+    const creatorType = searchParams.get("creatorType") // "staff", "client", or "management"
 
     const tickets = await prisma.ticket.findMany({
-      where,
+      where: {
+        ...(status && { status }),
+        ...(category && { category }),
+        ...(staffId && { staffUserId: staffId }),
+        ...(creatorType && { createdByType: creatorType.toUpperCase() }),
+      },
       include: {
         staffUser: {
           select: {
@@ -42,8 +40,25 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             avatar: true,
-            role: true
-          }
+            role: true,
+          },
+        },
+        managementUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
         },
         responses: {
           orderBy: { createdAt: "asc" },
@@ -53,7 +68,25 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 email: true,
+                avatar: true,
                 role: true,
+              },
+            },
+            managementUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
               },
             },
           },
@@ -62,10 +95,136 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json({ tickets, count: tickets.length })
+    return NextResponse.json({ tickets })
   } catch (error) {
     console.error("Error fetching admin tickets:", error)
-    return NextResponse.json({ error: "Failed to fetch tickets" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
 
+// POST /api/admin/tickets - Create a new ticket as management
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Verify user is management
+    const managementUser = await prisma.managementUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!managementUser) {
+      return NextResponse.json({ error: "Management user not found" }, { status: 404 })
+    }
+
+    const body = await request.json()
+    const { title, description, category, priority, attachments, staffUserId, managementUserId: targetManagementUserId, clientUserId } = body
+
+    if (!title || !description || !category) {
+      return NextResponse.json(
+        { error: "Title, description, and category are required" },
+        { status: 400 }
+      )
+    }
+
+    // Validate that at least one user ID is provided
+    if (!staffUserId && !targetManagementUserId && !clientUserId) {
+      return NextResponse.json(
+        { error: "At least one of staffUserId, managementUserId, or clientUserId is required" },
+        { status: 400 }
+      )
+    }
+
+    // Generate unique ticket ID
+    const ticketCount = await prisma.ticket.count()
+    const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        staffUserId: staffUserId || null,
+        clientUserId: clientUserId || null,
+        ticketId,
+        title,
+        description,
+        category,
+        priority: priority || "MEDIUM",
+        status: "OPEN",
+        attachments: attachments || [],
+        createdByType: "MANAGEMENT",
+        managementUserId: targetManagementUserId || managementUser.id,
+      },
+      include: {
+        staffUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        managementUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        clientUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        responses: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+            managementUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+            clientUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return NextResponse.json({ success: true, ticket }, { status: 201 })
+  } catch (error) {
+    console.error("Error creating admin ticket:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
