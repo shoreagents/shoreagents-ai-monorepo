@@ -157,7 +157,6 @@ const navItems = [
   { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
   { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
   { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
-  { icon: "LinkIcon", label: "Staff Assignments", href: "/admin/assignments", badge: null },
   { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },
   { icon: "CheckSquare", label: "Task Oversight", href: "/admin/tasks", badge: null },
   { icon: "Ticket", label: "Support Tickets", href: "/admin/tickets", badge: null },
