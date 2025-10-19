@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function ClientTicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -175,8 +176,10 @@ export default function ClientTicketsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-muted-foreground">Loading tickets...</div>
+      <div className="p-8 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <TicketListSkeleton count={5} />
+        </div>
       </div>
     )
   }
