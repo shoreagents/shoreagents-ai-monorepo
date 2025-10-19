@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Users, CheckCircle2, Clock, AlertCircle, ListTodo } from "lucide-react"
+import { Plus, Users, CheckCircle2, Clock, AlertCircle, ListTodo, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
 import ClientTaskKanban from "@/components/tasks/client-task-kanban"
 import CreateTaskModal from "@/components/tasks/create-task-modal"
 import { getAllStatuses } from "@/lib/task-utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface Task {
   id: string
@@ -60,6 +61,7 @@ export default function ClientTasksPage() {
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("")
 
   useEffect(() => {
     fetchTasks()
@@ -134,12 +136,24 @@ export default function ClientTasksPage() {
     setIsCreateModalOpen(false)
   }
 
-  // Calculate stats
+  // Filter tasks by selected staff member
+  const filteredTasks = selectedStaffId
+    ? tasks.filter((task) => {
+        // Check if task is assigned to the selected staff
+        const isAssignedViaArray = task.assignedStaff?.some(
+          (a) => a.staffUser.id === selectedStaffId
+        )
+        const isAssignedViaLegacy = task.staffUser?.id === selectedStaffId
+        return isAssignedViaArray || isAssignedViaLegacy
+      })
+    : tasks
+
+  // Calculate stats (based on filtered tasks)
   const stats = {
-    total: tasks.length,
-    completed: tasks.filter((t) => t.status === "COMPLETED").length,
-    inProgress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
-    stuck: tasks.filter((t) => t.status === "STUCK").length,
+    total: filteredTasks.length,
+    completed: filteredTasks.filter((t) => t.status === "COMPLETED").length,
+    inProgress: filteredTasks.filter((t) => t.status === "IN_PROGRESS").length,
+    stuck: filteredTasks.filter((t) => t.status === "STUCK").length,
   }
 
   if (loading) {
@@ -173,6 +187,58 @@ export default function ClientTasksPage() {
               <Plus className="h-5 w-5 mr-2" />
               Create Task
             </Button>
+          </div>
+
+          {/* Filter Section */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-semibold text-slate-700">Filter by Staff:</span>
+              </div>
+              <select
+                value={selectedStaffId}
+                onChange={(e) => setSelectedStaffId(e.target.value)}
+                className="flex-1 max-w-xs px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-slate-900 font-medium text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              >
+                <option value="">All Staff - Show All Company Tasks</option>
+                {staffUsers.map((staff) => (
+                  <option key={staff.id} value={staff.id}>
+                    {staff.name} ({staff.role})
+                  </option>
+                ))}
+              </select>
+              {selectedStaffId && (
+                <Button
+                  onClick={() => setSelectedStaffId("")}
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-300 hover:bg-slate-100"
+                >
+                  Clear Filter
+                </Button>
+              )}
+              {selectedStaffId && staffUsers.find(s => s.id === selectedStaffId) && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage 
+                      src={staffUsers.find(s => s.id === selectedStaffId)?.avatar || undefined} 
+                    />
+                    <AvatarFallback className="bg-blue-200 text-blue-700 text-xs font-bold">
+                      {staffUsers.find(s => s.id === selectedStaffId)?.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-semibold text-blue-900">
+                    Showing tasks for {staffUsers.find(s => s.id === selectedStaffId)?.name}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -229,7 +295,7 @@ export default function ClientTasksPage() {
 
         {/* Kanban Board */}
         <ClientTaskKanban
-          tasks={tasks}
+          tasks={filteredTasks}
           onStatusChange={handleStatusChange}
           onTaskUpdate={fetchTasks}
         />

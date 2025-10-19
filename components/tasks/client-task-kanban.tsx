@@ -191,11 +191,11 @@ export default function ClientTaskKanban({
                     isOver ? "ring-4 ring-blue-400 scale-[1.02] shadow-2xl shadow-blue-500/30 animate-pulse" : ""
                   }`}>
                     <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-sm flex items-center gap-2">
+                      <h3 className="font-bold text-sm flex items-center gap-2 text-slate-800">
                         <span className="text-lg">{config.emoji}</span>
                         <span>{config.label.replace(config.emoji, "").trim()}</span>
                       </h3>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${config.lightColor} ring-2`}>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${config.lightColor} ring-2 text-slate-800`}>
                         {statusTasks.length}
                       </span>
                     </div>

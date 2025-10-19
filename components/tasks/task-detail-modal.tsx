@@ -714,7 +714,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                     isDarkTheme 
                       ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                      : "bg-white border-2 border-slate-300 focus:border-blue-500"
+                      : "bg-white text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
                   }`}
                 />
               </div>
@@ -733,7 +733,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   className={`w-full px-4 py-2.5 rounded-lg outline-none resize-none ${
                     isDarkTheme 
                       ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                      : "bg-white border-2 border-slate-300 focus:border-blue-500"
+                      : "bg-white text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
                   }`}
                 />
               </div>
@@ -767,7 +767,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                     className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                       isDarkTheme 
                         ? "bg-slate-800 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500 [color-scheme:dark]" 
-                        : "bg-white border-2 border-slate-300 focus:border-blue-500"
+                        : "bg-white text-slate-900 border-2 border-slate-300 focus:border-blue-500 [color-scheme:light]"
                     }`}
                   />
                   {editedDeadline && (
@@ -790,7 +790,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                     className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                       isDarkTheme 
                         ? "bg-slate-800 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                        : "bg-white border-2 border-slate-300 focus:border-blue-500"
+                        : "bg-white text-slate-900 border-2 border-slate-300 focus:border-blue-500"
                     }`}
                   >
                     <option value="LOW">🟢 Low Priority</option>
@@ -1354,7 +1354,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 className={`w-full px-4 py-2 rounded-lg outline-none mb-3 ${
                   isDarkTheme 
                     ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-indigo-500" 
-                    : "bg-slate-50 border-2 border-slate-300 focus:border-blue-500"
+                    : "bg-slate-50 text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
                 }`}
               />
               <div className="flex gap-2">
@@ -1430,7 +1430,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                         className={`flex-1 px-3 py-1.5 rounded-lg outline-none ${
                           isDarkTheme 
                             ? "bg-slate-800 text-white ring-2 ring-indigo-500" 
-                            : "bg-slate-50 border-2 border-blue-500"
+                            : "bg-slate-50 text-slate-900 border-2 border-blue-500"
                         }`}
                       />
                       <button
@@ -1647,7 +1647,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               className={`w-full px-4 py-3 rounded-lg outline-none mb-3 resize-none ${
                 isDarkTheme 
                   ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-indigo-500" 
-                  : "bg-slate-50 border-2 border-slate-300 focus:border-blue-500"
+                  : "bg-slate-50 text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
               }`}
             />
 
