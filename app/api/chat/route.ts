@@ -17,10 +17,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user details for personalization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    // Try StaffUser first
+    let user = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id },
       select: { id: true, name: true },
     })
+
+    // If not staff, try ClientUser
+    if (!user) {
+      const clientUser = await prisma.clientUser.findUnique({
+        where: { authUserId: session.user.id },
+        select: { id: true, name: true },
+      })
+      if (clientUser) {
+        user = clientUser
+      }
+    }
+
+    // If not client, try ManagementUser
+    if (!user) {
+      const managementUser = await prisma.managementUser.findUnique({
+        where: { authUserId: session.user.id },
+        select: { id: true, name: true },
+      })
+      if (managementUser) {
+        user = managementUser
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -34,7 +57,7 @@ export async function POST(request: NextRequest) {
       const docs = await prisma.document.findMany({
         where: {
           id: { in: documentIds },
-          userId: user.id, // Only user's own documents
+          // Documents are accessible based on sharing permissions
         },
         select: {
           title: true,

@@ -10,6 +10,7 @@ import {
 import { useRef, useEffect, useState } from "react"
 import ReactMarkdown from 'react-markdown'
 import DocumentUpload from "./document-upload"
+import { DocumentSourceBadge } from "@/components/ui/document-source-badge"
 
 type Message = {
   id: string
@@ -121,10 +122,11 @@ export default function AIChatAssistant() {
   const fetchDocuments = async () => {
     setLoadingDocs(true)
     try {
-      // Fetch both staff and client documents
-      const [staffResponse, clientResponse] = await Promise.all([
-        fetch('/api/documents'),
-        fetch('/api/client/documents')
+      // Fetch from all three sources: staff, client, and admin
+      const [staffResponse, clientResponse, adminResponse] = await Promise.all([
+        fetch('/api/documents'),        // Staff's own + shared admin docs
+        fetch('/api/client/documents'),  // Client docs visible to this staff
+        fetch('/api/admin/documents')    // Admin docs (if any shared)
       ])
       
       let allDocuments: any[] = []
@@ -144,27 +146,38 @@ export default function AIChatAssistant() {
         const clientData = await clientResponse.json()
         const clientDocs = (clientData.documents || []).map((doc: any) => ({
           ...doc,
-          source: doc.isStaffUpload ? 'STAFF' : 'CLIENT'  // Map from client API format
+          source: doc.source || (doc.isStaffUpload ? 'STAFF' : 'CLIENT')  // Map from client API format
         }))
         allDocuments = [...allDocuments, ...clientDocs]
       }
       
-      // Deduplicate by ID (in case same doc appears in both)
+      // Add admin documents
+      if (adminResponse.ok) {
+        const adminData = await adminResponse.json()
+        const adminDocs = (Array.isArray(adminData) ? adminData : []).map((doc: any) => ({
+          ...doc,
+          source: doc.source || 'ADMIN'  // Ensure source field exists
+        }))
+        allDocuments = [...allDocuments, ...adminDocs]
+      }
+      
+      // Deduplicate by ID (in case same doc appears in multiple sources)
       const uniqueDocs = Array.from(
         new Map(allDocuments.map(doc => [doc.id, doc])).values()
       )
       
-      // Sort: Staff docs FIRST, then Client docs
+      // Sort: Admin docs FIRST, then Staff docs, then Client docs
       const sortedDocs = uniqueDocs.sort((a, b) => {
         if (a.source === b.source) {
           // If same type, sort by date (newest first)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         }
-        // Staff docs (STAFF) come before Client docs (CLIENT)
-        return a.source === 'STAFF' ? -1 : 1
+        // Priority: ADMIN > STAFF > CLIENT
+        const sourcePriority: Record<string, number> = { ADMIN: 0, STAFF: 1, CLIENT: 2 }
+        return (sourcePriority[a.source] || 99) - (sourcePriority[b.source] || 99)
       })
       
-      console.log(`✅ Fetched ${sortedDocs.length} total documents (staff + client)`)
+      console.log(`✅ Fetched ${sortedDocs.length} total documents (admin + staff + client)`)
       setDocuments(sortedDocs)
     } catch (error) {
       console.error('Error fetching documents:', error)
@@ -490,15 +503,7 @@ export default function AIChatAssistant() {
                         <div className="truncate text-sm font-medium text-white">
                           {doc.title}
                         </div>
-                        {doc.source === 'CLIENT' ? (
-                          <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                            Client: {doc.uploadedBy}
-                          </span>
-                        ) : (
-                          <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                            Staff: {doc.uploadedBy}
-                          </span>
-                        )}
+                        <DocumentSourceBadge source={doc.source as 'ADMIN' | 'STAFF' | 'CLIENT'} />
                       </div>
                       <div className="text-xs text-slate-400">
                         {doc.category} • {doc.size}
@@ -633,15 +638,7 @@ export default function AIChatAssistant() {
                                 <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400 flex-1 min-w-0">
                                   {doc.title}
                                 </h4>
-                                {doc.source === 'CLIENT' ? (
-                                  <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                                    Client: {doc.uploadedBy}
-                                  </span>
-                                ) : (
-                                  <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                                    Staff: {doc.uploadedBy}
-                                  </span>
-                                )}
+                                <DocumentSourceBadge source={doc.source as 'ADMIN' | 'STAFF' | 'CLIENT'} />
                               </div>
                               <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                                 <span>{doc.size}</span>

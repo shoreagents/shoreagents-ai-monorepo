@@ -96,155 +96,161 @@ export default function AdminTasksPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="text-slate-400">Loading tasks...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="flex items-center gap-2 text-slate-700">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700" />
+          <span className="text-lg font-semibold">Loading tasks...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Task Management (View Only)</h1>
-          <p className="mt-1 text-slate-400">Monitor all tasks across the organization</p>
-        </div>
-        <Button
-          onClick={() => setFilters({ status: "", priority: "", source: "", companyId: "" })}
-          className="flex items-center gap-2 rounded-lg bg-slate-800/50 px-4 py-2 font-medium text-white ring-1 ring-white/10 transition-all hover:bg-slate-700/50"
-        >
-          <Filter className="h-4 w-4" />
-          Clear Filters
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-slate-400">Total Tasks</div>
-                <div className="text-2xl font-bold text-white">{stats.total}</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/50">
-                <ListTodo className="h-5 w-5 text-slate-400" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 pt-20 md:p-8">
+      <div className="max-w-[1600px] mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
+                <Eye className="h-8 w-8 text-slate-700" />
+                Task Overview (View Only)
+              </h1>
+              <p className="text-slate-600">Monitor all tasks across the organization</p>
             </div>
-          </div>
-
-          <div className="rounded-xl bg-emerald-500/10 p-4 ring-1 ring-emerald-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-emerald-300">Completed</div>
-                <div className="text-2xl font-bold text-emerald-400">{stats.byStatus.COMPLETED}</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-blue-300">In Progress</div>
-                <div className="text-2xl font-bold text-blue-400">{stats.byStatus.IN_PROGRESS}</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/20">
-                <Clock className="h-5 w-5 text-blue-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-red-500/10 p-4 ring-1 ring-red-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-red-300">Stuck</div>
-                <div className="text-2xl font-bold text-red-400">{stats.byStatus.STUCK}</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/20">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-purple-500/10 p-4 ring-1 ring-purple-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-purple-300">For Review</div>
-                <div className="text-2xl font-bold text-purple-400">{stats.byStatus.FOR_REVIEW}</div>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/20">
-                <Eye className="h-5 w-5 text-purple-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/10">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div>
-            <label className="mb-2 block text-xs font-semibold text-slate-300">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+            <Button
+              onClick={() => setFilters({ status: "", priority: "", source: "", companyId: "" })}
+              variant="outline"
+              className="border-2 border-slate-300 hover:bg-slate-100"
             >
-              <option value="">All Statuses</option>
-              <option value="TODO">📋 To Do</option>
-              <option value="IN_PROGRESS">⚡ In Progress</option>
-              <option value="STUCK">🚧 Stuck</option>
-              <option value="FOR_REVIEW">👀 For Review</option>
-              <option value="COMPLETED">✅ Completed</option>
-            </select>
+              <Filter className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-semibold text-slate-300">Priority</label>
-            <select
-              value={filters.priority}
-              onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-              className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
-            >
-              <option value="">All Priorities</option>
-              <option value="LOW">💤 Low</option>
-              <option value="MEDIUM">📋 Medium</option>
-              <option value="HIGH">⚡ High</option>
-              <option value="URGENT">🚨 Urgent</option>
-            </select>
-          </div>
+          {/* Stats Cards */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-slate-200 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-600 mb-1">Total Tasks</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <ListTodo className="h-6 w-6 text-slate-700" />
+                  </div>
+                </div>
+              </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-semibold text-slate-300">Source</label>
-            <select
-              value={filters.source}
-              onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-              className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
-            >
-              <option value="">All Sources</option>
-              <option value="SELF">👤 Staff (Self)</option>
-              <option value="CLIENT">👔 Client</option>
-              <option value="MANAGEMENT">📋 Management</option>
-            </select>
-          </div>
+              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-emerald-200 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-700 mb-1">Completed</p>
+                    <p className="text-3xl font-bold text-emerald-600">{stats.byStatus.COMPLETED}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex items-end">
-            <p className="text-sm text-slate-400">
-              <strong className="text-white">{tasks.length}</strong> task{tasks.length !== 1 ? "s" : ""} found
-            </p>
+              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-200 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-700 mb-1">In Progress</p>
+                    <p className="text-3xl font-bold text-blue-600">{stats.byStatus.IN_PROGRESS}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-red-200 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 mb-1">Stuck</p>
+                    <p className="text-3xl font-bold text-red-600">{stats.byStatus.STUCK}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-purple-200 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-700 mb-1">For Review</p>
+                    <p className="text-3xl font-bold text-purple-600">{stats.byStatus.FOR_REVIEW}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Eye className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-slate-200 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-2 block">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="TODO">📋 To Do</option>
+                  <option value="IN_PROGRESS">⚡ In Progress</option>
+                  <option value="STUCK">🚧 Stuck</option>
+                  <option value="FOR_REVIEW">👀 For Review</option>
+                  <option value="COMPLETED">✅ Completed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-2 block">Priority</label>
+                <select
+                  value={filters.priority}
+                  onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">All Priorities</option>
+                  <option value="LOW">💤 Low</option>
+                  <option value="MEDIUM">📋 Medium</option>
+                  <option value="HIGH">⚡ High</option>
+                  <option value="URGENT">🚨 Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-2 block">Source</label>
+                <select
+                  value={filters.source}
+                  onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">All Sources</option>
+                  <option value="SELF">👤 Staff (Self)</option>
+                  <option value="CLIENT">👔 Client</option>
+                  <option value="MANAGEMENT">📋 Management</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <p className="text-sm text-slate-600">
+                  <strong>{tasks.length}</strong> task{tasks.length !== 1 ? "s" : ""} found
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Task View (No Drag) */}
-      <div className="flex-1 overflow-x-auto">
+        {/* Task View (No Drag) */}
         <AdminTaskView tasks={tasks} onRefresh={fetchTasks} />
       </div>
     </div>

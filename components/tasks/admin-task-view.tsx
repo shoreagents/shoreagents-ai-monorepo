@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Users, AlertCircle, Eye, Paperclip, ArrowUpDown } from "lucide-react"
+import { Calendar, Users, AlertCircle, Eye, Clock as ClockIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getPriorityConfig, formatDeadline, getStatusConfig, getSourceConfig } from "@/lib/task-utils"
-import TaskDetailModal from "./task-detail-modal"
+import { getPriorityConfig, formatDeadline, getStatusConfig, getAllStatuses, getSourceConfig } from "@/lib/task-utils"
 
 interface Task {
   id: string
@@ -36,263 +34,172 @@ interface AdminTaskViewProps {
   onRefresh: () => void
 }
 
-type SortField = "title" | "status" | "priority" | "deadline" | "createdAt"
-type SortDirection = "asc" | "desc"
+function AdminTaskCard({ task }: { task: Task }) {
+  const priorityConfig = getPriorityConfig(task.priority as any)
+  const sourceConfig = getSourceConfig(task.source as any)
+  const deadlineInfo = formatDeadline(task.deadline)
 
-export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) {
-  const [sortField, setSortField] = useState<SortField>("createdAt")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortDirection("asc")
-    }
-  }
-
-  const sortedTasks = [...tasks].sort((a, b) => {
-    let comparison = 0
-
-    switch (sortField) {
-      case "title":
-        comparison = a.title.localeCompare(b.title)
-        break
-      case "status":
-        comparison = a.status.localeCompare(b.status)
-        break
-      case "priority":
-        const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
-        comparison = (priorityOrder[a.priority as keyof typeof priorityOrder] || 999) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 999)
-        break
-      case "deadline":
-        const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Infinity
-        const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Infinity
-        comparison = aDeadline - bDeadline
-        break
-      case "createdAt":
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        break
-    }
-
-    return sortDirection === "asc" ? comparison : -comparison
-  })
-
-  if (tasks.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-xl bg-slate-800/50 ring-1 ring-white/10">
-        <div className="text-center">
-          <p className="text-4xl mb-3">📭</p>
-          <p className="text-slate-400 text-lg font-semibold">No tasks found</p>
-          <p className="text-slate-500 text-sm mt-1">Try adjusting your filters</p>
-        </div>
-      </div>
-    )
+  // Get all assigned staff
+  const allAssignedStaff = []
+  if (task.assignedStaff) {
+    allAssignedStaff.push(...task.assignedStaff.map(a => a.staffUser))
+  } else if (task.staffUser) {
+    allAssignedStaff.push(task.staffUser)
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-full rounded-xl bg-slate-800/50 ring-1 ring-white/10 backdrop-blur-xl overflow-hidden">
-        {/* Table */}
-        <table className="w-full">
-          {/* Header */}
-          <thead className="bg-slate-900/50">
-            <tr className="border-b border-slate-700">
-              <th className="px-4 py-4 text-left">
-                <button
-                  onClick={() => handleSort("title")}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
-                >
-                  Task
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </th>
-              <th className="px-4 py-4 text-left">
-                <button
-                  onClick={() => handleSort("status")}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
-                >
-                  Status
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </th>
-              <th className="px-4 py-4 text-left">
-                <button
-                  onClick={() => handleSort("priority")}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
-                >
-                  Priority
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </th>
-              <th className="px-4 py-4 text-left">
-                <span className="text-xs font-bold text-slate-300">Source</span>
-              </th>
-              <th className="px-4 py-4 text-left">
-                <span className="text-xs font-bold text-slate-300">Assigned</span>
-              </th>
-              <th className="px-4 py-4 text-left">
-                <button
-                  onClick={() => handleSort("deadline")}
-                  className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
-                >
-                  Deadline
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </th>
-              <th className="px-4 py-4 text-center">
-                <span className="text-xs font-bold text-slate-300">Files</span>
-              </th>
-            </tr>
-          </thead>
+    <div className="group rounded-xl bg-white p-4 border-2 border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300">
+      {/* Priority Bar */}
+      <div className={`h-1 w-full rounded-full mb-3 ${priorityConfig.color}`} />
 
-          {/* Body */}
-          <tbody>
-            {sortedTasks.map((task, index) => {
-              const priorityConfig = getPriorityConfig(task.priority as any)
-              const statusConfig = getStatusConfig(task.status as any)
-              const sourceConfig = getSourceConfig(task.source as any)
-              const deadlineInfo = formatDeadline(task.deadline)
-
-              // Get all assigned staff
-              const allAssignedStaff = []
-              if (task.assignedStaff) {
-                allAssignedStaff.push(...task.assignedStaff.map(a => a.staffUser))
-              } else if (task.staffUser) {
-                allAssignedStaff.push(task.staffUser)
-              }
-
-              return (
-                <tr
-                  key={task.id}
-                  onClick={() => setSelectedTask(task)}
-                  className={`border-b border-slate-800 hover:bg-slate-700/30 transition-colors group cursor-pointer ${
-                    index % 2 === 0 ? "bg-slate-900/20" : ""
-                  }`}
-                >
-                  {/* Task Title & Description */}
-                  <td className="px-4 py-4">
-                    <div className="max-w-md">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-white text-sm line-clamp-1">{task.title}</h4>
-                        {task.clientUser && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30">
-                            Client
-                          </span>
-                        )}
-                      </div>
-                      {task.description && (
-                        <p className="text-xs text-slate-400 line-clamp-1">{task.description}</p>
-                      )}
-                      {task.company && (
-                        <p className="text-xs text-slate-500 mt-1">🏢 {task.company.companyName}</p>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold ${statusConfig.darkColor} ring-1`}>
-                      <span>{statusConfig.emoji}</span>
-                      {statusConfig.label.replace(statusConfig.emoji, "").trim()}
-                    </span>
-                  </td>
-
-                  {/* Priority */}
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold ${priorityConfig.darkColor} ring-1`}>
-                      {priorityConfig.emoji} {priorityConfig.label}
-                    </span>
-                  </td>
-
-                  {/* Source */}
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold ${sourceConfig.darkColor} ring-1`}>
-                      {sourceConfig.emoji} {sourceConfig.label}
-                    </span>
-                  </td>
-
-                  {/* Assigned Staff */}
-                  <td className="px-4 py-4">
-                    {allAssignedStaff.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          {allAssignedStaff.slice(0, 3).map((staff) => (
-                            <Avatar key={staff.id} className="h-7 w-7 border-2 border-slate-800 ring-1 ring-white/20">
-                              <AvatarImage src={staff.avatar || undefined} alt={staff.name} />
-                              <AvatarFallback className="bg-slate-700 text-slate-300 text-xs font-bold">
-                                {staff.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                          {allAssignedStaff.length > 3 && (
-                            <div className="h-7 w-7 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center ring-1 ring-white/20">
-                              <span className="text-xs font-bold text-slate-300">+{allAssignedStaff.length - 3}</span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs text-slate-400">{allAssignedStaff.length}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-500">Unassigned</span>
-                    )}
-                  </td>
-
-                  {/* Deadline */}
-                  <td className="px-4 py-4">
-                    {task.deadline ? (
-                      <div className={`flex items-center gap-1.5 text-xs font-semibold ${
-                        deadlineInfo.isOverdue
-                          ? "text-red-400"
-                          : deadlineInfo.isUrgent
-                          ? "text-orange-400"
-                          : "text-slate-300"
-                      }`}>
-                        {deadlineInfo.isOverdue ? (
-                          <AlertCircle className="h-3.5 w-3.5" />
-                        ) : (
-                          <Calendar className="h-3.5 w-3.5" />
-                        )}
-                        {deadlineInfo.text}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-500">No deadline</span>
-                    )}
-                  </td>
-
-                  {/* Attachments */}
-                  <td className="px-4 py-4 text-center">
-                    {task.attachments && task.attachments.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-400 font-semibold">
-                        <Paperclip className="h-3.5 w-3.5" />
-                        {task.attachments.length}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-600">—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h4 className="font-semibold text-slate-900 line-clamp-2 flex-1">
+          {task.title}
+        </h4>
+        <span className={`text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap ${priorityConfig.lightColor}`}>
+          {priorityConfig.fullLabel}
+        </span>
       </div>
 
-      {/* View Only Task Detail Modal */}
-      {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdate={() => {
-            onRefresh()
-            setSelectedTask(null)
-          }}
-          isDarkTheme={true}
-          viewOnly={true}
-        />
+      {/* Description */}
+      {task.description && (
+        <p className="text-sm text-slate-600 line-clamp-2 mb-3">{task.description}</p>
       )}
+
+      {/* Source Badge */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`text-xs font-semibold px-2 py-1 rounded-md ${sourceConfig.lightColor}`}>
+          {sourceConfig.emoji} {sourceConfig.label}
+        </span>
+        {task.company && (
+          <span className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-700">
+            🏢 {task.company.companyName}
+          </span>
+        )}
+      </div>
+
+      {/* Creator Info */}
+      {task.clientUser && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={task.clientUser.avatar || undefined} alt={task.clientUser.name} />
+            <AvatarFallback className="bg-blue-200 text-blue-700 text-xs font-bold">
+              {task.clientUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-blue-700">Created by Client</p>
+            <p className="text-xs text-blue-600">{task.clientUser.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Deadline */}
+      {task.deadline && (
+        <div className={`flex items-center gap-1.5 text-xs mb-3 px-2 py-1.5 rounded-md ${
+          deadlineInfo.isOverdue
+            ? "bg-red-100 text-red-700 border border-red-300"
+            : deadlineInfo.isUrgent
+            ? "bg-orange-100 text-orange-700 border border-orange-300"
+            : "bg-slate-100 text-slate-700 border border-slate-300"
+        }`}>
+          {deadlineInfo.isOverdue ? (
+            <AlertCircle className="h-3.5 w-3.5" />
+          ) : (
+            <Calendar className="h-3.5 w-3.5" />
+          )}
+          <span className="font-semibold">{deadlineInfo.text}</span>
+        </div>
+      )}
+
+      {/* Attachments */}
+      {task.attachments && task.attachments.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-slate-600 mb-3 px-2 py-1.5 rounded-md bg-slate-100 border border-slate-300">
+          <span>📎 {task.attachments.length} attachment{task.attachments.length > 1 ? "s" : ""}</span>
+        </div>
+      )}
+
+      {/* Footer - Assigned Staff */}
+      {allAssignedStaff.length > 0 && (
+        <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-xs text-slate-600 font-semibold">
+              {allAssignedStaff.length} staff
+            </span>
+          </div>
+          <div className="flex -space-x-2">
+            {allAssignedStaff.slice(0, 3).map((staff) => (
+              <Avatar key={staff.id} className="h-7 w-7 border-2 border-white ring-1 ring-slate-300">
+                <AvatarImage src={staff.avatar || undefined} alt={staff.name} />
+                <AvatarFallback className="bg-slate-200 text-slate-700 text-xs font-bold">
+                  {staff.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+            {allAssignedStaff.length > 3 && (
+              <div className="h-7 w-7 rounded-full bg-slate-300 border-2 border-white flex items-center justify-center">
+                <span className="text-xs font-bold text-slate-700">+{allAssignedStaff.length - 3}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* View Only indicator */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          View Only
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) {
+  const statuses = getAllStatuses()
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {statuses.map((status) => {
+        const statusTasks = tasks.filter((task) => task.status === status)
+        const config = getStatusConfig(status as any)
+
+        return (
+          <div key={status} className="flex flex-col min-h-[500px]">
+            {/* Column Header */}
+            <div className={`mb-3 rounded-xl p-4 ${config.lightColor} border-2`}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <span className="text-lg">{config.emoji}</span>
+                  <span>{config.label.replace(config.emoji, "").trim()}</span>
+                </h3>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${config.lightColor} ring-2`}>
+                  {statusTasks.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Static Column (No Drag) */}
+            <div className="flex-1 rounded-xl p-3 bg-slate-50 border-2 border-slate-200">
+              {statusTasks.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-3xl mb-2">📭</p>
+                  <p className="text-sm">No tasks</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {statusTasks.map((task) => (
+                    <AdminTaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -408,22 +408,37 @@ model Kudos {
 }
 
 model Document {
-  id            String           @id @default(uuid())
+  id            String            @id @default(uuid())
   title         String
   category      DocumentCategory
   uploadedBy    String
   size          String
   fileUrl       String?
   content       String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   staffUserId   String
-  source        DocumentSource   @default(STAFF)
-  sharedWithAll Boolean          @default(false)
-  sharedWith    String[]         @default([])
-  staffUser     StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  source        DocumentSource    @default(STAFF)
+  sharedWithAll Boolean           @default(false)
+  sharedWith    String[]          @default([])
+  staffUser     StaffUser         @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  comments      DocumentComment[]
 
   @@map("documents")
+}
+
+model DocumentComment {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content    String   @db.Text
+  userId     String
+  userType   String   // STAFF, CLIENT, ADMIN
+  userName   String
+  userAvatar String?
+  createdAt  DateTime @default(now())
+
+  @@map("document_comments")
 }
 
 model Company {
@@ -762,6 +777,7 @@ enum DocumentCategory {
 enum DocumentSource {
   STAFF
   CLIENT
+  ADMIN
 }
 
 enum ClientRole {

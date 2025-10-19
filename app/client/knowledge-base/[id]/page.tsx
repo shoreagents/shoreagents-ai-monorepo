@@ -32,14 +32,17 @@ interface DocumentDetail {
   category: string
   content: string
   uploadedBy: string
-  uploadedByUser: {
+  staffUser?: {
+    id: string
     name: string
+    email: string
     avatar?: string
   }
   size: string
   fileUrl?: string
-  lastUpdated: string
+  updatedAt: string
   createdAt: string
+  source?: string
 }
 
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,11 +70,12 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
       const response = await fetch(`/api/client/documents/${id}`)
       if (!response.ok) throw new Error("Failed to fetch document")
       const data = await response.json()
-      setDocument(data.document)
+      // API returns document directly, not wrapped
+      setDocument(data)
       setEditForm({
-        title: data.document.title,
-        category: data.document.category,
-        content: data.document.content || "",
+        title: data.title,
+        category: data.category,
+        content: data.content || "",
       })
     } catch (error) {
       console.error("Error fetching document:", error)
@@ -269,13 +273,13 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <span className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Last updated: {document.lastUpdated}
+                Last updated: {new Date(document.updatedAt).toLocaleDateString()}
               </span>
               <span className="flex items-center gap-2">
-                {isStaffUpload ? (
+                {isStaffUpload && document.staffUser ? (
                   <>
                     <User className="h-4 w-4" />
-                    Uploaded by: {document.uploadedByUser.name}
+                    Uploaded by: {document.staffUser.name}
                   </>
                 ) : (
                   <>

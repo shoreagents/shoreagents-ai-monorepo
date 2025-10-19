@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calendar, Clock, Users, Building2, Paperclip, AlertCircle, Sparkles, MessageSquare, CheckSquare, Plus, Trash2, Loader2, Send, Image, Edit2, Check, XCircle, Upload, Eye } from "lucide-react"
+import { X, Calendar, Clock, Users, Building2, Paperclip, AlertCircle, Sparkles, MessageSquare, CheckSquare, Plus, Trash2, Loader2, Send, Image, Edit2, Check, XCircle } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { getPriorityConfig, getSourceConfig, formatDeadline } from "@/lib/task-utils"
@@ -65,10 +65,9 @@ interface TaskDetailModalProps {
   onClose: () => void
   isDarkTheme?: boolean
   onUpdate?: () => void
-  viewOnly?: boolean
 }
 
-export default function TaskDetailModal({ task, onClose, isDarkTheme = false, onUpdate, viewOnly = false }: TaskDetailModalProps) {
+export default function TaskDetailModal({ task, onClose, isDarkTheme = false, onUpdate }: TaskDetailModalProps) {
   const { toast } = useToast()
   const priorityConfig = getPriorityConfig(task.priority as any)
   const sourceConfig = getSourceConfig(task.source as any)
@@ -99,13 +98,6 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
   const [editedDeadline, setEditedDeadline] = useState(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : "")
   const [editedPriority, setEditedPriority] = useState(task.priority)
   const [savingTask, setSavingTask] = useState(false)
-  const [editAttachments, setEditAttachments] = useState<File[]>([])
-  const [uploadingEditAttachments, setUploadingEditAttachments] = useState(false)
-
-  // State for direct attachment uploads (the red box area!)
-  const [directAttachments, setDirectAttachments] = useState<File[]>([])
-  const [uploadingDirectAttachments, setUploadingDirectAttachments] = useState(false)
-  const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   // Get all assigned staff
   const allAssignedStaff = []
@@ -411,36 +403,12 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
     try {
       setSavingTask(true)
 
-      // Upload new attachments if any
-      let newAttachmentUrls: string[] = []
-      if (editAttachments.length > 0) {
-        setUploadingEditAttachments(true)
-        const formData = new FormData()
-        editAttachments.forEach(file => {
-          formData.append("files", file)
-        })
-
-        const uploadRes = await fetch("/api/tasks/attachments", {
-          method: "POST",
-          body: formData,
-        })
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json()
-          newAttachmentUrls = uploadData.urls || []
-        }
-        setUploadingEditAttachments(false)
-      }
-
-      // Combine existing attachments with new ones
-      const allAttachments = [...(task.attachments || []), ...newAttachmentUrls]
-
       const updateData: any = {
         title: editedTitle,
         description: editedDescription,
         priority: editedPriority,
+        // Always send deadline - either the date or null to clear it
         deadline: editedDeadline ? new Date(editedDeadline).toISOString() : null,
-        attachments: allAttachments,
       }
 
       console.log("💾 Saving task with data:", updateData)
@@ -462,13 +430,10 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
 
       toast({
         title: "Success! 🎉",
-        description: newAttachmentUrls.length > 0 
-          ? `📎 Added ${newAttachmentUrls.length} file(s)!` 
-          : (editedDeadline ? "📅 Deadline set!" : "✏️ Changes saved!"),
+        description: "Task updated: " + (editedDeadline ? "📅 Deadline set!" : "✏️ Changes saved!"),
       })
 
       setIsEditingTask(false)
-      setEditAttachments([])
       
       if (onUpdate) onUpdate()
       
@@ -485,7 +450,6 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
       })
     } finally {
       setSavingTask(false)
-      setUploadingEditAttachments(false)
     }
   }
 
@@ -494,100 +458,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
     setEditedDescription(task.description || "")
     setEditedDeadline(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : "")
     setEditedPriority(task.priority)
-    setEditAttachments([])
     setIsEditingTask(false)
-  }
-
-  // Direct attachment upload handler
-  const uploadDirectAttachments = async (files: File[]) => {
-    if (files.length === 0) return
-
-    try {
-      setUploadingDirectAttachments(true)
-      
-      // Upload files
-      const formData = new FormData()
-      files.forEach(file => {
-        formData.append("files", file)
-      })
-
-      const uploadRes = await fetch("/api/tasks/attachments", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!uploadRes.ok) throw new Error("Upload failed")
-
-      const uploadData = await uploadRes.json()
-      const newUrls = uploadData.urls || []
-
-      // Update task with new attachments
-      const allAttachments = [...(task.attachments || []), ...newUrls]
-
-      const updateRes = await fetch(`/api/tasks/${task.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          attachments: allAttachments,
-        }),
-      })
-
-      if (!updateRes.ok) throw new Error("Failed to update task")
-
-      toast({
-        title: "Success! 🎉",
-        description: `📎 Added ${files.length} file(s) to task!`,
-      })
-
-      setDirectAttachments([])
-      
-      if (onUpdate) onUpdate()
-      
-      // Close and reopen to see new attachments
-      setTimeout(() => {
-        onClose()
-      }, 800)
-    } catch (error) {
-      console.error("❌ Error uploading attachments:", error)
-      toast({
-        title: "Error",
-        description: "Failed to upload files. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setUploadingDirectAttachments(false)
-    }
-  }
-
-  // Drag & drop handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDraggingOver(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDraggingOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDraggingOver(false)
-
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length > 0) {
-      uploadDirectAttachments(files)
-    }
-  }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files)
-      uploadDirectAttachments(files)
-    }
   }
 
   const statusColors: Record<string, string> = {
@@ -636,7 +507,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               </span>
               
               {/* Edit Task Button */}
-              {!isEditingTask && !viewOnly && (
+              {!isEditingTask && (
                 <button
                   onClick={() => setIsEditingTask(true)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 ${
@@ -650,21 +521,13 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className={`text-3xl font-bold ${
-                isDarkTheme 
-                  ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
-                  : "text-slate-900"
-              }`}>
-                {task.title}
-              </h2>
-              {viewOnly && (
-                <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-slate-700 to-slate-600 text-white text-xs font-bold ring-2 ring-slate-500 flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5" />
-                  VIEW ONLY
-                </span>
-              )}
-            </div>
+            <h2 className={`text-3xl font-bold mb-2 ${
+              isDarkTheme 
+                ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
+                : "text-slate-900"
+            }`}>
+              {task.title}
+            </h2>
             {task.description && (
               <p className={`text-base ${isDarkTheme ? "text-slate-300" : "text-slate-600"}`}>
                 {task.description}
@@ -714,7 +577,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                     isDarkTheme 
                       ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                      : "bg-white text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
+                      : "bg-white border-2 border-slate-300 focus:border-blue-500"
                   }`}
                 />
               </div>
@@ -733,7 +596,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   className={`w-full px-4 py-2.5 rounded-lg outline-none resize-none ${
                     isDarkTheme 
                       ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                      : "bg-white text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
+                      : "bg-white border-2 border-slate-300 focus:border-blue-500"
                   }`}
                 />
               </div>
@@ -767,7 +630,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                     className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                       isDarkTheme 
                         ? "bg-slate-800 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500 [color-scheme:dark]" 
-                        : "bg-white text-slate-900 border-2 border-slate-300 focus:border-blue-500 [color-scheme:light]"
+                        : "bg-white border-2 border-slate-300 focus:border-blue-500"
                     }`}
                   />
                   {editedDeadline && (
@@ -790,7 +653,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                     className={`w-full px-4 py-2.5 rounded-lg outline-none ${
                       isDarkTheme 
                         ? "bg-slate-800 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-blue-500" 
-                        : "bg-white text-slate-900 border-2 border-slate-300 focus:border-blue-500"
+                        : "bg-white border-2 border-slate-300 focus:border-blue-500"
                     }`}
                   >
                     <option value="LOW">🟢 Low Priority</option>
@@ -799,91 +662,6 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                     <option value="URGENT">🔴 Urgent</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Add Files to TASK (Not Comments!) */}
-              <div className={`rounded-xl p-4 ${
-                isDarkTheme ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 ring-2 ring-green-500/30" : "bg-green-50 border-2 border-green-300"
-              }`}>
-                <label className={`block text-sm font-bold mb-2 ${isDarkTheme ? "text-green-300" : "text-green-700"}`}>
-                  📎 Add Files to TASK Attachments
-                </label>
-                <p className={`text-xs mb-3 ${isDarkTheme ? "text-green-400" : "text-green-600"}`}>
-                  ✨ These files will be added to the task's main attachment section (visible on card preview)
-                </p>
-                <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-bold transition-all hover:scale-105 ${
-                  isDarkTheme
-                    ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 backdrop-blur-xl text-green-300 ring-1 ring-green-500/30 hover:from-green-600/40 hover:to-emerald-600/40"
-                    : "bg-white text-green-700 border-2 border-green-400 hover:bg-green-50 hover:border-green-500"
-                }`}>
-                  <Image className="h-5 w-5" />
-                  📁 Add Files to Task
-                  <input
-                    type="file"
-                    accept="*/*"
-                    multiple
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        setEditAttachments(prev => [...prev, ...Array.from(e.target.files!)])
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Upload Progress */}
-                {uploadingEditAttachments && (
-                  <div className={`mt-3 p-3 rounded-lg ${
-                    isDarkTheme ? "bg-blue-500/20 ring-1 ring-blue-500/30" : "bg-blue-50 border border-blue-200"
-                  }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm font-bold">📤 Uploading {editAttachments.length} file{editAttachments.length > 1 ? 's' : ''}...</span>
-                    </div>
-                    <div className={`h-2 rounded-full overflow-hidden ${
-                      isDarkTheme ? "bg-slate-700" : "bg-slate-200"
-                    }`}>
-                      <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" style={{width: '75%'}} />
-                    </div>
-                  </div>
-                )}
-
-                {/* File Preview */}
-                {editAttachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {editAttachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center gap-3 rounded-xl p-3 transition-all ${
-                          isDarkTheme
-                            ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10 hover:ring-indigo-500/50"
-                            : "bg-slate-50 border border-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span className="text-2xl">📎</span>
-                        <div className="flex-1">
-                          <p className={`text-sm font-medium truncate ${isDarkTheme ? "text-slate-200" : "text-slate-900"}`}>
-                            {file.name}
-                          </p>
-                          <p className={`text-xs ${isDarkTheme ? "text-slate-400" : "text-slate-600"}`}>
-                            {(file.size / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setEditAttachments(prev => prev.filter((_, i) => i !== index))}
-                          className={`rounded-lg p-2 transition-all ${
-                            isDarkTheme
-                              ? "text-red-400 hover:bg-red-500/20"
-                              : "text-red-600 hover:bg-red-100"
-                          }`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Action Buttons */}
@@ -1077,53 +855,30 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
 
         {/* Task Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Deadline - ALWAYS SHOW WITH EDIT BUTTON */}
-          <div className={`rounded-xl p-4 ${
-            task.deadline
-              ? deadlineInfo.isOverdue
-                ? (isDarkTheme ? "bg-red-500/20 ring-2 ring-red-500/50" : "bg-red-50 border-2 border-red-400")
-                : (isDarkTheme ? "bg-slate-800/50 ring-1 ring-white/10" : "bg-slate-50 border border-slate-300")
-              : (isDarkTheme ? "bg-slate-800/30 ring-1 ring-slate-700 border-2 border-dashed border-yellow-500/50" : "bg-yellow-50 border-2 border-dashed border-yellow-400")
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
+          {/* Deadline */}
+          {task.deadline && (
+            <div className={`rounded-xl p-4 ${
+              isDarkTheme 
+                ? "bg-slate-800/50 ring-1 ring-white/10" 
+                : "bg-slate-50 border border-slate-300"
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
                 <Calendar className={`h-4 w-4 ${
-                  task.deadline
-                    ? deadlineInfo.isOverdue ? (isDarkTheme ? "text-red-400" : "text-red-600") : (isDarkTheme ? "text-slate-400" : "text-slate-600")
-                    : (isDarkTheme ? "text-yellow-400" : "text-yellow-600")
+                  deadlineInfo.isOverdue ? (isDarkTheme ? "text-red-400" : "text-red-600") : (isDarkTheme ? "text-slate-400" : "text-slate-600")
                 }`} />
-                <p className={`text-xs font-bold ${
-                  task.deadline
-                    ? (isDarkTheme ? "text-slate-400" : "text-slate-600")
-                    : (isDarkTheme ? "text-yellow-400" : "text-yellow-700")
-                }`}>
-                  📅 Deadline {!task.deadline && "(Not Set!)"}
+                <p className={`text-xs font-bold ${isDarkTheme ? "text-slate-400" : "text-slate-600"}`}>
+                  Deadline
                 </p>
               </div>
-              {!viewOnly && (
-                <button
-                  onClick={() => setIsEditingTask(true)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-110 ${
-                    isDarkTheme
-                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/50"
-                      : "bg-blue-500 hover:bg-blue-600 text-white"
-                  }`}
-                >
-                  <Edit2 className="h-3 w-3" />
-                  {task.deadline ? "EDIT" : "SET DATE"}
-                </button>
-              )}
-            </div>
-            <p className={`text-lg font-bold ${
-              task.deadline
-                ? deadlineInfo.isOverdue 
+              <p className={`text-lg font-bold ${
+                deadlineInfo.isOverdue 
                   ? (isDarkTheme ? "text-red-400" : "text-red-600") 
                   : (isDarkTheme ? "text-slate-200" : "text-slate-900")
-                : (isDarkTheme ? "text-yellow-300 text-sm" : "text-yellow-700 text-sm")
-            }`}>
-              {task.deadline ? deadlineInfo.text : "⚠️ No deadline set - Click 'SET DATE' to add one!"}
-            </p>
-          </div>
+              }`}>
+                {deadlineInfo.text}
+              </p>
+            </div>
+          )}
 
           {/* Created Date */}
           <div className={`rounded-xl p-4 ${
@@ -1162,65 +917,19 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
           )}
         </div>
 
-        {/* Attachments - DRAG & DROP UPLOAD ZONE */}
-        <div 
-          onDragOver={viewOnly ? undefined : handleDragOver}
-          onDragLeave={viewOnly ? undefined : handleDragLeave}
-          onDrop={viewOnly ? undefined : handleDrop}
-          className={`rounded-2xl p-6 mb-6 transition-all ${
-            viewOnly
-              ? (isDarkTheme ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10" : "bg-slate-50 border-2 border-slate-200")
-              : uploadingDirectAttachments
-              ? (isDarkTheme ? "bg-blue-500/20 ring-2 ring-blue-500/50 scale-[1.02]" : "bg-blue-50 border-2 border-blue-400")
-              : isDraggingOver
-              ? (isDarkTheme ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 ring-2 ring-green-500/50 scale-[1.02] shadow-2xl shadow-green-500/50" : "bg-green-50 border-2 border-green-500")
-              : (isDarkTheme 
-                ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10 hover:ring-indigo-500/50 cursor-pointer" 
-                : "bg-slate-50 border-2 border-slate-200 hover:border-blue-500 cursor-pointer")
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className={`text-sm font-bold flex items-center gap-2 ${
+        {/* Attachments */}
+        {task.attachments && task.attachments.length > 0 && (
+          <div className={`rounded-2xl p-6 mb-6 ${
+            isDarkTheme 
+              ? "bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10" 
+              : "bg-slate-50 border-2 border-slate-200"
+          }`}>
+            <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${
               isDarkTheme ? "text-slate-300" : "text-slate-700"
             }`}>
               <Paperclip className="h-4 w-4" />
-              📎 Attachments ({task.attachments?.length || 0})
+              Attachments ({task.attachments.length})
             </h3>
-            {!viewOnly && (
-              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs cursor-pointer transition-all hover:scale-110 ${
-                isDarkTheme
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
-              }`}>
-                <Upload className="h-4 w-4" />
-                {uploadingDirectAttachments ? "Uploading..." : "Click to Upload"}
-                <input
-                  type="file"
-                  accept="*/*"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  disabled={uploadingDirectAttachments}
-                />
-              </label>
-            )}
-          </div>
-
-          {uploadingDirectAttachments ? (
-            <div className={`p-4 rounded-lg ${
-              isDarkTheme ? "bg-blue-500/20 ring-1 ring-blue-500/30" : "bg-blue-50 border border-blue-200"
-            }`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-bold">📤 Uploading files...</span>
-              </div>
-              <div className={`h-2 rounded-full overflow-hidden ${
-                isDarkTheme ? "bg-slate-700" : "bg-slate-200"
-              }`}>
-                <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" style={{width: '75%'}} />
-              </div>
-            </div>
-          ) : task.attachments && task.attachments.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {task.attachments.map((url, index) => (
                 <a
@@ -1247,36 +956,8 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 </a>
               ))}
             </div>
-          ) : (
-            <div className={`text-center py-8 rounded-xl border-2 border-dashed transition-all ${
-              isDraggingOver
-                ? (isDarkTheme ? "border-green-500 bg-green-500/10" : "border-green-500 bg-green-50")
-                : (isDarkTheme ? "border-slate-700 bg-slate-900/30" : "border-slate-300 bg-white")
-            }`}>
-              <Upload className={`mx-auto h-12 w-12 mb-3 ${
-                isDraggingOver
-                  ? (isDarkTheme ? "text-green-400" : "text-green-600")
-                  : (isDarkTheme ? "text-slate-600" : "text-slate-400")
-              }`} />
-              <p className={`text-sm font-bold mb-1 ${
-                isDraggingOver
-                  ? (isDarkTheme ? "text-green-300" : "text-green-700")
-                  : (isDarkTheme ? "text-slate-400" : "text-slate-600")
-              }`}>
-                {isDraggingOver ? "📥 Drop files here!" : "📎 No attachments yet"}
-              </p>
-              {!viewOnly && (
-                <p className={`text-xs ${
-                  isDraggingOver
-                    ? (isDarkTheme ? "text-green-400" : "text-green-600")
-                    : (isDarkTheme ? "text-slate-500" : "text-slate-500")
-                }`}>
-                  {isDraggingOver ? "Release to upload" : "Click 'Click to Upload' or drag & drop files here"}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 🎯 SUBTASKS SECTION */}
         <div className={`rounded-2xl p-6 mb-6 ${
@@ -1293,19 +974,17 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               <CheckSquare className="h-5 w-5" />
               🎯 Subtasks
             </h3>
-            {!viewOnly && (
-              <button
-                onClick={() => setShowSubtaskInput(!showSubtaskInput)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 ${
-                  isDarkTheme 
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30" 
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                <Plus className="h-4 w-4" />
-                Add Subtask
-              </button>
-            )}
+            <button
+              onClick={() => setShowSubtaskInput(!showSubtaskInput)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 ${
+                isDarkTheme 
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30" 
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+            >
+              <Plus className="h-4 w-4" />
+              Add Subtask
+            </button>
           </div>
 
           {/* Progress Bar */}
@@ -1354,7 +1033,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 className={`w-full px-4 py-2 rounded-lg outline-none mb-3 ${
                   isDarkTheme 
                     ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-indigo-500" 
-                    : "bg-slate-50 text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
+                    : "bg-slate-50 border-2 border-slate-300 focus:border-blue-500"
                 }`}
               />
               <div className="flex gap-2">
@@ -1430,7 +1109,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                         className={`flex-1 px-3 py-1.5 rounded-lg outline-none ${
                           isDarkTheme 
                             ? "bg-slate-800 text-white ring-2 ring-indigo-500" 
-                            : "bg-slate-50 text-slate-900 border-2 border-blue-500"
+                            : "bg-slate-50 border-2 border-blue-500"
                         }`}
                       />
                       <button
@@ -1462,13 +1141,8 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                       <input
                         type="checkbox"
                         checked={subtask.completed}
-                        onChange={viewOnly ? undefined : (e) => toggleSubtask(subtask.id, e.target.checked)}
-                        disabled={viewOnly}
-                        className={`h-5 w-5 rounded transition-all ${
-                          viewOnly 
-                            ? "cursor-not-allowed opacity-50" 
-                            : "cursor-pointer"
-                        } ${
+                        onChange={(e) => toggleSubtask(subtask.id, e.target.checked)}
+                        className={`h-5 w-5 rounded cursor-pointer transition-all ${
                           subtask.completed 
                             ? "accent-emerald-500" 
                             : "accent-indigo-600"
@@ -1488,32 +1162,28 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                           ✅ Done
                         </span>
                       )}
-                      {!viewOnly && (
-                        <>
-                          <button
-                            onClick={() => startEditingSubtask(subtask)}
-                            className={`p-1.5 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100 ${
-                              isDarkTheme 
-                                ? "text-blue-400 hover:bg-blue-500/20" 
-                                : "text-blue-600 hover:bg-blue-50"
-                            }`}
-                            title="Edit subtask"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteSubtask(subtask.id)}
-                            className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
-                              isDarkTheme 
-                                ? "text-red-400 hover:bg-red-500/20" 
-                                : "text-red-600 hover:bg-red-50"
-                            }`}
-                            title="Delete subtask"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => startEditingSubtask(subtask)}
+                        className={`p-1.5 rounded-lg transition-all hover:scale-110 opacity-0 group-hover:opacity-100 ${
+                          isDarkTheme 
+                            ? "text-blue-400 hover:bg-blue-500/20" 
+                            : "text-blue-600 hover:bg-blue-50"
+                        }`}
+                        title="Edit subtask"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteSubtask(subtask.id)}
+                        className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
+                          isDarkTheme 
+                            ? "text-red-400 hover:bg-red-500/20" 
+                            : "text-red-600 hover:bg-red-50"
+                        }`}
+                        title="Delete subtask"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </>
                   )}
                 </div>
@@ -1633,12 +1303,11 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
           ) : null}
 
           {/* Add Response Form */}
-          {!viewOnly && (
-            <div className={`rounded-xl p-4 ${
-              isDarkTheme 
-                ? "bg-slate-700/50 ring-1 ring-white/10" 
-                : "bg-white border-2 border-slate-300"
-            }`}>
+          <div className={`rounded-xl p-4 ${
+            isDarkTheme 
+              ? "bg-slate-700/50 ring-1 ring-white/10" 
+              : "bg-white border-2 border-slate-300"
+          }`}>
             <textarea
               value={newResponseContent}
               onChange={(e) => setNewResponseContent(e.target.value)}
@@ -1647,7 +1316,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
               className={`w-full px-4 py-3 rounded-lg outline-none mb-3 resize-none ${
                 isDarkTheme 
                   ? "bg-slate-800 text-white placeholder-slate-500 ring-1 ring-white/10 focus:ring-indigo-500" 
-                  : "bg-slate-50 text-slate-900 placeholder-slate-500 border-2 border-slate-300 focus:border-blue-500"
+                  : "bg-slate-50 border-2 border-slate-300 focus:border-blue-500"
               }`}
             />
 
@@ -1655,18 +1324,11 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
             {responseAttachments.length > 0 && (
               <div className="space-y-2 mb-3">
                 {uploadingResponseAttachments && (
-                  <div className={`p-3 rounded-lg ${
-                    isDarkTheme ? "bg-blue-500/20 ring-1 ring-blue-500/30" : "bg-blue-50 border border-blue-200"
+                  <div className={`flex items-center gap-2 p-2 rounded-lg ${
+                    isDarkTheme ? "bg-blue-500/20 text-blue-300" : "bg-blue-50 text-blue-700"
                   }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm font-bold">📤 Uploading {responseAttachments.length} file{responseAttachments.length > 1 ? 's' : ''}...</span>
-                    </div>
-                    <div className={`h-2 rounded-full overflow-hidden ${
-                      isDarkTheme ? "bg-slate-700" : "bg-slate-200"
-                    }`}>
-                      <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" style={{width: '75%'}} />
-                    </div>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm font-bold">Uploading {responseAttachments.length} image(s)...</span>
                   </div>
                 )}
                 {responseAttachments.map((file, index) => (
@@ -1694,9 +1356,6 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
             )}
 
             {/* Actions */}
-            <p className={`text-xs mb-2 italic ${isDarkTheme ? "text-slate-500" : "text-slate-500"}`}>
-              💬 Add files to this COMMENT (or use "Edit Task" button above to add files to the task itself)
-            </p>
             <div className="flex gap-2">
               <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer transition-all hover:scale-105 ${
                 isDarkTheme 
@@ -1704,11 +1363,11 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   : "bg-slate-200 hover:bg-slate-300 text-slate-700"
               }`}>
                 <Image className="h-4 w-4" />
-                📎 Add to Comment
+                📸 Add Images
                 <input
                   type="file"
                   multiple
-                  accept="*/*"
+                  accept="image/*"
                   onChange={handleResponseFileSelect}
                   className="hidden"
                   disabled={uploadingResponseAttachments || submittingResponse}
@@ -1731,8 +1390,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                 Post Comment
               </button>
             </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Close Button */}
