@@ -289,6 +289,7 @@ export default function AdminTaskView({ tasks, onRefresh }: AdminTaskViewProps) 
             onRefresh()
             setSelectedTask(null)
           }}
+          isDarkTheme={true}
           viewOnly={true}
         />
       )}
