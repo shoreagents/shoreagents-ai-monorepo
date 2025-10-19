@@ -82,6 +82,7 @@ class ActivityTracker {
     this.dialogUpdateInterval = null
     this.performanceTracker = null
     this.inactivityStartTime = null // Track when inactivity started
+    this.isOnBreak = false // Flag to disable inactivity dialog during breaks
     
     // Throttling for mouse movements
     this.lastMouseTrack = 0
@@ -103,7 +104,8 @@ class ActivityTracker {
       console.log('[ActivityTracker] Integrated with performance tracker')
     }
     
-    this.startTracking()
+    // Don't start tracking immediately - wait for explicit start call
+    console.log('[ActivityTracker] Initialized but not started - waiting for explicit start')
   }
 
   /**
@@ -112,6 +114,12 @@ class ActivityTracker {
   startTracking() {
     if (this.isTracking) {
       console.log('[ActivityTracker] Already tracking')
+      return
+    }
+
+    // Check if we should be tracking (only for staff users)
+    if (this.shouldDisableTracking()) {
+      console.log('[ActivityTracker] 🚫 Activity tracking disabled - non-staff portal detected')
       return
     }
 
@@ -179,6 +187,20 @@ class ActivityTracker {
       clearInterval(this.intervalId)
       this.intervalId = null
       console.log('[ActivityTracker] Inactivity checker stopped')
+    }
+  }
+
+  /**
+   * Set break mode to disable inactivity dialog during breaks
+   */
+  setBreakMode(isOnBreak) {
+    this.isOnBreak = isOnBreak
+    if (isOnBreak) {
+      console.log('[ActivityTracker] Break mode enabled - inactivity dialog disabled')
+      // Close any existing dialog when break starts
+      this.closeInactivityDialog()
+    } else {
+      console.log('[ActivityTracker] Break mode disabled - inactivity dialog enabled')
     }
   }
 
@@ -296,6 +318,18 @@ class ActivityTracker {
    * Check if user has been inactive
    */
   checkInactivity() {
+    // Check if we should still be tracking
+    if (this.shouldDisableTracking()) {
+      console.log('[ActivityTracker] 🚫 Non-staff portal detected during activity tracking - stopping activity tracker')
+      this.stopTracking()
+      return
+    }
+    
+    // Don't show inactivity dialog during breaks
+    if (this.isOnBreak) {
+      return
+    }
+    
     const now = Date.now()
     const timeSinceLastActivity = now - this.lastActivityTime
 
@@ -525,7 +559,7 @@ class ActivityTracker {
       font-size: 16px;
       font-weight: 600;
       border: none;
-      border-radius: 8px;
+      border-radius: 16px;
       cursor: pointer;
       transition: all 0.2s ease;
       font-family: inherit;
@@ -630,6 +664,38 @@ class ActivityTracker {
   setInactivityTimeout(milliseconds) {
     console.log(`[ActivityTracker] Setting inactivity timeout to ${milliseconds}ms`)
     this.inactivityTimeout = milliseconds
+  }
+
+  /**
+   * Check if tracking should be disabled based on current URL
+   * Only staff portal users should have tracking enabled
+   */
+  shouldDisableTracking() {
+    try {
+      if (!this.mainWindow) {
+        return false // Default to allowing tracking if we can't determine
+      }
+      
+      const currentUrl = this.mainWindow.webContents.getURL()
+      
+      // Check for non-staff portals
+      const isClient = currentUrl.includes('/client')
+      const isAdmin = currentUrl.includes('/admin')
+      const isLoginPage = currentUrl.includes('/login')
+      
+      if (isLoginPage) {
+        return true // Don't track on login pages
+      }
+      
+      if (isClient || isAdmin) {
+        return true // Don't track on client or admin portals
+      }
+      
+      return false // Allow tracking for staff portal
+    } catch (error) {
+      console.error('[ActivityTracker] Error checking URL:', error)
+      return false // Default to allowing tracking if we can't determine
+    }
   }
 
   /**

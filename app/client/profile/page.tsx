@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { User, Mail, Briefcase, Phone, Clock, Edit2, Save, X, Building2, Bell, Camera } from "lucide-react"
+import { User, Mail, Briefcase, Phone, Clock, Edit2, Save, X, Building2, Bell, Camera, Loader2, TrendingUp, Calendar } from "lucide-react"
 import { uploadClientFile, deleteClientFile } from "@/lib/supabase-upload"
+import { useToast } from "@/hooks/use-toast"
 
 type ClientProfile = {
   id: string
@@ -52,12 +53,16 @@ type ProfileData = {
 }
 
 export default function ClientProfilePage() {
+  const { toast } = useToast()
   const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [editedProfile, setEditedProfile] = useState<Partial<ClientProfile>>({})
+  const [editedClientUser, setEditedClientUser] = useState<Partial<ClientUser>>({})
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [notificationLoading, setNotificationLoading] = useState<string | null>(null)
+  const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -89,28 +94,109 @@ export default function ClientProfilePage() {
       notifyReviews: data?.profile?.notifyReviews ?? true,
       notifyWeeklyReports: data?.profile?.notifyWeeklyReports ?? true
     })
+    setEditedClientUser({
+      name: data?.clientUser?.name || '',
+      role: data?.clientUser?.role || ''
+    })
     setEditing(true)
   }
 
   const cancelEditing = () => {
     setEditing(false)
     setEditedProfile({})
+    setEditedClientUser({})
   }
 
   const saveProfile = async () => {
+    setSavingProfile(true)
+    
+    // Show saving toast
+    toast({
+      title: "Saving Profile",
+      description: "Please wait while your profile is being updated...",
+      duration: 3000
+    })
+
     try {
       const response = await fetch('/api/client/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editedProfile),
+        body: JSON.stringify({
+          ...editedProfile,
+          ...editedClientUser
+        }),
       })
-      if (!response.ok) throw new Error('Failed to update profile')
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update profile')
+      }
+      
       await fetchProfile()
       setEditing(false)
       setEditedProfile({})
+      setEditedClientUser({})
+      
+      // Show success toast
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+        duration: 3000
+      })
     } catch (error) {
       console.error('Error updating profile:', error)
-      alert('Failed to update profile')
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
+        variant: "destructive",
+        duration: 5000
+      })
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
+  const updateNotificationPreference = async (preference: string, value: boolean) => {
+    if (!data?.profile) return
+
+    setNotificationLoading(preference)
+    
+    try {
+      const response = await fetch('/api/client/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [preference]: value }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to update notification preference')
+      
+      // Update local state immediately for better UX
+      setData(prev => {
+        if (!prev?.profile) return prev
+        return {
+          ...prev,
+          profile: {
+            ...prev.profile,
+            [preference]: value
+          }
+        }
+      })
+      
+      toast({
+        title: "Notification Updated",
+        description: `Your ${preference.replace('notify', '').replace(/([A-Z])/g, ' $1').toLowerCase()} preference has been updated.`,
+        duration: 3000
+      })
+    } catch (error) {
+      console.error('Error updating notification preference:', error)
+      toast({
+        title: "Update Failed",
+        description: "Failed to update notification preference. Please try again.",
+        variant: "destructive",
+        duration: 5000
+      })
+    } finally {
+      setNotificationLoading(null)
     }
   }
 
@@ -118,11 +204,59 @@ export default function ClientProfilePage() {
     const file = e.target.files?.[0]
     if (!file || !data) return
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a JPEG, PNG, or WebP image file.",
+        variant: "destructive",
+        duration: 5000
+      })
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+        duration: 5000
+      })
+      return
+    }
+
     setUploadingAvatar(true)
+    
+    // Show uploading toast
+    toast({
+      title: "Uploading Avatar",
+      description: "Please wait while your avatar is being uploaded...",
+      duration: 3000
+    })
+
     try {
-      // Delete old avatar if exists
+      // Delete old avatar if exists using server-side API
       if (data.clientUser.avatar) {
-        await deleteClientFile(data.clientUser.avatar)
+        try {
+          console.log('Deleting old avatar:', data.clientUser.avatar)
+          const deleteResponse = await fetch('/api/client/delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileUrl: data.clientUser.avatar }),
+          })
+          
+          if (deleteResponse.ok) {
+            console.log('Old avatar deleted successfully')
+          } else {
+            console.warn('Failed to delete old avatar, proceeding with upload')
+          }
+        } catch (deleteError) {
+          console.warn('Failed to delete old avatar, proceeding with upload:', deleteError)
+          // Continue with upload even if delete fails
+        }
       }
 
       // Upload new avatar using server-side API
@@ -143,10 +277,25 @@ export default function ClientProfilePage() {
       const result = await response.json()
       console.log('Avatar uploaded successfully:', result.url)
       
+      // Show success toast
+      toast({
+        title: "Avatar Updated",
+        description: "Your avatar has been successfully updated.",
+        duration: 3000
+      })
+
+      // Refresh profile immediately - the server already updated the database
+      console.log('Refreshing profile after avatar upload...')
       await fetchProfile()
+      console.log('Profile refreshed successfully')
     } catch (error) {
       console.error('Error uploading avatar:', error)
-      alert('Failed to upload avatar')
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+        duration: 5000
+      })
     } finally {
       setUploadingAvatar(false)
     }
@@ -156,11 +305,59 @@ export default function ClientProfilePage() {
     const file = e.target.files?.[0]
     if (!file || !data) return
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a JPEG, PNG, or WebP image file.",
+        variant: "destructive",
+        duration: 5000
+      })
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+        duration: 5000
+      })
+      return
+    }
+
     setUploadingCover(true)
+    
+    // Show uploading toast
+    toast({
+      title: "Uploading Cover Photo",
+      description: "Please wait while your cover photo is being uploaded...",
+      duration: 3000
+    })
+
     try {
-      // Delete old cover if exists
+      // Delete old cover if exists using server-side API
       if (data.clientUser.coverPhoto) {
-        await deleteClientFile(data.clientUser.coverPhoto)
+        try {
+          console.log('Deleting old cover photo:', data.clientUser.coverPhoto)
+          const deleteResponse = await fetch('/api/client/delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileUrl: data.clientUser.coverPhoto }),
+          })
+          
+          if (deleteResponse.ok) {
+            console.log('Old cover photo deleted successfully')
+          } else {
+            console.warn('Failed to delete old cover photo, proceeding with upload')
+          }
+        } catch (deleteError) {
+          console.warn('Failed to delete old cover photo, proceeding with upload:', deleteError)
+          // Continue with upload even if delete fails
+        }
       }
 
       // Upload new cover photo using server-side API
@@ -181,10 +378,25 @@ export default function ClientProfilePage() {
       const result = await response.json()
       console.log('Cover photo uploaded successfully:', result.url)
       
+      // Show success toast
+      toast({
+        title: "Cover Photo Updated",
+        description: "Your cover photo has been successfully updated.",
+        duration: 3000
+      })
+
+      // Refresh profile immediately - the server already updated the database
+      console.log('Refreshing profile after cover upload...')
       await fetchProfile()
+      console.log('Profile refreshed successfully')
     } catch (error) {
       console.error('Error uploading cover photo:', error)
-      alert('Failed to upload cover photo')
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload cover photo. Please try again.",
+        variant: "destructive",
+        duration: 5000
+      })
     } finally {
       setUploadingCover(false)
     }
@@ -192,8 +404,198 @@ export default function ClientProfilePage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <p className="text-gray-600">Loading profile...</p>
+      <div className="p-8 space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        {/* Profile Header Card Skeleton */}
+        <div className="overflow-hidden border-blue-200 rounded-lg">
+          {/* Cover Photo Skeleton */}
+          <div className="h-48 bg-gray-200 animate-pulse"></div>
+          
+          {/* Profile Content Skeleton */}
+          <div className="p-6 bg-white">
+            <div className="flex items-start gap-6">
+              {/* Avatar Skeleton */}
+              <div className="flex-shrink-0 -mt-16">
+                <div className="w-32 h-32 rounded-full bg-gray-200 animate-pulse"></div>
+              </div>
+              
+              {/* User Info Skeleton */}
+              <div className="flex-1 pt-4 space-y-3">
+                <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-48 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-96 bg-gray-200 rounded animate-pulse"></div>
+                
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Information Skeleton */}
+        <div className="p-6 border-l-4 border-l-indigo-500 bg-white shadow-sm rounded-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="flex-1">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-5 w-48 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="flex-1">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-5 w-56 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="flex-1">
+                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Professional Information Skeleton */}
+          <div className="p-6 border-l-4 border-l-blue-500 bg-white shadow-sm rounded-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="flex-1">
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="flex-1">
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-5 w-28 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information Skeleton */}
+          <div className="p-6 border-l-4 border-l-green-500 bg-white shadow-sm rounded-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="flex-1">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-5 w-56 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Statistics Skeleton */}
+        <div className="p-6 bg-white shadow-sm border-l-4 border-l-purple-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-gray-300 rounded-lg">
+                    <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-8 w-12 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-1"></div>
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notification Preferences Skeleton */}
+        <div className="p-6 bg-white shadow-sm border-l-4 border-l-indigo-500 rounded-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-300 rounded-lg">
+                      <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div>
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-1"></div>
+                      <div className="h-3 w-48 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -229,11 +631,29 @@ export default function ClientProfilePage() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={saveProfile} className="bg-green-600 hover:bg-green-700">
+            <Button 
+              onClick={saveProfile} 
+              disabled={savingProfile}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {savingProfile ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
               <Save className="h-4 w-4 mr-2" />
               Save Changes
+                </>
+              )}
             </Button>
-            <Button onClick={cancelEditing} variant="outline">
+            <Button 
+              onClick={cancelEditing} 
+              disabled={savingProfile}
+              variant="outline"
+              className="disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -242,9 +662,9 @@ export default function ClientProfilePage() {
       </div>
 
       {/* Profile Header Card with Cover Photo and Avatar */}
-      <Card className="overflow-hidden border-blue-200">
+      <Card className="overflow-hidden border-blue-200 bg-white py-0 gap-0">
         {/* Cover Photo Banner */}
-        <div className="relative h-48 bg-gradient-to-br from-blue-500 to-cyan-500 group">
+        <div className="relative h-52 bg-gradient-to-br from-blue-500 to-cyan-500 group">
           {clientUser.coverPhoto ? (
             <img src={clientUser.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
           ) : (
@@ -253,10 +673,15 @@ export default function ClientProfilePage() {
           {/* Cover Upload Overlay */}
           <label 
             htmlFor="cover-upload" 
-            className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity cursor-pointer ${
+              uploadingCover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
           >
             {uploadingCover ? (
-              <div className="text-white text-sm">Uploading cover photo...</div>
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <span className="text-white text-sm font-medium">Uploading...</span>
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <Camera className="h-8 w-8 text-white" />
@@ -275,7 +700,7 @@ export default function ClientProfilePage() {
         </div>
 
         {/* Profile Content */}
-        <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50">
+        <div className="p-6 bg-white">
           <div className="flex items-start gap-6">
             {/* Avatar with Upload */}
             <div className="flex-shrink-0 -mt-16">
@@ -290,10 +715,15 @@ export default function ClientProfilePage() {
                 {/* Upload Button Overlay */}
                 <label 
                   htmlFor="avatar-upload" 
-                  className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity cursor-pointer ${
+                    uploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
                 >
                   {uploadingAvatar ? (
-                    <div className="text-white text-xs">Uploading...</div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Loader2 className="w-4 h-4 text-white animate-spin" />
+                      <span className="text-white text-xs font-medium">Uploading...</span>
+                    </div>
                   ) : (
                     <Camera className="h-6 w-6 text-white" />
                   )}
@@ -335,19 +765,98 @@ export default function ClientProfilePage() {
         </div>
       </Card>
 
+      {/* Account Information */}
+      <Card className="p-6 border-l-4 border-l-indigo-500 bg-white shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <User className="h-6 w-6 text-indigo-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900">Account Information</h3>
+        </div>
+        
+        {editing ? (
+          <div className="space-y-6">
+            <div>
+              <Label className="text-gray-900 font-medium mb-2 block">Full Name</Label>
+              <Input
+                value={editedClientUser.name || ''}
+                onChange={(e) => setEditedClientUser({...editedClientUser, name: e.target.value})}
+                disabled={savingProfile}
+                className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            <div>
+              <Label className="text-gray-900 font-medium mb-2 block">Role</Label>
+              <select
+                value={editedClientUser.role || ''}
+                onChange={(e) => setEditedClientUser({...editedClientUser, role: e.target.value})}
+                disabled={savingProfile}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-900"
+              >
+                <option value="">Select your role</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+                <option value="USER">User</option>
+                <option value="CLIENT">Client</option>
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <User className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">Full Name</p>
+                <p className="text-gray-900 font-medium">{clientUser.name}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <Mail className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">Email Address</p>
+                <p className="text-gray-900 font-medium">{clientUser.email}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                <Briefcase className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">Role</p>
+                <p className="text-gray-900 font-medium">{clientUser.role}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Professional Information */}
-        <Card className="p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Professional Information</h3>
+        <Card className="p-6 border-l-4 border-l-blue-500 bg-white shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Briefcase className="h-6 w-6 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">Professional Information</h3>
+          </div>
           
           {editing ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <Label className="text-gray-900 font-medium mb-2 block">Position / Job Title</Label>
                 <Input
                   value={editedProfile.position || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, position: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="e.g., CEO, Operations Manager"
                 />
               </div>
@@ -357,7 +866,8 @@ export default function ClientProfilePage() {
                 <Input
                   value={editedProfile.department || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, department: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="e.g., Operations, Marketing"
                 />
               </div>
@@ -367,7 +877,8 @@ export default function ClientProfilePage() {
                 <Input
                   value={editedProfile.timezone || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, timezone: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="e.g., America/New_York, Asia/Manila"
                 />
               </div>
@@ -377,52 +888,90 @@ export default function ClientProfilePage() {
                 <Textarea
                   value={editedProfile.bio || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, bio: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
-                  placeholder="Tell us about yourself"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Tell us about yourself, your experience, and what you do..."
                   rows={4}
                 />
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              {profile?.position && (
-                <div>
-                  <p className="text-sm text-gray-600">Position</p>
-                  <p className="text-gray-900 font-medium">{profile.position}</p>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <Briefcase className="h-4 w-4 text-gray-600" />
                 </div>
-              )}
-              {profile?.department && (
-                <div>
-                  <p className="text-sm text-gray-600">Department</p>
-                  <p className="text-gray-900 font-medium">{profile.department}</p>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-1">Position</p>
+                  <p className="text-gray-900 font-medium">{profile?.position || clientUser.role || 'Not specified'}</p>
                 </div>
-              )}
-              {profile?.timezone && (
-                <div>
-                  <p className="text-sm text-gray-600">Timezone</p>
-                  <p className="text-gray-900 font-medium">{profile.timezone}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-gray-600">Role</p>
-                <p className="text-gray-900 font-medium">{clientUser.role}</p>
               </div>
+
+              {profile?.department && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                    <Building2 className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Department</p>
+                    <p className="text-gray-900 font-medium">{profile.department}</p>
+                  </div>
+                </div>
+              )}
+
+              {profile?.timezone && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                    <Clock className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Timezone</p>
+                    <p className="text-gray-900 font-medium">{profile.timezone}</p>
+                  </div>
+                </div>
+              )}
+
+              {profile?.bio && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                    <User className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Bio</p>
+                    <p className="text-gray-900 leading-relaxed">{profile.bio}</p>
+                  </div>
+                </div>
+              )}
+
+              {!profile?.position && !profile?.department && !profile?.timezone && !profile?.bio && (
+                <div className="text-center py-8 text-gray-500">
+                  <Briefcase className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No professional information added yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Click "Edit Profile" to add details</p>
+                </div>
+              )}
             </div>
           )}
         </Card>
 
         {/* Contact Information */}
-        <Card className="p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Contact Information</h3>
+        <Card className="p-6 border-l-4 border-l-green-500 bg-white shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Phone className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
+          </div>
           
           {editing ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <Label className="text-gray-900 font-medium mb-2 block">Direct Phone</Label>
                 <Input
                   value={editedProfile.directPhone || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, directPhone: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="+1 234 567 8900"
                 />
               </div>
@@ -432,36 +981,53 @@ export default function ClientProfilePage() {
                 <Input
                   value={editedProfile.mobilePhone || ''}
                   onChange={(e) => setEditedProfile({...editedProfile, mobilePhone: e.target.value})}
-                  className="bg-white text-gray-900 border-gray-300"
+                  disabled={savingProfile}
+                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="+1 234 567 8900"
                 />
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm text-gray-600">Email</p>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <Mail className="h-4 w-4 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-1">Email Address</p>
                   <p className="text-gray-900 font-medium">{clientUser.email}</p>
                 </div>
               </div>
+
               {profile?.directPhone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">Direct Phone</p>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                    <Phone className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Direct Phone</p>
                     <p className="text-gray-900 font-medium">{profile.directPhone}</p>
                   </div>
                 </div>
               )}
+
               {profile?.mobilePhone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">Mobile Phone</p>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                    <Phone className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">Mobile Phone</p>
                     <p className="text-gray-900 font-medium">{profile.mobilePhone}</p>
                   </div>
+                </div>
+              )}
+
+              {!profile?.directPhone && !profile?.mobilePhone && (
+                <div className="text-center py-8 text-gray-500">
+                  <Phone className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No additional contact information</p>
+                  <p className="text-xs text-gray-400 mt-1">Click "Edit Profile" to add phone numbers</p>
                 </div>
               )}
             </div>
@@ -470,95 +1036,276 @@ export default function ClientProfilePage() {
       </div>
 
       {/* Activity Statistics */}
-      <Card className="p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Activity Statistics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{profile?.tasksCreated || 0}</p>
-            <p className="text-sm text-gray-600">Tasks Created</p>
+      <Card className="p-6 bg-white shadow-sm border-l-4 border-l-purple-500">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-purple-100 rounded-lg">
+            <TrendingUp className="h-6 w-6 text-purple-600" />
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">{profile?.reviewsSubmitted || 0}</p>
-            <p className="text-sm text-gray-600">Reviews Submitted</p>
+          <h3 className="text-xl font-semibold text-gray-900">Activity Statistics</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Tasks Created */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Briefcase className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-blue-600">{profile?.tasksCreated || 0}</p>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-blue-800">Tasks Created</p>
+            <p className="text-xs text-blue-600 mt-1">Total tasks assigned</p>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-900 font-medium">
-              {profile?.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleDateString() : 'Never'}
-            </p>
-            <p className="text-sm text-gray-600">Last Login</p>
+
+          {/* Reviews Submitted */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <User className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-green-600">{profile?.reviewsSubmitted || 0}</p>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-green-800">Reviews Submitted</p>
+            <p className="text-xs text-green-600 mt-1">Feedback provided</p>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-900 font-medium">
-              {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
-            </p>
-            <p className="text-sm text-gray-600">Member Since</p>
+
+          {/* Last Login */}
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg border border-orange-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-orange-600">
+                  {profile?.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleDateString() : 'Never'}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-orange-800">Last Login</p>
+            <p className="text-xs text-orange-600 mt-1">Most recent activity</p>
+          </div>
+
+          {/* Member Since */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-purple-600">
+                  {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-purple-800">Member Since</p>
+            <p className="text-xs text-purple-600 mt-1">Account creation date</p>
           </div>
         </div>
       </Card>
 
       {/* Notification Preferences */}
-      <Card className="p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Bell className="h-5 w-5 text-blue-600" />
-          Notification Preferences
-        </h3>
+      <Card className="p-6 bg-white shadow-sm border-l-4 border-l-indigo-500">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <Bell className="h-6 w-6 text-indigo-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900">Notification Preferences</h3>
+        </div>
         
         {editing ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-900">Task Created</Label>
-              <Switch
-                checked={editedProfile.notifyTaskCreate ?? true}
-                onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskCreate: checked})}
-              />
+          <div className="space-y-6">
+            {/* Task Created Notification */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium text-base">Task Created</Label>
+                    <p className="text-sm text-gray-600">Get notified when new tasks are assigned to you</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={editedProfile.notifyTaskCreate ?? true}
+                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskCreate: checked})}
+                  disabled={savingProfile}
+                  className="data-[state=checked]:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-900">Task Completed</Label>
-              <Switch
-                checked={editedProfile.notifyTaskComplete ?? true}
-                onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskComplete: checked})}
-              />
+
+            {/* Task Completed Notification */}
+            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium text-base">Task Completed</Label>
+                    <p className="text-sm text-gray-600">Get notified when tasks are marked as completed</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={editedProfile.notifyTaskComplete ?? true}
+                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskComplete: checked})}
+                  disabled={savingProfile}
+                  className="data-[state=checked]:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-900">Reviews</Label>
-              <Switch
-                checked={editedProfile.notifyReviews ?? true}
-                onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyReviews: checked})}
-              />
+
+            {/* Reviews Notification */}
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium text-base">Reviews</Label>
+                    <p className="text-sm text-gray-600">Get notified about review requests and feedback</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={editedProfile.notifyReviews ?? true}
+                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyReviews: checked})}
+                  disabled={savingProfile}
+                  className="data-[state=checked]:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-900">Weekly Reports</Label>
-              <Switch
-                checked={editedProfile.notifyWeeklyReports ?? true}
-                onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyWeeklyReports: checked})}
-              />
+
+            {/* Weekly Reports Notification */}
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <Calendar className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium text-base">Weekly Reports</Label>
+                    <p className="text-sm text-gray-600">Get notified about weekly performance reports</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={editedProfile.notifyWeeklyReports ?? true}
+                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyWeeklyReports: checked})}
+                  disabled={savingProfile}
+                  className="data-[state=checked]:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700">Task Created</span>
-              <span className={`px-3 py-1 rounded-full text-sm ${profile?.notifyTaskCreate ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                {profile?.notifyTaskCreate ? 'Enabled' : 'Disabled'}
-              </span>
+          <div className="space-y-4">
+            {/* Task Created Toggle */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-900 font-medium text-base">Task Created</p>
+                    <p className="text-sm text-gray-600">New task assignments</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notificationLoading === 'notifyTaskCreate' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  )}
+                  <Switch
+                    checked={profile?.notifyTaskCreate ?? true}
+                    onCheckedChange={(checked) => updateNotificationPreference('notifyTaskCreate', checked)}
+                    disabled={notificationLoading === 'notifyTaskCreate'}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700">Task Completed</span>
-              <span className={`px-3 py-1 rounded-full text-sm ${profile?.notifyTaskComplete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                {profile?.notifyTaskComplete ? 'Enabled' : 'Disabled'}
-              </span>
+
+            {/* Task Completed Toggle */}
+            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-900 font-medium text-base">Task Completed</p>
+                    <p className="text-sm text-gray-600">Task completion updates</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notificationLoading === 'notifyTaskComplete' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                  )}
+                  <Switch
+                    checked={profile?.notifyTaskComplete ?? true}
+                    onCheckedChange={(checked) => updateNotificationPreference('notifyTaskComplete', checked)}
+                    disabled={notificationLoading === 'notifyTaskComplete'}
+                    className="data-[state=checked]:bg-green-600"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700">Reviews</span>
-              <span className={`px-3 py-1 rounded-full text-sm ${profile?.notifyReviews ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                {profile?.notifyReviews ? 'Enabled' : 'Disabled'}
-              </span>
+
+            {/* Reviews Toggle */}
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-900 font-medium text-base">Reviews</p>
+                    <p className="text-sm text-gray-600">Review requests and feedback</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notificationLoading === 'notifyReviews' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+                  )}
+                  <Switch
+                    checked={profile?.notifyReviews ?? true}
+                    onCheckedChange={(checked) => updateNotificationPreference('notifyReviews', checked)}
+                    disabled={notificationLoading === 'notifyReviews'}
+                    className="data-[state=checked]:bg-purple-600"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700">Weekly Reports</span>
-              <span className={`px-3 py-1 rounded-full text-sm ${profile?.notifyWeeklyReports ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                {profile?.notifyWeeklyReports ? 'Enabled' : 'Disabled'}
-              </span>
+
+            {/* Weekly Reports Toggle */}
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <Calendar className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-900 font-medium text-base">Weekly Reports</p>
+                    <p className="text-sm text-gray-600">Performance reports</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notificationLoading === 'notifyWeeklyReports' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                  )}
+                  <Switch
+                    checked={profile?.notifyWeeklyReports ?? true}
+                    onCheckedChange={(checked) => updateNotificationPreference('notifyWeeklyReports', checked)}
+                    disabled={notificationLoading === 'notifyWeeklyReports'}
+                    className="data-[state=checked]:bg-orange-600"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}

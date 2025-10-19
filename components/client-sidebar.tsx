@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { useEffect, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -43,6 +44,23 @@ type ClientUserWithCompany = {
 
 export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
   const pathname = usePathname()
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0)
+
+  useEffect(() => {
+    fetchPendingReviewsCount()
+  }, [])
+
+  const fetchPendingReviewsCount = async () => {
+    try {
+      const response = await fetch("/api/client/reviews/count")
+      if (response.ok) {
+        const data = await response.json()
+        setPendingReviewsCount(data.pendingCount || 0)
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending reviews count:", error)
+    }
+  }
 
   const handleLogout = async () => {
     // Stop Electron sync service if running in Electron
@@ -77,8 +95,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/time-tracking", label: "Time Tracking", icon: Clock },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
     { href: "/client/monitoring", label: "Monitoring", icon: Monitor },
-    { href: "/client/reviews", label: "Reviews", icon: FileText },
-    { href: "/client/tickets", label: "Support Tickets", icon: Headphones },
+    { href: "/client/reviews", label: "Reviews", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
     { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
@@ -140,7 +157,12 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
                   }`}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && item.badge > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
                 </Link>
               </li>
             )

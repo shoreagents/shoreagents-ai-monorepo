@@ -76,43 +76,24 @@ export function StaffSelectionModal({ isOpen, onClose }: StaffSelectionModalProp
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create video room")
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        console.error("Failed to create room:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(errorData.error || `Failed to create room: ${response.statusText}`)
       }
-
-      const { roomUrl } = await response.json()
-
-      // Get current user info (you'll need to pass this as a prop or fetch from session)
-      const currentUser = {
-        id: "client-user-id", // Replace with actual client user ID
-        name: "Stephen Batcheler", // Replace with actual client name
-      }
-
-      // Send WebSocket invitation to staff
-      console.log("[StaffSelection] Sending call invitation to:", staffMember.id)
-      emit("call:invite", {
-        staffId: staffMember.id,
-        roomUrl: roomUrl,
-        callerName: currentUser.name,
-        callerId: currentUser.id,
-      })
-
-      onClose() // Close modal before redirecting
 
       // Navigate to video room
       router.push(
         `/client/call/${roomUrl.split("/").pop()}?url=${encodeURIComponent(roomUrl)}&staff=${encodeURIComponent(staffMember.name)}`
       )
     } catch (error) {
-      console.error("Error initiating call:", error)
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to start call. Please check your connection.",
-        variant: "destructive",
-      })
-    } finally {
-      setCallingStaffId(null)
+      console.error("Error creating call:", error)
+      const errorMessage = error instanceof Error ? error.message : "Failed to start call. Please try again."
+      alert(errorMessage)
+      setCalling(null)
     }
   }
 

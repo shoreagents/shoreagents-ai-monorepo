@@ -52,6 +52,50 @@ function createWindow() {
     // Send tracking status to renderer
     mainWindow.webContents.send('tracking-status', performanceTracker.getStatus())
   })
+  
+  // Listen for URL changes to detect user type changes
+  mainWindow.webContents.on('did-navigate', async (event, url) => {
+    console.log('[Main] Navigation detected:', url)
+    
+    // Wait a moment for the page to fully load
+    setTimeout(async () => {
+      const shouldDisableTracking = await checkIfUserIsClient()
+      
+      if (shouldDisableTracking && performanceTracker.getStatus().isTracking) {
+        console.log('[Main] 🚫 User switched to non-staff portal - stopping performance tracking')
+        performanceTracker.stop()
+        activityTracker.destroy()
+        screenshotService.destroy()
+        updateTrayMenuForClient()
+      } else if (!shouldDisableTracking && !performanceTracker.getStatus().isTracking) {
+        console.log('[Main] ✅ User switched to staff portal - starting performance tracking')
+        // Re-initialize tracking for staff
+        await initializeTracking()
+      }
+    }, 1000) // Wait 1 second for page to load
+  })
+  
+  // Also listen for page load completion
+  mainWindow.webContents.on('did-finish-load', async () => {
+    console.log('[Main] Page finished loading, checking user type...')
+    
+    // Wait a moment for the page to fully render
+    setTimeout(async () => {
+      const shouldDisableTracking = await checkIfUserIsClient()
+      
+      if (shouldDisableTracking && performanceTracker.getStatus().isTracking) {
+        console.log('[Main] 🚫 Non-staff page loaded - stopping performance tracking')
+        performanceTracker.stop()
+        activityTracker.destroy()
+        screenshotService.destroy()
+        updateTrayMenuForClient()
+      } else if (!shouldDisableTracking && !performanceTracker.getStatus().isTracking) {
+        console.log('[Main] ✅ Staff page loaded - starting performance tracking')
+        // Re-initialize tracking for staff
+        await initializeTracking()
+      }
+    }, 500) // Wait 500ms for page to render
+  })
 }
 
 function createTray() {
@@ -198,8 +242,121 @@ function updateTrayMenu() {
 
 // Kiosk mode functions removed - breaks now use regular UI
 
+/**
+ * Check if the current user should have performance tracking disabled
+ * Only STAFF portal users should have tracking enabled
+ * CLIENT and ADMIN portal users should NOT have tracking
+ */
+async function checkIfUserIsClient() {
+  try {
+    if (!mainWindow) {
+      console.log('[Main] No main window available for user detection')
+      return false
+    }
+    
+    // Get the current URL from the main window
+    const currentUrl = mainWindow.webContents.getURL()
+    console.log('[Main] Current URL:', currentUrl)
+    
+    // Check for the three portal types
+    const isClient = currentUrl.includes('/client')
+    const isAdmin = currentUrl.includes('/admin')
+    const isLoginPage = currentUrl.includes('/login')
+    
+    if (isLoginPage) {
+      console.log('[Main] 🔐 Login page detected - waiting for user authentication')
+      return false // Don't start tracking on login pages
+    }
+    
+    if (isClient) {
+      console.log('[Main] 🚫 CLIENT PORTAL detected - NO TRACKING')
+      return true
+    } else if (isAdmin) {
+      console.log('[Main] ⚙️ ADMIN PORTAL detected - NO TRACKING')
+      return true // Admin also doesn't need performance tracking
+    } else {
+      console.log('[Main] ✅ STAFF PORTAL detected - TRACKING ENABLED')
+      return false
+    }
+  } catch (error) {
+    console.error('[Main] Error checking user type:', error)
+    // Default to staff if we can't determine
+    return false
+  }
+}
+
+/**
+ * Create a minimal tray menu for client/admin users (no performance tracking options)
+ */
+function updateTrayMenuForClient() {
+  if (!tray) return
+  
+  // Determine if it's admin or client based on current URL
+  const currentUrl = mainWindow ? mainWindow.webContents.getURL() : ''
+  const isAdmin = currentUrl.includes('/admin')
+  const portalType = isAdmin ? 'Admin' : 'Client'
+  
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Dashboard',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: `${portalType} Mode - No Tracking`,
+      enabled: false
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        app.isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+  
+  tray.setContextMenu(contextMenu)
+  tray.setToolTip(`${portalType} Dashboard`)
+}
+
 async function initializeTracking() {
   console.log('[Main] Initializing tracking services...')
+  
+  // Wait a moment for the page to be fully loaded before checking
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  
+  // Check if user should have tracking disabled (client/admin portals)
+  const shouldDisableTracking = await checkIfUserIsClient()
+  
+  if (shouldDisableTracking) {
+    console.log('[Main] 🚫 NON-STAFF PORTAL DETECTED - Performance tracking disabled')
+    console.log('[Main] Only basic sync service will be started for non-staff users')
+    
+    // Stop any existing tracking first
+    if (performanceTracker.getStatus().isTracking) {
+      console.log('[Main] Stopping existing performance tracking...')
+      performanceTracker.stop()
+      activityTracker.destroy()
+      screenshotService.destroy()
+    }
+    
+    // Only start sync service for clients (no performance tracking)
+    syncService.start()
+    console.log('[Main] Sync service started (client mode)')
+    
+    // Update tray menu (minimal for clients)
+    updateTrayMenuForClient()
+    
+    return
+  }
+  
+  console.log('[Main] ✅ STAFF USER DETECTED - Performance tracking enabled')
   
   // Check permissions
   const permissionStatus = await permissions.checkAllPermissions()
@@ -225,6 +382,9 @@ async function initializeTracking() {
   
   // Initialize activity tracker with performance tracker and screenshot service integration
   activityTracker.initialize(mainWindow, performanceTracker, screenshotService)
+  
+  // Start activity tracking (only for staff users)
+  activityTracker.startTracking()
   console.log('[Main] Activity tracking started (integrated with performance tracker and screenshot service)')
   
   // Start sync service (it will automatically get session cookie from Electron's cookie store)
@@ -338,6 +498,12 @@ function setupIPC() {
     console.log('[Main] Pausing performance tracking...')
     performanceTracker.pause()
     console.log('[Main] Performance tracking paused')
+    
+    // Set break mode to disable inactivity dialog during breaks
+    console.log('[Main] Setting break mode...')
+    activityTracker.setBreakMode(true)
+    console.log('[Main] Break mode enabled - inactivity dialog disabled')
+    
     updateTrayMenu()
     
     return { success: true, break: breakInfo }
@@ -355,6 +521,12 @@ function setupIPC() {
     console.log('[Main] Resuming performance tracking...')
     performanceTracker.resume()
     console.log('[Main] Performance tracking resumed')
+    
+    // Disable break mode to re-enable inactivity dialog
+    console.log('[Main] Disabling break mode...')
+    activityTracker.setBreakMode(false)
+    console.log('[Main] Break mode disabled - inactivity dialog enabled')
+    
     updateTrayMenu()
     
     return { success: true, break: breakInfo }
@@ -377,6 +549,11 @@ function setupIPC() {
   
   ipcMain.handle('activity-tracker:set-timeout', (event, milliseconds) => {
     activityTracker.setInactivityTimeout(milliseconds)
+    return { success: true }
+  })
+  
+  ipcMain.handle('activity-tracker:set-break-mode', (event, isOnBreak) => {
+    activityTracker.setBreakMode(isOnBreak)
     return { success: true }
   })
   

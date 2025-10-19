@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get staff user with profile, work schedule, company, and personal record
+    // Get staff user with profile, work schedule, company, personal record, and onboarding status
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
       include: {
@@ -24,7 +24,13 @@ export async function GET(req: NextRequest) {
             accountManager: true
           }
         },
-        staff_personal_records: true
+        staff_personal_records: true,
+        onboarding: {
+          select: {
+            isComplete: true,
+            completionPercent: true
+          }
+        }
       }
     })
 
@@ -53,7 +59,7 @@ export async function GET(req: NextRequest) {
         dateOfBirth: staffUser.profile.dateOfBirth,
         employmentStatus: staffUser.profile.employmentStatus,
         startDate: staffUser.profile.startDate,
-        daysEmployed: staffUser.profile.daysEmployed,
+        daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.profile.startDate).getTime()) / (1000 * 60 * 60 * 24)),
         currentRole: staffUser.profile.currentRole,
         salary: Number(staffUser.profile.salary),
         lastPayIncrease: staffUser.profile.lastPayIncrease,
@@ -65,7 +71,11 @@ export async function GET(req: NextRequest) {
         hmo: staffUser.profile.hmo,
       } : null,
       personalRecords: staffUser.staff_personal_records || null,
-      workSchedules: staffUser.profile?.workSchedule || []
+      workSchedules: staffUser.profile?.workSchedule || [],
+      onboarding: staffUser.onboarding ? {
+        isComplete: staffUser.onboarding.isComplete,
+        completionPercent: staffUser.onboarding.completionPercent
+      } : null
     })
 
   } catch (error) {

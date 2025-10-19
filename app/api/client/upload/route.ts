@@ -55,11 +55,44 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Generate file path
+    // Delete old file if it exists
+    const currentFileUrl = type === 'avatar' ? clientUser.avatar : clientUser.coverPhoto
+    if (currentFileUrl) {
+      try {
+        // Extract file path from URL - more robust parsing
+        const url = new URL(currentFileUrl)
+        const pathParts = url.pathname.split('/')
+        
+        // Find the client bucket and extract the file path
+        const clientIndex = pathParts.findIndex(part => part === 'client')
+        if (clientIndex !== -1 && clientIndex < pathParts.length - 1) {
+          const filePath = pathParts.slice(clientIndex + 1).join('/')
+          
+          console.log('Deleting old client file from path:', filePath)
+          const { error: deleteError } = await supabase.storage
+            .from('client')
+            .remove([filePath])
+          
+          if (deleteError) {
+            console.warn('Failed to delete old client file:', deleteError)
+          } else {
+            console.log('Old client file deleted successfully:', filePath)
+          }
+        } else {
+          console.warn('Could not parse file path from URL:', currentFileUrl)
+        }
+      } catch (deleteError) {
+        console.warn('Error deleting old client file:', deleteError)
+        // Continue with upload even if delete fails
+      }
+    }
+
+    // Generate file path with proper folder structure
     const fileExt = file.name.split('.').pop()
-    const fileName = `${clientUser.id}-${Date.now()}.${fileExt}`
-    const folder = type === 'avatar' ? 'client_avatars' : 'client_covers'
-    const filePath = `${folder}/${fileName}`
+    const timestamp = Date.now()
+    const folder = type === 'avatar' ? 'client_avatar' : 'client_cover'
+    const fileName = type === 'avatar' ? `avatar_${timestamp}.${fileExt}` : `cover_${timestamp}.${fileExt}`
+    const filePath = `${folder}/${clientUser.id}/${fileName}`
 
     // Upload to Supabase storage using service role key
     const { data, error } = await supabase.storage

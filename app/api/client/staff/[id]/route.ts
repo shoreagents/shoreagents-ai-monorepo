@@ -180,7 +180,7 @@ export async function GET(
         location: user.profile.location,
         employmentStatus: user.profile.employmentStatus,
         startDate: user.profile.startDate,
-        daysEmployed: user.profile.daysEmployed,
+        daysEmployed: Math.floor((new Date().getTime() - new Date(user.profile.startDate).getTime()) / (1000 * 60 * 60 * 24)),
         currentRole: user.profile.currentRole,
         salary: user.profile.salary,
         lastPayIncrease: user.profile.lastPayIncrease,

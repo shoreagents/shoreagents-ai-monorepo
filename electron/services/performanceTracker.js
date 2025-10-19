@@ -74,6 +74,12 @@ class PerformanceTracker {
       return
     }
 
+    // Check if we should be tracking (only for staff users)
+    if (this.shouldDisableTracking()) {
+      this.log('🚫 Performance tracking disabled - non-staff portal detected')
+      return
+    }
+
     this.isTracking = true
     this.sessionStartTime = Date.now()
     this.lastActivityTime = Date.now()
@@ -85,6 +91,13 @@ class PerformanceTracker {
 
     // Start main tracking loop
     this.trackingInterval = setInterval(() => {
+      // Check if we should still be tracking
+      if (this.shouldDisableTracking()) {
+        this.log('🚫 Non-staff portal detected during tracking - stopping performance tracker')
+        this.stop()
+        return
+      }
+      
       this.updateMetrics()
     }, config.TRACKING_INTERVAL)
 
@@ -117,6 +130,18 @@ class PerformanceTracker {
     if (this.trackingInterval) {
       clearInterval(this.trackingInterval)
       this.trackingInterval = null
+    }
+
+    // Stop application tracking
+    if (this.applicationTrackingInterval) {
+      clearInterval(this.applicationTrackingInterval)
+      this.applicationTrackingInterval = null
+    }
+
+    // Stop clipboard monitoring
+    if (this.clipboardInterval) {
+      clearInterval(this.clipboardInterval)
+      this.clipboardInterval = null
     }
 
     this.log('Performance tracking stopped')
@@ -236,8 +261,16 @@ class PerformanceTracker {
       this.lastClipboardContent = await this.clipboardy.read()
 
       // Check for clipboard changes periodically
-      setInterval(async () => {
+      this.clipboardInterval = setInterval(async () => {
         if (this.isPaused) return
+        
+        // Check if we should still be tracking
+        if (this.shouldDisableTracking()) {
+          this.log('🚫 Non-staff portal detected during clipboard monitoring - stopping clipboard monitoring')
+          clearInterval(this.clipboardInterval)
+          this.clipboardInterval = null
+          return
+        }
 
         try {
           const currentContent = await this.clipboardy.read()
@@ -258,8 +291,16 @@ class PerformanceTracker {
    * Track active applications
    */
   startApplicationTracking() {
-    setInterval(async () => {
+    this.applicationTrackingInterval = setInterval(async () => {
       if (this.isPaused) return
+      
+      // Check if we should still be tracking
+      if (this.shouldDisableTracking()) {
+        this.log('🚫 Non-staff portal detected during application tracking - stopping application tracking')
+        clearInterval(this.applicationTrackingInterval)
+        this.applicationTrackingInterval = null
+        return
+      }
 
       try {
         const window = await this.activeWin()
@@ -429,6 +470,9 @@ class PerformanceTracker {
       productivityScore: metrics.productivityScore,
       // Include visited URLs array for database storage
       visitedUrlsList: Array.from(this.visitedUrls),
+      visitedUrls: Array.from(this.visitedUrls), // Store as JSON in database
+      // Include applications used array for database storage
+      applicationsUsed: metrics.applicationsUsed || [],
     }
   }
 
@@ -493,6 +537,43 @@ class PerformanceTracker {
       hasSystemIdleTime: !!this.systemIdleTime,
       hasActiveWin: !!this.activeWin,
       hasClipboardy: !!this.clipboardy,
+    }
+  }
+
+  /**
+   * Check if tracking should be disabled based on current URL
+   * Only staff portal users should have tracking enabled
+   */
+  shouldDisableTracking() {
+    try {
+      // This will be called from the main process context
+      // We need to get the current URL from the main window
+      const { BrowserWindow } = require('electron')
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      
+      if (!mainWindow) {
+        return false // Default to allowing tracking if we can't determine
+      }
+      
+      const currentUrl = mainWindow.webContents.getURL()
+      
+      // Check for non-staff portals
+      const isClient = currentUrl.includes('/client')
+      const isAdmin = currentUrl.includes('/admin')
+      const isLoginPage = currentUrl.includes('/login')
+      
+      if (isLoginPage) {
+        return true // Don't track on login pages
+      }
+      
+      if (isClient || isAdmin) {
+        return true // Don't track on client or admin portals
+      }
+      
+      return false // Allow tracking for staff portal
+    } catch (error) {
+      console.error('[PerformanceTracker] Error checking URL:', error)
+      return false // Default to allowing tracking if we can't determine
     }
   }
 

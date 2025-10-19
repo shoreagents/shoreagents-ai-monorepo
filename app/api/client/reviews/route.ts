@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status") // Filter by status
+    const month = searchParams.get("month") // Filter by month (1-12)
+    const year = searchParams.get("year") // Filter by year (e.g., 2024)
 
     // Build where clause
     const where: any = {
@@ -33,6 +35,17 @@ export async function GET(req: NextRequest) {
 
     if (status) {
       where.status = status
+    }
+
+    // Add month/year filtering for completed reviews
+    if (month && year && status === "SUBMITTED" && month !== "all" && year !== "all") {
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59)
+      
+      where.submittedDate = {
+        gte: startDate,
+        lte: endDate
+      }
     }
 
     // Get all reviews submitted BY this client user

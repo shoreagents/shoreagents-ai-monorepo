@@ -19,6 +19,9 @@ const port = parseInt(process.env.PORT || '3000', 10)
 const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()
 
+// Global socket server for API routes
+global.socketServer = null
+
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
     try {
@@ -41,8 +44,21 @@ app.prepare().then(() => {
     },
   })
 
+  // Make socket server globally accessible
+  global.socketServer = io
+  console.log('✅ Socket server registered globally')
+
   // Store connected users
   const connectedUsers = new Map()
+
+  // Function to emit performance updates to monitoring clients
+  const emitPerformanceUpdate = (data) => {
+    console.log('[WebSocket] Emitting performance update to monitoring clients:', data)
+    io.to('monitoring').emit('monitoring:performance-update', data)
+  }
+
+  // Make emitPerformanceUpdate available globally
+  global.emitPerformanceUpdate = emitPerformanceUpdate
 
   io.on('connection', (socket) => {
     console.log('[WebSocket] Client connected:', socket.id)
@@ -51,7 +67,11 @@ app.prepare().then(() => {
     socket.on('identify', (data) => {
       const { userId, userName } = data
       connectedUsers.set(socket.id, { userId, userName, socketId: socket.id })
-      console.log('[WebSocket] User identified:', userName)
+      console.log('[WebSocket] User identified:', userName, 'UserID:', userId)
+      
+      // Have user join their own room for targeted messages
+      socket.join(`user:${userId}`)
+      console.log(`[WebSocket] User ${userName} joined room: user:${userId}`)
       
       // Broadcast online users count
       io.emit('users:online', {
@@ -125,6 +145,24 @@ app.prepare().then(() => {
     socket.on('metrics:update', (data) => {
       // Only send to the specific user
       socket.emit('metrics:updated', data)
+    })
+
+    // Performance monitoring events for clients
+    socket.on('monitoring:subscribe', (data) => {
+      console.log('[WebSocket] Client subscribed to monitoring updates:', data)
+      // Join a monitoring room for this client
+      socket.join('monitoring')
+    })
+
+    socket.on('monitoring:unsubscribe', () => {
+      console.log('[WebSocket] Client unsubscribed from monitoring updates')
+      socket.leave('monitoring')
+    })
+
+    // Force refresh event for monitoring clients
+    socket.on('monitoring:force-refresh', () => {
+      console.log('[WebSocket] Force refresh requested')
+      io.to('monitoring').emit('monitoring:refresh-requested')
     })
 
     // Activity feed events

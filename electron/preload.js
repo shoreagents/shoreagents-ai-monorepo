@@ -128,6 +128,9 @@ contextBridge.exposeInMainWorld('electron', {
     // Stop activity tracking
     stop: () => ipcRenderer.invoke('activity-tracker:stop'),
     
+    // Set break mode to disable inactivity dialog during breaks
+    setBreakMode: (isOnBreak) => ipcRenderer.invoke('activity-tracker:set-break-mode', isOnBreak),
+    
     // Set inactivity timeout (in milliseconds)
     setTimeout: (milliseconds) => ipcRenderer.invoke('activity-tracker:set-timeout', milliseconds),
     

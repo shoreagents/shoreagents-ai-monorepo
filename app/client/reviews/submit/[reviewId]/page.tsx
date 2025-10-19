@@ -120,10 +120,10 @@ export default function SubmitReviewPage({
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
-          <p className="mt-4 text-muted-foreground">Loading review...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent mx-auto" />
+          <p className="mt-4 text-gray-600">Loading review...</p>
         </div>
       </div>
     )
@@ -131,10 +131,10 @@ export default function SubmitReviewPage({
 
   if (error && !review) {
     return (
-      <div className="flex h-screen items-center justify-center p-6">
-        <Card className="max-w-md p-6 text-center">
-          <h2 className="text-xl font-bold text-foreground mb-2">Error</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
+      <div className="flex h-screen items-center justify-center bg-gray-50 p-6">
+        <Card className="max-w-md p-6 text-center bg-white border-gray-200 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={() => router.push("/client/reviews")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Reviews
@@ -166,28 +166,28 @@ export default function SubmitReviewPage({
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground">Performance Review</h1>
-            <p className="text-muted-foreground">{template.title}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Performance Review</h1>
+            <p className="text-gray-600">{template.title}</p>
           </div>
         </div>
 
         {/* Staff Info Card */}
-        <Card className="p-6">
+        <Card className="bg-white border-gray-200 shadow-sm p-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 border-2 border-gray-200">
               <AvatarImage src={review.staffUser.avatar} />
-              <AvatarFallback className="text-xl">
+              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white text-xl">
                 {review.staffUser.name.split(" ").map(n => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-foreground">{review.staffUser.name}</h2>
-              <p className="text-muted-foreground">{review.staffUser.email}</p>
+              <h2 className="text-xl font-semibold text-gray-900">{review.staffUser.name}</h2>
+              <p className="text-gray-600">{review.staffUser.email}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${typeBadge.bgColor} ${typeBadge.color}`}>
                   {typeBadge.icon} {typeBadge.label}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-600">
                   Evaluation Period: {review.evaluationPeriod}
                 </span>
               </div>
@@ -199,21 +199,22 @@ export default function SubmitReviewPage({
         <ReviewProgress 
           currentStep={currentStep + 1} 
           totalSteps={totalSteps}
-          currentCategory={currentCategory?.name || "Final Feedback"}
+          completedQuestions={Object.keys(ratings).length}
+          totalQuestions={getAllQuestions(template).length}
         />
 
         {error && (
-          <Card className="border-red-500 bg-red-50 p-4 dark:bg-red-950">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
+          <Card className="border-red-200 bg-red-50 p-4">
+            <p className="text-red-600">{error}</p>
           </Card>
         )}
 
         {/* Questions or Feedback Step */}
         {currentCategory ? (
-          <Card className="p-6">
+          <Card className="bg-white border-gray-200 shadow-sm p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-foreground">{currentCategory.name}</h2>
-              <p className="text-muted-foreground">{currentCategory.description}</p>
+              <h2 className="text-xl font-bold text-gray-900">{currentCategory.name}</h2>
+              <p className="text-gray-600">{currentCategory.description}</p>
             </div>
             
             <div className="space-y-6">
@@ -228,15 +229,15 @@ export default function SubmitReviewPage({
             </div>
           </Card>
         ) : (
-          <Card className="p-6">
+          <Card className="bg-white border-gray-200 shadow-sm p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-foreground">Final Feedback</h2>
-              <p className="text-muted-foreground">Provide additional context and comments</p>
+              <h2 className="text-xl font-bold text-gray-900">Final Feedback</h2>
+              <p className="text-gray-600">Provide additional context and comments</p>
             </div>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   ✨ What are this staff member's key strengths? <span className="text-red-500">*</span>
                 </label>
                 <Textarea
@@ -244,12 +245,12 @@ export default function SubmitReviewPage({
                   onChange={(e) => setStrengths(e.target.value)}
                   placeholder="Describe what they do well..."
                   rows={4}
-                  className="resize-none"
+                  className="resize-none bg-white border-gray-300"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   📈 What areas need improvement? <span className="text-red-500">*</span>
                 </label>
                 <Textarea
@@ -257,12 +258,12 @@ export default function SubmitReviewPage({
                   onChange={(e) => setImprovements(e.target.value)}
                   placeholder="Describe areas where they could improve..."
                   rows={4}
-                  className="resize-none"
+                  className="resize-none bg-white border-gray-300"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   💬 Additional Comments (Optional)
                 </label>
                 <Textarea
@@ -270,7 +271,7 @@ export default function SubmitReviewPage({
                   onChange={(e) => setAdditionalComments(e.target.value)}
                   placeholder="Any other feedback or context..."
                   rows={4}
-                  className="resize-none"
+                  className="resize-none bg-white border-gray-300"
                 />
               </div>
             </div>
