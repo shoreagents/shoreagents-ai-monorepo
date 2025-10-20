@@ -6,6 +6,7 @@ import {
   AlertCircle, CheckCircle, Clock, X, Search, MapPin, Cloud, Gift, Bus,
   Upload, Paperclip, Send, Trash2, ChevronDown, Filter
 } from "lucide-react"
+import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
 type TicketCategory = "IT" | "HR" | "MANAGEMENT" | "EQUIPMENT" | "STATION" | "SURROUNDINGS" | "COMPENSATION" | "TRANSPORT" | "OTHER"
@@ -230,11 +231,15 @@ export default function SupportTickets() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="text-slate-400">Loading tickets...</p>
-        </div>
+      <div className="flex h-full flex-col gap-6 p-6">
+        {/* Stats skeleton */}
+        <TicketStatsSkeleton />
+        
+        {/* Filters skeleton */}
+        <TicketFiltersSkeleton />
+        
+        {/* Tickets list skeleton */}
+        <TicketListSkeleton count={5} />
       </div>
     )
   }

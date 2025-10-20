@@ -24,6 +24,7 @@ import {
   LogOut,
   ChevronDown,
   Building2,
+  Headphones,
 } from "lucide-react"
 
 type ClientUserWithCompany = {

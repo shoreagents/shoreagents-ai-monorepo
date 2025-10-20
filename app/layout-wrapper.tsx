@@ -8,6 +8,7 @@ import ElectronProvider from "@/components/electron-provider"
 import { WebSocketProvider } from "@/lib/websocket-provider"
 import StaffFloatingCallButton from "@/components/staff/floating-call-button"
 import CallNotificationProvider from "@/components/staff/call-notification-provider"
+import IncomingCallNotification from "@/components/staff/incoming-call-notification"
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -37,6 +38,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <StaffFloatingCallButton />
       <CallNotificationProvider />
       <Toaster />
+      <IncomingCallNotification />
     </>
   ) : (
     // For login, admin, and client pages - no sidebar but include toaster

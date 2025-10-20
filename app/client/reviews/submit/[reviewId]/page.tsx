@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, ArrowRight, Send } from "lucide-react"
+import { ArrowLeft, ArrowRight, Send, User, CheckCircle } from "lucide-react"
 import { getReviewTemplate, getAllQuestions } from "@/lib/review-templates"
 import { getReviewTypeBadge } from "@/lib/review-utils"
 import ReviewQuestionCard from "@/components/client/review-question-card"
@@ -43,6 +43,7 @@ export default function SubmitReviewPage({
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   useEffect(() => {
     params.then(p => {
@@ -110,8 +111,7 @@ export default function SubmitReviewPage({
         throw new Error(data.error || "Failed to submit review")
       }
 
-      alert("✅ Review submitted successfully!")
-      router.push("/client/reviews")
+      setShowSuccessModal(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit review")
       setSubmitting(false)
@@ -155,33 +155,43 @@ export default function SubmitReviewPage({
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Back Button */}
+        <div className="flex items-center">
           <Button 
             variant="ghost" 
-            size="icon"
             onClick={() => router.push("/client/reviews")}
+            className="p-2 hover:bg-purple-50 text-gray-600 hover:text-purple-600"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Reviews
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">Performance Review</h1>
-            <p className="text-gray-600">{template.title}</p>
+        </div>
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-4xl font-bold text-gray-900">Performance Review</h1>
+            </div>
+            <p className="text-lg text-gray-600">{template.title}</p>
           </div>
         </div>
 
         {/* Staff Info Card */}
-        <Card className="bg-white border-gray-200 shadow-sm p-6">
+        <Card className="bg-white border-2 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg p-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-gray-200">
+            <Avatar className="h-16 w-16 border-2 border-purple-200 ring-2 ring-purple-50">
               <AvatarImage src={review.staffUser.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white text-xl">
+              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white text-xl font-semibold">
                 {review.staffUser.name.split(" ").map(n => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{review.staffUser.name}</h2>
+              <h2 className="text-xl font-bold text-gray-900">{review.staffUser.name}</h2>
               <p className="text-gray-600">{review.staffUser.email}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${typeBadge.bgColor} ${typeBadge.color}`}>
@@ -211,8 +221,8 @@ export default function SubmitReviewPage({
 
         {/* Questions or Feedback Step */}
         {currentCategory ? (
-          <Card className="bg-white border-gray-200 shadow-sm p-6">
-            <div className="mb-6">
+          <Card className="bg-white border-2 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg p-6">
+            <div>
               <h2 className="text-xl font-bold text-gray-900">{currentCategory.name}</h2>
               <p className="text-gray-600">{currentCategory.description}</p>
             </div>
@@ -229,8 +239,8 @@ export default function SubmitReviewPage({
             </div>
           </Card>
         ) : (
-          <Card className="bg-white border-gray-200 shadow-sm p-6">
-            <div className="mb-6">
+          <Card className="bg-white border-2 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg p-6">
+            <div>
               <h2 className="text-xl font-bold text-gray-900">Final Feedback</h2>
               <p className="text-gray-600">Provide additional context and comments</p>
             </div>
@@ -245,7 +255,7 @@ export default function SubmitReviewPage({
                   onChange={(e) => setStrengths(e.target.value)}
                   placeholder="Describe what they do well..."
                   rows={4}
-                  className="resize-none bg-white border-gray-300"
+                  className="resize-none bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
                 />
               </div>
 
@@ -258,7 +268,7 @@ export default function SubmitReviewPage({
                   onChange={(e) => setImprovements(e.target.value)}
                   placeholder="Describe areas where they could improve..."
                   rows={4}
-                  className="resize-none bg-white border-gray-300"
+                  className="resize-none bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
                 />
               </div>
 
@@ -271,7 +281,7 @@ export default function SubmitReviewPage({
                   onChange={(e) => setAdditionalComments(e.target.value)}
                   placeholder="Any other feedback or context..."
                   rows={4}
-                  className="resize-none bg-white border-gray-300"
+                  className="resize-none bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
                 />
               </div>
             </div>
@@ -284,18 +294,26 @@ export default function SubmitReviewPage({
             variant="outline"
             onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
             disabled={currentStep === 0 || submitting}
+            className="border-purple-300 bg-white text-purple-700 hover:bg-purple-50 hover:border-purple-400"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Previous
           </Button>
 
           {currentStep < totalSteps - 1 ? (
-            <Button onClick={() => setCurrentStep(prev => prev + 1)}>
+            <Button 
+              onClick={() => setCurrentStep(prev => prev + 1)}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            >
               Next
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={submitting}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+            >
               {submitting ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -311,6 +329,29 @@ export default function SubmitReviewPage({
           )}
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="bg-white p-8 max-w-md mx-4 text-center shadow-xl">
+            <div className="mb-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Submitted!</h2>
+              <p className="text-gray-600">
+                Your performance review has been successfully submitted. Thank you for your feedback!
+              </p>
+            </div>
+            <Button 
+              onClick={() => router.push("/client/reviews")}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            >
+              Back to Reviews
+            </Button>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

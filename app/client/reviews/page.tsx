@@ -13,7 +13,8 @@ import {
   User,
   ArrowRight,
   AlertCircle,
-  Filter
+  Filter,
+  Eye
 } from "lucide-react"
 import { 
   getReviewTypeBadge, 
@@ -48,7 +49,7 @@ export default function ClientReviewsPage() {
 
   useEffect(() => {
     fetchReviews()
-  }, [filterMonth, filterYear])
+  }, []) // Remove filterMonth, filterYear from dependencies
 
   const fetchReviews = async () => {
     try {
@@ -76,41 +77,12 @@ export default function ClientReviewsPage() {
         setAutoCreating(false)
       }
 
-          // Then fetch the reviews
-          // Always fetch all reviews first
-          const allReviewsResponse = await fetch("/api/client/reviews")
-          if (!allReviewsResponse.ok) throw new Error("Failed to fetch reviews")
-          const allReviewsData = await allReviewsResponse.json()
-          
-          // If filters are active, also fetch filtered completed reviews
-          let filteredCompletedReviews: Review[] = []
-          const currentYear = new Date().getFullYear().toString()
-          const hasMonthFilter = filterMonth && filterMonth !== "all"
-          const hasYearFilter = filterYear && filterYear !== "all"
-          
-          if (hasMonthFilter || hasYearFilter) {
-            const params = new URLSearchParams()
-            if (hasMonthFilter) params.append("month", filterMonth)
-            if (hasYearFilter) params.append("year", filterYear)
-            params.append("status", "SUBMITTED")
-            
-            const filteredResponse = await fetch(`/api/client/reviews?${params.toString()}`)
-            if (filteredResponse.ok) {
-              const filteredData = await filteredResponse.json()
-              filteredCompletedReviews = filteredData.reviews || []
-            }
-          }
-          
-          // Combine: all pending reviews + filtered completed reviews (or all completed if no filter)
-          const allReviews = allReviewsData.reviews || []
-          const pendingReviews = allReviews.filter((r: Review) => r.status === "PENDING")
-          const allCompletedReviews = allReviews.filter((r: Review) => r.status !== "PENDING")
-          
-          // Use filtered completed reviews if filters are active, otherwise use all completed
-          const finalCompletedReviews = filteredCompletedReviews.length > 0 ? filteredCompletedReviews : allCompletedReviews
-          
-          // Combine pending + completed for display
-          setReviews([...pendingReviews, ...finalCompletedReviews])
+      // Fetch all reviews once
+      const allReviewsResponse = await fetch("/api/client/reviews")
+      if (!allReviewsResponse.ok) throw new Error("Failed to fetch reviews")
+      const allReviewsData = await allReviewsResponse.json()
+      
+      setReviews(allReviewsData.reviews || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reviews")
     } finally {
@@ -119,7 +91,33 @@ export default function ClientReviewsPage() {
   }
 
   const pendingReviews = reviews.filter(r => r.status === "PENDING")
-  const submittedReviews = reviews.filter(r => r.status !== "PENDING")
+  
+  // Client-side filtering for submitted reviews
+  const getFilteredSubmittedReviews = () => {
+    const submittedReviews = reviews.filter(r => r.status !== "PENDING")
+    
+    const hasMonthFilter = filterMonth && filterMonth !== "all"
+    const hasYearFilter = filterYear && filterYear !== "all"
+    
+    if (!hasMonthFilter && !hasYearFilter) {
+      return submittedReviews
+    }
+    
+    return submittedReviews.filter(review => {
+      if (!review.submittedDate) return false
+      
+      const submittedDate = new Date(review.submittedDate)
+      const submittedMonth = submittedDate.getMonth() + 1 // getMonth() returns 0-11
+      const submittedYear = submittedDate.getFullYear()
+      
+      const monthMatch = !hasMonthFilter || submittedMonth === parseInt(filterMonth)
+      const yearMatch = !hasYearFilter || submittedYear === parseInt(filterYear)
+      
+      return monthMatch && yearMatch
+    })
+  }
+  
+  const submittedReviews = getFilteredSubmittedReviews()
 
   if (loading) {
     return (
@@ -386,12 +384,17 @@ export default function ClientReviewsPage() {
                             </div>
                           </div>
                         </div>
-                        <Badge className="bg-green-100 text-green-700 border-green-200">
-                          <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Completed
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => router.push(`/client/reviews/view/${review.id}`)}
+                            className="border-purple-300 bg-white text-purple-700 hover:bg-purple-100 hover:border-purple-500 hover:text-purple-800 h-6 px-2 text-xs"
+                          >
+                            <Eye className="mr-1 h-3 w-3" />
+                            View
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </Card>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import CloudConvert from 'cloudconvert'
 
 // GET /api/documents - Fetch all documents for current staff user (own + client uploads)
@@ -189,6 +190,73 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Upload original file to Supabase Storage
+    let fileUrl: string | null = null
+    if (file) {
+      try {
+        const fileName = file.name
+        const fileExt = fileName.split('.').pop()?.toLowerCase()
+        const timestamp = Date.now()
+        const uniqueFileName = `staff_docs/${staffUser.id}/${timestamp}-${fileName}`
+        
+        // Detect proper MIME type
+        const mimeTypes: Record<string, string> = {
+          'pdf': 'application/pdf',
+          'doc': 'application/msword',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'txt': 'text/plain',
+          'md': 'text/markdown'
+        }
+        const contentType = mimeTypes[fileExt || ''] || file.type || 'application/pdf'
+        
+        console.log('📤 [STAFF] Uploading to Supabase:', {
+          fileName,
+          contentType,
+          path: uniqueFileName
+        })
+        
+        // Convert file to buffer for Supabase
+        const arrayBuffer = await file.arrayBuffer()
+        const fileBuffer = Buffer.from(arrayBuffer)
+        
+        // Upload to staff bucket -> staff_docs folder
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('staff')
+          .upload(uniqueFileName, fileBuffer, {
+            contentType,
+            upsert: false
+          })
+        
+        if (uploadError) {
+          console.error('❌ [STAFF] Supabase upload FAILED:', {
+            error: uploadError.message,
+            fileName
+          })
+        } else {
+          // Get public URL
+          const { data: urlData } = supabaseAdmin.storage
+            .from('staff')
+            .getPublicUrl(uniqueFileName)
+          
+          fileUrl = urlData.publicUrl
+          console.log('✅ [STAFF] File uploaded SUCCESS:', {
+            bucket: 'staff',
+            path: uniqueFileName,
+            url: fileUrl
+          })
+        }
+      } catch (storageError: any) {
+        console.error('❌ [STAFF] Storage upload exception:', storageError)
+      }
+    }
+
+    // Auto-share with assigned company
+    let sharedWith: string[] = []
+    if (staffUser.companyId) {
+      sharedWith = [staffUser.companyId]
+      console.log('📤 [STAFF] Auto-sharing with company:', staffUser.companyId)
+    }
+
     // Create the document
     const document = await prisma.document.create({
       data: {
@@ -199,7 +267,8 @@ export async function POST(req: NextRequest) {
         content,
         uploadedBy: staffUser.name,
         size: fileSize,
-        fileUrl: null, // Can add Supabase storage later
+        fileUrl,
+        sharedWith
       },
       include: {
         staffUser: {

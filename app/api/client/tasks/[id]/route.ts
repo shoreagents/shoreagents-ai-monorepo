@@ -2,166 +2,151 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/client/tasks/[id] - Get a specific task
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+// PATCH /api/client/tasks/[id] - Update task
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
+    const body = await request.json()
+    const { title, description, status, priority, deadline, tags } = body
 
-    // Get the task
-    const task = await prisma.task.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true
-          }
-        }
-      }
+    // Get client user
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id },
     })
 
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
     }
 
-    // For testing, allow access to any task
-    // In production, verify staff assignment to client
-
-    return NextResponse.json({ task })
-  } catch (error) {
-    console.error("Error fetching task:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch task" },
-      { status: 500 }
-    )
-  }
-}
-
-// PUT /api/client/tasks/[id] - Update a task
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { id } = params
-    const body = await req.json()
-
-    // Get the task
+    // Verify task exists and belongs to client
     const existingTask = await prisma.task.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!existingTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    // For testing, allow updating any task
-    // In production, verify staff assignment to client
-
-    // Update the task
-    const updateData: any = {
-      updatedAt: new Date()
+    if (existingTask.clientUserId !== clientUser.id) {
+      return NextResponse.json({ error: "Forbidden: You can only edit your own tasks" }, { status: 403 })
     }
 
-    if (body.status !== undefined) {
-      updateData.status = body.status
-      if (body.status === 'COMPLETED') {
-        updateData.completedAt = new Date()
-      } else if (existingTask.completedAt) {
-        updateData.completedAt = null
-      }
-    }
-
-    if (body.title !== undefined) updateData.title = body.title
-    if (body.description !== undefined) updateData.description = body.description
-    if (body.priority !== undefined) updateData.priority = body.priority
-    if (body.deadline !== undefined) {
-      updateData.deadline = body.deadline ? new Date(body.deadline) : null
-    }
-    if (body.tags !== undefined) updateData.tags = body.tags
-
+    // Update task
     const task = await prisma.task.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...(title && { title }),
+        ...(description !== undefined && { description }),
+        ...(status && { status }),
+        ...(priority && { priority }),
+        ...(deadline !== undefined && {
+          deadline: deadline ? new Date(deadline) : null,
+        }),
+        ...(tags && { tags }),
+        ...(status === "COMPLETED" && { completedAt: new Date() }),
+      },
       include: {
-        user: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
+        clientUser: {
           select: {
             id: true,
             name: true,
             email: true,
-            avatar: true
-          }
-        }
-      }
+            avatar: true,
+          },
+        },
+        staffUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        assignedStaff: {
+          include: {
+            staffUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
     })
 
-    return NextResponse.json({ task })
+    return NextResponse.json({ success: true, task })
   } catch (error) {
-    console.error("Error updating task:", error)
-    return NextResponse.json(
-      { error: "Failed to update task" },
-      { status: 500 }
-    )
+    console.error("Error updating client task:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-// DELETE /api/client/tasks/[id] - Delete a task
+// DELETE /api/client/tasks/[id] - Delete task
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
-    // Get the task
+    // Get client user
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id },
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: "Client user not found" }, { status: 404 })
+    }
+
+    // Verify task exists and belongs to client
     const existingTask = await prisma.task.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!existingTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    // For testing, allow deleting any task
-    // In production, verify staff assignment to client
+    if (existingTask.clientUserId !== clientUser.id) {
+      return NextResponse.json({ error: "Forbidden: You can only delete your own tasks" }, { status: 403 })
+    }
 
-    // Delete the task
+    // Delete task (cascade will delete TaskAssignments)
     await prisma.task.delete({
-      where: { id }
+      where: { id },
     })
+
+    console.log(`✅ Client ${clientUser.name} deleted task ${id}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting task:", error)
-    return NextResponse.json(
-      { error: "Failed to delete task" },
-      { status: 500 }
-    )
+    console.error("Error deleting client task:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-
-
-

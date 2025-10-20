@@ -1,99 +1,155 @@
-# Linear Task Automation Scripts
+# Linear Task Creation Scripts
 
-These scripts allow you to easily create Linear tasks from the command line using the API key stored in your `.env` file.
+These scripts help you create Linear tasks automatically from markdown documentation files.
 
-## Prerequisites
+## Setup
 
-- Linear API key must be set in `.env` file (line 38): `LINEAR_API_KEY="your_key_here"`
-- `jq` command-line JSON processor installed (`brew install jq`)
-- `curl` (pre-installed on macOS)
+### 1. Install Dependencies
 
-## Scripts
+Make sure you have `dotenv` installed:
 
-### 1. `create-linear-task.sh`
-
-Generic script to create any Linear task.
-
-**Usage:**
 ```bash
-./scripts/create-linear-task.sh "Task Title" "Task Description" [status]
+npm install dotenv
 ```
 
-**Parameters:**
-- `Task Title` (required): The title of the Linear task
-- `Task Description` (required): The description/body of the task (supports markdown)
-- `status` (optional): One of `todo`, `in_progress`, `done` (default: `todo`)
+### 2. Add Linear API Key to `.env`
 
-**Examples:**
+Add this line to your `.env` file (should already be on line 38):
+
+```env
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**To get your Linear API Key:**
+1. Go to https://linear.app
+2. Click your profile (bottom left)
+3. Settings > API > Personal API Keys
+4. Create a new key
+5. Copy and paste it into `.env`
+
+### 3. Get Team ID and User IDs
+
+**Team ID:**
+1. Go to Linear > Settings > Teams
+2. Click your team
+3. Copy the Team ID (looks like: `TEAM-xxxxx`)
+
+**Kyle's User ID:**
+1. Go to Linear > Settings > Members
+2. Find Kyle in the list
+3. Click on Kyle
+4. Copy his User ID (looks like: `USER-xxxxx`)
+
+## Usage
+
+### Method 1: Quick Script (Easiest)
+
+1. Edit `scripts/create-task-for-kyle.sh` and add your IDs:
+
 ```bash
-# Create a todo task
-./scripts/create-linear-task.sh "Fix login bug" "Users cannot login on Safari"
-
-# Create an in-progress task
-./scripts/create-linear-task.sh "Build API endpoint" "Need to create /api/users endpoint" in_progress
-
-# Create a completed task
-./scripts/create-linear-task.sh "Setup database" "PostgreSQL configured and running" done
+TEAM_ID="TEAM-xxxxx"      # Your team ID
+KYLE_USER_ID="USER-xxxxx"  # Kyle's user ID
 ```
 
-### 2. `post-completion-report.sh`
+2. Make it executable:
 
-Automated script to post the performance review completion report as a Linear task.
-
-**Usage:**
 ```bash
-./scripts/post-completion-report.sh
+chmod +x scripts/create-task-for-kyle.sh
 ```
 
-This script:
-- Reads `PERFORMANCE-REVIEW-COMPLETION-REPORT.md`
-- Creates a Linear task with the full report as description
-- Sets status to "Done" since it's a completion report
-- Returns the task ID and URL
+3. Run it:
 
-**Example output:**
-```
-📝 Creating Linear task...
-Title: ✅ Performance Review System - Client Submission Flow Completed
-Status: done
-✅ Task created successfully!
-ID: SHO-37
-URL: https://linear.app/shoreagents/issue/SHO-37/...
+```bash
+./scripts/create-task-for-kyle.sh
 ```
 
-## Configuration
+### Method 2: Direct Script (More Flexible)
 
-The scripts automatically read from your `.env` file and use these hardcoded values:
+```bash
+node scripts/create-linear-task.js \
+    <markdown-file> \
+    <team-id> \
+    <assignee-id> \
+    [status]
+```
 
-- **Team ID:** `c5744c01-56b9-4f07-a09b-93f4f85c1ab9` (ShoreAgents)
-- **Status IDs:**
-  - Todo: `e7b196a9-7da8-4e9a-b4ea-663ee66d3c87`
-  - In Progress: `a6801fed-42ac-42fe-884e-11f7981c81e3`
-  - Done: `400ecb39-ce5a-44b6-b0d8-cb8f524f516e`
+**Example:**
+
+```bash
+node scripts/create-linear-task.js \
+    LINEAR-TASK-CLIENT-TICKETING-COMPLETE.md \
+    TEAM-12345 \
+    USER-67890 \
+    "In Progress"
+```
+
+## What It Does
+
+The script will:
+1. ✅ Read your markdown documentation file
+2. ✅ Extract the title (first # heading)
+3. ✅ Use the full markdown as the task description
+4. ✅ Create a Linear task in your team
+5. ✅ Assign it to Kyle (or whoever you specify)
+6. ✅ Set status to "In Progress" (or your choice)
+7. ✅ Set priority to High
+8. ✅ Return the task URL
+
+## Example Output
+
+```
+🚀 Creating Linear task...
+📝 Title: Client Ticketing System - Complete Implementation
+👤 Assignee ID: USER-67890
+📋 Team ID: TEAM-12345
+
+✅ Linear task created successfully!
+
+📌 ID: PROJ-123
+📝 Title: Client Ticketing System - Complete Implementation
+🔗 URL: https://linear.app/your-team/issue/PROJ-123
+
+✨ Task is ready in Linear!
+```
+
+## For Future Tasks
+
+You can reuse `create-linear-task.js` for any future tasks:
+
+1. Write your documentation in a markdown file
+2. Run the script with your markdown file
+3. Task created in Linear!
+
+**Example for a different task:**
+
+```bash
+node scripts/create-linear-task.js \
+    MY-NEW-FEATURE.md \
+    TEAM-12345 \
+    USER-different-person \
+    "Todo"
+```
 
 ## Troubleshooting
 
-### "LINEAR_API_KEY not found"
-Make sure line 38 of your `.env` file contains:
-```
-LINEAR_API_KEY="lin_api_..."
-```
+### Error: LINEAR_API_KEY not found
+- Check your `.env` file has `LINEAR_API_KEY=...`
+- Make sure the key starts with `lin_api_`
 
-### "jq: command not found"
-Install jq:
-```bash
-brew install jq
-```
+### Error: File not found
+- Make sure your markdown file exists in the project root
+- Use the correct filename with extension (.md)
 
-### "Task created successfully!" but no URL
-Check the Linear workspace at https://linear.app/shoreagents/
+### Error: Invalid team or assignee
+- Double-check your Team ID and User ID in Linear
+- Make sure they're the correct format (TEAM-xxxxx, USER-xxxxx)
 
-## API Reference
+## Files
 
-These scripts use the Linear GraphQL API:
-- **Endpoint:** https://api.linear.app/graphql
-- **Authentication:** Bearer token from `LINEAR_API_KEY`
-- **Mutation:** `issueCreate`
+- `create-linear-task.js` - Main reusable script
+- `create-task-for-kyle.sh` - Quick helper for Kyle
+- `README.md` - This file
 
-For more information, see: https://developers.linear.app/docs/graphql/working-with-the-graphql-api
+## Need Help?
 
+Check the Linear API docs: https://developers.linear.app/docs/graphql/working-with-the-graphql-api

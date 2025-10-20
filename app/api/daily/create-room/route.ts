@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma"
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -68,32 +68,32 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now()
     const roomName = `${roomNamePrefix}-${timestamp}`
 
-    // Set expiration time (1 hour from now)
-    const exp = Math.floor(Date.now() / 1000) + 3600
+    if (!DAILY_API_KEY || !NEXT_PUBLIC_DAILY_DOMAIN) {
+      return NextResponse.json({ error: "Daily.co API keys not configured" }, { status: 500 })
+    }
 
-    // Create room via Daily.co API
-    const response = await fetch("https://api.daily.co/v1/rooms", {
+    // Create a temporary Daily.co room
+    const response = await fetch(`https://api.daily.co/v1/rooms`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.DAILY_API_KEY}`
+        Authorization: `Bearer ${DAILY_API_KEY}`,
       },
       body: JSON.stringify({
-        name: roomName,
+        name: `quick-call-${staffId}-${clientUser.id}-${Date.now()}`,
         properties: {
-          exp: exp,
+          exp: Math.round(Date.now() / 1000) + 60 * 60, // 1 hour expiration
           enable_screenshare: true,
           enable_chat: true,
-          enable_recording: "cloud",
-          max_participants: 2
-        }
-      })
+          max_participants: 2, // 1-on-1 call
+        },
+      }),
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      console.error("Daily.co API error:", error)
-      return NextResponse.json({ error: "Failed to create room" }, { status: 500 })
+      const errorData = await response.json()
+      console.error("Daily.co room creation failed:", errorData)
+      return NextResponse.json({ error: "Failed to create video room" }, { status: 500 })
     }
 
     const room = await response.json()
@@ -179,10 +179,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error creating Daily.co room:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-

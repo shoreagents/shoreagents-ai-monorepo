@@ -38,9 +38,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Add month/year filtering for completed reviews
-    if (month && year && status === "SUBMITTED" && month !== "all" && year !== "all") {
-      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
-      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59)
+    if ((month !== "all" || year !== "all") && status === "SUBMITTED") {
+      const currentYear = new Date().getFullYear()
+      const currentMonth = new Date().getMonth() + 1
+      
+      const filterYear = year && year !== "all" ? parseInt(year) : currentYear
+      const filterMonth = month && month !== "all" ? parseInt(month) : currentMonth
+      
+      const startDate = new Date(filterYear, filterMonth - 1, 1)
+      const endDate = new Date(filterYear, filterMonth, 0, 23, 59, 59)
       
       where.submittedDate = {
         gte: startDate,
