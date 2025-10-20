@@ -619,6 +619,57 @@ function AIAnalysisTab({ candidate }: { candidate: CandidateProfile }) {
 function DISCTab({ candidate }: { candidate: CandidateProfile }) {
   const disc = candidate.assessments.disc
 
+  // Parse the comprehensive assessment into structured sections
+  const parseAssessment = (text: string) => {
+    const sections: { title: string; content: string; icon?: string }[] = []
+    
+    // Extract key sections from the text
+    const coreTraitsMatch = text.match(/CORE TRAITS:([^A-Z]+)/)
+    const culturalStrengthsMatch = text.match(/CULTURAL STRENGTHS:([^A-Z]+)/)
+    const leadershipMatch = text.match(/leadership(?:\s+style)?[:\s]+([^.]+\.)/i)
+    const animalMatch = text.match(/ANIMAL PERSONALITY REASON\s*\(([^)]+)\):([^A-Z]+)/)
+    
+    // Add overview/comprehensive assessment
+    const overviewEnd = text.indexOf('CORE TRAITS')
+    if (overviewEnd > 0) {
+      const overview = text.substring(0, overviewEnd).trim()
+      if (overview.length > 50) {
+        sections.push({
+          title: '📊 Comprehensive Assessment',
+          content: overview,
+        })
+      }
+    }
+    
+    // Add core traits
+    if (coreTraitsMatch) {
+      sections.push({
+        title: '⚡ Core Traits',
+        content: coreTraitsMatch[1].trim(),
+      })
+    }
+    
+    // Add cultural strengths
+    if (culturalStrengthsMatch) {
+      sections.push({
+        title: '🌏 Cultural Strengths',
+        content: culturalStrengthsMatch[1].trim(),
+      })
+    }
+    
+    // Add animal personality
+    if (animalMatch) {
+      sections.push({
+        title: `🦅 Animal Personality: ${animalMatch[1]}`,
+        content: animalMatch[2].trim(),
+      })
+    }
+    
+    return sections
+  }
+
+  const assessmentSections = disc.description ? parseAssessment(disc.description) : []
+
   return (
     <div className="space-y-6">
       {disc.primaryType && (
@@ -627,19 +678,14 @@ function DISCTab({ candidate }: { candidate: CandidateProfile }) {
           <Section title="DISC Personality Profile" icon={Zap}>
             <div className="space-y-6">
               {/* Primary & Secondary Types */}
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="px-8 py-4 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl font-bold text-4xl shadow-lg">
-                    {disc.primaryType}
-                  </div>
-                  {disc.secondaryType && (
-                    <div className="px-6 py-3 bg-gradient-to-br from-gray-600 to-gray-700 text-white rounded-xl font-bold text-2xl shadow-lg">
-                      {disc.secondaryType}
-                    </div>
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="px-8 py-4 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl font-bold text-4xl shadow-lg">
+                  {disc.primaryType}
                 </div>
-                {disc.description && (
-                  <p className="text-gray-700 text-lg leading-relaxed">{disc.description}</p>
+                {disc.secondaryType && (
+                  <div className="px-6 py-3 bg-gradient-to-br from-gray-600 to-gray-700 text-white rounded-xl font-bold text-2xl shadow-lg">
+                    {disc.secondaryType}
+                  </div>
                 )}
               </div>
 
@@ -666,6 +712,31 @@ function DISCTab({ candidate }: { candidate: CandidateProfile }) {
               </div>
             </div>
           </Section>
+
+          {/* Detailed Assessment Sections */}
+          {assessmentSections.length > 0 && (
+            <Section title="AI-Powered Personality Analysis" icon={Brain}>
+              <div className="space-y-4">
+                {assessmentSections.map((section, index) => (
+                  <div key={index} className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200">
+                    <h4 className="font-bold text-gray-900 mb-3 text-base flex items-start gap-2">
+                      <span>{section.title}</span>
+                    </h4>
+                    <p className="text-gray-700 leading-relaxed">{section.content}</p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Full Assessment (if parsing didn't work or user wants to see raw) */}
+          {disc.description && assessmentSections.length === 0 && (
+            <Section title="Comprehensive Analysis" icon={Brain}>
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
+                <p className="text-gray-700 text-base leading-relaxed whitespace-pre-line">{disc.description}</p>
+              </div>
+            </Section>
+          )}
         </>
       )}
 
