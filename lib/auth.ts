@@ -2,7 +2,7 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
+import { supabase } from "@/lib/supabase"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -24,34 +24,63 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Missing credentials")
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email as string,
-          },
-          include: {
-            profile: true,
-          },
+        // 1. Authenticate with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: credentials.email as string,
+          password: credentials.password as string,
         })
 
-        if (!user || !user.passwordHash) {
+        if (authError || !authData.user) {
           throw new Error("Invalid credentials")
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        )
+        const authUserId = authData.user.id
+        const email = authData.user.email!
 
-        if (!isPasswordValid) {
-          throw new Error("Invalid credentials")
+        // 2. Check which table this user belongs to
+        // Try Management User first
+        const managementUser = await prisma.managementUser.findUnique({
+          where: { authUserId }
+        })
+
+        if (managementUser) {
+          return {
+            id: authUserId,
+            email: managementUser.email,
+            name: managementUser.name,
+            role: managementUser.role,
+          }
         }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+        // Try Staff User
+        const staffUser = await prisma.staffUser.findUnique({
+          where: { authUserId }
+        })
+
+        if (staffUser) {
+          return {
+            id: authUserId,
+            email: staffUser.email,
+            name: staffUser.name,
+            role: staffUser.role,
+          }
         }
+
+        // Try Client User
+        const clientUser = await prisma.clientUser.findUnique({
+          where: { authUserId }
+        })
+
+        if (clientUser) {
+          return {
+            id: authUserId,
+            email: clientUser.email,
+            name: clientUser.name,
+            role: "CLIENT",
+          }
+        }
+
+        throw new Error("User not found in any user table")
       },
     }),
   ],

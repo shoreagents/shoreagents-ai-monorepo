@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timePeriod = searchParams.get("period") || "all_time" // this_week, this_month, all_time
 
-    // Get all users with their gamification profiles
-    const users = await prisma.user.findMany({
+    // Get all staff users with their gamification profiles
+    const staffUsers = await prisma.staffUser.findMany({
       where: {
         role: "STAFF", // Only show staff members in leaderboard
       },
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate rankings
-    const rankings = users
+    const rankings = staffUsers
       .map((user) => {
         const avgReviewScore =
           user.reviewsReceived.length > 0

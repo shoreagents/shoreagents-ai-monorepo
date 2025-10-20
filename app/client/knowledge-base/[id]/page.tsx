@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { use, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, FileText, User, Building2, Clock, Edit, Trash2, Save, X } from "lucide-react"
@@ -32,17 +32,21 @@ interface DocumentDetail {
   category: string
   content: string
   uploadedBy: string
-  uploadedByUser: {
+  staffUser?: {
+    id: string
     name: string
+    email: string
     avatar?: string
   }
   size: string
   fileUrl?: string
-  lastUpdated: string
+  updatedAt: string
   createdAt: string
+  source?: string
 }
 
-export default function DocumentDetailPage({ params }: { params: { id: string } }) {
+export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [document, setDocument] = useState<DocumentDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -59,18 +63,19 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     fetchDocument()
-  }, [params.id])
+  }, [id])
 
   const fetchDocument = async () => {
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`)
+      const response = await fetch(`/api/client/documents/${id}`)
       if (!response.ok) throw new Error("Failed to fetch document")
       const data = await response.json()
-      setDocument(data.document)
+      // API returns document directly, not wrapped
+      setDocument(data)
       setEditForm({
-        title: data.document.title,
-        category: data.document.category,
-        content: data.document.content || "",
+        title: data.title,
+        category: data.category,
+        content: data.content || "",
       })
     } catch (error) {
       console.error("Error fetching document:", error)
@@ -87,7 +92,7 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
 
     setSaving(true)
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`, {
+      const response = await fetch(`/api/client/documents/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -108,7 +113,7 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const response = await fetch(`/api/client/documents/${params.id}`, {
+      const response = await fetch(`/api/client/documents/${id}`, {
         method: "DELETE",
       })
 
@@ -268,13 +273,13 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <span className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Last updated: {document.lastUpdated}
+                Last updated: {new Date(document.updatedAt).toLocaleDateString()}
               </span>
               <span className="flex items-center gap-2">
-                {isStaffUpload ? (
+                {isStaffUpload && document.staffUser ? (
                   <>
                     <User className="h-4 w-4" />
-                    Uploaded by: {document.uploadedByUser.name}
+                    Uploaded by: {document.staffUser.name}
                   </>
                 ) : (
                   <>

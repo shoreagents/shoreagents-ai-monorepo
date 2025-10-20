@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { DocumentSourceBadgeLight } from "@/components/ui/document-source-badge"
 
 interface Document {
   id: string
@@ -39,9 +41,11 @@ interface Document {
   lastUpdated: string
   views: number
   isStaffUpload: boolean
+  source: 'ADMIN' | 'STAFF' | 'CLIENT'
 }
 
 export default function KnowledgeBasePage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [documents, setDocuments] = useState<Document[]>([])
@@ -82,7 +86,11 @@ export default function KnowledgeBasePage() {
 
   const handleUpload = async () => {
     if (!newDoc.title || !selectedFile) {
-      alert("Please fill in all required fields and select a file")
+      toast({
+        title: "Missing Information",
+        description: "Please provide a document title and select a file to upload.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -101,30 +109,52 @@ export default function KnowledgeBasePage() {
 
       if (!response.ok) throw new Error("Failed to upload document")
 
+      // Success! Refetch documents
       await fetchDocuments()
+      
+      // Close dialog and reset form
       setShowUploadDialog(false)
       setNewDoc({
         title: "",
         category: "procedure",
       })
       setSelectedFile(null)
-      alert("Document uploaded successfully! Your staff can now access it.")
+      
+      // Show success toast
+      toast({
+        title: "✅ Document Uploaded Successfully!",
+        description: `"${newDoc.title}" has been shared with your offshore staff. They can now access it in their AI Assistant.`,
+      })
     } catch (error) {
       console.error("Error uploading document:", error)
-      alert("Failed to upload document")
+      toast({
+        title: "Upload Failed",
+        description: "There was an error uploading your document. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setUploading(false)
     }
   }
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesCategory = selectedCategory === "all" || doc.category === selectedCategory
-    const matchesSearch =
-      searchQuery === "" ||
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  const filteredDocuments = documents
+    .filter((doc) => {
+      const matchesCategory = selectedCategory === "all" || doc.category === selectedCategory
+      const matchesSearch =
+        searchQuery === "" ||
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.description.toLowerCase().includes(searchQuery.toLowerCase())
+      return matchesCategory && matchesSearch
+    })
+    .sort((a, b) => {
+      // Sort: Client docs FIRST (isStaffUpload: false), then Staff docs (isStaffUpload: true)
+      if (a.isStaffUpload === b.isStaffUpload) {
+        // If same type, sort by date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      // Client docs (false) come before Staff docs (true)
+      return a.isStaffUpload ? 1 : -1
+    })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -197,22 +227,23 @@ export default function KnowledgeBasePage() {
                   <div key={doc.id} className="block p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
-                        <div className={`p-3 rounded-lg ${doc.isStaffUpload ? "bg-purple-50" : "bg-blue-50"}`}>
-                          <FileText className={`h-6 w-6 ${doc.isStaffUpload ? "text-purple-600" : "text-blue-600"}`} />
+                        <div className={`p-3 rounded-lg ${
+                          doc.source === 'ADMIN' ? 'bg-red-50' :
+                          doc.source === 'STAFF' ? 'bg-purple-50' : 'bg-blue-50'
+                        }`}>
+                          <FileText className={`h-6 w-6 ${
+                            doc.source === 'ADMIN' ? 'text-red-600' :
+                            doc.source === 'STAFF' ? 'text-purple-600' : 'text-blue-600'
+                          }`} />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <h3 className="text-lg font-semibold text-gray-900">{doc.title}</h3>
-                            {doc.isStaffUpload ? (
-                              <Badge className="bg-purple-100 text-purple-800 border-purple-300">
-                                <User className="h-3 w-3 mr-1" />
-                                Staff Upload
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-                                <Building2 className="h-3 w-3 mr-1" />
-                                Company Doc
-                              </Badge>
+                            <DocumentSourceBadgeLight source={doc.source} />
+                            {doc.source === 'ADMIN' && (
+                              <span className="text-xs text-red-600 font-medium px-2 py-1 bg-red-50 rounded border border-red-200">
+                                Shared by Admin
+                              </span>
                             )}
                             <Badge className="bg-gray-100 text-gray-800 border-gray-300">
                               {doc.category.toUpperCase()}
@@ -225,10 +256,15 @@ export default function KnowledgeBasePage() {
                               Updated {doc.lastUpdated}
                             </span>
                             <span className="flex items-center gap-1">
-                              {doc.isStaffUpload ? (
+                              {doc.source === 'ADMIN' ? (
                                 <>
                                   <User className="h-4 w-4" />
-                                  {doc.uploadedByUser.name}
+                                  {doc.uploadedBy}
+                                </>
+                              ) : doc.source === 'STAFF' ? (
+                                <>
+                                  <User className="h-4 w-4" />
+                                  {doc.uploadedByUser?.name || doc.uploadedBy}
                                 </>
                               ) : (
                                 <>
@@ -307,7 +343,15 @@ export default function KnowledgeBasePage() {
                   id="file"
                   type="file"
                   accept=".pdf,.doc,.docx,.txt,.md"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setSelectedFile(file)
+                    // Auto-fill title from filename if title is empty
+                    if (file && !newDoc.title) {
+                      const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "")
+                      setNewDoc({ ...newDoc, title: fileNameWithoutExt })
+                    }
+                  }}
                   className="hidden"
                 />
                 <label htmlFor="file" className="cursor-pointer">

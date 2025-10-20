@@ -11,17 +11,17 @@ export async function DELETE(
   try {
     const session = await auth()
     
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    // Get staff user first
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!staffUser) {
+      return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
     // Get document
@@ -34,7 +34,7 @@ export async function DELETE(
     }
 
     // Verify ownership
-    if (document.userId !== user.id) {
+    if (document.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+// Function to emit performance updates (will be set by server.js)
+declare global {
+  var emitPerformanceUpdate: ((data: any) => void) | undefined
+}
+
 // GET /api/performance - Get performance metrics for current user
 export async function GET(request: NextRequest) {
   try {
@@ -11,13 +16,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     // Get metrics for the last 7 days
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
     const metrics = await prisma.performanceMetric.findMany({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: sevenDaysAgo,
         },
@@ -33,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const todayMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -41,16 +55,27 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Format metrics for frontend
+    // Calculate total screenshot count (sum of all clipboardActions)
+    const allMetrics = await prisma.performanceMetric.findMany({
+      where: {
+        staffUserId: staffUser.id
+      },
+      select: {
+        clipboardActions: true
+      }
+    })
+    const totalScreenshotCount = allMetrics.reduce((sum, m) => sum + m.clipboardActions, 0)
+
+    // Format metrics for frontend (convert minutes to seconds for consistent display)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
       date: m.date.toISOString(),
       mouseMovements: m.mouseMovements,
       mouseClicks: m.mouseClicks,
       keystrokes: m.keystrokes,
-      activeTime: m.activeTime,
-      idleTime: m.idleTime,
-      screenTime: m.screenTime,
+      activeTime: m.activeTime * 60, // Convert minutes to seconds
+      idleTime: m.idleTime * 60, // Convert minutes to seconds
+      screenTime: m.screenTime * 60, // Convert minutes to seconds
       downloads: m.downloads,
       uploads: m.uploads,
       bandwidth: m.bandwidth,
@@ -59,8 +84,9 @@ export async function GET(request: NextRequest) {
       urlsVisited: m.urlsVisited,
       tabsSwitched: m.tabsSwitched,
       productivityScore: m.productivityScore,
-      screenshotCount: 0, // Not in schema, set to 0
-      applicationsUsed: [], // Not in schema, set to empty array
+      screenshotCount: m.clipboardActions, // Use clipboardActions as screenshot count
+      applicationsUsed: (m as any).applicationsUsed || [], // Get from database
+      visitedUrls: (m as any).visitedUrls || [], // Get from database
     }))
 
     const formattedToday = todayMetric
@@ -70,9 +96,9 @@ export async function GET(request: NextRequest) {
           mouseMovements: todayMetric.mouseMovements,
           mouseClicks: todayMetric.mouseClicks,
           keystrokes: todayMetric.keystrokes,
-          activeTime: todayMetric.activeTime,
-          idleTime: todayMetric.idleTime,
-          screenTime: todayMetric.screenTime,
+          activeTime: todayMetric.activeTime * 60, // Convert minutes to seconds
+          idleTime: todayMetric.idleTime * 60, // Convert minutes to seconds
+          screenTime: todayMetric.screenTime * 60, // Convert minutes to seconds
           downloads: todayMetric.downloads,
           uploads: todayMetric.uploads,
           bandwidth: todayMetric.bandwidth,
@@ -81,14 +107,16 @@ export async function GET(request: NextRequest) {
           urlsVisited: todayMetric.urlsVisited,
           tabsSwitched: todayMetric.tabsSwitched,
           productivityScore: todayMetric.productivityScore,
-          screenshotCount: 0,
-          applicationsUsed: [],
+          screenshotCount: todayMetric.clipboardActions, // Use clipboardActions as screenshot count
+          applicationsUsed: (todayMetric as any).applicationsUsed || [], // Get from database
+          visitedUrls: (todayMetric as any).visitedUrls || [], // Get from database
         }
       : null
 
     return NextResponse.json({
       metrics: formattedMetrics,
       today: formattedToday,
+      totalScreenshots: totalScreenshotCount,
     })
   } catch (error) {
     console.error("Error fetching performance metrics:", error)
@@ -108,6 +136,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const {
       mouseMovements,
@@ -124,6 +161,8 @@ export async function POST(request: NextRequest) {
       urlsVisited,
       tabsSwitched,
       productivityScore,
+      applicationsUsed,
+      visitedUrls,
     } = body
 
     // Check if there's already a metric for today
@@ -134,7 +173,7 @@ export async function POST(request: NextRequest) {
 
     const existingMetric = await prisma.performanceMetric.findFirst({
       where: {
-        userId: session.user.id,
+        staffUserId: staffUser.id,
         date: {
           gte: today,
           lt: tomorrow,
@@ -158,18 +197,21 @@ export async function POST(request: NextRequest) {
           downloads: downloads ?? existingMetric.downloads,
           uploads: uploads ?? existingMetric.uploads,
           bandwidth: bandwidth ?? existingMetric.bandwidth,
-          clipboardActions: clipboardActions ?? existingMetric.clipboardActions,
+          // NEVER overwrite clipboardActions from sync - it's managed by screenshot service
+          clipboardActions: existingMetric.clipboardActions,
           filesAccessed: filesAccessed ?? existingMetric.filesAccessed,
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,
           productivityScore: productivityScore ?? existingMetric.productivityScore,
-        },
+          ...(applicationsUsed !== undefined && { applicationsUsed }),
+          ...(visitedUrls !== undefined && { visitedUrls }),
+        } as any,
       })
     } else {
       // Create new metric
       metric = await prisma.performanceMetric.create({
         data: {
-          userId: session.user.id,
+          staffUserId: staffUser.id,
           mouseMovements: mouseMovements || 0,
           mouseClicks: mouseClicks || 0,
           keystrokes: keystrokes || 0,
@@ -184,8 +226,26 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited || 0,
           tabsSwitched: tabsSwitched || 0,
           productivityScore: productivityScore || 0,
-        },
+          applicationsUsed: applicationsUsed || [],
+          visitedUrls: visitedUrls || [],
+        } as any,
       })
+    }
+
+    // Emit real-time update to monitoring clients
+    if (global.emitPerformanceUpdate) {
+      try {
+        global.emitPerformanceUpdate({
+          staffUserId: staffUser.id,
+          type: 'latest',
+          metrics: metric,
+          isActive: true,
+          lastActivity: new Date().toISOString()
+        })
+        console.log('[Performance API] Emitted real-time update for staff user:', staffUser.id)
+      } catch (wsError) {
+        console.error('[Performance API] Error emitting real-time update:', wsError)
+      }
     }
 
     return NextResponse.json({ success: true, metric }, { status: 201 })

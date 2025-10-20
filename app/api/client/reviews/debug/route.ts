@@ -1,0 +1,64 @@
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+// GET /api/client/reviews/debug - Debug endpoint to check data
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "No session" }, { status: 401 })
+    }
+
+    // Check client user
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ 
+        error: "Client user not found",
+        email: session.user.email 
+      }, { status: 404 })
+    }
+
+    // Check staff users
+    const allStaffUsers = await prisma.staffUser.findMany({
+      where: {
+        companyId: clientUser.company.id
+      },
+      include: {
+        profile: true
+      }
+    })
+
+    // Filter to only include staff with startDate
+    const staffUsers = allStaffUsers.filter(staff => staff.profile?.startDate)
+
+    return NextResponse.json({
+      success: true,
+      clientUser: {
+        email: clientUser.email,
+        company: clientUser.company?.companyName,
+        companyId: clientUser.company?.id
+      },
+      staffCount: staffUsers.length,
+      staffUsers: staffUsers.map(staff => ({
+        name: staff.name,
+        email: staff.email,
+        startDate: staff.profile?.startDate,
+        companyId: staff.companyId
+      }))
+    })
+
+  } catch (error) {
+    console.error("❌ Debug error:", error)
+    return NextResponse.json({
+      error: "Debug failed",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
+  }
+}

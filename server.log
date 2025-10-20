@@ -1,0 +1,242 @@
+
+> my-v0-project@0.1.0 dev
+> cross-env NODE_ENV=development node server.js
+
+> Ready on http://localhost:3000
+> WebSocket server ready on ws://localhost:3000/api/socketio
+[Break Auto-Start] Background job started
+[WebSocket] Client connected: hpFE0OgswW5U__FyAAAC
+[WebSocket] Client connected: lbHoTXgs5Twt-yycAAAD
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] Client connected: hIXtW-VPlm8-hhItAAAH
+[WebSocket] Client connected: OzZCvZ9886s3H9d7AAAI
+[WebSocket] Client connected: KMqlBpHd9H7_2WQ6AAAJ
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] User identified: Stephen Atcheler
+[WebSocket] User identified: Stephen Atcheler
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1363ms (582 modules)
+ GET /api/auth/session 200 in 2011ms
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+ GET /api/auth/session 200 in 451ms
+ GET /api/auth/session 200 in 34ms
+ GET /api/auth/session 200 in 26ms
+ GET /api/auth/session 200 in 16ms
+ GET /api/auth/session 200 in 47ms
+ GET /api/auth/session 200 in 22ms
+[Break Auto-Start] Checking 4 active sessions
+ ○ Compiling /admin/tickets ...
+
+[2m[332.31ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[  0.03ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 48.88ms][22m  [2m ↳ [22mSetup compiler
+[2m[  0.26ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
+[2m[ 48.61ms][22m    [2m ↳ [22mCreate compiler
+[2m[  0.06ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 26.48ms][22m  [2m ↳ [22mSetup scanner
+[2m[162.91ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 30.69ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 53.51ms][22m  [2m ↳ [22mBuild utilities
+[2m[  6.44ms][22m  [2m ↳ [22mTransform Tailwind CSS AST into PostCSS AST
+[2m[  2.99ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled /admin/tickets in 3.1s (1312 modules)
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /admin/tickets 200 in 6527ms
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client connected: 6y2zGUrjT9NuVPcrAAAL
+
+[2m[35.98ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[ 0.01ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 0.08ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[19.67ms][22m  [2m ↳ [22mScan for candidates
+[2m[11.03ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 1.25ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 3.80ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ○ Compiling /api/admin/tickets ...
+ ✓ Compiled /api/admin/tickets in 586ms (1305 modules)
+ GET /api/auth/session 200 in 643ms
+[WebSocket] Client disconnected: 6y2zGUrjT9NuVPcrAAAL
+[WebSocket] Client connected: t9hDYm476TqU9hnjAAAN
+[WebSocket] User identified: Stephen Atcheler
+ GET /api/auth/session 200 in 35ms
+ GET /api/auth/session 200 in 18ms
+ GET /api/auth/session 200 in 32ms
+ GET /api/auth/session 200 in 22ms
+ GET /api/auth/session 200 in 16ms
+ GET /api/auth/csrf 200 in 11ms
+ POST /api/auth/signout 200 in 9ms
+ GET /api/auth/session 200 in 6ms
+ GET /api/auth/session 200 in 15ms
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client connected: qFzQvA9zTFBPsi5tAAAQ
+[WebSocket] Client connected: JvZn00KHdSTAM8evAAAR
+ ✓ Compiled /login in 379ms (1299 modules)
+ GET /api/auth/session 200 in 366ms
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client connected: Pk8ZiCayB2ySxsAlAAAT
+ GET /admin/tickets 200 in 1762ms
+ GET /api/admin/tickets 200 in 2530ms
+[WebSocket] Client disconnected: Stephen Atcheler
+ GET /login 200 in 509ms
+ GET /api/auth/session 200 in 24ms
+[WebSocket] Client disconnected: Stephen Atcheler
+[WebSocket] Client connected: BA0qxlnUnlIj_UFmAAAV
+[WebSocket] Client connected: 5cSiDt3Py9X7VSHQAAAX
+ GET /api/auth/session 200 in 15ms
+ GET /api/auth/session 200 in 6ms
+ GET /api/auth/session 200 in 5ms
+ GET /api/auth/session 200 in 6ms
+ GET /api/auth/session 200 in 6ms
+ GET /api/auth/session 200 in 6ms
+ ✓ Compiled /login/client in 497ms (1306 modules)
+ GET /login/client 200 in 536ms
+ GET /api/auth/providers 200 in 59ms
+ GET /api/auth/csrf 200 in 8ms
+ POST /api/auth/callback/credentials? 200 in 5370ms
+ GET /api/auth/session 200 in 20ms
+[WebSocket] Client disconnected: 5cSiDt3Py9X7VSHQAAAX
+[WebSocket] Client connected: 14bvRWfnVkz-S_S2AAAZ
+[WebSocket] User identified: Steve Atcheler
+ ○ Compiling /client ...
+ ✓ Compiled /client in 635ms (1360 modules)
+ GET /client 200 in 2724ms
+ GET /client 200 in 4187ms
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+ ○ Compiling /client/staff ...
+ ✓ Compiled /client/staff in 1452ms (1373 modules)
+ GET /client/staff 200 in 1801ms
+ ○ Compiling /api/client/staff ...
+ ✓ Compiled /api/client/staff in 753ms (1377 modules)
+ GET /api/client/staff 200 in 5225ms
+[WebSocket] Client disconnected: Steve Atcheler
+ GET /api/client/staff 200 in 2428ms
+
+[2m[66.42ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[ 0.09ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 0.12ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[23.03ms][22m  [2m ↳ [22mScan for candidates
+[2m[12.54ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[26.35ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 4.04ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled in 396ms (499 modules)
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /client 200 in 1726ms
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+[Break Auto-Start] Checking 4 active sessions
+ ○ Compiling / ...
+
+[2m[103.17ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[  0.02ms][22m  [2m ↳ [22mQuick bail check
+[2m[  0.10ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 39.01ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 12.51ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 40.61ms][22m  [2m ↳ [22mBuild utilities
+[2m[  7.74ms][22m  [2m ↳ [22mTransform Tailwind CSS AST into PostCSS AST
+[2m[  3.04ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled / in 2.2s (1399 modules)
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET / 200 in 2790ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 759ms (1389 modules)
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /_next/static/chunks/main-app.js?v=1760663442565 404 in 913ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 889ms
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/.next/server/app/login/client/page.js'
+    at async Server.<anonymous> (server.js:26:7) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/.next/server/app/login/client/page.js',
+  page: '/login/client'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1079ms (1718 modules)
+ GET /login/client 500 in 1425ms
+🔥🔥🔥 [ElectronProvider] FILE LOADED 🔥🔥🔥
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /login/client 200 in 80ms
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /_next/static/chunks/main-app.js?v=1760663445745 404 in 183ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 180ms
+ GET /_next/static/chunks/app/login/client/page.js 404 in 178ms
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /login/client? 200 in 110ms
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+[ElectronProvider] 🚀 Component mounted!
+[ElectronProvider] 📊 Render state: { isElectron: false, consentGiven: null }
+ GET /_next/static/chunks/app-pages-internals.js 404 in 202ms
+ GET /_next/static/chunks/app/login/client/page.js 404 in 201ms
+ GET /_next/static/chunks/main-app.js?v=1760663463382 404 in 209ms
+[Break Auto-Start] Checking 4 active sessions
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 537ms (988 modules)
+ GET /api/auth/session 200 in 764ms
+ ⨯ Failed to generate static paths for /api/auth/[...nextauth]:
+[Error: Cannot find module './vendor-chunks/next-auth.js'
+Require stack:
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/.next/server/webpack-runtime.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/.next/server/app/api/auth/[...nextauth]/route.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/node_modules/next/dist/server/require.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/node_modules/next/dist/server/load-components.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/node_modules/next/dist/build/utils.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/node_modules/next/dist/server/dev/static-paths-worker.js
+- /Users/stephenatcheler/Desktop/Electron - Staff/gamified-dashboard (1)/node_modules/next/dist/compiled/jest-worker/processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Break Auto-Start] Checking 4 active sessions

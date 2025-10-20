@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// PUT /api/breaks/[id] - End a break
-export async function PUT(
+// PUT & PATCH /api/breaks/[id] - End a break
+async function endBreak(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  params: Promise<{ id: string }>
 ) {
   try {
     const session = await auth()
@@ -14,7 +14,20 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the StaffUser record using authUserId
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
+
     const { id: breakId } = await params
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
+    }
 
     // Find the break
     const existingBreak = await prisma.break.findUnique({
@@ -25,7 +38,7 @@ export async function PUT(
       return NextResponse.json({ error: "Break not found" }, { status: 404 })
     }
 
-    if (existingBreak.userId !== session.user.id) {
+    if (existingBreak.staffUserId !== staffUser.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -38,7 +51,12 @@ export async function PUT(
 
     const endTime = new Date()
     const startTime = existingBreak.actualStart || new Date()
-    const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 60000) // minutes
+    
+    // Calculate total elapsed time minus paused duration
+    const totalElapsedMs = endTime.getTime() - startTime.getTime()
+    const pausedDurationMs = (existingBreak.pausedduration || 0) * 1000 // Convert seconds to ms
+    const actualBreakDurationMs = totalElapsedMs - pausedDurationMs
+    const duration = Math.floor(actualBreakDurationMs / 60000) // minutes
 
     // Update the break with end time and duration
     const updatedBreak = await prisma.break.update({
@@ -68,5 +86,20 @@ export async function PUT(
       { status: 500 }
     )
   }
+}
+
+// Export both PUT and PATCH
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return endBreak(request, params)
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return endBreak(request, params)
 }
 

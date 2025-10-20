@@ -10,6 +10,7 @@ import {
 import { useRef, useEffect, useState } from "react"
 import ReactMarkdown from 'react-markdown'
 import DocumentUpload from "./document-upload"
+import { DocumentSourceBadge } from "@/components/ui/document-source-badge"
 
 type Message = {
   id: string
@@ -21,19 +22,44 @@ type Message = {
 type Document = {
   id: string
   title: string
-  category: "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO"
+  category: "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO" | string  // Allow any string as fallback
   uploadedBy: string
   createdAt: string
   size: string
   fileUrl: string | null
+  source?: string  // Add source field
 }
 
-const categoryConfig = {
+type Task = {
+  id: string
+  title: string
+  description: string | null
+  status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "FOR_REVIEW" | "DONE"
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+  deadline: string | null
+  tags: string[]
+  createdAt: string
+  company?: {
+    id: string
+    companyName: string
+  }
+  clientUser?: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+const categoryConfig: Record<string, { label: string; color: string; icon: any }> = {
   CLIENT: { label: "Client Docs", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: Building2 },
   TRAINING: { label: "Training", color: "bg-purple-500/20 text-purple-400 ring-purple-500/30", icon: GraduationCap },
   PROCEDURE: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },
+  PROCEDURES: { label: "Procedures", color: "bg-emerald-500/20 text-emerald-400 ring-emerald-500/30", icon: FileCheck },  // Alias
   CULTURE: { label: "Culture", color: "bg-pink-500/20 text-pink-400 ring-pink-500/30", icon: Users },
   SEO: { label: "SEO", color: "bg-amber-500/20 text-amber-400 ring-amber-500/30", icon: TrendingUp },
+  OTHER: { label: "Other", color: "bg-gray-500/20 text-gray-400 ring-gray-500/30", icon: FileText },
+  // Default fallback
+  DEFAULT: { label: "Document", color: "bg-blue-500/20 text-blue-400 ring-blue-500/30", icon: FileText },
 }
 
 export default function AIChatAssistant() {
@@ -44,7 +70,9 @@ export default function AIChatAssistant() {
   const [searchDocs, setSearchDocs] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [documents, setDocuments] = useState<Document[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [loadingDocs, setLoadingDocs] = useState(true)
+  const [loadingTasks, setLoadingTasks] = useState(true)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showMentions, setShowMentions] = useState(false)
@@ -85,41 +113,72 @@ export default function AIChatAssistant() {
     setMentionQuery("")
   }
 
-  // Insert document mention
-  const insertMention = (doc: Document) => {
+  // Insert document or task mention
+  const insertMention = (item: Document | Task) => {
     const beforeMention = input.substring(0, mentionStartPos)
     const afterMention = input.substring(inputRef.current?.selectionStart || input.length)
-    const newValue = `${beforeMention}@${doc.title} ${afterMention}`
+    const newValue = `${beforeMention}@${item.title} ${afterMention}`
     setInput(newValue)
     setShowMentions(false)
     setMentionQuery("")
     inputRef.current?.focus()
   }
 
-  // Filter documents based on mention query
-  const mentionSuggestions = showMentions
+  // Special "All Tasks" trigger
+  const allTasksTrigger = {
+    id: '__all_tasks__',
+    title: 'All My Tasks',
+    isSpecial: true,
+  }
+  
+  // Filter documents and tasks based on mention query
+  const documentSuggestions = showMentions
     ? documents.filter(doc => 
         doc.title.toLowerCase().includes(mentionQuery) ||
         doc.category.toLowerCase().includes(mentionQuery)
-      ).slice(0, 5)
+      ).slice(0, 3)
     : []
+  
+  const taskSuggestions = showMentions
+    ? tasks.filter(task => 
+        task.title.toLowerCase().includes(mentionQuery) ||
+        task.status.toLowerCase().includes(mentionQuery) ||
+        task.tags.some(tag => tag.toLowerCase().includes(mentionQuery))
+      ).slice(0, 3)
+    : []
+  
+  // Show "All Tasks" option if query matches "all", "tasks", or is empty
+  const showAllTasksOption = showMentions && (
+    mentionQuery === '' || 
+    'all'.includes(mentionQuery) || 
+    'tasks'.includes(mentionQuery) ||
+    'my'.includes(mentionQuery)
+  )
+  
+  const mentionSuggestions = [
+    ...(showAllTasksOption ? [allTasksTrigger] : []),
+    ...documentSuggestions,
+    ...taskSuggestions
+  ]
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
-  // Fetch documents on mount
+  // Fetch documents and tasks on mount
   useEffect(() => {
     fetchDocuments()
+    fetchTasks()
   }, [])
 
   const fetchDocuments = async () => {
     setLoadingDocs(true)
     try {
-      // Fetch both staff and client documents
-      const [staffResponse, clientResponse] = await Promise.all([
-        fetch('/api/documents'),
-        fetch('/api/client/documents')
+      // Fetch from all three sources: staff, client, and admin
+      const [staffResponse, clientResponse, adminResponse] = await Promise.all([
+        fetch('/api/documents'),        // Staff's own + shared admin docs
+        fetch('/api/client/documents'),  // Client docs visible to this staff
+        fetch('/api/admin/documents')    // Admin docs (if any shared)
       ])
       
       let allDocuments: any[] = []
@@ -139,22 +198,62 @@ export default function AIChatAssistant() {
         const clientData = await clientResponse.json()
         const clientDocs = (clientData.documents || []).map((doc: any) => ({
           ...doc,
-          source: doc.isStaffUpload ? 'STAFF' : 'CLIENT'  // Map from client API format
+          source: doc.source || (doc.isStaffUpload ? 'STAFF' : 'CLIENT')  // Map from client API format
         }))
         allDocuments = [...allDocuments, ...clientDocs]
       }
       
-      // Deduplicate by ID (in case same doc appears in both)
+      // Add admin documents
+      if (adminResponse.ok) {
+        const adminData = await adminResponse.json()
+        const adminDocs = (Array.isArray(adminData) ? adminData : []).map((doc: any) => ({
+          ...doc,
+          source: doc.source || 'ADMIN'  // Ensure source field exists
+        }))
+        allDocuments = [...allDocuments, ...adminDocs]
+      }
+      
+      // Deduplicate by ID (in case same doc appears in multiple sources)
       const uniqueDocs = Array.from(
         new Map(allDocuments.map(doc => [doc.id, doc])).values()
       )
       
-      console.log(`✅ Fetched ${uniqueDocs.length} total documents (staff + client)`)
-      setDocuments(uniqueDocs)
+      // Sort: Admin docs FIRST, then Staff docs, then Client docs
+      const sortedDocs = uniqueDocs.sort((a, b) => {
+        if (a.source === b.source) {
+          // If same type, sort by date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        }
+        // Priority: ADMIN > STAFF > CLIENT
+        const sourcePriority: Record<string, number> = { ADMIN: 0, STAFF: 1, CLIENT: 2 }
+        return (sourcePriority[a.source] || 99) - (sourcePriority[b.source] || 99)
+      })
+      
+      console.log(`✅ Fetched ${sortedDocs.length} total documents (admin + staff + client)`)
+      setDocuments(sortedDocs)
     } catch (error) {
       console.error('Error fetching documents:', error)
     } finally {
       setLoadingDocs(false)
+    }
+  }
+
+  const fetchTasks = async () => {
+    setLoadingTasks(true)
+    try {
+      const response = await fetch('/api/tasks')
+      if (response.ok) {
+        const data = await response.json()
+        const fetchedTasks = data.tasks || []
+        console.log(`✅ Fetched ${fetchedTasks.length} tasks for staff user`)
+        setTasks(fetchedTasks)
+      } else {
+        console.error('Failed to fetch tasks:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+    } finally {
+      setLoadingTasks(false)
     }
   }
 
@@ -194,14 +293,40 @@ export default function AIChatAssistant() {
     setInput("")
 
     try {
-      // Extract document references from @mentions (e.g., @SEO_Training or @doc:id)
+      // Extract document and task references from @mentions
       const documentIds: string[] = []
+      const taskIds: string[] = []
       const mentionPattern = /@(\S+)/g
       const mentions = text.match(mentionPattern)
       
-      if (mentions) {
+      console.log('🔍 Message text:', text)
+      console.log('🔍 Mentions found:', mentions)
+      console.log('🔍 Total tasks available:', tasks.length)
+      
+      // Check if "All My Tasks" was mentioned (multiple variations)
+      const lowerText = text.toLowerCase()
+      const hasAllTasksMention = (
+        (lowerText.includes('@all') && lowerText.includes('tasks')) ||
+        lowerText.includes('@all my tasks') ||
+        lowerText.includes('all my tasks') ||
+        lowerText.includes('all tasks')
+      )
+      
+      console.log('🔍 Has all tasks mention?', hasAllTasksMention)
+      
+      if (hasAllTasksMention) {
+        // Add ALL task IDs
+        tasks.forEach(task => {
+          if (!taskIds.includes(task.id)) {
+            taskIds.push(task.id)
+          }
+        })
+        console.log(`📋✅ Referencing ALL ${tasks.length} tasks for AI context`)
+        console.log(`📋 Task IDs being sent:`, taskIds.slice(0, 3), '...')
+      } else if (mentions) {
         mentions.forEach(mention => {
           const searchTerm = mention.slice(1).toLowerCase()
+          
           // Find documents that match the mention
           const matchedDocs = documents.filter(doc => 
             doc.title.toLowerCase().includes(searchTerm) ||
@@ -210,6 +335,17 @@ export default function AIChatAssistant() {
           matchedDocs.forEach(doc => {
             if (!documentIds.includes(doc.id)) {
               documentIds.push(doc.id)
+            }
+          })
+          
+          // Find tasks that match the mention
+          const matchedTasks = tasks.filter(task => 
+            task.title.toLowerCase().includes(searchTerm) ||
+            task.status.toLowerCase() === searchTerm
+          )
+          matchedTasks.forEach(task => {
+            if (!taskIds.includes(task.id)) {
+              taskIds.push(task.id)
             }
           })
         })
@@ -225,6 +361,7 @@ export default function AIChatAssistant() {
             content: m.content,
           })),
           documentIds: documentIds.length > 0 ? documentIds : undefined,
+          taskIds: taskIds.length > 0 ? taskIds : undefined,
         }),
       })
 
@@ -459,38 +596,75 @@ export default function AIChatAssistant() {
           {showMentions && mentionSuggestions.length > 0 && (
             <div className="absolute bottom-full left-4 right-4 mb-2 rounded-xl bg-slate-800 p-2 shadow-xl ring-1 ring-white/20">
               <div className="mb-2 px-3 py-1 text-xs text-slate-400">
-                Select document to mention:
+                Select document or task to mention:
               </div>
               <div className="max-h-64 space-y-1 overflow-y-auto">
-                {mentionSuggestions.map((doc) => (
-                  <button
-                    key={doc.id}
-                    type="button"
-                    onClick={() => insertMention(doc)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all hover:bg-slate-700/50"
-                  >
-                    <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-medium text-white">
-                          {doc.title}
+                {mentionSuggestions.map((item) => {
+                  // Check if it's the special "All Tasks" trigger
+                  const isSpecial = 'isSpecial' in item && item.isSpecial
+                  // Check if it's a task or document
+                  const isTask = 'status' in item && 'priority' in item
+                  const isDoc = 'category' in item && 'size' in item
+                  
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => insertMention(item)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all ${
+                        isSpecial 
+                          ? 'bg-gradient-to-r from-emerald-500/10 to-blue-500/10 ring-1 ring-emerald-500/30 hover:from-emerald-500/20 hover:to-blue-500/20' 
+                          : 'hover:bg-slate-700/50'
+                      }`}
+                    >
+                      {isSpecial ? (
+                        <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
+                          <Briefcase className="h-4 w-4 text-emerald-400" />
                         </div>
-                        {doc.source === 'CLIENT' ? (
-                          <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                            Client
-                          </span>
-                        ) : (
-                          <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                            Staff
-                          </span>
-                        )}
+                      ) : isTask ? (
+                        <Briefcase className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                      ) : (
+                        <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+                      )}
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="truncate text-sm font-medium text-white">
+                            {isSpecial ? '📋 ' : ''}{item.title}
+                          </div>
+                          {isSpecial ? (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300">
+                              {tasks.length} tasks
+                            </span>
+                          ) : isTask ? (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              (item as Task).status === 'DONE' ? 'bg-emerald-500/20 text-emerald-300' :
+                              (item as Task).status === 'IN_PROGRESS' ? 'bg-amber-500/20 text-amber-300' :
+                              (item as Task).status === 'FOR_REVIEW' ? 'bg-purple-500/20 text-purple-300' :
+                              'bg-slate-500/20 text-slate-300'
+                            }`}>
+                              {(item as Task).status.replace('_', ' ')}
+                            </span>
+                          ) : (
+                            <DocumentSourceBadge source={(item as Document).source as 'ADMIN' | 'STAFF' | 'CLIENT'} />
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {isSpecial ? (
+                            'Get a report of all your tasks'
+                          ) : isTask ? (
+                            <>
+                              Priority: {(item as Task).priority} • {(item as Task).tags.join(', ') || 'No tags'}
+                            </>
+                          ) : (
+                            <>
+                              {(item as Document).category} • {(item as Document).size}
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-400">
-                        {doc.category} • {doc.size}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -502,7 +676,7 @@ export default function AIChatAssistant() {
                 type="text"
                 value={input}
                 onChange={handleInputChange}
-                placeholder="Ask about clients, procedures, training... Use @ to mention documents"
+                placeholder="Ask about clients, procedures, training... Use @ to mention documents or tasks"
                 disabled={isLoading}
                 className="w-full rounded-lg bg-slate-800/50 px-4 py-3 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50 disabled:opacity-50"
               />
@@ -600,7 +774,7 @@ export default function AIChatAssistant() {
                     </div>
                   ) : (
                     filteredDocs.map((doc) => {
-                      const config = categoryConfig[doc.category]
+                      const config = categoryConfig[doc.category] || categoryConfig.DEFAULT
                       const Icon = config.icon
                       const isDeleting = deletingId === doc.id
                       
@@ -618,15 +792,7 @@ export default function AIChatAssistant() {
                                 <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-indigo-400 flex-1 min-w-0">
                                   {doc.title}
                                 </h4>
-                                {doc.source === 'CLIENT' ? (
-                                  <span className="flex-shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 border border-blue-500/30">
-                                    Client
-                                  </span>
-                                ) : (
-                                  <span className="flex-shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 border border-purple-500/30">
-                                    Staff
-                                  </span>
-                                )}
+                                <DocumentSourceBadge source={doc.source as 'ADMIN' | 'STAFF' | 'CLIENT'} />
                               </div>
                               <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                                 <span>{doc.size}</span>
@@ -665,6 +831,78 @@ export default function AIChatAssistant() {
                     })
                   )}
                 </div>
+          </div>
+
+          {/* My Tasks Section */}
+          <div className="rounded-2xl bg-slate-900/50 p-5 ring-1 ring-white/10 backdrop-blur-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-emerald-400" />
+                <h3 className="text-sm font-semibold text-white">My Tasks</h3>
+              </div>
+              <span className="text-xs text-slate-400">{tasks.length} tasks</span>
+            </div>
+            
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+              {loadingTasks ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                </div>
+              ) : tasks.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-slate-400">No tasks assigned yet</p>
+                </div>
+              ) : (
+                tasks.slice(0, 10).map((task) => (
+                  <div
+                    key={task.id}
+                    className="group rounded-lg bg-slate-800/30 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800/50 hover:ring-white/10"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 rounded-lg p-2 ring-1 ${
+                        task.status === 'DONE' ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30' :
+                        task.status === 'IN_PROGRESS' ? 'bg-amber-500/20 text-amber-400 ring-amber-500/30' :
+                        task.status === 'FOR_REVIEW' ? 'bg-purple-500/20 text-purple-400 ring-purple-500/30' :
+                        'bg-slate-500/20 text-slate-400 ring-slate-500/30'
+                      }`}>
+                        <Briefcase className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-emerald-400 flex-1 min-w-0">
+                            {task.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            task.status === 'DONE' ? 'bg-emerald-500/20 text-emerald-300' :
+                            task.status === 'IN_PROGRESS' ? 'bg-amber-500/20 text-amber-300' :
+                            task.status === 'FOR_REVIEW' ? 'bg-purple-500/20 text-purple-300' :
+                            'bg-slate-500/20 text-slate-300'
+                          }`}>
+                            {task.status.replace('_', ' ')}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            task.priority === 'URGENT' ? 'bg-red-500/20 text-red-300' :
+                            task.priority === 'HIGH' ? 'bg-orange-500/20 text-orange-300' :
+                            task.priority === 'MEDIUM' ? 'bg-blue-500/20 text-blue-300' :
+                            'bg-gray-500/20 text-gray-300'
+                          }`}>
+                            {task.priority}
+                          </span>
+                        </div>
+                        {task.deadline && (
+                          <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                            <Clock className="h-3 w-3" />
+                            <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Upload Button */}

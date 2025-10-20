@@ -1,20 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getStaffUser } from "@/lib/auth-helpers"
+import { logClockedOut } from "@/lib/activity-generator"
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get userId from session
-    const userId = "c463d406-e524-4ef6-8ab5-29db543d4cb6" // Maria Santos
+    const staffUser = await getStaffUser()
+
+    if (!staffUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     const body = await request.json()
-    const { notes } = body
+    const { reason, notes } = body
 
-    // Find active time entry
+    if (!reason) {
+      return NextResponse.json({ error: "Clock-out reason is required" }, { status: 400 })
+    }
+
+    // Find active time entry with breaks in one query
     const activeEntry = await prisma.timeEntry.findFirst({
       where: {
-        userId,
+        staffUserId: staffUser.id,
         clockOut: null,
       },
+      include: {
+        breaks: true
+      }
     })
 
     if (!activeEntry) {
@@ -24,10 +36,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for active breaks (breaks that have been STARTED but not ended)
+    const activeBreak = activeEntry.breaks.find(b => b.actualStart && !b.actualEnd)
+    
+    if (activeBreak) {
+      return NextResponse.json({ 
+        error: "Please end your active break before clocking out" 
+      }, { status: 400 })
+    }
+
     const clockOut = new Date()
-    const clockIn = new Date(activeEntry.clockIn)
-    const diffMs = clockOut.getTime() - clockIn.getTime()
-    const totalHours = diffMs / (1000 * 60 * 60) // Convert to hours
+    const totalHours = (clockOut.getTime() - activeEntry.clockIn.getTime()) / (1000 * 60 * 60)
+    
+    // Calculate break time from the breaks we already fetched
+    const breaks = activeEntry.breaks
+    const totalBreakTime = breaks.reduce((sum, b) => sum + (b.duration || 0), 0) / 60
+    const netWorkHours = totalHours - totalBreakTime
 
     // Update time entry
     const timeEntry = await prisma.timeEntry.update({
@@ -36,15 +60,21 @@ export async function POST(request: NextRequest) {
       },
       data: {
         clockOut,
-        totalHours: Number(totalHours.toFixed(2)),
+        totalHours: Number(netWorkHours.toFixed(2)),
+        clockOutReason: reason,
         notes: notes || null,
       },
     })
 
+    // ✨ Auto-generate activity post
+    await logClockedOut(staffUser.id, staffUser.name, netWorkHours)
+
     return NextResponse.json({
       success: true,
       timeEntry,
-      message: `Clocked out successfully. Total hours: ${totalHours.toFixed(2)}`,
+      totalHours: netWorkHours.toFixed(2),
+      breakTime: totalBreakTime.toFixed(2),
+      message: `Clocked out successfully. Net work hours: ${netWorkHours.toFixed(2)}`,
     })
   } catch (error) {
     console.error("Error clocking out:", error)

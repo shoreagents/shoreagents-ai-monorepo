@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,16 +8,640 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// =====================
-// USER & PROFILE
-// =====================
+model ManagementUser {
+  id               String           @id @default(uuid())
+  authUserId       String           @unique
+  name             String
+  role             ManagementRole   @default(MANAGER)
+  avatar           String?
+  phone            String?
+  department       Department
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  email            String           @unique
+  coverPhoto       String?
+  activityPosts    ActivityPost[]
+  managedCompanies Company[]
+  postComments     PostComment[]
+  postReactions    PostReaction[]
+  ticketResponses  TicketResponse[]
+  tickets          Ticket[]
 
-enum Role {
+  @@map("management_users")
+}
+
+model StaffUser {
+  id                     String                  @id @default(uuid())
+  authUserId             String                  @unique
+  name                   String
+  role                   StaffRole               @default(STAFF)
+  avatar                 String?
+  coverPhoto             String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  email                  String                  @unique
+  companyId              String?
+  activityPosts          ActivityPost[]
+  breaks                 Break[]
+  documents              Document[]
+  gamificationProfile    GamificationProfile?
+  kudosGiven             Kudos[]                 @relation("KudosGiven")
+  kudosReceived          Kudos[]                 @relation("KudosReceived")
+  notifications          Notification[]
+  performanceMetrics     PerformanceMetric[]
+  postComments           PostComment[]
+  postReactions          PostReaction[]
+  reviewsReceived        Review[]
+  onboarding             StaffOnboarding?
+  staff_personal_records staff_personal_records?
+  profile                StaffProfile?
+  company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
+  taskAssignments        TaskAssignment[]
+  legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
+  ticketResponses        TicketResponse[]
+  tickets                Ticket[]
+  timeEntries            TimeEntry[]
+
+  @@map("staff_users")
+}
+
+model StaffProfile {
+  id                 String           @id @default(uuid())
+  staffUserId        String           @unique
+  phone              String?
+  location           String?
+  employmentStatus   EmploymentStatus @default(PROBATION)
+  startDate          DateTime
+  daysEmployed       Int              @default(0)
+  currentRole        String
+  salary             Decimal          @db.Decimal(10, 2)
+  lastPayIncrease    DateTime?
+  lastIncreaseAmount Decimal?         @db.Decimal(10, 2)
+  totalLeave         Int              @default(12)
+  usedLeave          Int              @default(0)
+  vacationUsed       Int              @default(0)
+  sickUsed           Int              @default(0)
+  hmo                Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  civilStatus        String?
+  dateOfBirth        DateTime?
+  gender             String?
+  staffUser          StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  workSchedule       WorkSchedule[]
+
+  @@map("staff_profiles")
+}
+
+model WorkSchedule {
+  id        String       @id @default(uuid())
+  profileId String
+  dayOfWeek String
+  startTime String
+  endTime   String
+  isWorkday Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  profile   StaffProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("work_schedules")
+}
+
+model Task {
+  id            String           @id @default(uuid())
+  staffUserId   String?
+  title         String
+  description   String?
+  status        TaskStatus       @default(TODO)
+  priority      TaskPriority     @default(MEDIUM)
+  source        TaskSource       @default(SELF)
+  deadline      DateTime?
+  completedAt   DateTime?
+  timeSpent     Int?
+  tags          String[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  companyId     String?
+  createdById   String?
+  createdByType CreatorType      @default(STAFF)
+  attachments   String[]         @default([])
+  clientUserId  String?
+  subtasks      Subtask[]
+  assignedStaff TaskAssignment[]
+  responses     TaskResponse[]
+  clientUser    ClientUser?      @relation(fields: [clientUserId], references: [id])
+  company       Company?         @relation(fields: [companyId], references: [id])
+  staffUser     StaffUser?       @relation("LegacyTaskAssignment", fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id          String    @id @default(uuid())
+  taskId      String
+  staffUserId String
+  createdAt   DateTime  @default(now())
+  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, staffUserId])
+  @@map("task_assignments")
+}
+
+model TaskResponse {
+  id            String      @id @default(uuid())
+  taskId        String
+  content       String
+  createdByType CreatorType
+  createdById   String
+  attachments   String[]    @default([])
+  createdAt     DateTime    @default(now())
+  task          Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_responses")
+}
+
+model Subtask {
+  id          String    @id @default(uuid())
+  taskId      String
+  title       String
+  completed   Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("subtasks")
+}
+
+model Break {
+  id             String      @id @default(uuid())
+  staffUserId    String
+  type           BreakType
+  awayReason     AwayReason?
+  scheduledStart String?
+  scheduledEnd   String?
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  duration       Int?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  isLate         Boolean     @default(false)
+  lateBy         Int?
+  timeEntryId    String?
+  staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
+
+  @@map("breaks")
+}
+
+model TimeEntry {
+  id              String          @id @default(uuid())
+  staffUserId     String
+  clockIn         DateTime
+  clockOut        DateTime?
+  totalHours      Decimal?        @db.Decimal(5, 2)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  breaksScheduled Boolean         @default(false)
+  clockOutReason  ClockOutReason?
+  expectedClockIn DateTime?
+  lateBy          Int?
+  wasLate         Boolean         @default(false)
+  breaks          Break[]
+  staffUser       StaffUser       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("time_entries")
+}
+
+model PerformanceMetric {
+  id                String    @id @default(uuid())
+  staffUserId       String
+  date              DateTime  @default(now())
+  mouseMovements    Int       @default(0)
+  mouseClicks       Int       @default(0)
+  keystrokes        Int       @default(0)
+  activeTime        Int       @default(0)
+  idleTime          Int       @default(0)
+  screenTime        Int       @default(0)
+  downloads         Int       @default(0)
+  uploads           Int       @default(0)
+  bandwidth         Int       @default(0)
+  clipboardActions  Int       @default(0)
+  filesAccessed     Int       @default(0)
+  urlsVisited       Int       @default(0)
+  tabsSwitched      Int       @default(0)
+  productivityScore Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("performance_metrics")
+}
+
+model Review {
+  id                 String       @id @default(uuid())
+  staffUserId        String
+  type               ReviewType
+  status             ReviewStatus @default(PENDING)
+  client             String
+  reviewer           String
+  reviewerTitle      String?
+  submittedDate      DateTime?
+  evaluationPeriod   String
+  overallScore       Decimal?     @db.Decimal(5, 2)
+  acknowledgedDate   DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  dueDate            DateTime
+  ratings            Json?
+  performanceLevel   String?
+  strengths          String?
+  improvements       String?
+  additionalComments String?
+  managementNotes    String?
+  reviewedBy         String?
+  reviewedDate       DateTime?
+  staffUser          StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Ticket {
+  id               String           @id @default(uuid())
+  ticketId         String           @unique
+  staffUserId      String?
+  title            String
+  description      String
+  category         TicketCategory
+  priority         TicketPriority   @default(MEDIUM)
+  status           TicketStatus     @default(OPEN)
+  assignedTo       String?
+  resolvedDate     DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  attachments      String[]         @default([])
+  createdByType    String           @default("STAFF")
+  managementUserId String?
+  clientUserId     String?
+  responses        TicketResponse[]
+  clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("tickets")
+}
+
+model TicketResponse {
+  id               String          @id @default(uuid())
+  ticketId         String
+  staffUserId      String?
+  message          String
+  createdAt        DateTime        @default(now())
+  managementUserId String?
+  createdByType    String
+  attachments      String[]        @default([])
+  clientUserId     String?
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_responses")
+}
+
+model ActivityPost {
+  id               String          @id @default(uuid())
+  staffUserId      String?
+  type             PostType
+  content          String
+  achievement      Json?
+  images           String[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  clientUserId     String?
+  taggedUserIds    String[]        @default([])
+  audience         PostAudience?   @default(ALL)
+  managementUserId String?
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_managementuserid_fkey")
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  notifications    Notification[]
+  comments         PostComment[]
+  reactions        PostReaction[]
+
+  @@index([audience])
+  @@index([taggedUserIds], map: "activity_posts_tagged_users_idx", type: Gin)
+  @@index([audience, createdAt(sort: Desc)], map: "idx_posts_audience_created")
+  @@index([taggedUserIds], map: "idx_posts_tagged_users", type: Gin)
+  @@index([type, createdAt(sort: Desc)], map: "idx_posts_type_created")
+  @@map("activity_posts")
+}
+
+model PostReaction {
+  id               String          @id @default(uuid())
+  postId           String
+  staffUserId      String?
+  type             ReactionType
+  createdAt        DateTime        @default(now())
+  clientUserId     String?
+  managementUserId String?
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_managementuserid_fkey")
+  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, staffUserId, type])
+  @@index([postId], map: "idx_reactions_post")
+  @@index([postId, type], map: "idx_reactions_post_type")
+  @@map("post_reactions")
+}
+
+model PostComment {
+  id               String          @id @default(uuid())
+  postId           String
+  staffUserId      String?
+  content          String
+  createdAt        DateTime        @default(now())
+  clientUserId     String?
+  managementUserId String?
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_managementuserid_fkey")
+  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt], map: "idx_comments_post_created")
+  @@map("post_comments")
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId    String
+  type      NotificationType @default(TAG)
+  title     String
+  message   String
+  postId    String?
+  actionUrl String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  post      ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "idx_notifications_post")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
+  @@index([userId, read], map: "idx_notifications_user_read")
+  @@map("notifications")
+}
+
+model GamificationProfile {
+  id               String      @id @default(uuid())
+  staffUserId      String      @unique
+  level            Int         @default(1)
+  points           Int         @default(0)
+  rank             Int?
+  streak           Int         @default(0)
+  tasksCompleted   Int         @default(0)
+  performanceScore Int         @default(0)
+  reviewRating     Decimal?    @db.Decimal(2, 1)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  staffUser        StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  badges           UserBadge[]
+
+  @@map("gamification_profiles")
+}
+
+model UserBadge {
+  id        String              @id @default(uuid())
+  profileId String
+  badgeType BadgeType
+  earnedAt  DateTime            @default(now())
+  profile   GamificationProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, badgeType])
+  @@map("user_badges")
+}
+
+model Kudos {
+  id        String    @id @default(uuid())
+  fromId    String
+  toId      String
+  message   String
+  createdAt DateTime  @default(now())
+  from      StaffUser @relation("KudosGiven", fields: [fromId], references: [id], onDelete: Cascade)
+  to        StaffUser @relation("KudosReceived", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@map("kudos")
+}
+
+model Document {
+  id            String            @id @default(uuid())
+  title         String
+  category      DocumentCategory
+  uploadedBy    String
+  size          String
+  fileUrl       String?
+  content       String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  staffUserId   String
+  source        DocumentSource    @default(STAFF)
+  sharedWithAll Boolean           @default(false)
+  sharedWith    String[]          @default([])
+  comments      DocumentComment[]
+  staffUser     StaffUser         @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model DocumentComment {
+  id         String   @id @default(uuid())
+  documentId String
+  content    String
+  userId     String
+  userType   String
+  userName   String
+  userAvatar String?
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_comments")
+}
+
+model Company {
+  id               String          @id @default(uuid())
+  companyName      String
+  industry         String?
+  location         String?
+  billingEmail     String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  organizationId   String          @unique @default(cuid())
+  logo             String?
+  accountManagerId String?
+  bio              String?
+  contractStart    DateTime?
+  isActive         Boolean         @default(true)
+  phone            String?
+  tradingName      String?
+  website          String?
+  coverPhoto       String?
+  clientUsers      ClientUser[]    @relation("CompanyUsers")
+  accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
+  staffUsers       StaffUser[]     @relation("CompanyStaff")
+  tasks            Task[]
+
+  @@map("company")
+}
+
+model ClientUser {
+  id              String           @id @default(uuid())
+  authUserId      String           @unique
+  name            String
+  role            ClientRole       @default(MANAGER)
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  email           String           @unique
+  companyId       String
+  coverPhoto      String?
+  activityPosts   ActivityPost[]
+  profile         ClientProfile?
+  company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  postComments    PostComment[]
+  postReactions   PostReaction[]
+  tasks           Task[]
+  ticketResponses TicketResponse[]
+  tickets         Ticket[]
+
+  @@map("client_users")
+}
+
+model ClientProfile {
+  id                  String     @id @default(uuid())
+  clientUserId        String     @unique
+  position            String?
+  department          String?
+  directPhone         String?
+  mobilePhone         String?
+  timezone            String?
+  bio                 String?
+  notifyTaskCreate    Boolean    @default(true)
+  notifyTaskComplete  Boolean    @default(true)
+  notifyReviews       Boolean    @default(true)
+  notifyWeeklyReports Boolean    @default(true)
+  tasksCreated        Int        @default(0)
+  reviewsSubmitted    Int        @default(0)
+  lastLoginAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  clientUser          ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@map("client_profiles")
+}
+
+model StaffOnboarding {
+  id                         String           @id @default(uuid())
+  staffUserId                String           @unique
+  sss                        String?
+  tin                        String?
+  philhealthNo               String?
+  pagibigNo                  String?
+  firstName                  String?
+  middleName                 String?
+  lastName                   String?
+  gender                     String?
+  civilStatus                String?
+  dateOfBirth                DateTime?
+  contactNo                  String?
+  email                      String?
+  emergencyContactName       String?
+  emergencyContactNo         String?
+  emergencyRelationship      String?
+  validIdUrl                 String?
+  birthCertUrl               String?
+  nbiClearanceUrl            String?
+  birForm2316Url             String?
+  idPhotoUrl                 String?
+  signatureUrl               String?
+  policeClearanceUrl         String?
+  certificateEmpUrl          String?
+  sssDocUrl                  String?
+  tinDocUrl                  String?
+  philhealthDocUrl           String?
+  pagibigDocUrl              String?
+  personalInfoStatus         OnboardingStatus @default(PENDING)
+  govIdStatus                OnboardingStatus @default(PENDING)
+  documentsStatus            OnboardingStatus @default(PENDING)
+  signatureStatus            OnboardingStatus @default(PENDING)
+  emergencyContactStatus     OnboardingStatus @default(PENDING)
+  personalInfoFeedback       String?
+  govIdFeedback              String?
+  documentsFeedback          String?
+  signatureFeedback          String?
+  emergencyContactFeedback   String?
+  personalInfoVerifiedAt     DateTime?
+  govIdVerifiedAt            DateTime?
+  documentsVerifiedAt        DateTime?
+  signatureVerifiedAt        DateTime?
+  emergencyContactVerifiedAt DateTime?
+  verifiedBy                 String?
+  isComplete                 Boolean          @default(false)
+  completionPercent          Int              @default(0)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_onboarding")
+}
+
+model staff_personal_records {
+  id                    String    @id
+  staffUserId           String    @unique
+  sss                   String?
+  tin                   String?
+  philhealthNo          String?
+  pagibigNo             String?
+  emergencyContactName  String?
+  emergencyContactNo    String?
+  emergencyRelationship String?
+  validIdUrl            String?
+  birthCertUrl          String?
+  nbiClearanceUrl       String?
+  policeClearanceUrl    String?
+  sssDocUrl             String?
+  tinDocUrl             String?
+  philhealthDocUrl      String?
+  pagibigDocUrl         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
+
+enum ManagementRole {
+  ADMIN
+  MANAGER
+}
+
+enum Department {
+  CEO_EXECUTIVE
+  IT_DEPARTMENT
+  HR_DEPARTMENT
+  NURSE_DEPARTMENT
+  RECRUITMENT_DEPARTMENT
+  ACCOUNT_MANAGEMENT
+  FINANCE_DEPARTMENT
+  NERDS_DEPARTMENT
+  OPERATIONS
+}
+
+enum StaffRole {
   STAFF
   TEAM_LEAD
-  MANAGER
-  ADMIN
-  CLIENT
 }
 
 enum EmploymentStatus {
@@ -28,92 +649,6 @@ enum EmploymentStatus {
   REGULAR
   TERMINATED
 }
-
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  role         Role     @default(STAFF)
-  passwordHash String
-  avatar       String?
-  coverPhoto   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  profile              Profile?
-  tasks                Task[]
-  breaks               Break[]
-  timeEntries          TimeEntry[]
-  performanceMetrics   PerformanceMetric[]
-  reviewsReceived      Review[]
-  tickets              Ticket[]
-  ticketResponses      TicketResponse[]
-  activityPosts        ActivityPost[]
-  postReactions        PostReaction[]
-  postComments         PostComment[]
-  gamificationProfile  GamificationProfile?
-  kudosGiven           Kudos[]                 @relation("KudosGiven")
-  kudosReceived        Kudos[]                 @relation("KudosReceived")
-  documents            Document[]
-  staffAssignments     StaffAssignment[]       // Client assignments for offshore staff
-
-  @@map("users")
-}
-
-model Profile {
-  id              String           @id @default(uuid())
-  userId          String           @unique
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phone           String?
-  location        String?
-  client          String?
-  accountManager  String?
-  employmentStatus EmploymentStatus @default(PROBATION)
-  startDate       DateTime
-  daysEmployed    Int              @default(0)
-  currentRole     String
-  salary          Decimal          @db.Decimal(10, 2)
-  lastPayIncrease DateTime?
-  lastIncreaseAmount Decimal?      @db.Decimal(10, 2)
-  
-  // Leave credits
-  totalLeave      Int              @default(12)
-  usedLeave       Int              @default(0)
-  vacationUsed    Int              @default(0)
-  sickUsed        Int              @default(0)
-  
-  // Benefits
-  hmo             Boolean          @default(true)
-  
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  // Relations
-  workSchedule    WorkSchedule[]
-
-  @@map("profiles")
-}
-
-model WorkSchedule {
-  id        String   @id @default(uuid())
-  profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  dayOfWeek String   // "Monday", "Tuesday", etc.
-  startTime String   // "09:00"
-  endTime   String   // "17:00"
-  isWorkday Boolean  @default(true)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("work_schedules")
-}
-
-// =====================
-// TASKS
-// =====================
 
 enum TaskStatus {
   TODO
@@ -136,32 +671,11 @@ enum TaskSource {
   MANAGEMENT
 }
 
-model Task {
-  id          String       @id @default(uuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title       String
-  description String?
-  status      TaskStatus   @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  source      TaskSource   @default(SELF)
-  
-  deadline    DateTime?
-  completedAt DateTime?
-  timeSpent   Int?         // in minutes
-  
-  tags        String[]     // Array of tags
-  
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  @@map("tasks")
+enum CreatorType {
+  STAFF
+  CLIENT
+  ADMIN
 }
-
-// =====================
-// BREAKS
-// =====================
 
 enum BreakType {
   MORNING
@@ -179,151 +693,57 @@ enum AwayReason {
   OTHER
 }
 
-model Break {
-  id          String      @id @default(uuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type        BreakType
-  awayReason  AwayReason?
-  
-  scheduledStart String?  // "10:00"
-  scheduledEnd   String?  // "10:15"
-  
-  actualStart    DateTime?
-  actualEnd      DateTime?
-  duration       Int?      // in minutes
-  
-  notes       String?
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@map("breaks")
+enum ClockOutReason {
+  END_OF_SHIFT
+  EMERGENCY
+  SICK
+  EARLY_LEAVE_APPROVED
+  INTERNET_ISSUE
+  POWER_OUTAGE
+  PERSONAL
+  OTHER
 }
-
-// =====================
-// TIME TRACKING (Clock In/Out)
-// =====================
-
-model TimeEntry {
-  id         String    @id @default(uuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  clockIn    DateTime
-  clockOut   DateTime?
-  
-  totalHours Decimal?  @db.Decimal(5, 2) // Calculated when clocked out
-  notes      String?
-  
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  @@map("time_entries")
-}
-
-// =====================
-// PERFORMANCE
-// =====================
-
-model PerformanceMetric {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  date         DateTime @default(now())
-  
-  // Input tracking
-  mouseMovements Int    @default(0)
-  mouseClicks    Int    @default(0)
-  keystrokes     Int    @default(0)
-  
-  // Time tracking
-  activeTime     Int    @default(0) // minutes
-  idleTime       Int    @default(0) // minutes
-  screenTime     Int    @default(0) // minutes
-  
-  // Network & files
-  downloads      Int    @default(0)
-  uploads        Int    @default(0)
-  bandwidth      Int    @default(0) // MB
-  clipboardActions Int  @default(0)
-  filesAccessed  Int    @default(0)
-  
-  // Browser
-  urlsVisited    Int    @default(0)
-  tabsSwitched   Int    @default(0)
-  
-  // Scores
-  productivityScore Int @default(0) // 0-100
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("performance_metrics")
-}
-
-// =====================
-// REVIEWS
-// =====================
 
 enum ReviewType {
   MONTH_1
   MONTH_3
   MONTH_5
-  RECURRING_6M
-  AD_HOC
+  RECURRING
 }
 
 enum ReviewStatus {
   PENDING
-  ACKNOWLEDGED
-  ARCHIVED
+  SUBMITTED
+  UNDER_REVIEW
+  COMPLETED
 }
-
-model Review {
-  id             String       @id @default(uuid())
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type           ReviewType
-  status         ReviewStatus @default(PENDING)
-  
-  client         String
-  reviewer       String
-  reviewerTitle  String?
-  
-  submittedDate  DateTime     @default(now())
-  evaluationPeriod String
-  
-  overallScore   Decimal      @db.Decimal(3, 1)
-  previousScore  Decimal?     @db.Decimal(3, 1)
-  
-  answers        Json         // Store all Q&A as JSON
-  
-  acknowledgedDate DateTime?
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("reviews")
-}
-
-// =====================
-// SUPPORT TICKETS
-// =====================
 
 enum TicketCategory {
   IT
   HR
   MANAGEMENT
   EQUIPMENT
+  OTHER
   STATION
   SURROUNDINGS
   COMPENSATION
   TRANSPORT
-  OTHER
+  ONBOARDING
+  OFFBOARDING
+  CLINIC
+  MEETING_ROOM
+  MAINTENANCE
+  CLEANING
+  FINANCE
+  OPERATIONS
+  ACCOUNT_SUPPORT
+  STAFF_PERFORMANCE
+  PURCHASE_REQUEST
+  BONUS_REQUEST
+  REFERRAL
+  REPORTING_ISSUES
+  SYSTEM_ACCESS
+  GENERAL_INQUIRY
 }
 
 enum TicketPriority {
@@ -340,52 +760,6 @@ enum TicketStatus {
   CLOSED
 }
 
-model Ticket {
-  id          String          @id @default(uuid())
-  ticketId    String          @unique // TKT-001 format
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title       String
-  description String
-  category    TicketCategory
-  priority    TicketPriority  @default(MEDIUM)
-  status      TicketStatus    @default(OPEN)
-  
-  assignedTo  String?
-  attachments String[]        @default([]) // URLs to uploaded files
-  
-  resolvedDate DateTime?
-  
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // Relations
-  responses   TicketResponse[]
-
-  @@map("tickets")
-}
-
-model TicketResponse {
-  id        String   @id @default(uuid())
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  message   String
-  role      String   // "Staff", "IT Specialist", etc.
-  
-  createdAt DateTime @default(now())
-
-  @@map("ticket_responses")
-}
-
-// =====================
-// ACTIVITY FEED (Social)
-// =====================
-
 enum PostType {
   ACHIEVEMENT
   MILESTONE
@@ -396,25 +770,19 @@ enum PostType {
   ANNOUNCEMENT
 }
 
-model ActivityPost {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type        PostType
-  content     String
-  
-  achievement Json?    // Badge info if applicable
-  images      String[] // Array of image URLs
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum PostAudience {
+  STAFF
+  CLIENT
+  MANAGEMENT
+  ALL
+}
 
-  // Relations
-  reactions   PostReaction[]
-  comments    PostComment[]
-
-  @@map("activity_posts")
+enum NotificationType {
+  TAG
+  MENTION
+  COMMENT
+  REACTION
+  SYSTEM
 }
 
 enum ReactionType {
@@ -430,64 +798,6 @@ enum ReactionType {
   MIND_BLOWN
 }
 
-model PostReaction {
-  id      String       @id @default(uuid())
-  postId  String
-  post    ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
-  userId  String
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type    ReactionType
-  
-  createdAt DateTime   @default(now())
-
-  @@unique([postId, userId, type]) // One reaction type per user per post
-  @@map("post_reactions")
-}
-
-model PostComment {
-  id        String       @id @default(uuid())
-  postId    String
-  post      ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  content   String
-  
-  createdAt DateTime     @default(now())
-
-  @@map("post_comments")
-}
-
-// =====================
-// GAMIFICATION
-// =====================
-
-model GamificationProfile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  level     Int      @default(1)
-  points    Int      @default(0)
-  rank      Int?
-  streak    Int      @default(0)
-  
-  tasksCompleted     Int @default(0)
-  performanceScore   Int @default(0)
-  reviewRating       Decimal? @db.Decimal(2, 1)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  badges    UserBadge[]
-
-  @@map("gamification_profiles")
-}
-
 enum BadgeType {
   SPEEDSTER
   PERFECTIONIST
@@ -498,37 +808,6 @@ enum BadgeType {
   CONSISTENT
   INNOVATOR
 }
-
-model UserBadge {
-  id        String   @id @default(uuid())
-  profileId String
-  profile   GamificationProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  badgeType BadgeType
-  earnedAt  DateTime  @default(now())
-
-  @@unique([profileId, badgeType]) // One badge per type per user
-  @@map("user_badges")
-}
-
-model Kudos {
-  id        String   @id @default(uuid())
-  fromId    String
-  from      User     @relation("KudosGiven", fields: [fromId], references: [id], onDelete: Cascade)
-  
-  toId      String
-  to        User     @relation("KudosReceived", fields: [toId], references: [id], onDelete: Cascade)
-  
-  message   String
-  
-  createdAt DateTime @default(now())
-
-  @@map("kudos")
-}
-
-// =====================
-// AI ASSISTANT
-// =====================
 
 enum DocumentCategory {
   CLIENT
@@ -542,100 +821,19 @@ enum DocumentCategory {
 enum DocumentSource {
   STAFF
   CLIENT
+  ADMIN
 }
-
-model Document {
-  id          String           @id @default(uuid())
-  userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  category    DocumentCategory
-  source      DocumentSource   @default(STAFF)  // NEW: Track if uploaded by STAFF or CLIENT
-  uploadedBy  String           // User's name for display
-  size        String
-  fileUrl     String?
-  content     String?          // For searchable text content
-  
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@map("documents")
-}
-
-// =====================
-// CLIENT ORGANIZATION
-// =====================
 
 enum ClientRole {
-  OWNER      // CEO - Full control, billing, can delete company
-  ADMIN      // Can manage all staff, add/remove client users
-  MANAGER    // Can manage assigned staff only (e.g., Wendy)
-  VIEWER     // Read-only access
+  OWNER
+  ADMIN
+  MANAGER
+  VIEWER
 }
 
-model Client {
-  id              String   @id @default(uuid())
-  companyName     String   // "TechCorp Inc."
-  industry        String?
-  location        String?  // "San Francisco, CA"
-  billingEmail    String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  onshoreStaff    ClientUser[]        // CEO, Wendy (their internal employees)
-  offshoreStaff   StaffAssignment[]   // Maria Santos (hired BPO workers)
-
-  @@map("clients")
+enum OnboardingStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
 }
-
-model ClientUser {
-  id         String       @id @default(uuid())
-  clientId   String
-  client     Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  email      String       @unique
-  name       String       // "Wendy", "CEO Name"
-  role       ClientRole   @default(MANAGER)
-  
-  passwordHash String
-  avatar       String?
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // What offshore staff do they manage?
-  managedOffshoreStaff StaffAssignment[] @relation("ManagedBy")
-
-  @@map("client_users")
-}
-
-model StaffAssignment {
-  id        String   @id @default(uuid())
-  
-  // OFFSHORE Staff (Maria Santos from User table)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Assigned to which client company
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  // ONSHORE manager (Wendy - optional)
-  managerId String?
-  manager   ClientUser? @relation("ManagedBy", fields: [managerId], references: [id], onDelete: SetNull)
-  
-  role      String?     // "Customer Support Specialist"
-  startDate DateTime    @default(now())
-  rate      Decimal?    @db.Decimal(10, 2) // Monthly rate
-  
-  isActive  Boolean     @default(true)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, clientId]) // Staff can only be assigned once per client
-  @@map("staff_assignments")
-}
-

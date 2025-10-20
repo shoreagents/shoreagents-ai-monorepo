@@ -1,46 +1,72 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { supabaseAdmin } from "@/lib/supabase"
 import CloudConvert from 'cloudconvert'
+import { logDocumentUploaded } from "@/lib/activity-generator"
 
-// GET - Fetch all documents (staff + client uploads)
+// GET - Fetch documents for client: own uploads + staff documents shared with them
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get actual clientId from session
-    const clientId = "cm59d03ng0000a17aykwgg8xj" // TechCorp Inc.
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    // Get all assigned staff for this client
-    const assignments = await prisma.staffAssignment.findMany({
-      where: {
-        clientId: clientId,
-        isActive: true,
-      },
-      include: {
-        user: true,
-      },
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
     })
 
-    const staffUserIds = assignments.map((a) => a.userId)
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
 
-    // Fetch documents from assigned staff + client's own documents
+    // Get all staff assigned to this company
+    const staffUsers = await prisma.staffUser.findMany({
+      where: { companyId: clientUser.company.id },
+      select: { id: true }
+    })
+
+    const staffUserIds = staffUsers.map((s) => s.id)
+
+    // Fetch documents:
+    // 1. Client's own uploads (source=CLIENT)
+    // 2. Staff documents that are shared (sharedWithAll=true or client in sharedWith)
+    // 3. Admin documents that are shared (sharedWithAll=true or client in sharedWith)
     const documents = await prisma.document.findMany({
       where: {
         OR: [
-          {
-            // Staff documents
-            userId: {
-              in: staffUserIds,
-            },
+          // Client's own documents
+          { source: 'CLIENT' },
+          // Staff documents shared with all
+          { 
+            staffUserId: { in: staffUserIds },
+            source: 'STAFF',
+            sharedWithAll: true
           },
+          // Staff documents shared with this specific client
           {
-            // Client documents (we'll need to add a clientId field later)
-            // For now, fetch documents with "CLIENT" category
-            category: "CLIENT",
+            staffUserId: { in: staffUserIds },
+            source: 'STAFF',
+            sharedWith: { has: clientUser.company.id }
           },
+          // Admin documents shared with all
+          {
+            source: 'ADMIN',
+            sharedWithAll: true
+          },
+          // Admin documents shared with this specific client
+          {
+            source: 'ADMIN',
+            sharedWith: { has: clientUser.company.id }
+          }
         ],
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -61,13 +87,14 @@ export async function GET(request: NextRequest) {
       category: doc.category.toLowerCase().replace("_", "-"),
       description: doc.content?.substring(0, 150) || "No description available",
       uploadedBy: doc.uploadedBy,
-      uploadedByUser: doc.user,
+      uploadedByUser: doc.staffUser,
       size: doc.size,
       fileUrl: doc.fileUrl,
       lastUpdated: doc.updatedAt.toISOString().split("T")[0],
       createdAt: doc.createdAt.toISOString(),
       views: 0, // TODO: Add view tracking
-      isStaffUpload: staffUserIds.includes(doc.userId),
+      isStaffUpload: staffUserIds.includes(doc.staffUserId),
+      source: doc.source, // Include source for badge display
     }))
 
     // Get category counts
@@ -113,12 +140,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user info (for now use first staff user as placeholder for client upload)
-    // TODO: Get actual ClientUser from session
-    const user = await prisma.user.findFirst()
+    // Get ClientUser
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { email: session.user.email },
+      include: { company: true }
+    })
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!clientUser) {
+      return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
+    }
+
+    // Get first staff assigned to this client (for storing in staffUserId relation)
+    const firstStaff = await prisma.staffUser.findFirst({
+      where: {
+        companyId: clientUser.company.id
+      }
+    })
+
+    if (!firstStaff) {
+      return NextResponse.json({ error: "No staff assigned to your organization" }, { status: 400 })
     }
 
     // Extract text content from file using CloudConvert
@@ -198,20 +238,99 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Upload original file to Supabase Storage
+    let fileUrl: string | null = null
+    let uploadStatus = {
+      success: false,
+      message: '',
+      path: ''
+    }
+    
+    if (file) {
+      try {
+        const fileName = file.name
+        const fileExt = fileName.split('.').pop()?.toLowerCase()
+        const timestamp = Date.now()
+        const uniqueFileName = `client_docs/${clientUser.company.id}/${timestamp}-${fileName}`
+        
+        // Detect proper MIME type
+        const mimeTypes: Record<string, string> = {
+          'pdf': 'application/pdf',
+          'doc': 'application/msword',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'txt': 'text/plain',
+          'md': 'text/markdown'
+        }
+        const contentType = mimeTypes[fileExt || ''] || file.type || 'application/octet-stream'
+        
+        console.log('📤 [CLIENT] Uploading to Supabase:', {
+          fileName,
+          fileExt,
+          contentType,
+          size: file.size,
+          path: uniqueFileName
+        })
+        
+        // Convert file to buffer for Supabase
+        const arrayBuffer = await file.arrayBuffer()
+        const fileBuffer = Buffer.from(arrayBuffer)
+        
+        // Upload to client bucket -> client_docs folder
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('client')
+          .upload(uniqueFileName, fileBuffer, {
+            contentType,
+            upsert: false
+          })
+        
+        if (uploadError) {
+          console.error('❌ [CLIENT] Supabase upload FAILED:', {
+            error: uploadError.message,
+            status: uploadError.status,
+            fileName
+          })
+          uploadStatus.success = false
+          uploadStatus.message = `Storage upload failed: ${uploadError.message}`
+        } else {
+          // Get public URL
+          const { data: urlData } = supabaseAdmin.storage
+            .from('client')
+            .getPublicUrl(uniqueFileName)
+          
+          fileUrl = urlData.publicUrl
+          uploadStatus.success = true
+          uploadStatus.message = 'File uploaded successfully to client bucket (client_docs folder)'
+          uploadStatus.path = uniqueFileName
+          
+          console.log('✅ [CLIENT] File uploaded to Supabase SUCCESS:', {
+            bucket: 'client',
+            path: uniqueFileName,
+            url: fileUrl
+          })
+        }
+      } catch (storageError: any) {
+        console.error('❌ [CLIENT] Storage upload exception:', storageError)
+        uploadStatus.success = false
+        uploadStatus.message = `Upload exception: ${storageError.message}`
+      }
+    }
+
     // Create document with CLIENT source
     const document = await prisma.document.create({
       data: {
-        userId: user.id, // TODO: Use actual ClientUser ID
+        staffUserId: firstStaff.id, // Use first staff as placeholder for relation
         title,
         category,
         source: 'CLIENT',  // Mark as client upload
         content,
         size: fileSize,
-        fileUrl: null,
-        uploadedBy: "TechCorp Inc.", // TODO: Get from ClientUser session
+        fileUrl,
+        uploadedBy: clientUser.company.companyName,
+        sharedWithAll: false, // Clients don't auto-share, staff decide
+        sharedWith: []
       },
       include: {
-        user: {
+        staffUser: {
           select: {
             id: true,
             name: true,
@@ -221,8 +340,21 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+    
+    console.log('✅ [CLIENT] Document created:', {
+      id: document.id,
+      title: document.title,
+      fileUrl: document.fileUrl ? 'YES' : 'NO',
+      storageStatus: uploadStatus.message
+    })
 
-    console.log('✅ [CLIENT] Document created:', document.id)
+    // 🎉 Auto-generate activity post for client document upload
+    await logDocumentUploaded(
+      firstStaff.id,  // Use first staff as poster
+      title,
+      clientUser.name,
+      clientUser.company.companyName
+    )
 
     return NextResponse.json({
       success: true,
@@ -231,10 +363,12 @@ export async function POST(request: NextRequest) {
         title: document.title,
         category: document.category.toLowerCase(),
         uploadedBy: document.uploadedBy,
-        uploadedByUser: document.user,
+        uploadedByUser: document.staffUser,
         lastUpdated: document.updatedAt.toISOString().split("T")[0],
         createdAt: document.createdAt.toISOString(),
+        fileUrl: document.fileUrl,
       },
+      storage: uploadStatus
     }, { status: 201 })
   } catch (error) {
     console.error("[CLIENT] Error creating document:", error)

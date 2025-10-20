@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electron', {
     // Resume tracking
     resume: () => ipcRenderer.invoke('resume-tracking'),
     
+    // Log visited URLs to console
+    logVisitedUrls: () => ipcRenderer.invoke('log-visited-urls'),
+    
     // Listen for metrics updates
     onMetricsUpdate: (callback) => {
       const subscription = (event, data) => callback(data)
@@ -61,12 +64,18 @@ contextBridge.exposeInMainWorld('electron', {
     // Get break status
     getStatus: () => ipcRenderer.invoke('get-break-status'),
     
-    // Notify main process of break start
+    // Start break with kiosk mode
+    start: (breakData) => ipcRenderer.invoke('start-break', breakData),
+    
+    // End break and exit kiosk mode
+    end: () => ipcRenderer.invoke('end-break'),
+    
+    // Notify main process of break start (legacy)
     notifyBreakStart: (breakData) => {
       ipcRenderer.send('break-started', breakData)
     },
     
-    // Notify main process of break end
+    // Notify main process of break end (legacy)
     notifyBreakEnd: (breakData) => {
       ipcRenderer.send('break-ended', breakData)
     },
@@ -106,6 +115,53 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.removeListener('permissions-needed', subscription)
       }
     },
+  },
+  
+  // Activity Tracker API
+  activityTracker: {
+    // Get activity status
+    getStatus: () => ipcRenderer.invoke('get-activity-status'),
+    
+    // Start activity tracking
+    start: () => ipcRenderer.invoke('activity-tracker:start'),
+    
+    // Stop activity tracking
+    stop: () => ipcRenderer.invoke('activity-tracker:stop'),
+    
+    // Set break mode to disable inactivity dialog during breaks
+    setBreakMode: (isOnBreak) => ipcRenderer.invoke('activity-tracker:set-break-mode', isOnBreak),
+    
+    // Set inactivity timeout (in milliseconds)
+    setTimeout: (milliseconds) => ipcRenderer.invoke('activity-tracker:set-timeout', milliseconds),
+    
+    // Listen for break requests from activity tracker
+    onBreakRequested: (callback) => {
+      const subscription = () => callback()
+      ipcRenderer.on('activity-tracker:break-requested', subscription)
+      
+      return () => {
+        ipcRenderer.removeListener('activity-tracker:break-requested', subscription)
+      }
+    },
+    
+    // Listen for debug activity events (temporary for debugging)
+    onActivityDebug: (callback) => {
+      const subscription = (event, data) => callback(data)
+      ipcRenderer.on('activity-debug', subscription)
+      
+      return () => {
+        ipcRenderer.removeListener('activity-debug', subscription)
+      }
+    },
+  },
+  
+  // Screenshot Service API
+  screenshots: {
+    // Get screenshot detection status
+    getStatus: () => ipcRenderer.invoke('screenshot:get-status'),
+    
+    // Manually capture screenshot from clipboard
+    captureNow: () => ipcRenderer.invoke('screenshot:capture-now'),
   },
   
   // Utility to check if running in Electron
