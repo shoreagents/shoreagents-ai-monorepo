@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit, AtSign } from "lucide-react"
+import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit, AtSign, Bell } from "lucide-react"
 import Image from "next/image"
 import { useWebSocket } from "@/lib/websocket-provider"
+import { NotificationCenter } from "@/components/notification-center"
 
 type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
 type ReactionType = "LIKE" | "LOVE" | "FIRE" | "CELEBRATE" | "CLAP" | "LAUGH" | "POO" | "ROCKET" | "SHOCKED" | "MIND_BLOWN"
@@ -79,6 +80,7 @@ export default function ActivityLog() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
+  const [showNotifications, setShowNotifications] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // 🔥 WebSocket for real-time updates
@@ -374,8 +376,18 @@ export default function ActivityLog() {
       <div className="mx-auto max-w-2xl space-y-4">
         {/* Header */}
         <div className="rounded-xl bg-gradient-to-br from-indigo-900/50 via-purple-900/50 to-indigo-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10 shadow-xl">
-          <h1 className="text-3xl font-bold text-white">Team Feed 🎉</h1>
-          <p className="mt-1 text-slate-300">Share updates, wins, memes, and 💩 takes with the team!</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Team Feed 🎉</h1>
+              <p className="mt-1 text-slate-300">Share updates, wins, memes, and 💩 takes with the team!</p>
+            </div>
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="relative p-3 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <Bell className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Create Post */}
@@ -701,6 +713,12 @@ export default function ActivityLog() {
           </div>
         )}
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </div>
   )
 }

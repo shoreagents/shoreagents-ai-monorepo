@@ -48,6 +48,7 @@ model StaffUser {
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
   performanceMetrics     PerformanceMetric[]
+  notifications          Notification[]
   postComments           PostComment[]
   postReactions          PostReaction[]
   reviewsReceived        Review[]
@@ -339,6 +340,7 @@ model ActivityPost {
   managementUser  ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   comments        PostComment[]
   reactions       PostReaction[]
+  notifications   Notification[]
 
   @@map("activity_posts")
 }
@@ -373,6 +375,25 @@ model PostComment {
   managementUser  ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
 
   @@map("post_comments")
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String
+  type      NotificationType  @default(TAG)
+  title     String
+  message   String
+  postId    String?
+  actionUrl String?
+  read      Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  readAt    DateTime?
+  user      StaffUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      ActivityPost?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
 }
 
 model GamificationProfile {
@@ -747,6 +768,14 @@ enum PostAudience {
   CLIENT
   MANAGEMENT
   ALL
+}
+
+enum NotificationType {
+  TAG
+  MENTION
+  COMMENT
+  REACTION
+  SYSTEM
 }
 
 enum ReactionType {
