@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       },
       include: {
         profile: true,
-        personalRecord: true,
-        workSchedule: true,
+        staff_personal_records: true,
+        gamificationProfile: true,
         timeEntries: {
           where: {
             clockInTime: {
@@ -34,14 +34,14 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        tasks: {
+        legacyTasks: {
           where: {
             status: {
               not: 'COMPLETED',
             },
           },
         },
-        reviews: {
+        reviewsReceived: {
           orderBy: {
             createdAt: 'desc',
           },
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
       )
 
       // Calculate days employed
-      const daysEmployed = member.personalRecord?.startDate
-        ? Math.floor((Date.now() - new Date(member.personalRecord.startDate).getTime()) / (1000 * 60 * 60 * 24))
+      const daysEmployed = member.profile?.startDate
+        ? Math.floor((Date.now() - new Date(member.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))
         : 0
 
       return {
@@ -77,28 +77,28 @@ export async function GET(request: NextRequest) {
         name: member.name,
         email: member.email,
         avatar: member.avatar,
-        assignmentRole: member.personalRecord?.assignmentRole || null,
-        rate: member.personalRecord?.rate || null,
-        startDate: member.personalRecord?.startDate || new Date().toISOString(),
+        assignmentRole: member.staff_personal_records?.assignmentRole || null,
+        rate: member.staff_personal_records?.rate || null,
+        startDate: member.profile?.startDate?.toISOString() || new Date().toISOString(),
         managedBy: clientUser.company.managementName || "Management",
         client: clientUser.company.name,
-        phone: member.personalRecord?.phone || null,
-        location: member.personalRecord?.location || null,
-        employmentStatus: member.personalRecord?.employmentStatus || "PROBATION",
+        phone: member.profile?.phone || null,
+        location: member.profile?.location || null,
+        employmentStatus: member.profile?.employmentStatus || "PROBATION",
         daysEmployed,
-        currentRole: member.personalRecord?.currentRole || "Staff Member",
-        salary: member.personalRecord?.salary || 0,
-        totalLeave: member.workSchedule?.annualLeave || 0,
-        usedLeave: member.workSchedule?.usedLeave || 0,
-        hmo: member.personalRecord?.hmo || false,
-        shift: member.workSchedule?.shift || "Day Shift",
-        activeTasks: member.tasks.length,
-        avgProductivity: member.profile?.level || 1,
-        reviewScore: member.reviews[0]?.rating || 0,
+        currentRole: member.profile?.currentRole || "Staff Member",
+        salary: Number(member.profile?.salary || 0),
+        totalLeave: member.profile?.totalLeave || 0,
+        usedLeave: member.profile?.usedLeave || 0,
+        hmo: member.staff_personal_records?.hmo || false,
+        shift: member.staff_personal_records?.shift || "Day Shift",
+        activeTasks: member.legacyTasks.length,
+        avgProductivity: member.gamificationProfile?.level || 1,
+        reviewScore: member.reviewsReceived[0]?.rating || 0,
         totalHoursThisMonth: Math.round(totalHours),
         isClockedIn,
-        level: member.profile?.level || 1,
-        points: member.profile?.points || 0,
+        level: member.gamificationProfile?.level || 1,
+        points: member.gamificationProfile?.points || 0,
       }
     })
 
