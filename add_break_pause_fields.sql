@@ -5,3 +5,4 @@ ADD COLUMN pausedAt TIMESTAMP,
 ADD COLUMN pausedDuration INTEGER DEFAULT 0;
 
 
+

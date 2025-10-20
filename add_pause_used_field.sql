@@ -2,3 +2,4 @@
 ALTER TABLE breaks 
 ADD COLUMN pauseused BOOLEAN DEFAULT FALSE;
 
+
