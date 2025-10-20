@@ -164,7 +164,7 @@ const navItems = [
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
   { icon: "Trophy", label: "Gamification", href: "/admin/gamification", badge: null },
   { icon: "TrendingUp", label: "Performance Analytics", href: "/admin/analytics", badge: null },
-  { icon: "Megaphone", label: "Activity Feed", href: "/admin/activity", badge: null },
+  { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
   { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
 ]
 

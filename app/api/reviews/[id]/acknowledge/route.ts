@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logReviewCompleted } from "@/lib/activity-generator"
 
 // POST /api/reviews/[id]/acknowledge - Acknowledge a review
 export async function POST(
@@ -54,6 +55,16 @@ export async function POST(
         acknowledgedDate: new Date(),
       },
     })
+
+    // ✨ Auto-generate activity post (only if score >= 75%)
+    if (existingReview.overallScore && Number(existingReview.overallScore) >= 75) {
+      await logReviewCompleted(
+        staffUser.id,
+        staffUser.name,
+        Number(existingReview.overallScore),
+        existingReview.type || "Review"
+      )
+    }
 
     // TODO: Create notification for client
     // await createNotification({

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit } from "lucide-react"
+import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit, AtSign } from "lucide-react"
 import Image from "next/image"
 
 type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
@@ -12,6 +12,12 @@ interface User {
   name: string
   avatar: string | null
   role?: string
+}
+
+interface StaffMember {
+  id: string
+  name: string
+  avatar: string | null
 }
 
 interface Reaction {
@@ -39,6 +45,7 @@ interface Post {
   content: string
   type: PostType
   images: string[]
+  taggedUsers?: StaffMember[]
   createdAt: string
   user: User
   reactions: Reaction[]
@@ -86,7 +93,8 @@ export default function ActivityLog() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch("/api/posts")
+      // Staff see posts for STAFF and ALL audiences
+      const response = await fetch("/api/posts?audience=STAFF")
       const data = await response.json()
       setPosts(data.posts || [])
     } catch (error) {
@@ -149,6 +157,7 @@ export default function ActivityLog() {
           content: newPostContent,
           type: "UPDATE",
           images: imageUrls,
+          audience: "STAFF", // Staff posts go to staff feed
         }),
       })
       if (response.ok) {
@@ -319,10 +328,16 @@ export default function ActivityLog() {
           </div>
         ) : (
           <div className="space-y-4">
-            {posts.map((post, index) => (
+            {posts.map((post, index) => {
+              const isTagged = post.taggedUsers?.some(u => u.id === currentUserId)
+              return (
               <div
                 key={post.id}
-                className="animate-fade-in-up rounded-xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10 transition-all hover:ring-white/20 hover:shadow-xl"
+                className={`animate-fade-in-up rounded-xl p-6 backdrop-blur-xl ring-1 transition-all hover:shadow-xl ${
+                  isTagged 
+                    ? 'bg-indigo-500/10 ring-indigo-400/40 hover:ring-indigo-400/60' 
+                    : 'bg-slate-900/50 ring-white/10 hover:ring-white/20'
+                }`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Post Header */}
@@ -335,8 +350,15 @@ export default function ActivityLog() {
                       className="object-cover"
                     />
                   </div>
-                  <div>
-                    <div className="font-semibold text-white hover:text-indigo-300 transition-colors cursor-pointer">{post.user.name}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-white hover:text-indigo-300 transition-colors cursor-pointer">{post.user.name}</div>
+                      {isTagged && (
+                        <span className="text-xs px-2 py-0.5 bg-indigo-500/30 text-indigo-300 rounded-full">
+                          Tagged you
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-slate-400">{formatTimeAgo(post.createdAt)}</div>
                   </div>
                 </div>
@@ -345,6 +367,30 @@ export default function ActivityLog() {
                 <div className="mt-4">
                   <p className="whitespace-pre-wrap text-white">{post.content}</p>
                 </div>
+
+                {/* Tagged Users */}
+                {post.taggedUsers && post.taggedUsers.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {post.taggedUsers.map((staff) => (
+                      <div key={staff.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-full text-sm">
+                        {staff.avatar ? (
+                          <Image
+                            src={staff.avatar}
+                            alt={staff.name}
+                            width={20}
+                            height={20}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                            {staff.name.charAt(0)}
+                          </div>
+                        )}
+                        <span>{staff.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Post Images */}
                 {post.images && post.images.length > 0 && (
@@ -504,7 +550,7 @@ export default function ActivityLog() {
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

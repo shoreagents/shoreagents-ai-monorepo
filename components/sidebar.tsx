@@ -29,14 +29,13 @@ const navItems = [
   { href: "/profile", icon: User, label: "My Profile" },
   { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
-  { href: "/breaks", icon: Coffee, label: "Breaks" },
   { href: "/performance", icon: Activity, label: "Performance" },
   { href: "/reviews", icon: Star, label: "Reviews" },
   { href: "/team", icon: Users, label: "Team" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
   { href: "/tickets", icon: Headphones, label: "Support Tickets" },
-  { href: "/activity", icon: FileText, label: "Activity Log" },
+  { href: "/activity", icon: FileText, label: "The Feed" },
 ]
 
 export default function Sidebar() {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getStaffUser } from "@/lib/auth-helpers"
+import { logClockedIn } from "@/lib/activity-generator"
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,6 +141,9 @@ export async function POST(request: NextRequest) {
     const shouldShowBreakScheduler = !existingBreaksToday
     
     console.log(`[Clock-In] Breaks today: ${existingBreaksToday ? 'YES' : 'NO'}, Show scheduler: ${shouldShowBreakScheduler}`)
+
+    // ✨ Auto-generate activity post
+    await logClockedIn(staffUser.id, staffUser.name)
 
     return NextResponse.json({
       success: true,
