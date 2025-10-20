@@ -57,7 +57,7 @@ export async function GET(
           orderBy: { date: 'desc' },
           take: 30,
         },
-        tasks: {
+        legacyTasks: {
           orderBy: { createdAt: 'desc' },
         },
         reviewsReceived: {
@@ -95,7 +95,8 @@ export async function GET(
       : 0
 
     const latestReview = user.reviewsReceived[0]
-    const reviewScore = latestReview ? Number(latestReview.overallScore) : 0
+    // Convert from 100-point scale to 5-point scale
+    const reviewScore = latestReview ? Math.round((Number(latestReview.overallScore) / 100 * 5) * 10) / 10 : 0
 
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -111,11 +112,11 @@ export async function GET(
 
     // Calculate task stats
     const taskStats = {
-      total: user.tasks.length,
-      todo: user.tasks.filter(t => t.status === 'TODO').length,
-      inProgress: user.tasks.filter(t => t.status === 'IN_PROGRESS').length,
-      completed: user.tasks.filter(t => t.status === 'COMPLETED').length,
-      stuck: user.tasks.filter(t => t.status === 'STUCK').length,
+      total: user.legacyTasks.length,
+      todo: user.legacyTasks.filter(t => t.status === 'TODO').length,
+      inProgress: user.legacyTasks.filter(t => t.status === 'IN_PROGRESS').length,
+      completed: user.legacyTasks.filter(t => t.status === 'COMPLETED').length,
+      stuck: user.legacyTasks.filter(t => t.status === 'STUCK').length,
     }
 
     // Calculate attendance stats from timeEntries
@@ -217,7 +218,7 @@ export async function GET(
       // Tasks
       tasks: {
         stats: taskStats,
-        recent: user.tasks.slice(0, 5).map(t => ({
+        recent: user.legacyTasks.slice(0, 5).map(t => ({
           id: t.id,
           title: t.title,
           status: t.status,
@@ -237,8 +238,12 @@ export async function GET(
       reviews: user.reviewsReceived.map(r => ({
         id: r.id,
         type: r.type,
-        overallScore: Number(r.overallScore),
-        previousScore: r.previousScore ? Number(r.previousScore) : null,
+        overallScore: r.overallScore 
+          ? Math.round((Number(r.overallScore) / 100 * 5) * 10) / 10 
+          : 0, // Convert from 100-point to 5-point scale
+        previousScore: r.previousScore 
+          ? Math.round((Number(r.previousScore) / 100 * 5) * 10) / 10 
+          : null,
         submittedDate: r.submittedDate,
         reviewer: r.reviewer,
         status: r.status,

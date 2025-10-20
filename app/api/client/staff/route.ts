@@ -27,9 +27,10 @@ export async function GET(request: NextRequest) {
         profile: true,
         staff_personal_records: true,
         gamificationProfile: true,
+        performanceMetrics: true,
         timeEntries: {
           where: {
-            clockInTime: {
+            clockIn: {
               gte: new Date(new Date().setDate(1)), // This month
             },
           },
@@ -53,23 +54,30 @@ export async function GET(request: NextRequest) {
 
     // Transform data to match frontend expectations
     const formattedStaff = staff.map((member) => {
-      // Calculate total hours this month
+      // Calculate total hours this month (use stored totalHours field)
       const totalHours = member.timeEntries.reduce((sum, entry) => {
-        if (entry.clockOutTime) {
-          const hours = (new Date(entry.clockOutTime).getTime() - new Date(entry.clockInTime).getTime()) / (1000 * 60 * 60)
-          return sum + hours
+        if (entry.totalHours) {
+          return sum + Number(entry.totalHours)
         }
         return sum
       }, 0)
 
       // Check if currently clocked in
       const isClockedIn = member.timeEntries.some(
-        (entry) => !entry.clockOutTime
+        (entry) => !entry.clockOut
       )
 
       // Calculate days employed
       const daysEmployed = member.profile?.startDate
         ? Math.floor((Date.now() - new Date(member.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 0
+
+      // Calculate average productivity from performance metrics
+      const avgProductivity = member.performanceMetrics.length > 0
+        ? Math.round(
+            member.performanceMetrics.reduce((sum, m) => sum + m.productivityScore, 0) /
+            member.performanceMetrics.length
+          )
         : 0
 
       return {
@@ -93,8 +101,10 @@ export async function GET(request: NextRequest) {
         hmo: member.staff_personal_records?.hmo || false,
         shift: member.staff_personal_records?.shift || "Day Shift",
         activeTasks: member.legacyTasks.length,
-        avgProductivity: member.gamificationProfile?.level || 1,
-        reviewScore: member.reviewsReceived[0]?.rating || 0,
+        avgProductivity: avgProductivity,
+        reviewScore: member.reviewsReceived[0]?.overallScore 
+          ? Math.round((Number(member.reviewsReceived[0].overallScore) / 100 * 5) * 10) / 10 
+          : 0,
         totalHoursThisMonth: Math.round(totalHours),
         isClockedIn,
         level: member.gamificationProfile?.level || 1,
