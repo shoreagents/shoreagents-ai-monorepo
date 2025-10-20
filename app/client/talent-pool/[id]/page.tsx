@@ -735,30 +735,8 @@ function DISCTab({ candidate }: { candidate: CandidateProfile }) {
             </div>
           </Section>
 
-          {/* Detailed Assessment Sections */}
-          {assessmentSections.length > 0 && (
-            <Section title="AI-Powered Personality Analysis" icon={Brain}>
-              <div className="space-y-4">
-                {assessmentSections.map((section, index) => (
-                  <div key={index} className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200">
-                    <h4 className="font-bold text-gray-900 mb-3 text-base flex items-start gap-2">
-                      <span>{section.title}</span>
-                    </h4>
-                    <p className="text-gray-700 leading-relaxed">{section.content}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Full Assessment (if parsing didn't work or user wants to see raw) */}
-          {disc.description && assessmentSections.length === 0 && (
-            <Section title="Comprehensive Analysis" icon={Brain}>
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
-                <p className="text-gray-700 text-base leading-relaxed whitespace-pre-line">{disc.description}</p>
-              </div>
-            </Section>
-          )}
+          {/* NOTE: DISC description text is in Tagalog (Filipino) - hiding from clients */}
+          {/* Clients get the visual DISC breakdown and personality scores instead */}
         </>
       )}
 
