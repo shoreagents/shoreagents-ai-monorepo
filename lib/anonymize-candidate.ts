@@ -57,8 +57,11 @@ export function anonymizeCandidateForList(candidate: any) {
  */
 export function anonymizeCandidateForProfile(candidate: any) {
   const resumeData = candidate.resume_data || {}
-  const culturalResults = candidate.cultural_results || {}
-  const aiAnalysis = candidate.ai_analysis || {}
+
+  // Parse AI analysis data (could be in different fields)
+  const aiOverallScore = candidate.ai_overall_score || null
+  const aiKeyStrengths = candidate.ai_key_strengths || null
+  const aiStrengthsAnalysis = candidate.ai_strengths_analysis || null
 
   return {
     id: candidate.id,
@@ -79,14 +82,8 @@ export function anonymizeCandidateForProfile(candidate: any) {
       languages: resumeData.languages || [],
     },
     
-    // Assessment Results (FULL DATA - this is the value!)
+    // Assessment Results (DISC & Typing - this is the value!)
     assessments: {
-      cultural: {
-        score: parseInt(culturalResults.overallScore) || null,
-        summary: culturalResults.summary || culturalResults.culturalSummary,
-        details: culturalResults.details || {},
-        traits: culturalResults.traits || [],
-      },
       disc: {
         primaryType: candidate.latest_primary_type,
         secondaryType: candidate.latest_secondary_type,
@@ -97,31 +94,20 @@ export function anonymizeCandidateForProfile(candidate: any) {
           steadiness: candidate.s_score || 0,
           conscientiousness: candidate.c_score || 0,
         },
-        strengths: [], // Not in current schema
-        weaknesses: [], // Not in current schema
-        workStyle: [], // Not in current schema
       },
       typing: {
         wpm: candidate.typing_wpm,
         accuracy: candidate.typing_accuracy,
-        consistency: candidate.consistency_score,
-      },
-      leaderboard: {
-        totalScore: candidate.leaderboard_score,
-        profileCompletion: candidate.profile_completion_score,
-        assessmentScore: candidate.assessment_score,
-        activityScore: candidate.activity_score,
+        bestWpm: candidate.typing_best_wpm,
+        bestAccuracy: candidate.typing_best_accuracy,
       },
     },
     
     // AI Analysis Results (FULL DATA - this is premium value!)
     aiAnalysis: {
-      summary: aiAnalysis.summary,
-      strengths: aiAnalysis.strengths || [],
-      areasForGrowth: aiAnalysis.areasForGrowth || [],
-      recommendations: aiAnalysis.recommendations || [],
-      fitScore: aiAnalysis.fitScore,
-      details: aiAnalysis.details || {},
+      overallScore: aiOverallScore,
+      keyStrengths: parseAIStrengths(aiKeyStrengths),
+      strengthsAnalysis: aiStrengthsAnalysis,
     },
     
     // NO personal contact details
@@ -130,6 +116,31 @@ export function anonymizeCandidateForProfile(candidate: any) {
     // NO phone
     // NO applications history
   }
+}
+
+/**
+ * Parse AI strengths (could be JSON array or comma-separated string)
+ */
+function parseAIStrengths(strengths: any): string[] {
+  if (!strengths) return []
+  
+  // If it's already an array
+  if (Array.isArray(strengths)) return strengths
+  
+  // If it's a JSON string
+  try {
+    const parsed = JSON.parse(strengths)
+    if (Array.isArray(parsed)) return parsed
+  } catch (e) {
+    // Not JSON, try comma-separated
+  }
+  
+  // If it's a comma-separated string
+  if (typeof strengths === 'string') {
+    return strengths.split(',').map(s => s.trim()).filter(s => s.length > 0)
+  }
+  
+  return []
 }
 
 /**
