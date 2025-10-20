@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Star, Clock, CheckCircle2, User, Calendar, Eye, MessageSquare } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Loader2, Star, Clock, CheckCircle2, User, Calendar, ArrowRight, MessageSquare } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { getReviewTypeBadge } from "@/lib/review-utils"
+import { getReviewTypeBadge, getPerformanceBadge } from "@/lib/review-utils"
 
 interface Review {
   id: string
@@ -16,6 +17,7 @@ interface Review {
   status: string
   client: string
   reviewer: string
+  reviewerName?: string
   reviewerTitle?: string
   submittedDate?: string
   evaluationPeriod: string
@@ -104,8 +106,72 @@ export default function AdminReviewsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+      <div className="space-y-6 p-6">
+        {/* Header Skeleton */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Skeleton className="h-8 w-8 rounded bg-slate-700/50" />
+            <Skeleton className="h-8 w-64 bg-slate-700/50" />
+          </div>
+          <Skeleton className="h-4 w-96 bg-slate-700/50" />
+        </div>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full bg-slate-700/50" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-16 bg-slate-700/50" />
+                  <Skeleton className="h-4 w-12 bg-slate-700/50" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Reviews Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="rounded-xl bg-slate-800/50 ring-1 ring-white/10">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full bg-slate-700/50" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-32 bg-slate-700/50" />
+                      <Skeleton className="h-4 w-48 bg-slate-700/50" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full bg-slate-700/50" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {[...Array(4)].map((_, j) => (
+                    <div key={j} className="space-y-1">
+                      <Skeleton className="h-4 w-20 bg-slate-700/50" />
+                      <Skeleton className="h-5 w-24 bg-slate-700/50" />
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between gap-4 text-sm mb-3 pb-3 border-b border-border">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-24 bg-slate-700/50" />
+                      <Skeleton className="h-4 w-28 bg-slate-700/50" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Skeleton className="h-6 w-32 rounded-full bg-slate-700/50" />
+                    <Skeleton className="h-8 w-24 rounded bg-slate-700/50" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
@@ -137,7 +203,7 @@ export default function AdminReviewsPage() {
                 <div className="text-2xl font-bold text-blue-400">
                   {reviews.filter(r => r.status === 'SUBMITTED').length}
                 </div>
-                <div className="text-sm text-muted-foreground">Submitted</div>
+                <div className="text-sm text-muted-foreground">Client Reviewed</div>
               </div>
             </CardContent>
           </Card>
@@ -147,7 +213,7 @@ export default function AdminReviewsPage() {
                 <div className="text-2xl font-bold text-purple-400">
                   {reviews.filter(r => r.status === 'UNDER_REVIEW').length}
                 </div>
-                <div className="text-sm text-muted-foreground">Under Review</div>
+                <div className="text-sm text-muted-foreground">Waiting for Acknowledgement</div>
               </div>
             </CardContent>
           </Card>
@@ -197,11 +263,15 @@ export default function AdminReviewsPage() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">Client</div>
+                      <div className="text-sm text-muted-foreground mb-1">Company</div>
                       <div className="text-foreground font-medium">{review.client}</div>
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground mb-1">Reviewer</div>
+                      <div className="text-foreground font-medium">{review.reviewerName || review.reviewer}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-1">Reviewer's Email</div>
                       <div className="text-foreground font-medium">{review.reviewer}</div>
                     </div>
                     <div>
@@ -211,14 +281,21 @@ export default function AdminReviewsPage() {
                     {review.overallScore && (
                       <div>
                         <div className="text-sm text-muted-foreground mb-1">Overall Score</div>
-                        <div className="text-2xl font-bold text-purple-400">{review.overallScore}/5</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-2xl font-bold text-purple-400">{review.overallScore}%</div>
+                          {review.performanceLevel && (
+                            <Badge className={`${getPerformanceBadge(review.performanceLevel as any).bgColor} ${getPerformanceBadge(review.performanceLevel as any).color} text-sm`}>
+                              {getPerformanceBadge(review.performanceLevel as any).icon} {getPerformanceBadge(review.performanceLevel as any).label}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
 
 
                   <div className="pt-4 border-t border-border">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3 pb-3 border-b border-border">
+                    <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground mb-3 pb-3 border-b border-border">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         Due: {new Date(review.dueDate).toLocaleDateString()}
@@ -237,10 +314,10 @@ export default function AdminReviewsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-border text-muted-foreground hover:bg-muted"
+                        className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                         onClick={() => handleViewDetails(review)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <ArrowRight className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
                     </div>

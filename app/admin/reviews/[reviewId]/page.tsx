@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   ArrowLeft,
@@ -31,6 +32,7 @@ interface Review {
   status: string
   client: string
   reviewer: string
+  reviewerName?: string
   reviewerTitle?: string
   dueDate: string
   submittedDate?: string
@@ -43,6 +45,7 @@ interface Review {
   additionalComments?: string
   managementNotes?: string
   reviewedBy?: string
+  reviewedByName?: string
   reviewedDate?: string
   acknowledgedDate?: string
   staffUser: {
@@ -121,20 +124,109 @@ export default function AdminReviewDetailPage({
     }
   }
 
-  const getReviewerName = (email: string) => {
-    // Extract name from email (e.g., "james.d@shoreagents.com" -> "James D")
-    const namePart = email.split('@')[0]
-    const nameParts = namePart.split('.')
-    if (nameParts.length > 1) {
-      return nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
-    }
-    return namePart.charAt(0).toUpperCase() + namePart.slice(1)
-  }
-
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6 p-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-4 mb-6">
+          <Skeleton className="h-8 w-8 rounded bg-slate-700/50" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48 bg-slate-700/50" />
+            <Skeleton className="h-4 w-64 bg-slate-700/50" />
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content Skeleton */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Client Feedback Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-32 bg-slate-700/50" />
+                <Skeleton className="h-4 w-full bg-slate-700/50" />
+                <Skeleton className="h-4 w-3/4 bg-slate-700/50" />
+                <Skeleton className="h-4 w-1/2 bg-slate-700/50" />
+              </div>
+            </Card>
+
+            {/* Ratings Breakdown Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-40 bg-slate-700/50" />
+                <div className="grid gap-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-24 bg-slate-700/50" />
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-8 bg-slate-700/50" />
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, j) => (
+                            <Skeleton key={j} className="h-4 w-4 rounded bg-slate-700/50" />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            {/* Management Notes Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-32 bg-slate-700/50" />
+                <Skeleton className="h-24 w-full rounded bg-slate-700/50" />
+              </div>
+            </Card>
+          </div>
+
+          {/* Sidebar Skeleton */}
+          <div className="space-y-6">
+            {/* Staff Info Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="text-center space-y-4">
+                <Skeleton className="h-16 w-16 rounded-full mx-auto bg-slate-700/50" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32 mx-auto bg-slate-700/50" />
+                  <Skeleton className="h-4 w-48 mx-auto bg-slate-700/50" />
+                </div>
+                <div className="flex justify-center gap-2">
+                  <Skeleton className="h-6 w-20 rounded-full bg-slate-700/50" />
+                  <Skeleton className="h-6 w-16 rounded-full bg-slate-700/50" />
+                </div>
+              </div>
+            </Card>
+
+            {/* Overall Score Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="text-center space-y-4">
+                <div className="flex items-center justify-center gap-2">
+                  <Skeleton className="h-10 w-16 bg-slate-700/50" />
+                  <Skeleton className="h-6 w-20 rounded-full bg-slate-700/50" />
+                </div>
+                <Skeleton className="h-4 w-24 mx-auto bg-slate-700/50" />
+              </div>
+            </Card>
+
+            {/* Review Info Skeleton */}
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-32 bg-slate-700/50" />
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="space-y-1">
+                      <Skeleton className="h-4 w-20 bg-slate-700/50" />
+                      <Skeleton className="h-5 w-32 bg-slate-700/50" />
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-border">
+                  <Skeleton className="h-8 w-full rounded bg-slate-700/50" />
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     )
   }
@@ -256,14 +348,16 @@ export default function AdminReviewDetailPage({
               className="resize-none"
               disabled={review.status !== "SUBMITTED"}
             />
-            {review.reviewedBy && (
-              <div className="mt-4 rounded-lg bg-muted p-3">
-                <p className="text-sm text-muted-foreground">
-                  Reviewed by {getReviewerName(review.reviewedBy)} on {formatReviewDate(review.reviewedDate!)}
-                </p>
-              </div>
-            )}
           </Card>
+
+          {/* Reviewed by Section */}
+          {review.reviewedBy && (
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-sm text-muted-foreground">
+                Reviewed by {review.reviewedByName || review.reviewedBy} on {formatReviewDate(review.reviewedDate!)}
+              </p>
+            </div>
+          )}
 
           {/* Mark as Reviewed Button */}
           {review.status === "SUBMITTED" && (
@@ -359,11 +453,15 @@ export default function AdminReviewDetailPage({
             
             <div className="border-t border-border pt-3 mt-3">
               <div className="text-sm">
-                <span className="text-muted-foreground">Client:</span>
+                <span className="text-muted-foreground">Company:</span>
                 <div className="font-medium text-foreground">{review.client}</div>
               </div>
               <div className="text-sm mt-2">
-                <span className="text-muted-foreground">Email:</span>
+                <span className="text-muted-foreground">Reviewer:</span>
+                <div className="font-medium text-foreground">{review.reviewerName || review.reviewer}</div>
+              </div>
+              <div className="text-sm mt-2">
+                <span className="text-muted-foreground">Reviewer's Email:</span>
                 <div className="font-medium text-foreground">{review.reviewer}</div>
               </div>
               {review.reviewerTitle && (
