@@ -74,7 +74,7 @@ export async function POST(
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -83,7 +83,7 @@ export async function POST(
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,

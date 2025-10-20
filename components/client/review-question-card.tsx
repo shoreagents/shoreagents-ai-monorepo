@@ -12,9 +12,9 @@ interface ReviewQuestionCardProps {
 
 function ReviewQuestionCard({ question, value, onChange }: ReviewQuestionCardProps) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div className="rounded-lg border-2 border-purple-200 bg-white p-6 shadow-sm hover:border-purple-400 transition-all hover:shadow-lg">
       <div className="mb-4">
-        <p className="text-base font-medium text-foreground">
+        <p className="text-base font-medium text-gray-900">
           {question.question}
           {question.required && <span className="ml-1 text-red-500">*</span>}
         </p>
@@ -27,22 +27,19 @@ function ReviewQuestionCard({ question, value, onChange }: ReviewQuestionCardPro
             key={rating}
             type="button"
             onClick={() => onChange(question.id, rating)}
-            className="group relative transition-transform hover:scale-110"
+            className="transition-transform hover:scale-110"
           >
             <Star
               className={`h-10 w-10 transition-colors ${
                 value && rating <= value
-                  ? "fill-amber-400 text-amber-400"
-                  : "text-gray-300 hover:text-amber-300"
+                  ? "fill-purple-500 text-purple-500"
+                  : "text-gray-300 hover:text-purple-400"
               }`}
             />
-            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 opacity-0 group-hover:opacity-100">
-              {rating}
-            </span>
           </button>
         ))}
         {value && (
-          <span className="ml-4 text-sm font-medium text-foreground">
+          <span className="ml-4 text-sm font-medium text-gray-900">
             {value === 1 && "Poor"}
             {value === 2 && "Below Expectations"}
             {value === 3 && "Meets Expectations"}

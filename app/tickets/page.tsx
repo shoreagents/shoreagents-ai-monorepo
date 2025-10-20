@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { getCategoriesForUserType, getCategoryLabel, getCategoryIcon } from "@/lib/ticket-categories"
 import ClientTicketCard from "@/components/tickets/client-ticket-card"
 import { mapCategoryToDepartment, getDepartmentLabel, getDepartmentEmoji } from "@/lib/category-department-map"
+import { TicketListSkeleton, TicketKanbanSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -54,10 +55,29 @@ export default function TicketsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="text-slate-400">Loading tickets...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-700">
+          {/* Header skeleton */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-10 w-64 bg-slate-700/50 rounded-lg animate-pulse" />
+              <div className="mt-2 h-4 w-48 bg-slate-700/50 rounded animate-pulse" />
+            </div>
+            <div className="h-12 w-32 bg-slate-700/50 rounded-2xl animate-pulse" />
+          </div>
+
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="group rounded-2xl bg-slate-900/50 backdrop-blur-xl p-6 ring-1 ring-white/10">
+                <div className="text-3xl font-extrabold bg-slate-700/50 h-8 w-12 rounded animate-pulse" />
+                <div className="text-sm font-medium bg-slate-700/50 h-4 w-20 rounded mt-1 animate-pulse" />
+              </div>
+            ))}
+          </div>
+
+          {/* Kanban skeleton */}
+          <TicketKanbanSkeleton count={2} />
         </div>
       </div>
     )

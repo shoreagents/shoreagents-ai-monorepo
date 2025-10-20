@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,

@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   User,
   CheckSquare,
-  Coffee,
   Activity,
   Star,
   Users,
