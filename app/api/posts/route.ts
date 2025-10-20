@@ -277,6 +277,30 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 🔔 Create notifications for tagged users
+    if (taggedUserIds && taggedUserIds.length > 0) {
+      const postUser = staffUser || clientUser || managementUser
+      const postUserName = postUser.name
+      
+      // Create notification for each tagged user
+      const notificationPromises = taggedUserIds.map((userId: string) =>
+        prisma.notification.create({
+          data: {
+            userId,
+            type: 'TAG',
+            title: `${postUserName} tagged you in a post`,
+            message: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+            postId: post.id,
+            actionUrl: `/activity?postId=${post.id}`,
+            read: false
+          }
+        })
+      )
+      
+      await Promise.all(notificationPromises)
+      console.log(`🔔 [Notifications] Created ${taggedUserIds.length} tag notifications for post ${post.id}`)
+    }
+
     // 🔥 Emit real-time event to all connected clients
     const io = global.socketServer
     if (io) {
@@ -298,6 +322,19 @@ export async function POST(request: NextRequest) {
         comments: []
       })
       console.log('🔥 [WebSocket] New post emitted:', post.id)
+      
+      // 🔔 Emit notification events to tagged users
+      if (taggedUserIds && taggedUserIds.length > 0) {
+        taggedUserIds.forEach((userId: string) => {
+          io.to(`user:${userId}`).emit('notification:new', {
+            userId,
+            postId: post.id,
+            title: `${postUser.name} tagged you in a post`,
+            message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+          })
+        })
+        console.log(`🔔 [WebSocket] Notification emitted to ${taggedUserIds.length} tagged users`)
+      }
     }
 
     return NextResponse.json({ success: true, post }, { status: 201 })
