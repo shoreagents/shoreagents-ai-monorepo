@@ -54,7 +54,16 @@ interface CandidateProfile {
   aiAnalysis: {
     overallScore: number | null
     keyStrengths: string[]
-    strengthsAnalysis: string
+    strengthsAnalysis: string | {
+      coreStrengths?: string[]
+      technicalStrengths?: string[]
+      softSkills?: string[]
+      uniqueValue?: string
+      marketAdvantage?: string
+      topStrengths?: string[]
+      achievements?: string[]
+      areasToHighlight?: string[]
+    } | null
   }
 }
 
@@ -481,6 +490,10 @@ function ProfileTab({ candidate }: { candidate: CandidateProfile }) {
 // ============================================================================
 
 function AIAnalysisTab({ candidate }: { candidate: CandidateProfile }) {
+  // Check if strengthsAnalysis is an object with detailed breakdown
+  const strengthsAnalysis = candidate.aiAnalysis.strengthsAnalysis
+  const isDetailedAnalysis = strengthsAnalysis && typeof strengthsAnalysis === 'object' && !Array.isArray(strengthsAnalysis)
+
   return (
     <div className="space-y-6">
       {/* AI Overall Score */}
@@ -512,12 +525,76 @@ function AIAnalysisTab({ candidate }: { candidate: CandidateProfile }) {
         </Section>
       )}
 
-      {/* Detailed Strengths Analysis */}
-      {candidate.aiAnalysis.strengthsAnalysis && (
+      {/* Detailed Strengths Analysis - Object Format */}
+      {isDetailedAnalysis && (
+        <>
+          {(strengthsAnalysis as any).coreStrengths && Array.isArray((strengthsAnalysis as any).coreStrengths) && (strengthsAnalysis as any).coreStrengths.length > 0 && (
+            <Section title="Core Strengths" icon={Award}>
+              <div className="space-y-3">
+                {(strengthsAnalysis as any).coreStrengths.map((strength: string, i: number) => (
+                  <div key={i} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">★</span>
+                    </div>
+                    <span className="text-gray-800 font-medium">{strength}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {(strengthsAnalysis as any).technicalStrengths && Array.isArray((strengthsAnalysis as any).technicalStrengths) && (strengthsAnalysis as any).technicalStrengths.length > 0 && (
+            <Section title="Technical Strengths" icon={Target}>
+              <div className="space-y-3">
+                {(strengthsAnalysis as any).technicalStrengths.map((strength: string, i: number) => (
+                  <div key={i} className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                    <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">⚡</span>
+                    </div>
+                    <span className="text-gray-800 font-medium">{strength}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {(strengthsAnalysis as any).softSkills && Array.isArray((strengthsAnalysis as any).softSkills) && (strengthsAnalysis as any).softSkills.length > 0 && (
+            <Section title="Soft Skills" icon={Brain}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(strengthsAnalysis as any).softSkills.map((skill: string, i: number) => (
+                  <div key={i} className="flex items-center gap-2 p-3 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg border border-green-200">
+                    <span className="text-green-500 text-lg">✓</span>
+                    <span className="text-gray-700 font-medium text-sm">{skill}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {(strengthsAnalysis as any).uniqueValue && (
+            <Section title="Unique Value Proposition" icon={TrendingUp}>
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200">
+                <p className="text-gray-800 leading-relaxed text-lg">{(strengthsAnalysis as any).uniqueValue}</p>
+              </div>
+            </Section>
+          )}
+
+          {(strengthsAnalysis as any).marketAdvantage && (
+            <Section title="Market Advantage" icon={Award}>
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200">
+                <p className="text-gray-800 leading-relaxed text-lg">{(strengthsAnalysis as any).marketAdvantage}</p>
+              </div>
+            </Section>
+          )}
+        </>
+      )}
+
+      {/* Detailed Strengths Analysis - String Format */}
+      {!isDetailedAnalysis && strengthsAnalysis && typeof strengthsAnalysis === 'string' && (
         <Section title="Detailed AI Strengths Analysis" icon={Brain}>
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200">
             <p className="text-gray-800 leading-relaxed text-lg whitespace-pre-line">
-              {candidate.aiAnalysis.strengthsAnalysis}
+              {strengthsAnalysis}
             </p>
           </div>
         </Section>

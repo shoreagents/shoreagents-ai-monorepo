@@ -103,11 +103,11 @@ export function anonymizeCandidateForProfile(candidate: any) {
       },
     },
     
-    // AI Analysis Results (FULL DATA - this is premium value!)
+  // AI Analysis Results (FULL DATA - this is premium value!)
     aiAnalysis: {
       overallScore: aiOverallScore,
       keyStrengths: parseAIStrengths(aiKeyStrengths),
-      strengthsAnalysis: aiStrengthsAnalysis,
+      strengthsAnalysis: parseAIStrengthsAnalysis(aiStrengthsAnalysis),
     },
     
     // NO personal contact details
@@ -141,6 +141,35 @@ function parseAIStrengths(strengths: any): string[] {
   }
   
   return []
+}
+
+/**
+ * Parse AI strengths analysis (could be JSON object, string, or plain object)
+ */
+function parseAIStrengthsAnalysis(analysis: any): any {
+  if (!analysis) return null
+  
+  // If it's already an object (not a string), return as is
+  if (typeof analysis === 'object' && !Array.isArray(analysis)) {
+    return analysis
+  }
+  
+  // If it's a JSON string, try to parse it
+  if (typeof analysis === 'string') {
+    try {
+      const parsed = JSON.parse(analysis)
+      // If parsed result is an object, return it
+      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed
+      }
+    } catch (e) {
+      // Not valid JSON, return the string as is
+    }
+    // Return the string
+    return analysis
+  }
+  
+  return null
 }
 
 /**
