@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   ArrowLeft,
   Star,
@@ -63,6 +64,7 @@ export default function AdminReviewDetailPage({
   const [processing, setProcessing] = useState(false)
   const [managementNotes, setManagementNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [reviewId, setReviewId] = useState<string>("")
 
   useEffect(() => {
@@ -111,13 +113,22 @@ export default function AdminReviewDetailPage({
       
       if (!response.ok) throw new Error("Failed to process review")
       
-      alert("✅ Review processed successfully!")
-      router.push("/admin/reviews")
+      setShowSuccessModal(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process review")
     } finally {
       setProcessing(false)
     }
+  }
+
+  const getReviewerName = (email: string) => {
+    // Extract name from email (e.g., "james.d@shoreagents.com" -> "James D")
+    const namePart = email.split('@')[0]
+    const nameParts = namePart.split('.')
+    if (nameParts.length > 1) {
+      return nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+    }
+    return namePart.charAt(0).toUpperCase() + namePart.slice(1)
   }
 
   if (loading) {
@@ -131,7 +142,7 @@ export default function AdminReviewDetailPage({
   if (!review) {
     return (
       <div className="p-6">
-        <Card className="p-12 text-center">
+        <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-12 text-center">
           <p className="text-muted-foreground">Review not found</p>
           <Button className="mt-4" onClick={() => router.push("/admin/reviews")}>
             Back to Reviews
@@ -168,7 +179,7 @@ export default function AdminReviewDetailPage({
       </div>
 
       {error && (
-        <Card className="border-red-500 bg-red-50 p-4 dark:bg-red-950">
+        <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 border-red-500 bg-red-50 p-4 dark:bg-red-950">
           <p className="text-red-600 dark:text-red-400">{error}</p>
         </Card>
       )}
@@ -176,58 +187,24 @@ export default function AdminReviewDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Staff Info */}
-          <Card className="p-6">
-            <div className="flex items-start gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={review.staffUser.avatar} />
-                <AvatarFallback>
-                  {review.staffUser.name.split(" ").map(n => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-foreground">{review.staffUser.name}</h2>
-                <p className="text-muted-foreground">{review.staffUser.email}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge className={`${typeBadge.bgColor} ${typeBadge.color}`}>
-                    {typeBadge.icon} {typeBadge.label}
-                  </Badge>
-                  <Badge className={`${statusBadge.bgColor} ${statusBadge.color}`}>
-                    {statusBadge.label}
-                  </Badge>
-                  {perfBadge && (
-                    <Badge className={`${perfBadge.bgColor} ${perfBadge.color}`}>
-                      {perfBadge.icon} {perfBadge.label}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              {review.overallScore && (
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary">{review.overallScore}%</p>
-                  <p className="text-sm text-muted-foreground">Overall Score</p>
-                </div>
-              )}
-            </div>
-          </Card>
 
           {/* Client Feedback */}
           {review.strengths && (
-            <Card className="p-6">
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
               <h3 className="mb-4 text-lg font-semibold text-foreground">✨ Strengths</h3>
               <p className="whitespace-pre-wrap text-muted-foreground">{review.strengths}</p>
             </Card>
           )}
 
           {review.improvements && (
-            <Card className="p-6">
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
               <h3 className="mb-4 text-lg font-semibold text-foreground">📈 Areas for Improvement</h3>
               <p className="whitespace-pre-wrap text-muted-foreground">{review.improvements}</p>
             </Card>
           )}
 
           {review.additionalComments && (
-            <Card className="p-6">
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
               <h3 className="mb-4 text-lg font-semibold text-foreground">💬 Additional Comments</h3>
               <p className="whitespace-pre-wrap text-muted-foreground">{review.additionalComments}</p>
             </Card>
@@ -235,7 +212,7 @@ export default function AdminReviewDetailPage({
 
           {/* Ratings Breakdown */}
           {review.ratings && review.ratings.length > 0 && (
-            <Card className="p-6">
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
               <h3 className="mb-4 text-lg font-semibold text-foreground">📊 Ratings Breakdown</h3>
               <div className="space-y-4">
                 {questions.map((question, index) => {
@@ -269,7 +246,7 @@ export default function AdminReviewDetailPage({
           )}
 
           {/* Management Notes */}
-          <Card className="p-6">
+          <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
             <h3 className="mb-4 text-lg font-semibold text-foreground">📝 Management Notes</h3>
             <Textarea
               value={managementNotes}
@@ -279,89 +256,159 @@ export default function AdminReviewDetailPage({
               className="resize-none"
               disabled={review.status !== "SUBMITTED"}
             />
-            {review.status === "SUBMITTED" && (
-              <Button
-                className="mt-4 w-full"
-                onClick={handleProcessReview}
-                disabled={processing}
-              >
-                {processing ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Reviewed
-                  </>
-                )}
-              </Button>
-            )}
             {review.reviewedBy && (
               <div className="mt-4 rounded-lg bg-muted p-3">
                 <p className="text-sm text-muted-foreground">
-                  Reviewed by {review.reviewedBy} on {formatReviewDate(review.reviewedDate!)}
+                  Reviewed by {getReviewerName(review.reviewedBy)} on {formatReviewDate(review.reviewedDate!)}
                 </p>
               </div>
             )}
           </Card>
+
+          {/* Mark as Reviewed Button */}
+          {review.status === "SUBMITTED" && (
+            <Button
+              onClick={handleProcessReview}
+              disabled={processing}
+              className="w-fit mx-auto"
+            >
+              {processing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Reviewed
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Review Info */}
-          <Card className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-foreground">Review Information</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Due:</span>
-                <span className="font-medium text-foreground">
-                  {formatReviewDate(review.dueDate)}
-                </span>
+        <div className="flex flex-col gap-6 sticky top-6 h-fit">
+          {/* Staff Name Section */}
+          <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+            <div className="flex items-start gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={review.staffUser.avatar} />
+                <AvatarFallback>
+                  {review.staffUser.name.split(" ").map(n => n[0]).join("")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-foreground">{review.staffUser.name}</h2>
+                <p className="text-muted-foreground">{review.staffUser.email}</p>
               </div>
-              {review.submittedDate && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Submitted:</span>
-                  <span className="font-medium text-foreground">
-                    {formatReviewDate(review.submittedDate)}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Client:</span>
-                <span className="font-medium text-foreground">{review.client}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Reviewer:</span>
-                <span className="font-medium text-foreground">{review.reviewer}</span>
-              </div>
-              {review.reviewerTitle && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Title:</span>
-                  <span className="font-medium text-foreground">{review.reviewerTitle}</span>
-                </div>
-              )}
             </div>
           </Card>
 
-          {/* Staff Info */}
-          <Card className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-foreground">Staff Information</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Period:</span>
-                <span className="font-medium text-foreground">{review.evaluationPeriod}</span>
+          {/* Overall Score */}
+          {review.overallScore && (
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6 flex flex-col justify-between">
+              <div className="text-center">
+                <div className="flex items-center justify-center">
+                  <p className="text-4xl font-bold text-primary">{review.overallScore}%</p>
+                  {perfBadge && (
+                    <Badge className={`${perfBadge.bgColor} ${perfBadge.color} text-sm ml-2`}>
+                      {perfBadge.icon} {perfBadge.label}
+                    </Badge>
+                  )}
+                </div>
               </div>
+              <h3 className="text-sm font-medium text-foreground text-center">Overall Score</h3>
+            </Card>
+          )}
+
+          {/* Review Info */}
+          <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">Review Information</h3>
+            <div className="flex flex-wrap gap-2">
+              <Badge className={`${typeBadge.bgColor} ${typeBadge.color} text-sm`}>
+                {typeBadge.icon} {typeBadge.label}
+              </Badge>
+              <Badge className={`${statusBadge.bgColor} ${statusBadge.color} text-sm`}>
+                {statusBadge.label}
+              </Badge>
+            </div>
+            
+            <div className="border-t border-border pt-3 mt-4">
+              <div className="space-y-2">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Due:</span>
+                  <div className="font-medium text-foreground">
+                    {formatReviewDate(review.dueDate)}
+                  </div>
+                </div>
+                {review.submittedDate && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Submitted:</span>
+                    <div className="font-medium text-foreground">
+                      {formatReviewDate(review.submittedDate)}
+                    </div>
+                  </div>
+                )}
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Period:</span>
+                  <div className="font-medium text-foreground">{review.evaluationPeriod}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Client:</span>
+                <div className="font-medium text-foreground">{review.client}</div>
+              </div>
+              <div className="text-sm mt-2">
+                <span className="text-muted-foreground">Email:</span>
+                <div className="font-medium text-foreground">{review.reviewer}</div>
+              </div>
+              {review.reviewerTitle && (
+                <div className="text-sm mt-2">
+                  <span className="text-muted-foreground">Title:</span>
+                  <div className="font-medium text-foreground">{review.reviewerTitle}</div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Review Processed Successfully
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              The review has been marked as reviewed and is now complete.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowSuccessModal(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false)
+                router.push("/admin/reviews")
+              }}
+            >
+              Back to Reviews
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
