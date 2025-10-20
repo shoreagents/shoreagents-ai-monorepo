@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit, AtSign, Users, Building, Shield, Globe } from "lucide-react"
 import Image from "next/image"
+import { useWebSocket } from "@/lib/websocket-provider"
 
 type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
 type ReactionType = "LIKE" | "LOVE" | "FIRE" | "CELEBRATE" | "CLAP" | "LAUGH" | "POO" | "ROCKET" | "SHOCKED" | "MIND_BLOWN"
@@ -93,6 +94,9 @@ export default function AdminActivityFeed() {
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // 🔥 WebSocket for real-time updates
+  const { on, off } = useWebSocket()
 
   useEffect(() => {
     fetchPosts()
@@ -105,6 +109,107 @@ export default function AdminActivityFeed() {
     setHasMore(true)
     fetchPosts(1)
   }, [filterAudience])
+
+  // 🔥 Listen for real-time activity updates
+  useEffect(() => {
+    if (!on || !off) return
+
+    // New post added
+    const handleNewPost = (newPost: any) => {
+      // Check if post matches current filter
+      const matchesFilter = filterAudience === 'ALL_FILTER' || 
+                           newPost.audience === filterAudience || 
+                           newPost.audience === 'ALL'
+      
+      if (matchesFilter) {
+        setPosts((prev) => [newPost, ...prev])
+        console.log('✨ New post received:', newPost.id)
+      }
+    }
+
+    // Reaction events
+    const handleReactionAdded = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? { ...post, reactions: [...post.reactions, data.reaction] }
+            : post
+        )
+      )
+    }
+
+    const handleReactionUpdated = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                reactions: post.reactions.map((r) =>
+                  r.user.id === data.reaction.user.id ? data.reaction : r
+                ),
+              }
+            : post
+        )
+      )
+    }
+
+    const handleReactionRemoved = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                reactions: post.reactions.filter(
+                  (r) => !(r.user.id === data.userId && r.type === data.type)
+                ),
+              }
+            : post
+        )
+      )
+    }
+
+    // Comment events
+    const handleCommentAdded = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? { ...post, comments: [...post.comments, data.comment] }
+            : post
+        )
+      )
+    }
+
+    const handleCommentDeleted = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                comments: post.comments.filter((c) => c.id !== data.commentId),
+              }
+            : post
+        )
+      )
+    }
+
+    // Register event listeners
+    on('activity:newPost', handleNewPost)
+    on('activity:reactionAdded', handleReactionAdded)
+    on('activity:reactionUpdated', handleReactionUpdated)
+    on('activity:reactionRemoved', handleReactionRemoved)
+    on('activity:commentAdded', handleCommentAdded)
+    on('activity:commentDeleted', handleCommentDeleted)
+
+    // Cleanup on unmount
+    return () => {
+      off('activity:newPost', handleNewPost)
+      off('activity:reactionAdded', handleReactionAdded)
+      off('activity:reactionUpdated', handleReactionUpdated)
+      off('activity:reactionRemoved', handleReactionRemoved)
+      off('activity:commentAdded', handleCommentAdded)
+      off('activity:commentDeleted', handleCommentDeleted)
+    }
+  }, [on, off, filterAudience])
 
   const fetchCurrentUser = async () => {
     try {

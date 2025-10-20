@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Heart, ThumbsUp, Flame, PartyPopper, Sparkles, MessageSquare, Send, Image as ImageIcon, FileText, Trash2, X, Laugh, Skull, Rocket, Zap, BrainCircuit, AtSign } from "lucide-react"
 import Image from "next/image"
+import { useWebSocket } from "@/lib/websocket-provider"
 
 type PostType = "UPDATE" | "WIN" | "CELEBRATION" | "ACHIEVEMENT" | "KUDOS" | "ANNOUNCEMENT"
 type ReactionType = "LIKE" | "LOVE" | "FIRE" | "CELEBRATE" | "CLAP" | "LAUGH" | "POO" | "ROCKET" | "SHOCKED" | "MIND_BLOWN"
@@ -82,12 +83,112 @@ export default function ClientActivityFeed() {
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // 🔥 WebSocket for real-time updates
+  const { on, off } = useWebSocket()
 
   useEffect(() => {
     fetchPosts()
     fetchCurrentUser()
     fetchStaff()
   }, [])
+
+  // 🔥 Listen for real-time activity updates
+  useEffect(() => {
+    if (!on || !off) return
+
+    // New post added
+    const handleNewPost = (newPost: any) => {
+      // Only add if it matches our audience filter (CLIENT or ALL)
+      if (newPost.audience === 'CLIENT' || newPost.audience === 'ALL') {
+        setPosts((prev) => [newPost, ...prev])
+        console.log('✨ New post received:', newPost.id)
+      }
+    }
+
+    // Reaction added/updated/removed
+    const handleReactionAdded = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? { ...post, reactions: [...post.reactions, data.reaction] }
+            : post
+        )
+      )
+    }
+
+    const handleReactionUpdated = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                reactions: post.reactions.map((r) =>
+                  r.user.id === data.reaction.user.id ? data.reaction : r
+                ),
+              }
+            : post
+        )
+      )
+    }
+
+    const handleReactionRemoved = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                reactions: post.reactions.filter(
+                  (r) => !(r.user.id === data.userId && r.type === data.type)
+                ),
+              }
+            : post
+        )
+      )
+    }
+
+    // Comment added/deleted
+    const handleCommentAdded = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? { ...post, comments: [...post.comments, data.comment] }
+            : post
+        )
+      )
+    }
+
+    const handleCommentDeleted = (data: any) => {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === data.postId
+            ? {
+                ...post,
+                comments: post.comments.filter((c) => c.id !== data.commentId),
+              }
+            : post
+        )
+      )
+    }
+
+    // Register event listeners
+    on('activity:newPost', handleNewPost)
+    on('activity:reactionAdded', handleReactionAdded)
+    on('activity:reactionUpdated', handleReactionUpdated)
+    on('activity:reactionRemoved', handleReactionRemoved)
+    on('activity:commentAdded', handleCommentAdded)
+    on('activity:commentDeleted', handleCommentDeleted)
+
+    // Cleanup on unmount
+    return () => {
+      off('activity:newPost', handleNewPost)
+      off('activity:reactionAdded', handleReactionAdded)
+      off('activity:reactionUpdated', handleReactionUpdated)
+      off('activity:reactionRemoved', handleReactionRemoved)
+      off('activity:commentAdded', handleCommentAdded)
+      off('activity:commentDeleted', handleCommentDeleted)
+    }
+  }, [on, off])
 
   const fetchCurrentUser = async () => {
     try {
