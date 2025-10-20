@@ -20,12 +20,12 @@ model ManagementUser {
   updatedAt        DateTime         @updatedAt
   email            String           @unique
   coverPhoto       String?
-  managedCompanies Company[]
-  tickets          Ticket[]
-  ticketResponses  TicketResponse[]
   activityPosts    ActivityPost[]
-  postReactions    PostReaction[]
+  managedCompanies Company[]
   postComments     PostComment[]
+  postReactions    PostReaction[]
+  ticketResponses  TicketResponse[]
+  tickets          Ticket[]
 
   @@map("management_users")
 }
@@ -47,8 +47,8 @@ model StaffUser {
   gamificationProfile    GamificationProfile?
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
-  performanceMetrics     PerformanceMetric[]
   notifications          Notification[]
+  performanceMetrics     PerformanceMetric[]
   postComments           PostComment[]
   postReactions          PostReaction[]
   reviewsReceived        Review[]
@@ -243,38 +243,29 @@ model PerformanceMetric {
 }
 
 model Review {
-  id               String       @id @default(uuid())
-  staffUserId      String
-  type             ReviewType
-  status           ReviewStatus @default(PENDING)
-  client           String
-  reviewer         String       // Client user email
-  reviewerTitle    String?
-  submittedDate    DateTime?    // When client submits (nullable for PENDING)
-  dueDate          DateTime     // When review is due
-  evaluationPeriod String
-  
-  // Scoring
-  ratings          Json?        // Array of 1-5 ratings for each question
-  overallScore     Decimal?     @db.Decimal(5, 2)  // Percentage (0-100)
-  performanceLevel String?      // critical, needs_improvement, good, excellent
-  
-  // Open-ended responses
-  strengths        String?      @db.Text
-  improvements     String?      @db.Text
-  additionalComments String?    @db.Text
-  
-  // Management review
-  managementNotes  String?      @db.Text
-  reviewedBy       String?      // Management user who processed
-  reviewedDate     DateTime?
-  
-  // Staff acknowledgment
-  acknowledgedDate DateTime?
-  
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  staffUser        StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id                 String       @id @default(uuid())
+  staffUserId        String
+  type               ReviewType
+  status             ReviewStatus @default(PENDING)
+  client             String
+  reviewer           String
+  reviewerTitle      String?
+  submittedDate      DateTime?
+  evaluationPeriod   String
+  overallScore       Decimal?     @db.Decimal(5, 2)
+  acknowledgedDate   DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  dueDate            DateTime
+  ratings            Json?
+  performanceLevel   String?
+  strengths          String?
+  improvements       String?
+  additionalComments String?
+  managementNotes    String?
+  reviewedBy         String?
+  reviewedDate       DateTime?
+  staffUser          StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
@@ -283,7 +274,6 @@ model Ticket {
   id               String           @id @default(uuid())
   ticketId         String           @unique
   staffUserId      String?
-  clientUserId     String?
   title            String
   description      String
   category         TicketCategory
@@ -296,10 +286,11 @@ model Ticket {
   attachments      String[]         @default([])
   createdByType    String           @default("STAFF")
   managementUserId String?
+  clientUserId     String?
   responses        TicketResponse[]
-  staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
   managementUser   ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
 }
@@ -308,91 +299,101 @@ model TicketResponse {
   id               String          @id @default(uuid())
   ticketId         String
   staffUserId      String?
-  managementUserId String?
-  clientUserId     String?
   message          String
-  createdByType    String          // "STAFF" or "MANAGEMENT" or "CLIENT"
   createdAt        DateTime        @default(now())
+  managementUserId String?
+  createdByType    String
   attachments      String[]        @default([])
-  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  clientUserId     String?
   clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_responses")
 }
 
 model ActivityPost {
-  id              String          @id @default(uuid())
-  staffUserId     String?
-  clientUserId    String?
+  id               String          @id @default(uuid())
+  staffUserId      String?
+  type             PostType
+  content          String
+  achievement      Json?
+  images           String[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  clientUserId     String?
+  taggedUserIds    String[]        @default([])
+  audience         PostAudience?   @default(ALL)
   managementUserId String?
-  type            PostType
-  content         String
-  achievement     Json?
-  images          String[]
-  taggedUserIds   String[]        @default([])
-  audience        PostAudience    @default(ALL)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  staffUser       StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  clientUser      ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser  ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
-  comments        PostComment[]
-  reactions       PostReaction[]
-  notifications   Notification[]
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_managementuserid_fkey")
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  notifications    Notification[]
+  comments         PostComment[]
+  reactions        PostReaction[]
 
+  @@index([audience])
+  @@index([taggedUserIds], map: "activity_posts_tagged_users_idx", type: Gin)
+  @@index([audience, createdAt(sort: Desc)], map: "idx_posts_audience_created")
+  @@index([taggedUserIds], map: "idx_posts_tagged_users", type: Gin)
+  @@index([type, createdAt(sort: Desc)], map: "idx_posts_type_created")
   @@map("activity_posts")
 }
 
 model PostReaction {
-  id              String          @id @default(uuid())
-  postId          String
-  staffUserId     String?
-  clientUserId    String?
+  id               String          @id @default(uuid())
+  postId           String
+  staffUserId      String?
+  type             ReactionType
+  createdAt        DateTime        @default(now())
+  clientUserId     String?
   managementUserId String?
-  type            ReactionType
-  createdAt       DateTime        @default(now())
-  post            ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staffUser       StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  clientUser      ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser  ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_managementuserid_fkey")
+  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
+  @@unique([postId, staffUserId, type])
+  @@index([postId], map: "idx_reactions_post")
+  @@index([postId, type], map: "idx_reactions_post_type")
   @@map("post_reactions")
 }
 
 model PostComment {
-  id              String          @id @default(uuid())
-  postId          String
-  staffUserId     String?
-  clientUserId    String?
+  id               String          @id @default(uuid())
+  postId           String
+  staffUserId      String?
+  content          String
+  createdAt        DateTime        @default(now())
+  clientUserId     String?
   managementUserId String?
-  content         String
-  createdAt       DateTime        @default(now())
-  post            ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staffUser       StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  clientUser      ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser  ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_clientuserid_fkey")
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_managementuserid_fkey")
+  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
+  @@index([postId, createdAt], map: "idx_comments_post_created")
   @@map("post_comments")
 }
 
 model Notification {
-  id        String            @id @default(uuid())
+  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
   userId    String
-  type      NotificationType  @default(TAG)
+  type      NotificationType @default(TAG)
   title     String
   message   String
   postId    String?
   actionUrl String?
-  read      Boolean           @default(false)
-  createdAt DateTime          @default(now())
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
   readAt    DateTime?
-  user      StaffUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      ActivityPost?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, read])
-  @@index([userId, createdAt(sort: Desc)])
+  @@index([postId], map: "idx_notifications_post")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
+  @@index([userId, read], map: "idx_notifications_user_read")
   @@map("notifications")
 }
 
@@ -508,14 +509,14 @@ model ClientUser {
   email           String           @unique
   companyId       String
   coverPhoto      String?
+  activityPosts   ActivityPost[]
   profile         ClientProfile?
   company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  tasks           Task[]
-  tickets         Ticket[]
-  ticketResponses TicketResponse[]
-  activityPosts   ActivityPost[]
-  postReactions   PostReaction[]
   postComments    PostComment[]
+  postReactions   PostReaction[]
+  tasks           Task[]
+  ticketResponses TicketResponse[]
+  tickets         Ticket[]
 
   @@map("client_users")
 }
@@ -704,17 +705,17 @@ enum ClockOutReason {
 }
 
 enum ReviewType {
-  MONTH_1      // 30 days after startDate
-  MONTH_3      // 90 days after startDate
-  MONTH_5      // 150 days after startDate - Regularization decision
-  RECURRING    // Every 6 months post-regularization
+  MONTH_1
+  MONTH_3
+  MONTH_5
+  RECURRING
 }
 
 enum ReviewStatus {
-  PENDING      // Waiting for client to complete
-  SUBMITTED    // Client completed, waiting for management
-  UNDER_REVIEW // Management reviewing
-  COMPLETED    // Staff acknowledged
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  COMPLETED
 }
 
 enum TicketCategory {
@@ -727,8 +728,14 @@ enum TicketCategory {
   SURROUNDINGS
   COMPENSATION
   TRANSPORT
-  
-  // Client-only
+  ONBOARDING
+  OFFBOARDING
+  CLINIC
+  MEETING_ROOM
+  MAINTENANCE
+  CLEANING
+  FINANCE
+  OPERATIONS
   ACCOUNT_SUPPORT
   STAFF_PERFORMANCE
   PURCHASE_REQUEST
