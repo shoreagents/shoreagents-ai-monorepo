@@ -6,17 +6,16 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   ArrowLeft,
   Star,
   CheckCircle,
-  RefreshCw,
   User,
   Calendar,
-  Mail
+  Mail,
+  RefreshCw
 } from "lucide-react"
 import { 
   getReviewTypeBadge, 
@@ -49,6 +48,8 @@ interface Review {
   reviewedByName?: string
   reviewedDate?: string
   acknowledgedDate?: string
+  createdAt: string
+  updatedAt: string
   staffUser: {
     id: string
     name: string
@@ -57,7 +58,7 @@ interface Review {
   }
 }
 
-export default function AdminReviewDetailPage({ 
+export default function StaffReviewDetailPage({ 
   params 
 }: { 
   params: Promise<{ reviewId: string }> 
@@ -66,63 +67,80 @@ export default function AdminReviewDetailPage({
   const [review, setReview] = useState<Review | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [managementNotes, setManagementNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [reviewId, setReviewId] = useState<string>("")
 
   useEffect(() => {
-    params.then(p => {
-      setReviewId(p.reviewId)
-      fetchReview(p.reviewId)
-    })
-  }, [params])
+    fetchReview()
+  }, [])
 
-  const fetchReview = async (id: string) => {
+  const fetchReview = async () => {
     try {
-      const response = await fetch(`/api/admin/reviews?reviewId=${id}`)
-      if (!response.ok) throw new Error("Failed to fetch review")
+      const resolvedParams = await params
+      const response = await fetch(`/api/reviews/${resolvedParams.reviewId}`)
+      if (!response.ok) throw new Error('Failed to fetch review')
       
       const data = await response.json()
-      
-      // If we get a single review back (filtered by reviewId)
-      if (data.reviews && data.reviews.length > 0) {
-        setReview(data.reviews[0])
-        setManagementNotes(data.reviews[0].managementNotes || "")
-      } else {
-        throw new Error("Review not found")
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load review")
+      setReview(data.review)
+    } catch (error) {
+      console.error('Error fetching review:', error)
+      setError('Failed to load review details')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleProcessReview = async () => {
+  const handleAcknowledgeReview = async () => {
     if (!review) return
     
     setProcessing(true)
     setError(null)
     
     try {
-      const response = await fetch("/api/admin/reviews", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reviewId: review.id,
-          managementNotes: managementNotes || null
-        })
+      const response = await fetch(`/api/reviews/${review.id}/acknowledge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
       })
       
-      if (!response.ok) throw new Error("Failed to process review")
+      if (!response.ok) throw new Error("Failed to acknowledge review")
       
       setShowSuccessModal(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to process review")
+      setError(err instanceof Error ? err.message : "Failed to acknowledge review")
     } finally {
       setProcessing(false)
     }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'Pending Client Review'
+      case 'SUBMITTED': return 'Client Reviewed'
+      case 'UNDER_REVIEW': return 'Waiting for Acknowledgement'
+      case 'COMPLETED': return 'Completed'
+      default: return status.replace('_', ' ')
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'bg-yellow-500/20 text-yellow-400 ring-yellow-500/30'
+      case 'SUBMITTED': return 'bg-blue-500/20 text-blue-400 ring-blue-500/30'
+      case 'UNDER_REVIEW': return 'bg-purple-500/20 text-purple-400 ring-purple-500/30'
+      case 'COMPLETED': return 'bg-green-500/20 text-green-400 ring-green-500/30'
+      default: return 'bg-slate-500/20 text-muted-foreground ring-slate-500/30'
+    }
+  }
+
+  const getAcknowledgmentDueDate = (submittedDate: string) => {
+    const submitted = new Date(submittedDate)
+    const dueDate = new Date(submitted)
+    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
+    return dueDate
+  }
+
+  const isOverdue = (dueDate: Date) => {
+    return dueDate < new Date()
   }
 
   if (loading) {
@@ -171,14 +189,6 @@ export default function AdminReviewDetailPage({
                 </div>
               </div>
             </Card>
-
-            {/* Management Notes Skeleton */}
-            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
-              <div className="space-y-4">
-                <Skeleton className="h-6 w-32 bg-slate-700/50" />
-                <Skeleton className="h-24 w-full rounded bg-slate-700/50" />
-              </div>
-            </Card>
           </div>
 
           {/* Sidebar Skeleton */}
@@ -221,9 +231,6 @@ export default function AdminReviewDetailPage({
                     </div>
                   ))}
                 </div>
-                <div className="pt-4 border-t border-border">
-                  <Skeleton className="h-8 w-full rounded bg-slate-700/50" />
-                </div>
               </div>
             </Card>
           </div>
@@ -237,7 +244,7 @@ export default function AdminReviewDetailPage({
       <div className="p-6">
         <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-12 text-center">
           <p className="text-muted-foreground">Review not found</p>
-          <Button className="mt-4" onClick={() => router.push("/admin/reviews")}>
+          <Button className="mt-4" onClick={() => router.push("/reviews")}>
             Back to Reviews
           </Button>
         </Card>
@@ -247,19 +254,10 @@ export default function AdminReviewDetailPage({
 
   const typeBadge = getReviewTypeBadge(review.type as any)
   const statusBadge = getStatusBadge(review.status as any)
-  const perfBadge = review.performanceLevel 
-    ? getPerformanceBadge(review.performanceLevel as any)
-    : null
+  const perfBadge = review.performanceLevel ? getPerformanceBadge(review.performanceLevel as any) : null
 
   const template = getReviewTemplate(review.type as any)
   const questions = getAllQuestions(template)
-
-  const getAcknowledgmentDueDate = (submittedDate: string) => {
-    const submitted = new Date(submittedDate)
-    const dueDate = new Date(submitted)
-    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
-    return dueDate
-  }
 
   return (
     <div className="space-y-6 p-6">
@@ -268,13 +266,13 @@ export default function AdminReviewDetailPage({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/admin/reviews")}
+          onClick={() => router.push("/reviews")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground">Review Details</h1>
-          <p className="text-muted-foreground">Process and review staff performance</p>
+          <p className="text-muted-foreground">View your performance review</p>
         </div>
       </div>
 
@@ -346,31 +344,17 @@ export default function AdminReviewDetailPage({
           )}
 
           {/* Management Notes */}
-          <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
-            <h3 className="mb-4 text-lg font-semibold text-foreground">📝 Management Notes</h3>
-            <Textarea
-              value={managementNotes}
-              onChange={(e) => setManagementNotes(e.target.value)}
-              placeholder="Add internal notes about this review (optional)..."
-              rows={6}
-              className="resize-none"
-              disabled={review.status !== "SUBMITTED"}
-            />
-          </Card>
+          {review.managementNotes && (
+            <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
+              <h3 className="mb-4 text-lg font-semibold text-foreground">📝 Management Notes</h3>
+              <p className="whitespace-pre-wrap text-muted-foreground">{review.managementNotes}</p>
+            </Card>
+            )}
 
-          {/* Reviewed by Section */}
-          {review.reviewedBy && (
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-sm text-muted-foreground">
-                Reviewed by {review.reviewedByName || review.reviewedBy} on {formatReviewDate(review.reviewedDate!)}
-              </p>
-            </div>
-          )}
-
-          {/* Mark as Reviewed Button */}
-          {review.status === "SUBMITTED" && (
+            {/* Acknowledge Review Button */}
+          {review.status === "UNDER_REVIEW" && (
             <Button
-              onClick={handleProcessReview}
+              onClick={handleAcknowledgeReview}
               disabled={processing}
               className="w-fit mx-auto"
             >
@@ -382,7 +366,7 @@ export default function AdminReviewDetailPage({
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Reviewed
+                  Acknowledge Review
                 </>
               )}
             </Button>
@@ -391,18 +375,14 @@ export default function AdminReviewDetailPage({
 
         {/* Sidebar */}
         <div className="flex flex-col gap-6 sticky top-6 h-fit">
-          {/* Staff Name Section */}
+          {/* Review Title Section */}
           <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
-            <div className="flex items-start gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={review.staffUser.avatar} />
-                <AvatarFallback>
-                  {review.staffUser.name.split(" ").map(n => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-foreground">{review.staffUser.name}</h2>
-                <p className="text-muted-foreground">{review.staffUser.email}</p>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-foreground">{typeBadge.label} Review</h2>
+              <div className="flex justify-center gap-2 mt-3">
+                <Badge className={`${statusBadge.bgColor} ${statusBadge.color} text-sm`}>
+                  {getStatusLabel(review.status)}
+                </Badge>
               </div>
             </div>
           </Card>
@@ -427,57 +407,43 @@ export default function AdminReviewDetailPage({
           {/* Review Info */}
           <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-6">
             <h3 className="mb-4 text-lg font-semibold text-foreground">Review Information</h3>
-            <div className="flex flex-wrap gap-2">
-              <Badge className={`${typeBadge.bgColor} ${typeBadge.color} text-sm`}>
-                {typeBadge.icon} {typeBadge.label}
-              </Badge>
-              <Badge className={`${statusBadge.bgColor} ${statusBadge.color} text-sm`}>
-                {statusBadge.label}
-              </Badge>
-            </div>
             
-            <div className="border-t border-border pt-3 mt-4">
-              <div className="space-y-2">
+            <div className="space-y-2">
+              {review.submittedDate && (
                 <div className="text-sm">
                   <span className="text-muted-foreground">
-                    {review.status === 'UNDER_REVIEW' ? 'Acknowledgment Due Date:' : 'Due Date:'}
+                    {review.acknowledgedDate ? "Acknowledgment Date:" : "Acknowledgment Due Date:"}
                   </span>
                   <div className={`font-medium ${
-                    review.status === 'UNDER_REVIEW' && review.submittedDate
-                      ? getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
+                    review.acknowledgedDate 
+                      ? "text-green-400" 
+                      : getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
                         getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due tomorrow" ||
                         getDueDateText(getAcknowledgmentDueDate(review.submittedDate)).includes("overdue")
                         ? "text-red-400" 
                         : "text-foreground"
-                      : "text-foreground"
                   }`}>
-                    {review.status === 'UNDER_REVIEW' && review.submittedDate
-                      ? getDueDateText(getAcknowledgmentDueDate(review.submittedDate))
-                      : formatReviewDate(review.dueDate)
+                    {review.acknowledgedDate 
+                      ? formatReviewDate(review.acknowledgedDate)
+                      : getDueDateText(getAcknowledgmentDueDate(review.submittedDate))
                     }
                   </div>
                 </div>
-                {review.submittedDate && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Client Reviewed Date:</span>
-                    <div className="font-medium text-foreground">
-                      {formatReviewDate(review.submittedDate)}
-                    </div>
-                  </div>
-                )}
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Period:</span>
-                  <div className="font-medium text-foreground">{review.evaluationPeriod}</div>
-                </div>
+              )}
+              <div className="text-sm">
+                <span className="text-muted-foreground">Period:</span>
+                <div className="font-medium text-foreground">{review.evaluationPeriod}</div>
               </div>
+              {review.submittedDate && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Client Reviewed Date:</span>
+                  <div className="font-medium text-foreground">{formatReviewDate(review.submittedDate)}</div>
+                </div>
+              )}
             </div>
             
             <div className="border-t border-border pt-3 mt-3">
               <div className="text-sm">
-                <span className="text-muted-foreground">Company:</span>
-                <div className="font-medium text-foreground">{review.client}</div>
-              </div>
-              <div className="text-sm mt-2">
                 <span className="text-muted-foreground">Reviewer:</span>
                 <div className="font-medium text-foreground">{review.reviewerName || review.reviewer}</div>
               </div>
@@ -502,12 +468,12 @@ export default function AdminReviewDetailPage({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Review Processed Successfully
+              Review Acknowledged Successfully
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              The review has been marked as reviewed and is now complete.
+              You have successfully acknowledged your review. The review is now complete.
             </p>
           </div>
           <div className="flex justify-end gap-2">
@@ -520,7 +486,7 @@ export default function AdminReviewDetailPage({
             <Button
               onClick={() => {
                 setShowSuccessModal(false)
-                router.push("/admin/reviews")
+                router.push("/reviews")
               }}
             >
               Back to Reviews
@@ -531,4 +497,3 @@ export default function AdminReviewDetailPage({
     </div>
   )
 }
-

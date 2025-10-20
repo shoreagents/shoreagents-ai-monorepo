@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Star, Clock, CheckCircle2, User, Calendar, ArrowRight, MessageSquare } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { getReviewTypeBadge, getPerformanceBadge } from "@/lib/review-utils"
+import { getReviewTypeBadge, getPerformanceBadge, getDueDateText } from "@/lib/review-utils"
 
 interface Review {
   id: string
@@ -93,6 +93,13 @@ export default function AdminReviewsPage() {
       case 'COMPLETED': return 'bg-green-500/20 text-green-400 ring-green-500/30'
       default: return 'bg-slate-500/20 text-muted-foreground ring-slate-500/30'
     }
+  }
+
+  const getAcknowledgmentDueDate = (submittedDate: string) => {
+    const submitted = new Date(submittedDate)
+    const dueDate = new Date(submitted)
+    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
+    return dueDate
   }
 
   const getTypeColor = (type: string) => {
@@ -295,15 +302,45 @@ export default function AdminReviewsPage() {
 
 
                   <div className="pt-4 border-t border-border">
-                    <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground mb-3 pb-3 border-b border-border">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        Due: {new Date(review.dueDate).toLocaleDateString()}
-                      </div>
-                      {review.submittedDate && (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Submitted: {new Date(review.submittedDate).toLocaleDateString()}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {!review.submittedDate && (
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-1">Client Review Due Date</div>
+                          <div className={`font-medium ${
+                            getDueDateText(review.dueDate) === "Due today" || 
+                            getDueDateText(review.dueDate) === "Due tomorrow" ||
+                            getDueDateText(review.dueDate).includes("overdue")
+                              ? "text-red-400" 
+                              : "text-foreground"
+                          }`}>
+                            {getDueDateText(review.dueDate)}
+                          </div>
+                        </div>
+                      )}
+                      {review.submittedDate && review.status === 'UNDER_REVIEW' && (
+                        <>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Acknowledgment Due Date</div>
+                            <div className={`font-medium ${
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due tomorrow" ||
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)).includes("overdue")
+                                ? "text-red-400" 
+                                : "text-foreground"
+                            }`}>
+                              {getDueDateText(getAcknowledgmentDueDate(review.submittedDate))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Client Reviewed Date</div>
+                            <div className="font-medium text-foreground">{new Date(review.submittedDate).toLocaleDateString()}</div>
+                          </div>
+                        </>
+                      )}
+                      {review.submittedDate && review.status !== 'UNDER_REVIEW' && (
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-1">Client Reviewed Date</div>
+                          <div className="font-medium text-foreground">{new Date(review.submittedDate).toLocaleDateString()}</div>
                         </div>
                       )}
                     </div>

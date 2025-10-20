@@ -66,17 +66,17 @@ export function getStatusBadge(status: ReviewStatusType): {
 } {
   const badges = {
     PENDING: {
-      label: "Pending Client",
+      label: "Pending Client Review",
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/20"
     },
     SUBMITTED: {
-      label: "Submitted",
+      label: "Client Reviewed",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20"
     },
     UNDER_REVIEW: {
-      label: "Under Review",
+      label: "Waiting for Acknowledgement",
       color: "text-purple-400",
       bgColor: "bg-purple-500/20"
     },
