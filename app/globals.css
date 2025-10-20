@@ -396,3 +396,33 @@ input[type="file"]::-webkit-file-upload-button {
 .top-performers-scroll::-webkit-scrollbar-thumb:hover {
   background: #facc15;
 }
+
+/* Shimmer animation for talent pool cards */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
+/* Fade in animation for tab content */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}

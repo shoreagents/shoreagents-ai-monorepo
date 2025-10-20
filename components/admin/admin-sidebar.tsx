@@ -149,6 +149,19 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  Video: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="m22 8-6 4 6 4V8Z" />
+      <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
+    </svg>
+  ),
+  FileCheck: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+      <polyline points="14 2 14 8 20 8" />
+      <path d="m9 15 2 2 4-4" />
+    </svg>
+  ),
 }
 
 const navItems = [
@@ -165,6 +178,8 @@ const navItems = [
   { icon: "Trophy", label: "Gamification", href: "/admin/gamification", badge: null },
   { icon: "TrendingUp", label: "Performance Analytics", href: "/admin/analytics", badge: null },
   { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
+  { icon: "Video", label: "Interview Requests", href: "/admin/interviews/requests", badge: null },
+  { icon: "FileCheck", label: "Interview Outcomes", href: "/admin/interviews/outcomes", badge: null },
   { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
 ]
 

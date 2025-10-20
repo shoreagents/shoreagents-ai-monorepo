@@ -96,6 +96,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/reviews", label: "Reviews", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
     { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
+    { href: "/client/interviews", label: "Interviews", icon: Coffee },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   ]
 
