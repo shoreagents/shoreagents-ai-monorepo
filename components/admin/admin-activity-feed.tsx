@@ -77,6 +77,7 @@ const audienceConfig = {
 export default function AdminActivityFeed() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -88,12 +89,21 @@ export default function AdminActivityFeed() {
   const [showStaffDropdown, setShowStaffDropdown] = useState(false)
   const [selectedAudience, setSelectedAudience] = useState<PostAudience>("ALL")
   const [filterAudience, setFilterAudience] = useState<PostAudience | "ALL_FILTER">("ALL_FILTER")
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [total, setTotal] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchPosts()
     fetchCurrentUser()
     fetchStaff()
+  }, [])
+
+  useEffect(() => {
+    setPage(1)
+    setHasMore(true)
+    fetchPosts(1)
   }, [filterAudience])
 
   const fetchCurrentUser = async () => {
@@ -118,19 +128,36 @@ export default function AdminActivityFeed() {
     }
   }
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (pageNum = 1) => {
     try {
-      const url = filterAudience === "ALL_FILTER" 
-        ? "/api/posts"
-        : `/api/posts?audience=${filterAudience}`
-      const response = await fetch(url)
+      const baseUrl = filterAudience === "ALL_FILTER" 
+        ? `/api/posts?page=${pageNum}&limit=15`
+        : `/api/posts?audience=${filterAudience}&page=${pageNum}&limit=15`
+      
+      const response = await fetch(baseUrl)
       const data = await response.json()
-      setPosts(data.posts || [])
+      
+      if (pageNum === 1) {
+        setPosts(data.posts || [])
+      } else {
+        setPosts(prev => [...prev, ...(data.posts || [])])
+      }
+      
+      setHasMore(data.pagination?.hasMore || false)
+      setTotal(data.pagination?.total || 0)
+      setPage(pageNum)
     } catch (error) {
       console.error("Error fetching posts:", error)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
+  }
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    await fetchPosts(page + 1)
   }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -653,6 +680,29 @@ export default function AdminActivityFeed() {
                 </div>
               )
             })}
+
+            {/* Load More Button */}
+            {!loading && hasMore && (
+              <div className="flex flex-col items-center gap-2 py-6">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium transition-all hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-lg shadow-purple-500/20"
+                >
+                  {loadingMore ? "Loading..." : "Load More Posts"}
+                </button>
+                <p className="text-sm text-slate-400">
+                  Showing {posts.length} of {total} posts
+                </p>
+              </div>
+            )}
+
+            {/* No More Posts Message */}
+            {!loading && !hasMore && posts.length > 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-slate-500">🎉 You've reached the end!</p>
+              </div>
+            )}
           </div>
         )}
       </div>

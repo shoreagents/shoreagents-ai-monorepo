@@ -11,9 +11,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get audience filter from query params
+    // Get query params
     const { searchParams } = new URL(request.url)
     const audienceFilter = searchParams.get('audience')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '15')
+    
+    // Validate pagination params
+    const validPage = Math.max(1, page)
+    const validLimit = Math.min(Math.max(1, limit), 50) // Max 50 posts per page
+    const skip = (validPage - 1) * validLimit
 
     // Build where clause based on audience filter
     // If filtering by a specific audience, show posts for that audience AND posts for ALL
@@ -24,8 +31,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total count for pagination
+    const totalCount = await prisma.activityPost.count({
+      where: whereClause
+    })
+
     const posts = await prisma.activityPost.findMany({
       where: whereClause,
+      skip,
+      take: validLimit,
       include: {
         staffUser: {
           select: {
@@ -103,7 +117,6 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 50, // Limit to recent 50 posts
     })
 
     // Fetch tagged users if any posts have them
@@ -161,7 +174,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ posts: transformedPosts })
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / validLimit)
+    const hasMore = validPage < totalPages
+
+    return NextResponse.json({ 
+      posts: transformedPosts,
+      pagination: {
+        page: validPage,
+        limit: validLimit,
+        total: totalCount,
+        totalPages,
+        hasMore
+      }
+    })
   } catch (error) {
     console.error("Error fetching posts:", error)
     return NextResponse.json(
