@@ -277,6 +277,29 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 🔥 Emit real-time event to all connected clients
+    const io = global.socketServer
+    if (io) {
+      const postUser = staffUser || clientUser || managementUser
+      io.emit('activity:newPost', {
+        id: post.id,
+        content: post.content,
+        type: post.type,
+        images: post.images,
+        audience: post.audience,
+        createdAt: post.createdAt.toISOString(),
+        user: {
+          id: postUser.id,
+          name: postUser.name,
+          avatar: postUser.avatar,
+          role: staffUser?.role || managementUser?.role || 'Client'
+        },
+        reactions: [],
+        comments: []
+      })
+      console.log('🔥 [WebSocket] New post emitted:', post.id)
+    }
+
     return NextResponse.json({ success: true, post }, { status: 201 })
   } catch (error) {
     console.error("Error creating post:", error)

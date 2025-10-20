@@ -83,6 +83,26 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 🔥 Emit WebSocket event
+    const io = global.socketServer
+    if (io) {
+      const user = comment.staffUser || comment.clientUser || comment.managementUser
+      io.emit('activity:commentAdded', {
+        postId,
+        comment: {
+          id: comment.id,
+          content: comment.content,
+          createdAt: comment.createdAt.toISOString(),
+          user: {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          }
+        }
+      })
+      console.log('🔥 [WebSocket] Comment added:', postId)
+    }
+
     return NextResponse.json({ success: true, comment }, { status: 201 })
   } catch (error) {
     console.error("Error adding comment:", error)
@@ -151,10 +171,23 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // Store postId before deleting
+    const postId = comment.postId
+    
     // Delete comment
     await prisma.postComment.delete({
       where: { id: commentId },
     })
+
+    // 🔥 Emit WebSocket event
+    const io = global.socketServer
+    if (io) {
+      io.emit('activity:commentDeleted', {
+        postId,
+        commentId
+      })
+      console.log('🔥 [WebSocket] Comment deleted:', commentId)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

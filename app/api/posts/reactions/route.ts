@@ -70,6 +70,14 @@ export async function POST(request: NextRequest) {
       await prisma.postReaction.delete({
         where: { id: existingReaction.id },
       })
+      
+      // 🔥 Emit WebSocket event
+      const io = global.socketServer
+      if (io) {
+        io.emit('activity:reactionRemoved', { postId, userId: staffUser?.id || clientUser?.id || managementUser?.id, type })
+        console.log('🔥 [WebSocket] Reaction removed:', postId)
+      }
+      
       return NextResponse.json({ success: true, action: "removed" })
     }
 
@@ -84,6 +92,22 @@ export async function POST(request: NextRequest) {
         where: { id: anyReaction.id },
         data: { type },
       })
+      
+      // 🔥 Emit WebSocket event
+      const io = global.socketServer
+      if (io) {
+        const user = staffUser || clientUser || managementUser
+        io.emit('activity:reactionUpdated', { 
+          postId, 
+          reaction: {
+            id: reaction.id,
+            type: reaction.type,
+            user: { id: user.id, name: user.name }
+          }
+        })
+        console.log('🔥 [WebSocket] Reaction updated:', postId)
+      }
+      
       return NextResponse.json({ success: true, action: "updated", reaction })
     }
 
@@ -97,6 +121,21 @@ export async function POST(request: NextRequest) {
         type,
       },
     })
+
+    // 🔥 Emit WebSocket event
+    const io = global.socketServer
+    if (io) {
+      const user = staffUser || clientUser || managementUser
+      io.emit('activity:reactionAdded', { 
+        postId, 
+        reaction: {
+          id: reaction.id,
+          type: reaction.type,
+          user: { id: user.id, name: user.name }
+        }
+      })
+      console.log('🔥 [WebSocket] Reaction added:', postId)
+    }
 
     return NextResponse.json({ success: true, action: "added", reaction })
   } catch (error) {
