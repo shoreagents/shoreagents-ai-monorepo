@@ -100,9 +100,19 @@ export async function GET(
 
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const totalHoursThisMonth = user.performanceMetrics
-      .filter(m => new Date(m.date) >= startOfMonth)
-      .reduce((sum, m) => sum + m.activeTime, 0) / 60
+    
+    // Calculate hours from timeEntries (same as attendance stats)
+    const thisMonthEntries = user.timeEntries.filter(
+      e => new Date(e.clockIn) >= startOfMonth
+    )
+    const totalHoursThisMonth = Math.round(
+      thisMonthEntries.reduce((sum, e) => {
+        if (e.totalHours) {
+          return sum + Number(e.totalHours)
+        }
+        return sum
+      }, 0)
+    )
 
     const currentEntry = user.timeEntries[0]
     const isClockedIn = currentEntry && !currentEntry.clockOut
@@ -119,10 +129,7 @@ export async function GET(
       stuck: user.legacyTasks.filter(t => t.status === 'STUCK').length,
     }
 
-    // Calculate attendance stats from timeEntries
-    const thisMonthEntries = user.timeEntries.filter(
-      e => new Date(e.clockIn) >= startOfMonth
-    )
+    // Calculate attendance stats from timeEntries (using thisMonthEntries from above)
     const attendanceStats = {
       daysPresent: thisMonthEntries.length,
       totalHours: Math.round(
@@ -208,7 +215,7 @@ export async function GET(
       stats: {
         avgProductivity,
         reviewScore,
-        totalHoursThisMonth: Math.round(totalHoursThisMonth),
+        totalHoursThisMonth, // Already rounded in calculation above
         level: user.gamificationProfile?.level || 1,
         points: user.gamificationProfile?.points || 0,
         rank: user.gamificationProfile?.rank || null,
