@@ -38,7 +38,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <StaffFloatingCallButton />
       <CallNotificationProvider />
       <Toaster />
-      <IncomingCallNotification />
     </>
   ) : (
     // For login, admin, and client pages - no sidebar but include toaster

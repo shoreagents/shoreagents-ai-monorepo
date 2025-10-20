@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import CloudConvert from 'cloudconvert'
+import { logDocumentUploaded } from "@/lib/activity-generator"
 
 // GET - Fetch documents for client: own uploads + staff documents shared with them
 export async function GET(request: NextRequest) {
@@ -339,13 +340,21 @@ export async function POST(request: NextRequest) {
         },
       },
     })
-
+    
     console.log('✅ [CLIENT] Document created:', {
       id: document.id,
       title: document.title,
       fileUrl: document.fileUrl ? 'YES' : 'NO',
       storageStatus: uploadStatus.message
     })
+
+    // 🎉 Auto-generate activity post for client document upload
+    await logDocumentUploaded(
+      firstStaff.id,  // Use first staff as poster
+      title,
+      clientUser.name,
+      clientUser.company.companyName
+    )
 
     return NextResponse.json({
       success: true,
