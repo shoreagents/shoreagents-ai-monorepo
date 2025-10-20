@@ -131,6 +131,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const title = formData.get('title') as string
     const category = formData.get('category') as string
+    const sharedWithAllStr = formData.get('sharedWithAll') as string
+    const sharedWithStr = formData.get('sharedWith') as string
 
     if (!title || !category || !file) {
       return NextResponse.json(
@@ -139,6 +141,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Parse sharing settings
+    const sharedWithAll = sharedWithAllStr === 'true'
+    let sharedWith: string[] = []
+    
+    if (!sharedWithAll && sharedWithStr) {
+      try {
+        sharedWith = JSON.parse(sharedWithStr)
+      } catch (e) {
+        console.error('Failed to parse sharedWith:', e)
+      }
+    }
+
+    console.log(`📤 [CLIENT] Document upload request:`, {
+      title,
+      category,
+      sharedWithAll,
+      specificStaffCount: sharedWith.length,
+      fileSize: file.size
+    })
+
     // Get ClientUser
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
@@ -146,8 +168,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (!clientUser) {
+      console.error(`❌ [CLIENT] Client user not found for email: ${session.user.email}`)
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
+
+    console.log(`✅ [CLIENT] Client user found: ${clientUser.name} (Company: ${clientUser.company.companyName})`)
 
     // Get first staff assigned to this client (for storing in staffUserId relation)
     const firstStaff = await prisma.staffUser.findFirst({
@@ -157,7 +182,10 @@ export async function POST(request: NextRequest) {
     })
 
     if (!firstStaff) {
-      return NextResponse.json({ error: "No staff assigned to your organization" }, { status: 400 })
+      console.error(`❌ [CLIENT] No staff assigned to company: ${clientUser.company.id}`)
+      return NextResponse.json({ 
+        error: "No staff members are assigned to your company yet. Please contact your administrator to assign staff before uploading documents." 
+      }, { status: 400 })
     }
 
     // Extract text content from file using CloudConvert
@@ -314,6 +342,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // For CLIENT documents:
+    // - If sharedWithAll is true, we'll use that flag + uploadedBy (company name) for dynamic matching
+    // - If specific staff are selected, use the sharedWith array
+    
     // Create document with CLIENT source
     const document = await prisma.document.create({
       data: {
@@ -324,9 +356,9 @@ export async function POST(request: NextRequest) {
         content,
         size: fileSize,
         fileUrl,
-        uploadedBy: clientUser.company.companyName,
-        sharedWithAll: false, // Clients don't auto-share, staff decide
-        sharedWith: []
+        uploadedBy: clientUser.company.companyName,  // Store company name for dynamic filtering
+        sharedWithAll: sharedWithAll,  // TRUE = all staff in this company, FALSE = specific staff only
+        sharedWith: sharedWith  // Array of specific staff user IDs (used when sharedWithAll is false)
       },
       include: {
         staffUser: {
@@ -344,7 +376,9 @@ export async function POST(request: NextRequest) {
       id: document.id,
       title: document.title,
       fileUrl: document.fileUrl ? 'YES' : 'NO',
-      storageStatus: uploadStatus.message
+      storageStatus: uploadStatus.message,
+      company: clientUser.company.companyName,
+      shareMode: sharedWithAll ? 'ALL_COMPANY_STAFF' : `SPECIFIC (${sharedWith.length} users)`
     })
 
     return NextResponse.json({
@@ -361,9 +395,16 @@ export async function POST(request: NextRequest) {
       },
       storage: uploadStatus
     }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error("[CLIENT] Error creating document:", error)
-    return NextResponse.json({ error: "Failed to create document" }, { status: 500 })
+    const errorMessage = error.message || "Failed to create document"
+    const errorDetails = error.stack || error.toString()
+    console.error("[CLIENT] Error details:", errorDetails)
+    
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+    }, { status: 500 })
   }
 }
 
