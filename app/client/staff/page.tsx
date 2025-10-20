@@ -92,24 +92,30 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Staff</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage your dedicated team • {staff.length} {staff.length === 1 ? "member" : "members"}
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                Your Team
+              </h1>
+              <p className="text-base text-gray-600 flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                {staff.length} dedicated {staff.length === 1 ? "team member" : "team members"}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {/* View Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1.5 shadow-inner">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
+                  className={viewMode === 'list' 
+                    ? 'bg-white shadow-md hover:bg-white rounded-lg' 
+                    : 'hover:bg-gray-200 rounded-lg'
+                  }
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -117,14 +123,17 @@ export default function StaffPage() {
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
+                  className={viewMode === 'grid' 
+                    ? 'bg-white shadow-md hover:bg-white rounded-lg' 
+                    : 'hover:bg-gray-200 rounded-lg'
+                  }
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all">
                 <Users className="h-4 w-4 mr-2" />
-                Request Staff
+                Request New Staff
               </Button>
             </div>
           </div>
@@ -144,85 +153,14 @@ export default function StaffPage() {
             {staff.map((member) => viewMode === 'grid' ? (
               // GRID VIEW - Compact Card
               <Link key={member.id} href={`/client/staff/${member.id}`}>
-                <Card className="p-6 bg-white border-gray-200 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group h-full">
-                  <div className="flex flex-col items-center text-center mb-4">
-                    {member.avatar ? (
-                      <div className="relative w-24 h-24 rounded-full overflow-hidden ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all mb-3">
-                        <Image
-                          src={member.avatar}
-                          alt={member.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-2xl font-semibold ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all mb-3">
-                        {member.name.split(" ").map((n) => n[0]).join("")}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {member.name}
-                      </h3>
-                      {member.isClockedIn && (
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{member.assignmentRole || member.currentRole}</p>
-                    <div className="flex items-center gap-2 flex-wrap justify-center">
-                      <Badge className={getStatusColor(member.employmentStatus)}>
-                        {member.employmentStatus}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Level {member.level}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-1 mb-4 pb-4 border-b border-gray-200">
-                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-2xl font-bold text-gray-900">{member.avgProductivity}</span>
-                  </div>
-
-                  <div className="space-y-2 mb-4 text-sm">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Mail className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                      <span className="truncate">{member.email}</span>
-                    </div>
-                    {member.phone && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Phone className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                        <span>{member.phone}</span>
-                      </div>
-                    )}
-                    {member.rate && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <DollarSign className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                        <span>${member.rate}/month</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-blue-600">{member.totalHoursThisMonth}h</p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Hours</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-purple-600">{member.activeTasks}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Tasks</p>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ) : (
-              // LIST VIEW - Full Detail Card
-              <Link key={member.id} href={`/client/staff/${member.id}`}>
-                <Card className="p-6 bg-white border-gray-200 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-start gap-4">
+                <Card className="relative p-6 bg-white border-gray-200 hover:shadow-2xl transition-all hover:border-blue-400 hover:-translate-y-1 cursor-pointer group h-full overflow-hidden">
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/30 transition-all pointer-events-none" />
+                  
+                  <div className="relative z-10">
+                    <div className="flex flex-col items-center text-center mb-4">
                       {member.avatar ? (
-                        <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all">
+                        <div className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-blue-100 group-hover:ring-blue-300 group-hover:scale-105 transition-all mb-3 shadow-lg">
                           <Image
                             src={member.avatar}
                             alt={member.name}
@@ -231,105 +169,197 @@ export default function StaffPage() {
                           />
                         </div>
                       ) : (
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-2xl font-semibold ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all">
-                          {member.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white flex items-center justify-center text-2xl font-bold ring-4 ring-blue-100 group-hover:ring-blue-300 group-hover:scale-105 transition-all mb-3 shadow-lg">
+                          {member.name.split(" ").map((n) => n[0]).join("")}
                         </div>
                       )}
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                            {member.name}
-                          </h3>
-                          {member.isClockedIn && (
-                            <Badge className="bg-green-100 text-green-700 border-green-200">
-                              <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
-                              Online
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm font-medium text-gray-600 mb-2">{member.assignmentRole || member.currentRole}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(member.employmentStatus)}>
-                            {member.employmentStatus}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Level {member.level}
-                          </Badge>
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {member.name}
+                        </h3>
+                        {member.isClockedIn && (
+                          <div className="relative">
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                            <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3 font-medium">{member.assignmentRole || member.currentRole}</p>
+                      <div className="flex items-center gap-2 flex-wrap justify-center">
+                        <Badge className={getStatusColor(member.employmentStatus) + " font-semibold"}>
+                          {member.employmentStatus}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs font-semibold border-2">
+                          Level {member.level}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-1 justify-end mb-1">
-                        <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                        <p className="text-2xl font-bold text-gray-900">{member.avgProductivity}</p>
-                      </div>
-                      <p className="text-xs text-gray-500 font-medium">Performance Score</p>
-                      {member.reviewScore > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">Review: {member.reviewScore}/5.0</p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <Mail className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">{member.email}</span>
+                    <div className="flex items-center justify-center gap-2 mb-4 pb-4 border-b border-gray-200">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                        <span className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{member.avgProductivity}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 mb-4 text-sm">
+                      <div className="flex items-center gap-2 text-gray-700 bg-gray-50 p-2 rounded-lg">
+                        <Mail className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                        <span className="truncate font-medium">{member.email}</span>
                       </div>
                       {member.phone && (
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <Phone className="h-4 w-4 text-blue-600" />
+                        <div className="flex items-center gap-2 text-gray-700 bg-gray-50 p-2 rounded-lg">
+                          <Phone className="h-4 w-4 text-blue-600 flex-shrink-0" />
                           <span className="font-medium">{member.phone}</span>
                         </div>
                       )}
-                      {member.location && (
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <MapPin className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium">{member.location}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">Started {formatDate(member.startDate)}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">Shift: {member.shift}</span>
-                      </div>
                       {member.rate && (
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <DollarSign className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium">${member.rate}/month</span>
+                        <div className="flex items-center gap-2 text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-lg">
+                          <DollarSign className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          <span className="font-bold text-green-700">${member.rate.toLocaleString()}/mo</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">Managed by {member.managedBy}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
+                      <div className="text-center bg-blue-50 rounded-lg p-3">
+                        <p className="text-2xl font-bold text-blue-600">{member.totalHoursThisMonth}h</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">This Month</p>
+                      </div>
+                      <div className="text-center bg-purple-50 rounded-lg p-3">
+                        <p className="text-2xl font-bold text-purple-600">{member.activeTasks}</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Active</p>
                       </div>
                     </div>
                   </div>
+                </Card>
+              </Link>
+            ) : (
+              // LIST VIEW - Full Detail Card
+              <Link key={member.id} href={`/client/staff/${member.id}`}>
+                <Card className="relative p-6 bg-white border-gray-200 hover:shadow-2xl transition-all hover:border-blue-400 cursor-pointer group overflow-hidden">
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/40 group-hover:to-purple-50/20 transition-all pointer-events-none" />
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-start gap-5">
+                        {member.avatar ? (
+                          <div className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-blue-100 group-hover:ring-blue-300 transition-all shadow-lg">
+                            <Image
+                              src={member.avatar}
+                              alt={member.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white flex items-center justify-center text-3xl font-bold ring-4 ring-blue-100 group-hover:ring-blue-300 transition-all shadow-lg">
+                            {member.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                              {member.name}
+                            </h3>
+                            {member.isClockedIn && (
+                              <Badge className="bg-green-100 text-green-700 border-green-300 font-semibold">
+                                <div className="relative mr-2">
+                                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                  <div className="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                                </div>
+                                Online Now
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-base font-semibold text-gray-600 mb-3">{member.assignmentRole || member.currentRole}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getStatusColor(member.employmentStatus) + " font-semibold"}>
+                              {member.employmentStatus}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs font-semibold border-2">
+                              Level {member.level}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs font-semibold border-2">
+                              {member.points} pts
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
+                        <div className="flex items-center gap-2 justify-end mb-1">
+                          <Star className="h-6 w-6 text-yellow-500 fill-yellow-500" />
+                          <p className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{member.avgProductivity}</p>
+                        </div>
+                        <p className="text-xs text-gray-600 font-semibold">Performance</p>
+                        {member.reviewScore > 0 && (
+                          <p className="text-xs text-gray-500 mt-1 font-medium">Review: {member.reviewScore}/5.0</p>
+                        )}
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-4 gap-4 pt-4 border-t border-gray-200">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">{member.totalHoursThisMonth}h</p>
-                      <p className="text-xs text-gray-500 font-medium mt-1">This Month</p>
+                    <div className="grid grid-cols-2 gap-6 mb-5">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <span className="font-semibold">{member.email}</span>
+                        </div>
+                        {member.phone && (
+                          <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                            <Phone className="h-4 w-4 text-blue-600" />
+                            <span className="font-semibold">{member.phone}</span>
+                          </div>
+                        )}
+                        {member.location && (
+                          <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                            <span className="font-semibold">{member.location}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          <span className="font-semibold">Started {formatDate(member.startDate)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <span className="font-semibold">Shift: {member.shift}</span>
+                        </div>
+                        {member.rate && (
+                          <div className="flex items-center gap-3 text-sm text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <span className="font-bold text-green-700">${member.rate.toLocaleString()}/month</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          <span className="font-semibold">Managed by {member.managedBy}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-purple-600">{member.activeTasks}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-1">Active Tasks</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{member.totalLeave - member.usedLeave}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-1">Leave Days</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">{member.daysEmployed}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-1">Days</p>
+
+                    <div className="grid grid-cols-4 gap-4 pt-5 border-t-2 border-gray-200">
+                      <div className="text-center bg-blue-50 p-4 rounded-xl">
+                        <p className="text-3xl font-bold text-blue-600">{member.totalHoursThisMonth}h</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">This Month</p>
+                      </div>
+                      <div className="text-center bg-purple-50 p-4 rounded-xl">
+                        <p className="text-3xl font-bold text-purple-600">{member.activeTasks}</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Active Tasks</p>
+                      </div>
+                      <div className="text-center bg-green-50 p-4 rounded-xl">
+                        <p className="text-3xl font-bold text-green-600">{member.totalLeave - member.usedLeave}</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Leave Days</p>
+                      </div>
+                      <div className="text-center bg-orange-50 p-4 rounded-xl">
+                        <p className="text-3xl font-bold text-orange-600">{member.daysEmployed}</p>
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Days Employed</p>
+                      </div>
                     </div>
                   </div>
                 </Card>
