@@ -621,48 +621,70 @@ function DISCTab({ candidate }: { candidate: CandidateProfile }) {
 
   // Parse the comprehensive assessment into structured sections
   const parseAssessment = (text: string) => {
-    const sections: { title: string; content: string; icon?: string }[] = []
+    const sections: { title: string; content: string }[] = []
     
-    // Extract key sections from the text
-    const coreTraitsMatch = text.match(/CORE TRAITS:([^A-Z]+)/)
-    const culturalStrengthsMatch = text.match(/CULTURAL STRENGTHS:([^A-Z]+)/)
-    const leadershipMatch = text.match(/leadership(?:\s+style)?[:\s]+([^.]+\.)/i)
-    const animalMatch = text.match(/ANIMAL PERSONALITY REASON\s*\(([^)]+)\):([^A-Z]+)/)
+    // Split text into logical chunks based on ALL CAPS keywords
+    const markers = [
+      { key: 'COMPREHENSIVE ASSESSMENT:', title: '📊 Comprehensive Assessment', emoji: '📊' },
+      { key: 'CORE TRAITS:', title: '⚡ Core Traits', emoji: '⚡' },
+      { key: 'CULTURAL STRENGTHS:', title: '🌏 Cultural Strengths', emoji: '🌏' },
+      { key: 'ANIMAL PERSONALITY REASON', title: '🦅 Animal Personality', emoji: '🦅' },
+    ]
     
-    // Add overview/comprehensive assessment
-    const overviewEnd = text.indexOf('CORE TRAITS')
-    if (overviewEnd > 0) {
-      const overview = text.substring(0, overviewEnd).trim()
-      if (overview.length > 50) {
-        sections.push({
-          title: '📊 Comprehensive Assessment',
-          content: overview,
-        })
+    // Find all marker positions
+    const positions: { index: number; marker: typeof markers[0] }[] = []
+    markers.forEach(marker => {
+      const index = text.indexOf(marker.key)
+      if (index !== -1) {
+        positions.push({ index, marker })
+      }
+    })
+    
+    // Sort by position
+    positions.sort((a, b) => a.index - b.index)
+    
+    // Extract content between markers
+    for (let i = 0; i < positions.length; i++) {
+      const current = positions[i]
+      const next = positions[i + 1]
+      
+      const startIndex = current.index + current.marker.key.length
+      const endIndex = next ? next.index : text.length
+      
+      let content = text.substring(startIndex, endIndex).trim()
+      
+      // For animal personality, extract the animal name from parentheses
+      let title = current.marker.title
+      if (current.marker.key.includes('ANIMAL')) {
+        const animalMatch = text.substring(current.index, endIndex).match(/REASON\s*\(([^)]+)\):/)
+        if (animalMatch) {
+          title = `🦅 Animal Personality: ${animalMatch[1]}`
+          content = content.replace(/REASON\s*\([^)]+\):\s*/, '')
+        }
+      }
+      
+      // Clean up content - remove extra markers and trim
+      content = content
+        .replace(/^[\s:\-•]+/, '') // Remove leading colons, dashes, bullets
+        .replace(/[\s]+/g, ' ') // Normalize whitespace
+        .trim()
+      
+      if (content.length > 10) { // Only add if has substantial content
+        sections.push({ title, content })
       }
     }
     
-    // Add core traits
-    if (coreTraitsMatch) {
-      sections.push({
-        title: '⚡ Core Traits',
-        content: coreTraitsMatch[1].trim(),
-      })
-    }
-    
-    // Add cultural strengths
-    if (culturalStrengthsMatch) {
-      sections.push({
-        title: '🌏 Cultural Strengths',
-        content: culturalStrengthsMatch[1].trim(),
-      })
-    }
-    
-    // Add animal personality
-    if (animalMatch) {
-      sections.push({
-        title: `🦅 Animal Personality: ${animalMatch[1]}`,
-        content: animalMatch[2].trim(),
-      })
+    // If no markers found, try to extract overview at least
+    if (sections.length === 0 && text.length > 50) {
+      // Look for first sentence ending or first period
+      const sentences = text.split(/\.(?=\s+[A-Z])/)
+      if (sentences.length > 0) {
+        const overview = sentences.slice(0, Math.min(3, sentences.length)).join('. ') + '.'
+        sections.push({
+          title: '📊 Overview',
+          content: overview.trim()
+        })
+      }
     }
     
     return sections
