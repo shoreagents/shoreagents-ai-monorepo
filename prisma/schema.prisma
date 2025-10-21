@@ -47,7 +47,7 @@ model StaffUser {
   gamificationProfile    GamificationProfile?
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
-  notifications          notifications[]
+  notifications          Notification[]
   performanceMetrics     PerformanceMetric[]
   postComments           PostComment[]
   postReactions          PostReaction[]
@@ -336,7 +336,7 @@ model ActivityPost {
   client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_clientuserid_fkey")
   management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_managementuserid_fkey")
   staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  notifications    notifications[]
+  notifications    Notification[]
   comments         PostComment[]
   reactions        PostReaction[]
 
@@ -629,26 +629,6 @@ model staff_personal_records {
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model notifications {
-  id             String           @id @default(dbgenerated("(gen_random_uuid())::text"))
-  userId         String
-  type           NotificationType @default(TAG)
-  title          String
-  message        String
-  postId         String?
-  actionUrl      String?
-  read           Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  readAt         DateTime?
-  activity_posts ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staff_users    StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId], map: "idx_notifications_post")
-  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
-  @@index([userId, read], map: "idx_notifications_user_read")
-}
-
 enum ManagementRole {
   ADMIN
   MANAGER
@@ -863,19 +843,4 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
-}
-
-enum NotificationType {
-  TAG
-  MENTION
-  COMMENT
-  REACTION
-  SYSTEM
-}
-
-enum PostAudience {
-  STAFF
-  CLIENT
-  MANAGEMENT
-  ALL
 }
