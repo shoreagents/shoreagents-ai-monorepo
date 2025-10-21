@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        management_users: {
+        managementUser: {
           select: {
             id: true,
             name: true,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            management_users: {
+            managementUser: {
               select: {
                 id: true,
                 name: true,
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        management_users: {
+        managementUser: {
           select: {
             id: true,
             name: true,
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
                 avatar: true,
               },
             },
-            management_users: {
+            managementUser: {
               select: {
                 id: true,
                 name: true,

@@ -66,17 +66,17 @@ export function getStatusBadge(status: ReviewStatusType): {
 } {
   const badges = {
     PENDING: {
-      label: "Pending Client",
+      label: "Pending Client Review",
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/20"
     },
     SUBMITTED: {
-      label: "Submitted",
+      label: "Client Reviewed",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20"
     },
     UNDER_REVIEW: {
-      label: "Under Review",
+      label: "Waiting for Acknowledgement",
       color: "text-purple-400",
       bgColor: "bg-purple-500/20"
     },
@@ -155,9 +155,8 @@ export function formatReviewDateTime(date: Date | string): string {
  * Check if review is overdue
  */
 export function isReviewOverdue(dueDate: Date | string): boolean {
-  const due = typeof dueDate === "string" ? new Date(dueDate) : dueDate
-  const now = new Date()
-  return now > due
+  const days = getDaysUntilDue(dueDate)
+  return days < 0
 }
 
 /**

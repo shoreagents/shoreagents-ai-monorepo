@@ -1,9 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { 
-  Star, ThumbsUp, CheckCircle, Clock, TrendingUp,
-  ChevronDown, ChevronUp, Eye, Calendar, User
+  Star, ThumbsUp, Clock, TrendingUp,
+  ChevronDown, ChevronUp, Eye, Calendar, User, CheckCircle
 } from "lucide-react"
 
 type ReviewStatus = "PENDING_APPROVAL" | "APPROVED" | "FINALIZED" | "ACKNOWLEDGED" | "ARCHIVED"
@@ -14,8 +17,11 @@ interface Review {
   type: ReviewType
   userId: string
   reviewer: string
+  reviewerName?: string
+  reviewerTitle?: string
   client: string
   submittedDate: string
+  evaluationPeriod?: string
   status: ReviewStatus
   overallScore: number
   answers: any
@@ -47,17 +53,6 @@ export default function ReviewsSystem() {
     }
   }
 
-  const acknowledgeReview = async (reviewId: string) => {
-    try {
-      const response = await fetch(`/api/reviews/${reviewId}/acknowledge`, {
-        method: "POST",
-      })
-      if (!response.ok) throw new Error("Failed to acknowledge review")
-      await fetchReviews()
-    } catch (err) {
-      console.error("Error acknowledging review:", err)
-    }
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -107,7 +102,7 @@ export default function ReviewsSystem() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mx-auto w-full space-y-6">
           <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-64 rounded-xl bg-slate-800/50 animate-pulse" />
@@ -120,7 +115,7 @@ export default function ReviewsSystem() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto w-full">
           <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
             <h2 className="text-xl font-bold text-red-400">Error Loading Reviews</h2>
             <p className="mt-2 text-red-300">{error}</p>
@@ -132,7 +127,7 @@ export default function ReviewsSystem() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto w-full space-y-6">
         {/* Header */}
         <div className="rounded-2xl bg-gradient-to-br from-purple-900/50 via-pink-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
           <div className="flex items-center justify-between">
@@ -172,84 +167,101 @@ export default function ReviewsSystem() {
           })}
         </div>
 
-        {/* Reviews List */}
-        <div className="space-y-4">
+        {/* Reviews Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredReviews.length === 0 ? (
-            <div className="rounded-xl bg-slate-900/50 p-12 text-center backdrop-blur-xl ring-1 ring-white/10">
+            <div className="col-span-full rounded-xl bg-slate-900/50 p-12 text-center backdrop-blur-xl ring-1 ring-white/10">
               <p className="text-slate-400">No reviews found</p>
             </div>
           ) : (
             filteredReviews.map((review) => (
-              <div
+              <Card
                 key={review.id}
-                className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10"
+                className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 hover:ring-white/20 transition-all"
               >
-                {/* Review Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">{getReviewTypeLabel(review.type)} Review</CardTitle>
                     <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${getReviewTypeColor(review.type)}`}>
-                        {getReviewTypeLabel(review.type)}
-                      </span>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${getStatusColor(review.status)}`}>
-                        {review.status}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex items-center gap-4 text-sm text-slate-400">
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        {review.client}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {mounted ? formatDate(review.submittedDate) : review.submittedDate}
-                      </div>
+                      {review.status === "FINALIZED" && (
+                        <Badge className="bg-red-500/20 text-red-400 ring-red-500/30">
+                          🔴 New Review
+                        </Badge>
+                      )}
+                      {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 ring-emerald-500/30">
+                          Acknowledged
+                        </Badge>
+                      )}
                     </div>
                   </div>
-
-                  {review.overallScore && (
-                    <div className="rounded-xl bg-purple-500/10 p-4 text-center ring-1 ring-purple-500/30">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-5 w-5 ${
-                              i < Math.round(review.overallScore || 0)
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-slate-600"
-                            }`}
-                          />
-                        ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Reviewer</div>
+                      <div className="text-white font-medium">{review.reviewerName || review.reviewer}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Reviewer's Email</div>
+                      <div className="text-white font-medium">{review.reviewer}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Evaluation Period</div>
+                      <div className="text-white font-medium">{review.evaluationPeriod || "N/A"}</div>
+                    </div>
+                    {review.overallScore && (
+                      <div>
+                        <div className="text-sm text-slate-400 mb-1">Overall Score</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-2xl font-bold text-purple-400">{review.overallScore.toFixed(1)}</div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < Math.round(review.overallScore || 0)
+                                    ? "fill-amber-400 text-amber-400"
+                                    : "text-slate-600"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-1 text-2xl font-bold text-white">{review.overallScore.toFixed(1)}</div>
-                      <div className="text-xs text-slate-400">Overall Score</div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Actions */}
-                <div className="mt-4 flex gap-2">
-                  {review.status === "FINALIZED" && (
-                    <button
-                      onClick={() => acknowledgeReview(review.id)}
-                      className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-2 text-sm font-medium text-white transition-all hover:from-emerald-700 hover:to-emerald-800"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Acknowledge Review
-                    </button>
-                  )}
-                  {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
-                    <div className="rounded-lg bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400 ring-1 ring-emerald-500/20">
-                      Acknowledged on {mounted ? formatDate(review.acknowledgedDate) : review.acknowledgedDate}
+                  <div className="pt-4 border-t border-slate-700">
+                    <div className="flex items-center justify-between gap-4 text-sm text-slate-400 mb-3 pb-3 border-b border-slate-700">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Due: {review.dueDate ? new Date(review.dueDate).toLocaleDateString() : "N/A"}
+                      </div>
+                      {review.submittedDate && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Submitted: {new Date(review.submittedDate).toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {review.status === "FINALIZED" && (
-                    <div className="rounded-lg bg-purple-500/10 px-4 py-2 text-sm text-purple-400 ring-1 ring-purple-500/20">
-                      📋 New Review - Please acknowledge after reading
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {review.status === "UNDER_REVIEW" && (
+                          <Badge className="bg-purple-500/20 text-purple-400 ring-purple-500/30">
+                            Waiting for Acknowledgement
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                    {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
+                      <div className="mt-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-400 ring-1 ring-emerald-500/20 text-center">
+                        Acknowledged on {mounted ? formatDate(review.acknowledgedDate) : review.acknowledgedDate}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ))
           )}
         </div>

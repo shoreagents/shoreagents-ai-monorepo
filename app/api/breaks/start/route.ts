@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getStaffUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { BreakType, AwayReason } from "@prisma/client"
+import { logBreakStarted } from "@/lib/activity-generator"
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,6 +58,11 @@ export async function POST(request: NextRequest) {
         }
       })
       
+      // ✨ Auto-generate activity post (skip AWAY breaks - too noisy)
+      if (type !== "AWAY") {
+        await logBreakStarted(staffUser.id, staffUser.name, type)
+      }
+      
       return NextResponse.json({ 
         success: true, 
         break: breakRecord,
@@ -82,6 +88,11 @@ export async function POST(request: NextRequest) {
         where: { id: breakId },
         data: { actualStart: now }
       })
+      
+      // ✨ Auto-generate activity post (skip AWAY breaks)
+      if (existingBreak.type !== "AWAY") {
+        await logBreakStarted(staffUser.id, staffUser.name, existingBreak.type)
+      }
       
       return NextResponse.json({ 
         success: true, 

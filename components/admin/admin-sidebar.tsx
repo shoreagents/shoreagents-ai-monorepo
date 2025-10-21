@@ -157,7 +157,6 @@ const navItems = [
   { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
   { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
   { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
-  { icon: "LinkIcon", label: "Staff Assignments", href: "/admin/assignments", badge: null },
   { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },
   { icon: "CheckSquare", label: "Task Oversight", href: "/admin/tasks", badge: null },
   { icon: "Ticket", label: "Support Tickets", href: "/admin/tickets", badge: null },
@@ -165,7 +164,7 @@ const navItems = [
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
   { icon: "Trophy", label: "Gamification", href: "/admin/gamification", badge: null },
   { icon: "TrendingUp", label: "Performance Analytics", href: "/admin/analytics", badge: null },
-  { icon: "Megaphone", label: "Activity Feed", href: "/admin/activity", badge: null },
+  { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
   { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
 ]
 

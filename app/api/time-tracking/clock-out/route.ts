@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getStaffUser } from "@/lib/auth-helpers"
+import { logClockedOut } from "@/lib/activity-generator"
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
       },
     })
+
+    // ✨ Auto-generate activity post
+    await logClockedOut(staffUser.id, staffUser.name, netWorkHours)
 
     return NextResponse.json({
       success: true,

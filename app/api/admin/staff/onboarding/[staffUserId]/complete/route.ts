@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logStaffOnboarded } from "@/lib/activity-generator"
 
 export async function POST(
   req: NextRequest,
@@ -277,6 +278,9 @@ export async function POST(
       salary,
       profileId: profile.id
     })
+
+    // ✨ Auto-generate activity post
+    await logStaffOnboarded(staffUser.id, fullName)
 
     return NextResponse.json({ 
       success: true,

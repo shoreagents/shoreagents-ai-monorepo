@@ -295,8 +295,8 @@ model Ticket {
   managementUserId String?
   clientUserId     String?
   responses        TicketResponse[]
-  client_users     ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  management_users ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
@@ -312,8 +312,8 @@ model TicketResponse {
   createdByType    String
   attachments      String[]        @default([])
   clientUserId     String?
-  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
@@ -382,6 +382,26 @@ model PostComment {
 
   @@index([postId, createdAt], map: "idx_comments_post_created")
   @@map("post_comments")
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId    String
+  type      NotificationType @default(TAG)
+  title     String
+  message   String
+  postId    String?
+  actionUrl String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  post      ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "idx_notifications_post")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
+  @@index([userId, read], map: "idx_notifications_user_read")
+  @@map("notifications")
 }
 
 model GamificationProfile {
@@ -775,6 +795,21 @@ enum PostType {
   CELEBRATION
   UPDATE
   ANNOUNCEMENT
+}
+
+enum PostAudience {
+  STAFF
+  CLIENT
+  MANAGEMENT
+  ALL
+}
+
+enum NotificationType {
+  TAG
+  MENTION
+  COMMENT
+  REACTION
+  SYSTEM
 }
 
 enum ReactionType {
