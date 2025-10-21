@@ -53,9 +53,10 @@ export default function StaffPage() {
       const response = await fetch("/api/client/staff")
       if (!response.ok) throw new Error("Failed to fetch staff")
       const data = await response.json()
-      setStaff(data)
+      setStaff(data.staff || [])
     } catch (error) {
       console.error("Error fetching staff:", error)
+      setStaff([])
     } finally {
       setLoading(false)
     }

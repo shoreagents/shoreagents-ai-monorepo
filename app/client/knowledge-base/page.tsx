@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { BookOpen, Plus, Search, FileText, FolderOpen, Clock, Edit, User, Building2, Upload, X } from "lucide-react"
+import { BookOpen, Plus, Search, FileText, FolderOpen, Clock, Edit, User, Building2, Upload, X, Users, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,6 +35,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { DocumentSourceBadgeLight } from "@/components/ui/document-source-badge"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Document {
   id: string
@@ -52,12 +64,33 @@ export default function KnowledgeBasePage() {
   const [loading, setLoading] = useState(true)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
   
-  const [newDoc, setNewDoc] = useState({
-    title: "",
-    category: "procedure",
-  })
+  interface DocumentToUpload {
+    id: string
+    title: string
+    category: string
+    file: File | null
+    shareMode: 'all' | 'specific'
+    sharedWith: string[]
+  }
+  
+  const [documentsToUpload, setDocumentsToUpload] = useState<DocumentToUpload[]>([
+    { id: crypto.randomUUID(), title: "", category: "procedure", file: null, shareMode: 'all', sharedWith: [] }
+  ])
+
+  interface StaffMember {
+    id: string
+    name: string
+    email: string
+    avatar: string | null
+  }
+
+  const [assignedStaff, setAssignedStaff] = useState<StaffMember[]>([])
+  const [staffSearchQueries, setStaffSearchQueries] = useState<Record<string, string>>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const categories = [
     { id: "all", name: "All Documents", count: documents.length },
@@ -69,6 +102,7 @@ export default function KnowledgeBasePage() {
 
   useEffect(() => {
     fetchDocuments()
+    fetchAssignedStaff()
   }, [])
 
   const fetchDocuments = async () => {
@@ -84,56 +118,178 @@ export default function KnowledgeBasePage() {
     }
   }
 
+  const fetchAssignedStaff = async () => {
+    try {
+      const response = await fetch("/api/client/staff")
+      if (response.ok) {
+        const data = await response.json()
+        setAssignedStaff(data.staff || [])
+      }
+    } catch (error) {
+      console.error("Error fetching assigned staff:", error)
+    }
+  }
+
+  const handleDeleteClick = (doc: Document) => {
+    setDocumentToDelete(doc)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!documentToDelete) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/client/documents/${documentToDelete.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to delete document")
+      }
+
+      toast({
+        title: "✅ Document Deleted",
+        description: `"${documentToDelete.title}" has been permanently deleted.`,
+      })
+
+      // Refresh document list
+      await fetchDocuments()
+      
+      // Close dialog
+      setDeleteDialogOpen(false)
+      setDocumentToDelete(null)
+    } catch (error: any) {
+      console.error("Error deleting document:", error)
+      toast({
+        title: "Delete Failed",
+        description: error.message || "There was an error deleting the document. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const addAnotherDocument = () => {
+    setDocumentsToUpload([
+      ...documentsToUpload,
+      { id: crypto.randomUUID(), title: "", category: "procedure", file: null, shareMode: 'all', sharedWith: [] }
+    ])
+  }
+
+  const removeDocument = (id: string) => {
+    if (documentsToUpload.length === 1) {
+      // Keep at least one form
+      return
+    }
+    setDocumentsToUpload(documentsToUpload.filter(doc => doc.id !== id))
+  }
+
+  const updateDocument = (id: string, updates: Partial<DocumentToUpload>) => {
+    setDocumentsToUpload(documentsToUpload.map(doc => 
+      doc.id === id ? { ...doc, ...updates } : doc
+    ))
+  }
+
+  const resetUploadForm = () => {
+    setDocumentsToUpload([
+      { id: crypto.randomUUID(), title: "", category: "procedure", file: null, shareMode: 'all', sharedWith: [] }
+    ])
+    setUploadProgress({ current: 0, total: 0 })
+  }
+
   const handleUpload = async () => {
-    if (!newDoc.title || !selectedFile) {
+    // Validate all documents
+    const invalidDocs = documentsToUpload.filter(doc => !doc.title || !doc.file)
+    if (invalidDocs.length > 0) {
       toast({
         title: "Missing Information",
-        description: "Please provide a document title and select a file to upload.",
+        description: "Please provide a title and file for all documents.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate specific sharing - must select at least one staff member
+    const invalidSharing = documentsToUpload.filter(doc => doc.shareMode === 'specific' && doc.sharedWith.length === 0)
+    if (invalidSharing.length > 0) {
+      toast({
+        title: "Missing Sharing Selection",
+        description: "Please select at least one staff member for documents with specific sharing.",
         variant: "destructive",
       })
       return
     }
 
     setUploading(true)
-    try {
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('title', newDoc.title)
-      formData.append('category', newDoc.category.toUpperCase())
+    setUploadProgress({ current: 0, total: documentsToUpload.length })
 
-      const response = await fetch("/api/client/documents", {
-        method: "POST",
-        body: formData, // Send FormData instead of JSON
-      })
+    let successCount = 0
+    let failCount = 0
+    const failedTitles: string[] = []
 
-      if (!response.ok) throw new Error("Failed to upload document")
+    // Upload each document sequentially
+    for (let i = 0; i < documentsToUpload.length; i++) {
+      const doc = documentsToUpload[i]
+      setUploadProgress({ current: i + 1, total: documentsToUpload.length })
 
-      // Success! Refetch documents
-      await fetchDocuments()
-      
-      // Close dialog and reset form
-      setShowUploadDialog(false)
-      setNewDoc({
-        title: "",
-        category: "procedure",
-      })
-      setSelectedFile(null)
-      
-      // Show success toast
+      try {
+        const formData = new FormData()
+        formData.append('file', doc.file!)
+        formData.append('title', doc.title)
+        formData.append('category', doc.category.toUpperCase())
+        
+        // For "all" mode, use sharedWithAll flag (company-scoped)
+        // For "specific" mode, use sharedWith array
+        if (doc.shareMode === 'all') {
+          formData.append('sharedWithAll', 'true')
+        } else {
+          formData.append('sharedWithAll', 'false')
+          formData.append('sharedWith', JSON.stringify(doc.sharedWith))
+        }
+
+        const response = await fetch("/api/client/documents", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage = errorData.error || `Failed to upload document (${response.status})`
+          console.error(`Upload error for "${doc.title}":`, errorMessage, errorData)
+          throw new Error(errorMessage)
+        }
+        
+        successCount++
+      } catch (error: any) {
+        console.error(`Error uploading document "${doc.title}":`, error)
+        failCount++
+        failedTitles.push(`${doc.title} (${error.message || 'Unknown error'})`)
+      }
+    }
+
+    // Refetch documents
+    await fetchDocuments()
+    
+    // Close dialog and reset form
+    setShowUploadDialog(false)
+    resetUploadForm()
+    setUploading(false)
+    
+    // Show summary toast
+    if (failCount === 0) {
       toast({
-        title: "✅ Document Uploaded Successfully!",
-        description: `"${newDoc.title}" has been shared with your offshore staff. They can now access it in their AI Assistant.`,
+        title: `✅ ${successCount} Document${successCount > 1 ? 's' : ''} Uploaded Successfully!`,
+        description: `Your documents have been shared with your offshore staff. They can now access them in their AI Assistant.`,
       })
-    } catch (error) {
-      console.error("Error uploading document:", error)
+    } else {
       toast({
-        title: "Upload Failed",
-        description: "There was an error uploading your document. Please try again.",
+        title: "Upload Complete with Errors",
+        description: `${successCount} succeeded, ${failCount} failed: ${failedTitles.join(', ')}`,
         variant: "destructive",
       })
-    } finally {
-      setUploading(false)
     }
   }
 
@@ -277,12 +433,26 @@ export default function KnowledgeBasePage() {
                           </div>
                         </div>
                       </div>
-                      <Link
-                        href={`/client/knowledge-base/${doc.id}`}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <FileText className="h-5 w-5" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/client/knowledge-base/${doc.id}`}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <FileText className="h-5 w-5" />
+                        </Link>
+                        {doc.source === 'CLIENT' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteClick(doc)
+                            }}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete document"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -303,108 +473,341 @@ export default function KnowledgeBasePage() {
       </div>
 
       {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="sm:max-w-[600px]">
+      <Dialog open={showUploadDialog} onOpenChange={(open) => {
+        setShowUploadDialog(open)
+        if (!open) resetUploadForm()
+      }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upload Document</DialogTitle>
             <DialogDescription>
               Share documents with your offshore staff. They will be able to view and reference these documents.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Document Title *</Label>
-              <Input
-                id="title"
-                placeholder="e.g., Customer Service Guidelines"
-                value={newDoc.title}
-                onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category *</Label>
-              <Select value={newDoc.category} onValueChange={(value) => setNewDoc({ ...newDoc, category: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="client">Client Resources</SelectItem>
-                  <SelectItem value="procedure">Procedures & SOPs</SelectItem>
-                  <SelectItem value="training">Training Materials</SelectItem>
-                  <SelectItem value="culture">Company Culture</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="file">Document File *</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                <input
-                  id="file"
-                  type="file"
-                  accept=".pdf,.doc,.docx,.txt,.md"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null
-                    setSelectedFile(file)
-                    // Auto-fill title from filename if title is empty
-                    if (file && !newDoc.title) {
-                      const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "")
-                      setNewDoc({ ...newDoc, title: fileNameWithoutExt })
-                    }
-                  }}
-                  className="hidden"
-                />
-                <label htmlFor="file" className="cursor-pointer">
-                  {selectedFile ? (
-                    <div className="space-y-2">
-                      <FileText className="h-8 w-8 text-blue-600 mx-auto" />
-                      <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {(selectedFile.size / 1024).toFixed(2)} KB
-                      </p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          setSelectedFile(null)
-                        }}
-                        className="mt-2"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                      <p className="text-sm font-medium text-gray-700">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        PDF, DOC, DOCX, TXT, or MD (Max 10MB)
-                      </p>
-                    </div>
-                  )}
-                </label>
-              </div>
-              <p className="text-xs text-gray-500">
-                Text will be extracted automatically using CloudConvert and made searchable
-              </p>
-            </div>
 
+          <div className="grid gap-4 py-4">
+            {documentsToUpload.map((doc, index) => (
+              <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
+                {documentsToUpload.length > 1 && (
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+                    <h4 className="text-sm font-bold text-white">
+                      Document {index + 1}
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDocument(doc.id)}
+                      className="h-7 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
+
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor={`title-${doc.id}`}>Document Title *</Label>
+                    <Input
+                      id={`title-${doc.id}`}
+                      placeholder="e.g., Customer Service Guidelines"
+                      value={doc.title}
+                      onChange={(e) => updateDocument(doc.id, { title: e.target.value })}
+                      disabled={uploading}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor={`category-${doc.id}`}>Category *</Label>
+                    <Select 
+                      value={doc.category} 
+                      onValueChange={(value) => updateDocument(doc.id, { category: value })}
+                      disabled={uploading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">Client Resources</SelectItem>
+                        <SelectItem value="procedure">Procedures & SOPs</SelectItem>
+                        <SelectItem value="training">Training Materials</SelectItem>
+                        <SelectItem value="culture">Company Culture</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <Label>Share With *</Label>
+                    <RadioGroup 
+                      value={doc.shareMode} 
+                      onValueChange={(value: 'all' | 'specific') => updateDocument(doc.id, { shareMode: value })}
+                      disabled={uploading}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-700 transition-colors">
+                        <RadioGroupItem value="all" id={`all-${doc.id}`} />
+                        <Label htmlFor={`all-${doc.id}`} className="font-normal cursor-pointer flex-1">
+                          <div className="font-medium text-white">All assigned staff</div>
+                          <div className="text-xs text-gray-400 mt-0.5">Everyone can access this document</div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-700 transition-colors">
+                        <RadioGroupItem value="specific" id={`specific-${doc.id}`} />
+                        <Label htmlFor={`specific-${doc.id}`} className="font-normal cursor-pointer flex-1">
+                          <div className="font-medium text-white">Specific staff members only</div>
+                          <div className="text-xs text-gray-400 mt-0.5">Choose who can access this document</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {doc.shareMode === 'specific' && (
+                      <div>
+                        {/* Staff Selection */}
+                        <div className="border border-gray-200 rounded-lg">
+                          {/* Selected Staff Display */}
+                          {doc.sharedWith.length > 0 && (
+                            <div className="px-3 py-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-white">
+                                  {doc.sharedWith.length} selected
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => updateDocument(doc.id, { sharedWith: [] })}
+                                  className="h-6 text-xs"
+                                  disabled={uploading}
+                                >
+                                  Clear all
+                                </Button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {doc.sharedWith.map(staffId => {
+                                  const staff = assignedStaff.find(s => s.id === staffId)
+                                  if (!staff) return null
+                                  return (
+                                    <div
+                                      key={staffId}
+                                      className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+                                    >
+                                      <span className="font-medium">{staff.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newSharedWith = doc.sharedWith.filter(id => id !== staffId)
+                                          updateDocument(doc.id, { sharedWith: newSharedWith })
+                                        }}
+                                        className="ml-1 hover:text-blue-900"
+                                        disabled={uploading}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Search Input */}
+                          <div className="px-3 py-2 border-b border-gray-200">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                type="text"
+                                placeholder="Search staff by name or email..."
+                                value={staffSearchQueries[doc.id] || ''}
+                                onChange={(e) => setStaffSearchQueries({ ...staffSearchQueries, [doc.id]: e.target.value })}
+                                className="pl-9"
+                                disabled={uploading}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="p-2 max-h-56 overflow-y-auto space-y-1">
+                            {assignedStaff.length === 0 ? (
+                              <div className="p-4 text-center">
+                                <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-white">No staff assigned to your company yet.</p>
+                              </div>
+                            ) : (
+                              (() => {
+                                const searchQuery = (staffSearchQueries[doc.id] || '').toLowerCase()
+                                const filteredStaff = assignedStaff.filter(staff => 
+                                  staff.name.toLowerCase().includes(searchQuery) ||
+                                  staff.email.toLowerCase().includes(searchQuery)
+                                )
+                                
+                                if (filteredStaff.length === 0) {
+                                  return (
+                                    <div className="p-4 text-center">
+                                      <p className="text-sm text-white">No staff found matching "{staffSearchQueries[doc.id]}"</p>
+                                    </div>
+                                  )
+                                }
+
+                                return filteredStaff.map((staff) => (
+                                  <div 
+                                    key={staff.id} 
+                                    className="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 transition-colors"
+                                  >
+                                    <Checkbox
+                                      id={`staff-${doc.id}-${staff.id}`}
+                                      checked={doc.sharedWith.includes(staff.id)}
+                                      onCheckedChange={(checked) => {
+                                        const newSharedWith = checked
+                                          ? [...doc.sharedWith, staff.id]
+                                          : doc.sharedWith.filter(id => id !== staff.id)
+                                        updateDocument(doc.id, { sharedWith: newSharedWith })
+                                      }}
+                                      disabled={uploading}
+                                    />
+                                    <Label 
+                                      htmlFor={`staff-${doc.id}-${staff.id}`}
+                                      className="text-sm font-normal cursor-pointer flex-1"
+                                    >
+                                      <div className="font-medium text-white">{staff.name}</div>
+                                      <div className="text-xs text-gray-400">{staff.email}</div>
+                                    </Label>
+                                  </div>
+                                ))
+                              })()
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor={`file-${doc.id}`}>Document File *</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                      <input
+                        id={`file-${doc.id}`}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          updateDocument(doc.id, { file })
+                          // Auto-fill title from filename if title is empty
+                          if (file && !doc.title) {
+                            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "")
+                            updateDocument(doc.id, { title: fileNameWithoutExt })
+                          }
+                        }}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      <label htmlFor={`file-${doc.id}`} className="cursor-pointer">
+                        {doc.file ? (
+                          <div className="space-y-2">
+                            <FileText className="h-8 w-8 text-blue-600 mx-auto" />
+                            <p className="text-sm font-medium text-white">{doc.file.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(doc.file.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                            <p className="text-sm font-medium text-white">
+                              Click to upload or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              PDF, DOC, DOCX, TXT, or MD (Max 10MB)
+                            </p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    {index === 0 && (
+                      <p className="text-xs text-gray-500">
+                        Text will be extracted automatically using CloudConvert and made searchable
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {uploading && uploadProgress.total > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-900">
+                    Uploading documents...
+                  </span>
+                  <span className="text-sm text-blue-700">
+                    {uploadProgress.current} of {uploadProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!uploading && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addAnotherDocument}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another Document
+              </Button>
+            )}
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDialog(false)} disabled={uploading}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUploadDialog(false)} 
+              disabled={uploading}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={uploading} className="bg-blue-600 hover:bg-blue-700">
-              {uploading ? "Uploading..." : "Upload Document"}
+            <Button 
+              onClick={handleUpload} 
+              disabled={uploading} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {uploading 
+                ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...` 
+                : `Upload ${documentsToUpload.length > 1 ? `All (${documentsToUpload.length})` : 'Document'}`
+              }
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{documentToDelete?.title}"? This will permanently delete the document and remove the file from storage. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
