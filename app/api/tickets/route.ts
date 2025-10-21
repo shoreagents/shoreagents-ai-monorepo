@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const tickets = await prisma.ticket.findMany({
       where: {
         staffUserId: staffUser.id,
-        ...(status && { status }),
+        ...(status && { status: status as any }),
       },
       include: {
         staffUser: {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            client_users: {
+            clientUser: {
               select: {
                 id: true,
                 name: true,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
                 avatar: true,
               },
             },
-            client_users: {
+            clientUser: {
               select: {
                 id: true,
                 name: true,
