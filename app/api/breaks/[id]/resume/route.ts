@@ -41,14 +41,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Break is not paused" }, { status: 400 })
     }
 
-    // Calculate new remaining time after pause period
-    const now = new Date()
-    const pauseDuration = existingBreak.pausedat 
-      ? Math.floor((now.getTime() - existingBreak.pausedat.getTime()) / 1000) // seconds
-      : 0
-
-    // Calculate new remaining time (subtract pause duration from remaining time)
-    const newRemainingTime = Math.max(0, (existingBreak.pausedduration || 0) - pauseDuration)
+    // When resuming, the remaining time should be the same as when it was paused
+    // The pausedDuration represents the remaining time when paused, so we keep it the same
+    const newRemainingTime = existingBreak.pausedduration || 0
 
     // Resume the break
     const updatedBreak = await prisma.break.update({
