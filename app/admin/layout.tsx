@@ -46,10 +46,10 @@ export default async function AdminLayout({
   }
 
   return (
-    <>
+    <div className="dark">
       <AdminSidebar user={managementUser}>{children}</AdminSidebar>
       <Toaster />
-    </>
+    </div>
   )
 }
 
