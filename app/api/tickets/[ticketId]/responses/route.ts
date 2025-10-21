@@ -83,7 +83,7 @@ export async function POST(
             role: true,
           },
         },
-        client_users: {
+        clientUser: {
           select: {
             id: true,
             name: true,
