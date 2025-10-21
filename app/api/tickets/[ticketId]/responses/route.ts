@@ -74,7 +74,7 @@ export async function POST(
             role: true,
           },
         },
-        management_users: {
+        managementUser: {
           select: {
             id: true,
             name: true,
