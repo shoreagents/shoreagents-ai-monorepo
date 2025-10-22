@@ -96,9 +96,9 @@ export default function AdminTasksPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <div className="flex items-center gap-2 text-slate-700">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-2 text-foreground">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-700/50 border-t-slate-700" />
           <span className="text-lg font-semibold">Loading tasks...</span>
         </div>
       </div>
@@ -106,22 +106,22 @@ export default function AdminTasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 pt-20 md:p-8">
+    <div className="container mx-auto p-6 max-w-7xl">
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-                <Eye className="h-8 w-8 text-slate-700" />
-                Task Overview (View Only)
+              <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+                <Eye className="h-8 w-8 text-purple-400" />
+                Task Overview
               </h1>
-              <p className="text-slate-600">Monitor all tasks across the organization</p>
+              <p className="text-muted-foreground">View-only monitoring of all tasks across the organization</p>
             </div>
             <Button
               onClick={() => setFilters({ status: "", priority: "", source: "", companyId: "" })}
               variant="outline"
-              className="border-2 border-slate-300 hover:bg-slate-100"
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10"
             >
               <Filter className="h-4 w-4 mr-2" />
               Clear Filters
@@ -131,77 +131,52 @@ export default function AdminTasksPage() {
           {/* Stats Cards */}
           {stats && (
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-slate-200 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-600 mb-1">Total Tasks</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                    <ListTodo className="h-6 w-6 text-slate-700" />
-                  </div>
+              <div className="rounded-lg bg-card border p-6">
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-foreground">{stats.total}</div>
+                  <div className="text-sm text-muted-foreground">Total Tasks</div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-emerald-200 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-700 mb-1">Completed</p>
-                    <p className="text-3xl font-bold text-emerald-600">{stats.byStatus.COMPLETED}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                  </div>
+              <div className="rounded-lg bg-card border p-6">
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-green-500">{stats.byStatus.COMPLETED}</div>
+                  <div className="text-sm text-muted-foreground">Completed</div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-200 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-blue-700 mb-1">In Progress</p>
-                    <p className="text-3xl font-bold text-blue-600">{stats.byStatus.IN_PROGRESS}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-blue-600" />
-                  </div>
+              <div className="rounded-lg bg-card border p-6">
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-blue-500">{stats.byStatus.IN_PROGRESS}</div>
+                  <div className="text-sm text-muted-foreground">In Progress</div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-red-200 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-red-700 mb-1">Stuck</p>
-                    <p className="text-3xl font-bold text-red-600">{stats.byStatus.STUCK}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
-                    <AlertCircle className="h-6 w-6 text-red-600" />
-                  </div>
+              <div className="rounded-lg bg-card border p-6">
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-red-500">{stats.byStatus.STUCK}</div>
+                  <div className="text-sm text-muted-foreground">Stuck</div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border-2 border-purple-200 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-purple-700 mb-1">For Review</p>
-                    <p className="text-3xl font-bold text-purple-600">{stats.byStatus.FOR_REVIEW}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Eye className="h-6 w-6 text-purple-600" />
-                  </div>
+              <div className="rounded-lg bg-card border p-6">
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-purple-500">{stats.byStatus.FOR_REVIEW}</div>
+                  <div className="text-sm text-muted-foreground">For Review</div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Filters */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-slate-200 mb-4">
+          <div className="rounded-lg bg-card border p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Status</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-2 block">Status</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-purple-500 focus:outline-none"
                 >
                   <option value="">All Statuses</option>
                   <option value="TODO">📋 To Do</option>
@@ -213,11 +188,11 @@ export default function AdminTasksPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Priority</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-2 block">Priority</label>
                 <select
                   value={filters.priority}
                   onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-purple-500 focus:outline-none"
                 >
                   <option value="">All Priorities</option>
                   <option value="LOW">💤 Low</option>
@@ -228,11 +203,11 @@ export default function AdminTasksPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Source</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-2 block">Source</label>
                 <select
                   value={filters.source}
                   onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-                  className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-purple-500 focus:outline-none"
                 >
                   <option value="">All Sources</option>
                   <option value="SELF">👤 Staff (Self)</option>
@@ -242,8 +217,8 @@ export default function AdminTasksPage() {
               </div>
 
               <div className="flex items-end">
-                <p className="text-sm text-slate-600">
-                  <strong>{tasks.length}</strong> task{tasks.length !== 1 ? "s" : ""} found
+                <p className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">{tasks.length}</strong> task{tasks.length !== 1 ? "s" : ""} found
                 </p>
               </div>
             </div>

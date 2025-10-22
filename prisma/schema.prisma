@@ -235,6 +235,9 @@ model PerformanceMetric {
   urlsVisited       Int       @default(0)
   tabsSwitched      Int       @default(0)
   productivityScore Int       @default(0)
+  visitedUrls       Json?     @default("[]") @map("visitedurls")
+  applicationsUsed  Json?     @default("[]") @map("applicationsused")
+  screenshotUrls    Json?     @default("[]") @map("screenshoturls")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)

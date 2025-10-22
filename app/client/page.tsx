@@ -52,28 +52,31 @@ export default async function ClientDashboard() {
 
   const tasksCompletedThisWeek = await prisma.task.count({
     where: {
-      assigneeId: { in: staffUserIds },
+      OR: [
+        { staffUserId: { in: staffUserIds } },
+        { assignedStaff: { some: { staffUserId: { in: staffUserIds } } } }
+      ],
       status: 'COMPLETED',
       updatedAt: { gte: startOfWeek }
     }
   })
 
   // Fetch real hours worked this week
-  const timeLogs = await prisma.timeLog.findMany({
+  const timeEntries = await prisma.timeEntry.findMany({
     where: {
       staffUserId: { in: staffUserIds },
-      createdAt: { gte: startOfWeek }
+      clockIn: { gte: startOfWeek }
     },
     select: { 
-      startTime: true,
-      endTime: true
+      clockIn: true,
+      clockOut: true
     }
   })
 
   // Calculate total hours
-  const hoursThisWeek = timeLogs.reduce((total, log) => {
-    if (log.startTime && log.endTime) {
-      const hours = (new Date(log.endTime).getTime() - new Date(log.startTime).getTime()) / (1000 * 60 * 60)
+  const hoursThisWeek = timeEntries.reduce((total, entry) => {
+    if (entry.clockIn && entry.clockOut) {
+      const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)
       return total + hours
     }
     return total
@@ -93,18 +96,23 @@ export default async function ClientDashboard() {
     : 0
 
   // Fetch recent activities (last 10)
-  const recentActivities = await prisma.activityFeed.findMany({
+  const recentActivities = await prisma.activityPost.findMany({
     where: {
-      OR: [
-        { staffUserId: { in: staffUserIds } },
-        { targetStaffUserId: { in: staffUserIds } }
-      ]
+      staffUserId: { in: staffUserIds }
     },
     orderBy: { createdAt: 'desc' },
     take: 10,
     include: {
       staffUser: {
-        select: { name: true, avatar: true, position: true }
+        select: { 
+          name: true, 
+          avatar: true,
+          profile: {
+            select: {
+              currentRole: true
+            }
+          }
+        }
       }
     }
   })
