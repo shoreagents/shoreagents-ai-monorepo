@@ -77,7 +77,7 @@ export default function StaffReviewDetailPage({
   const fetchReview = async () => {
     try {
       const resolvedParams = await params
-      const response = await fetch(`/api/reviews/${resolvedParams.reviewId}`)
+      const response = await fetch(`/api/performance-reviews/${resolvedParams.reviewId}`)
       if (!response.ok) throw new Error('Failed to fetch review')
       
       const data = await response.json()
@@ -97,7 +97,7 @@ export default function StaffReviewDetailPage({
     setError(null)
     
     try {
-      const response = await fetch(`/api/reviews/${review.id}/acknowledge`, {
+      const response = await fetch(`/api/performance-reviews/${review.id}/acknowledge`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       })
