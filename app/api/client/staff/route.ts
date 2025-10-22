@@ -67,10 +67,11 @@ export async function GET(request: NextRequest) {
         },
         taskAssignments: {
           where: {
-            OR: [
-              { status: 'TODO' },
-              { status: 'IN_PROGRESS' }
-            ]
+            task: {
+              status: {
+                in: ['TODO', 'IN_PROGRESS']
+              }
+            }
           },
           select: { id: true }
         },
@@ -95,7 +96,8 @@ export async function GET(request: NextRequest) {
         },
         breaks: {
           where: {
-            status: 'ACTIVE'
+            actualStart: { not: null },
+            actualEnd: null
           },
           select: { id: true }
         }
