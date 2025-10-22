@@ -458,15 +458,15 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="loader"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 flex flex-col justify-between">
-      <div className="max-w-4xl mx-auto w-full">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="max-w-4xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
         {/* Header */}
         <div className="text-center mb-8 mt-12">
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -478,7 +478,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Progress */}
-        <Card className="mb-6 bg-slate-800 border-slate-700">
+        <Card className="mb-6 bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
           <CardContent className="py-6">
             <div className="flex justify-between mb-4">
               {STEPS.map((step, index) => {
@@ -540,7 +540,7 @@ export default function OnboardingPage() {
         </Card>
 
         {/* Form */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-2">
