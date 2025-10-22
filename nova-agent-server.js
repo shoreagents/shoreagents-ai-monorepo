@@ -7,6 +7,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { NovaIntelligence } from './lib/nova-intelligence.js';
 
 const execAsync = promisify(exec);
 
@@ -27,6 +28,7 @@ const NOVA_PERSONALITY = {
 // Initialize external services
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const novaIntelligence = new NovaIntelligence();
 
 const server = new Server(
   {
@@ -150,6 +152,75 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             }
           }
         }
+      },
+      {
+        name: "nova_think",
+        description: "NOVA uses Claude API to think, reason, and have intelligent conversations",
+        inputSchema: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "Message or question for NOVA to think about"
+            },
+            context: {
+              type: "object",
+              description: "Additional context for the conversation"
+            }
+          }
+        }
+      },
+      {
+        name: "nova_debug_issue",
+        description: "NOVA uses Claude API to intelligently debug issues and problems",
+        inputSchema: {
+          type: "object",
+          properties: {
+            issue_description: {
+              type: "string",
+              description: "Description of the issue to debug"
+            },
+            code_context: {
+              type: "string",
+              description: "Relevant code context for debugging"
+            }
+          }
+        }
+      },
+      {
+        name: "nova_review_code",
+        description: "NOVA uses Claude API to provide intelligent code reviews",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "Code to review"
+            },
+            context: {
+              type: "string",
+              description: "Context about the code (purpose, requirements, etc.)"
+            }
+          }
+        }
+      },
+      {
+        name: "nova_make_decision",
+        description: "NOVA uses Claude API to make intelligent decisions",
+        inputSchema: {
+          type: "object",
+          properties: {
+            options: {
+              type: "array",
+              items: { type: "string" },
+              description: "Available options to choose from"
+            },
+            context: {
+              type: "object",
+              description: "Context for the decision"
+            }
+          }
+        }
       }
     ]
   };
@@ -178,6 +249,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       
       case "nova_plan_task":
         return await planTask(args.task_description, args.constraints);
+      
+      case "nova_think":
+        return await thinkIntelligently(args.message, args.context);
+      
+      case "nova_debug_issue":
+        return await debugIssue(args.issue_description, args.code_context);
+      
+      case "nova_review_code":
+        return await reviewCode(args.code, args.context);
+      
+      case "nova_make_decision":
+        return await makeDecision(args.options, args.context);
       
       default:
         throw new Error(`Unknown tool: ${name}`);
@@ -465,6 +548,87 @@ async function executeFeatureImplementation(plan) {
 
 async function createExecutionPlan(description, constraints) {
   return `Execution plan for: ${description}\nConstraints: ${constraints?.join(', ') || 'None'}\n1. Planning phase\n2. Implementation phase\n3. Testing phase\n4. Deployment phase`;
+}
+
+// NOVA's Intelligent Functions using Claude API
+async function thinkIntelligently(message, context) {
+  try {
+    const result = await novaIntelligence.think(message, context);
+    
+    return {
+      content: [{
+        type: "text",
+        text: `🧠 **NOVA Thinking:**\n\n${result.response}\n\n**Thinking Process:** ${result.thinking}\n**Recommended Action:** ${result.action}`
+      }]
+    };
+  } catch (error) {
+    return {
+      content: [{
+        type: "text",
+        text: `NOVA Intelligence Error: ${error.message}`
+      }]
+    };
+  }
+}
+
+async function debugIssue(issueDescription, codeContext) {
+  try {
+    const result = await novaIntelligence.debugIssue(issueDescription, codeContext);
+    
+    return {
+      content: [{
+        type: "text",
+        text: `🔧 **NOVA Debug Analysis:**\n\n${result.response}\n\n**Thinking Process:** ${result.thinking}\n**Recommended Action:** ${result.action}`
+      }]
+    };
+  } catch (error) {
+    return {
+      content: [{
+        type: "text",
+        text: `NOVA Debug Error: ${error.message}`
+      }]
+    };
+  }
+}
+
+async function reviewCode(code, context) {
+  try {
+    const result = await novaIntelligence.reviewCode(code, context);
+    
+    return {
+      content: [{
+        type: "text",
+        text: `👀 **NOVA Code Review:**\n\n${result.response}\n\n**Thinking Process:** ${result.thinking}\n**Recommended Action:** ${result.action}`
+      }]
+    };
+  } catch (error) {
+    return {
+      content: [{
+        type: "text",
+        text: `NOVA Code Review Error: ${error.message}`
+      }]
+    };
+  }
+}
+
+async function makeDecision(options, context) {
+  try {
+    const result = await novaIntelligence.makeDecision(options, context);
+    
+    return {
+      content: [{
+        type: "text",
+        text: `🤔 **NOVA Decision Analysis:**\n\n${result.response}\n\n**Thinking Process:** ${result.thinking}\n**Recommended Action:** ${result.action}`
+      }]
+    };
+  } catch (error) {
+    return {
+      content: [{
+        type: "text",
+        text: `NOVA Decision Error: ${error.message}`
+      }]
+    };
+  }
 }
 
 // Start the server
