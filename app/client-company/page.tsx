@@ -11,7 +11,6 @@ interface ClientUser {
   email: string
   avatar: string | null
   role: string
-  phone: string | null
   createdAt: string
 }
 
@@ -272,12 +271,6 @@ export default function ClientCompanyPage() {
                       <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="truncate">{user.email}</span>
                     </div>
-                    {user.phone && (
-                      <div className="flex items-center gap-2 text-sm text-slate-400">
-                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{user.phone}</span>
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center justify-between border-t border-white/5 pt-3">
                     <span className="text-xs text-slate-500">Click to view details</span>

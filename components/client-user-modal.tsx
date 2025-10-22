@@ -1,6 +1,6 @@
 "use client"
 
-import { X, Mail, Phone, User, Calendar, Shield } from "lucide-react"
+import { X, Mail, User, Calendar, Shield } from "lucide-react"
 import Image from "next/image"
 
 interface ClientUser {
@@ -9,7 +9,6 @@ interface ClientUser {
   email: string
   avatar: string | null
   role: string
-  phone: string | null
   createdAt: string
 }
 
@@ -84,17 +83,6 @@ export default function ClientUserModal({ user, isOpen, onClose }: ClientUserMod
                 </div>
               </div>
 
-              {user.phone && (
-                <div className="flex items-center gap-3 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-white/10">
-                  <div className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 p-2.5">
-                    <Phone className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-slate-400 mb-1">Phone</div>
-                    <div className="text-sm font-semibold text-white truncate">{user.phone}</div>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center gap-3 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-white/10">
                 <div className="rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
@@ -127,20 +115,11 @@ export default function ClientUserModal({ user, isOpen, onClose }: ClientUserMod
             <div className="flex gap-3 pt-4">
               <a
                 href={`mailto:${user.email}`}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/50"
               >
                 <Mail className="h-4 w-4" />
                 Send Email
               </a>
-              {user.phone && (
-                <a
-                  href={`tel:${user.phone}`}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-800/80 px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/10 transition-all hover:bg-slate-800 hover:scale-[1.02]"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call
-                </a>
-              )}
             </div>
           </div>
         </div>
