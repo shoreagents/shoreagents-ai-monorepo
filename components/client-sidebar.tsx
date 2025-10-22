@@ -93,13 +93,13 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/time-tracking", label: "Time Tracking", icon: Clock },
     { href: "/client/analytics", label: "Analytics", icon: Monitor },
     { href: "/client/tickets", label: "Tickets", icon: Headphones },
-    { href: "/client/performance-reviews", label: "Performance Reviews", icon: FileText, badge: pendingReviewsCount },
-    { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/client/news-feed", label: "The Feed", icon: Bell },
+    { href: "/client/performance-reviews", label: "Performance", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
+    { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+    { href: "/client/news-feed", label: "The Feed", icon: Bell },
+    { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
     { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
-    { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   ]
 
   return (
