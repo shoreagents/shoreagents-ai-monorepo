@@ -83,7 +83,7 @@ export default function StaffPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center p-4 pt-20 md:p-8 lg:pt-8">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading staff...</p>
@@ -93,24 +93,30 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-7xl animate-in fade-in duration-700">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Staff</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900">Your Staff</h1>
+              </div>
+              <p className="text-gray-600 text-lg">
                 Manage your dedicated team • {staff.length} {staff.length === 1 ? "member" : "members"}
               </p>
             </div>
             <div className="flex items-center gap-3">
               {/* View Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
+                  className={viewMode === 'list' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -118,34 +124,33 @@ export default function StaffPage() {
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
+                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">
                 <Users className="h-4 w-4 mr-2" />
                 Request Staff
               </Button>
             </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+        <main>
         {staff.length === 0 ? (
-          <Card className="p-12 text-center bg-white">
+          <Card className="p-12 text-center bg-white shadow-sm border">
             <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No staff assigned yet</h3>
             <p className="text-gray-600 mb-6">Get started by requesting your first team member</p>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Request Staff</Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">Request Staff</Button>
           </Card>
         ) : (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'grid grid-cols-1 gap-6'}>
             {staff.map((member) => viewMode === 'grid' ? (
               // GRID VIEW - Compact Card
               <Link key={member.id} href={`/client/staff/${member.id}`}>
-                <Card className="p-6 bg-white border-gray-200 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group h-full">
+                <Card className="p-6 bg-white border shadow-sm hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group h-full border-l-4 border-l-blue-500">
                   <div className="flex flex-col items-center text-center mb-4">
                     {member.avatar ? (
                       <div className="relative w-24 h-24 rounded-full overflow-hidden ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all mb-3">
@@ -219,7 +224,7 @@ export default function StaffPage() {
             ) : (
               // LIST VIEW - Full Detail Card
               <Link key={member.id} href={`/client/staff/${member.id}`}>
-                <Card className="p-6 bg-white border-gray-200 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group">
+                <Card className="p-6 bg-white border shadow-sm hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group border-l-4 border-l-blue-500">
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-start gap-4">
                       {member.avatar ? (
@@ -338,7 +343,8 @@ export default function StaffPage() {
             ))}
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

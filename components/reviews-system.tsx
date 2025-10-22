@@ -42,7 +42,7 @@ export default function ReviewsSystem() {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch("/api/reviews")
+      const response = await fetch("/api/performance-reviews")
       if (!response.ok) throw new Error("Failed to fetch reviews")
       const data = await response.json()
       setReviews(data.reviews)
