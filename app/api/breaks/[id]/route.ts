@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getStaffUser } from "@/lib/auth-helpers"
 
 // PUT & PATCH /api/breaks/[id] - End a break
 async function endBreak(
@@ -81,6 +82,45 @@ async function endBreak(
     })
   } catch (error) {
     console.error("Error ending break:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+// GET /api/breaks/[id] - Get a specific break
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const staffUser = await getStaffUser()
+    if (!staffUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id: breakId } = await params
+
+    // Find the break
+    const breakRecord = await prisma.break.findUnique({
+      where: { id: breakId }
+    })
+
+    if (!breakRecord) {
+      return NextResponse.json({ error: "Break not found" }, { status: 404 })
+    }
+
+    if (breakRecord.staffUserId !== staffUser.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      break: breakRecord
+    })
+  } catch (error) {
+    console.error("Error fetching break:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
