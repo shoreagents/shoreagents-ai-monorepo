@@ -234,3 +234,4 @@ export async function checkCandidateAvailability(candidateId: string) {
 
 // Export pool for cleanup if needed
 export { pool as bpocPool }
+

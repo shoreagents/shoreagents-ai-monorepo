@@ -166,7 +166,7 @@ export default function RecruitmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -190,7 +190,7 @@ export default function RecruitmentPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {showForm ? (
-          <div className="bg-white shadow rounded-lg">
+                  <div className="bg-white shadow rounded-lg text-gray-900">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Create Job Request</h2>
               <p className="mt-1 text-sm text-gray-500">
@@ -208,22 +208,22 @@ export default function RecruitmentPage() {
                 
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <Label htmlFor="job_title" className="text-sm font-medium text-gray-700">
-                      Job Title <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="job_title"
-                      type="text"
-                      required
-                      value={formData.job_title}
-                      onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                      placeholder="e.g. Senior Virtual Assistant"
-                      className="mt-1"
-                    />
+                            <Label htmlFor="job_title" className="text-sm font-medium text-gray-900">
+                              Job Title <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              id="job_title"
+                              type="text"
+                              required
+                              value={formData.job_title}
+                              onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                              placeholder="e.g. Senior Virtual Assistant"
+                              className="mt-1 text-gray-900 bg-white border-gray-300"
+                            />
                   </div>
 
                   <div>
-                    <Label htmlFor="job_description" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="job_description" className="text-sm font-medium text-gray-900">
                       Job Description <span className="text-red-500">*</span>
                     </Label>
                     <Textarea
@@ -233,13 +233,13 @@ export default function RecruitmentPage() {
                       value={formData.job_description}
                       onChange={(e) => setFormData({ ...formData, job_description: e.target.value })}
                       placeholder="Describe the role, responsibilities, and what makes this position exciting..."
-                      className="mt-1"
+                      className="mt-1 text-gray-900 bg-white border-gray-300"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="department" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="department" className="text-sm font-medium text-gray-900">
                         Department
                       </Label>
                       <Input
@@ -248,11 +248,11 @@ export default function RecruitmentPage() {
                         value={formData.department}
                         onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                         placeholder="e.g. Marketing, IT, Operations"
-                        className="mt-1"
+                        className="mt-1 text-gray-900 bg-white border-gray-300"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="industry" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="industry" className="text-sm font-medium text-gray-900">
                         Industry
                       </Label>
                       <Input
@@ -261,7 +261,7 @@ export default function RecruitmentPage() {
                         value={formData.industry}
                         onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
                         placeholder="e.g. Technology, Finance, Healthcare"
-                        className="mt-1"
+                        className="mt-1 text-gray-900 bg-white border-gray-300"
                       />
                     </div>
                   </div>
@@ -277,14 +277,14 @@ export default function RecruitmentPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <Label htmlFor="work_type" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="work_type" className="text-sm font-medium text-gray-900">
                       Work Type <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={formData.work_type}
                       onValueChange={(value) => setFormData({ ...formData, work_type: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select work type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -296,14 +296,14 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="work_arrangement" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="work_arrangement" className="text-sm font-medium text-gray-900">
                       Work Arrangement
                     </Label>
                     <Select
                       value={formData.work_arrangement}
                       onValueChange={(value) => setFormData({ ...formData, work_arrangement: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select arrangement" />
                       </SelectTrigger>
                       <SelectContent>
@@ -315,14 +315,14 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="experience_level" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="experience_level" className="text-sm font-medium text-gray-900">
                       Experience Level
                     </Label>
                     <Select
                       value={formData.experience_level}
                       onValueChange={(value) => setFormData({ ...formData, experience_level: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select level" />
                       </SelectTrigger>
                       <SelectContent>
@@ -336,14 +336,14 @@ export default function RecruitmentPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <Label htmlFor="shift" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="shift" className="text-sm font-medium text-gray-900">
                       Shift
                     </Label>
                     <Select
                       value={formData.shift}
                       onValueChange={(value) => setFormData({ ...formData, shift: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select shift" />
                       </SelectTrigger>
                       <SelectContent>
@@ -355,14 +355,14 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="priority" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="priority" className="text-sm font-medium text-gray-900">
                       Priority
                     </Label>
                     <Select
                       value={formData.priority}
                       onValueChange={(value) => setFormData({ ...formData, priority: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent>
@@ -374,7 +374,7 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="application_deadline" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="application_deadline" className="text-sm font-medium text-gray-900">
                       Application Deadline
                     </Label>
                     <Input
@@ -383,7 +383,7 @@ export default function RecruitmentPage() {
                       value={formData.application_deadline}
                       onChange={(e) => setFormData({ ...formData, application_deadline: e.target.value })}
                       min={new Date().toISOString().split('T')[0]}
-                      className="mt-1"
+                      className="mt-1 text-gray-900 bg-white border-gray-300"
                     />
                   </div>
                 </div>
@@ -398,14 +398,14 @@ export default function RecruitmentPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
-                    <Label htmlFor="currency" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="currency" className="text-sm font-medium text-gray-900">
                       Currency <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={formData.currency}
                       onValueChange={(value) => setFormData({ ...formData, currency: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
                       <SelectContent>
@@ -417,14 +417,14 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="salary_type" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="salary_type" className="text-sm font-medium text-gray-900">
                       Salary Type <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={formData.salary_type}
                       onValueChange={(value) => setFormData({ ...formData, salary_type: value })}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 text-gray-900 bg-white border-gray-300">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -436,7 +436,7 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="salary_min" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="salary_min" className="text-sm font-medium text-gray-900">
                       Min Salary
                     </Label>
                     <Input
@@ -445,12 +445,12 @@ export default function RecruitmentPage() {
                       value={formData.salary_min}
                       onChange={(e) => setFormData({ ...formData, salary_min: e.target.value })}
                       placeholder="20000"
-                      className="mt-1"
+                      className="mt-1 text-gray-900 bg-white border-gray-300"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="salary_max" className="text-sm font-medium text-gray-700">
+                    <Label htmlFor="salary_max" className="text-sm font-medium text-gray-900">
                       Max Salary
                     </Label>
                     <Input
@@ -459,7 +459,7 @@ export default function RecruitmentPage() {
                       value={formData.salary_max}
                       onChange={(e) => setFormData({ ...formData, salary_max: e.target.value })}
                       placeholder="30000"
-                      className="mt-1"
+                      className="mt-1 text-gray-900 bg-white border-gray-300"
                     />
                   </div>
                 </div>

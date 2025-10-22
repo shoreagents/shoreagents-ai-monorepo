@@ -435,3 +435,4 @@ function CandidateCard({ candidate, onClick }: { candidate: Candidate; onClick: 
     </div>
   )
 }
+

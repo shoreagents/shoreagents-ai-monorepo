@@ -254,3 +254,4 @@ export function getDiscTypeColor(type: string): string {
   }
   return colors[type?.toUpperCase()] || 'bg-gray-500'
 }
+
