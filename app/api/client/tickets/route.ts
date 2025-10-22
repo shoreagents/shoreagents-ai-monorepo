@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            management_users: {
+            managementUser: {
               select: {
                 id: true,
                 name: true,
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            client_users: {
+            clientUser: {
               select: {
                 id: true,
                 name: true,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         assignedTo: clientUser.company?.accountManagerId || null,
       },
       include: {
-        client_users: {
+        clientUser: {
           select: {
             id: true,
             name: true,
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            management_users: {
+            managementUser: {
               select: {
                 id: true,
                 name: true,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            client_users: {
+            clientUser: {
               select: {
                 id: true,
                 name: true,

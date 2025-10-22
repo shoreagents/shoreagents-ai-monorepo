@@ -106,7 +106,7 @@ export default function GamifiedDashboard() {
         reviews: reviews.reviews || [],
         tickets: tickets.tickets || [],
         posts: posts.posts || [],
-        leaderboard: leaderboard.rankings?.find((r: any) => r.name === "Maria Santos"),
+        leaderboard: leaderboard.currentUser || null,
       })
     } catch (err) {
       console.error("Error fetching dashboard data:", err)
@@ -138,15 +138,15 @@ export default function GamifiedDashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
         <div className="mx-auto max-w-7xl space-y-8">
-          <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
+          <div className="h-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              <div className="h-64 rounded-xl bg-slate-800/50 animate-pulse" />
-              <div className="h-64 rounded-xl bg-slate-800/50 animate-pulse" />
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
             <div className="space-y-6">
-              <div className="h-48 rounded-xl bg-slate-800/50 animate-pulse" />
-              <div className="h-48 rounded-xl bg-slate-800/50 animate-pulse" />
+              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function GamifiedDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -165,7 +165,7 @@ export default function GamifiedDashboard() {
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {quickStats.map((stat, index) => (
-              <div key={index} className="glass flex flex-col items-center justify-center rounded-xl p-4 text-center shadow-xl transition-transform hover:scale-105">
+              <div key={index} className="flex flex-col items-center justify-center rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-4 text-center shadow-xl transition-all duration-500 hover:scale-[1.02] hover:ring-white/20 hover:shadow-indigo-500/30">
                 <div className="text-2xl font-bold text-white">{stat.value}</div>
                 <div className="text-xs font-medium uppercase tracking-wider text-white/60">{stat.label}</div>
               </div>
@@ -176,10 +176,10 @@ export default function GamifiedDashboard() {
         {/* Onboarding Banner */}
         {onboardingStatus && !onboardingStatus.isComplete && (
           <Link href={onboardingStatus.completionPercent === 100 ? "/onboarding/status" : "/onboarding"} className="block mb-6">
-            <div className={`glass cursor-pointer rounded-xl border-2 p-5 shadow-xl transition-all hover:scale-[1.02] ${
+            <div className={`cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] ${
               onboardingStatus.completionPercent === 100
-                ? "border-blue-500/50 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500"
-                : "border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500"
+                ? "border-blue-500/50 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500 hover:shadow-blue-500/30"
+                : "border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500 hover:shadow-yellow-500/30"
             }`}>
               <div className="flex items-center justify-between gap-6">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -245,7 +245,7 @@ export default function GamifiedDashboard() {
             <Link
               key={index}
               href={action.href}
-              className="glass flex items-center justify-center gap-3 rounded-xl p-5 text-lg font-bold text-white shadow-xl transition-transform hover:scale-105 hover:ring-2 hover:ring-blue-500/50"
+              className="flex items-center justify-center gap-3 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-5 text-lg font-bold text-white shadow-xl transition-all duration-500 hover:scale-[1.02] hover:ring-white/20 hover:shadow-indigo-500/30"
             >
               <action.icon className="h-6 w-6" />
               {action.label}
@@ -258,7 +258,7 @@ export default function GamifiedDashboard() {
           {/* Left Column */}
           <div className="space-y-8 lg:col-span-2">
             {/* Today's Tasks */}
-            <div className="glass space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+            <div className="space-y-4 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 shadow-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Today's Tasks</h2>
                 <Link href="/tasks" className="text-sm text-blue-400 hover:underline">View All →</Link>
@@ -290,7 +290,7 @@ export default function GamifiedDashboard() {
             </div>
 
             {/* Recent Team Activity */}
-            <div className="glass space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+            <div className="space-y-4 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 shadow-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Recent Team Activity</h2>
                 <Link href="/activity" className="text-sm text-blue-400 hover:underline">View Feed →</Link>
@@ -316,7 +316,7 @@ export default function GamifiedDashboard() {
           <div className="space-y-8 lg:col-span-1">
             {/* Your Rank */}
             {data.leaderboard && (
-              <div className="glass space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+              <div className="space-y-4 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 shadow-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Your Rank</h2>
                   <Link href="/leaderboard" className="text-sm text-blue-400 hover:underline">Full Board →</Link>
@@ -335,7 +335,7 @@ export default function GamifiedDashboard() {
 
             {/* Pending Reviews */}
             {pendingReviews.length > 0 && (
-              <div className="glass space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/50 bg-amber-900/20">
+              <div className="space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/50 bg-amber-900/20 transition-all duration-500 hover:ring-amber-500 hover:shadow-amber-500/30">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Pending Reviews</h2>
                   <Link href="/reviews" className="text-sm text-blue-400 hover:underline">View All →</Link>
@@ -357,7 +357,7 @@ export default function GamifiedDashboard() {
             )}
 
             {/* Support Tickets */}
-            <div className="glass space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+            <div className="space-y-4 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 shadow-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Support Tickets</h2>
                 <Link href="/tickets" className="text-sm text-blue-400 hover:underline">View All →</Link>

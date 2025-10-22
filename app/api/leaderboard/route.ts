@@ -57,7 +57,10 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.points - a.points)
       .map((user, index) => ({ ...user, rank: index + 1 }))
 
-    return NextResponse.json({ rankings })
+    // Find current user in rankings
+    const currentUser = rankings.find((user) => user.id === session.user.id) || null
+
+    return NextResponse.json({ rankings, currentUser })
   } catch (error) {
     console.error("Error fetching leaderboard:", error)
     return NextResponse.json(

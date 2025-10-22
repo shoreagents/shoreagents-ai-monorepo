@@ -138,8 +138,12 @@ export default function TeamView() {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xl font-bold text-white ring-1 ring-white/20">
-                    {member.avatar}
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xl font-bold text-white ring-1 ring-white/20 overflow-hidden">
+                    {member.avatar && member.avatar !== "/placeholder-user.jpg" ? (
+                      <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{member.name.split(" ").map(n => n[0]).join("").toUpperCase()}</span>
+                    )}
                     <div
                       className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-slate-900 ${statusConfig[member.status].dotColor}`}
                     />
