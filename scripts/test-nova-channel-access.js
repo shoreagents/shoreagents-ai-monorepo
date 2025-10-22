@@ -1,65 +1,76 @@
-import { config } from 'dotenv';
-import { WebClient } from '@slack/web-api';
-import { NovaIntelligence } from '../lib/nova-intelligence.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Load environment variables
-config();
+import { WebClient } from '@slack/web-api';
 
 async function testNovaChannelAccess() {
-  console.log('🔥 Testing NOVA Channel Access...');
-  
+  console.log('🔍 Testing NOVA Channel Access...');
+
   const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
-  const novaIntelligence = new NovaIntelligence();
-  const generalChannelId = 'C09MFH9JTK5'; // #general channel ID
-  
+
+  // 1. Test authentication
+  console.log('\n1. Testing authentication...');
   try {
-    // 1. Test authentication
-    console.log('\n1. Testing authentication...');
-    const auth = await slack.auth.test();
-    console.log('✅ Authenticated as:', auth.user);
-    
-    // 2. Test channel history access
-    console.log('\n2. Testing channel history access...');
-    const messages = await slack.conversations.history({
-      channel: generalChannelId,
-      limit: 5
-    });
-    
-    if (messages.ok) {
-      console.log('✅ Can access #general channel history');
-      console.log(`✅ Found ${messages.messages.length} recent messages`);
-    } else {
-      console.log('❌ Cannot access #general channel:', messages.error);
-      return;
-    }
-    
-    // 3. Test NOVA's intelligence
-    console.log('\n3. Testing NOVA intelligence...');
-    const testMessage = "Testing NOVA's channel access and intelligence";
-    const novaResponse = await novaIntelligence.think(
-      `Someone is testing my channel access: "${testMessage}". Give a brief, confident response.`
-    );
-    
-    console.log('✅ NOVA Response:', novaResponse.response);
-    
-    // 4. Test posting to #general
-    console.log('\n4. Testing message posting to #general...');
-    const result = await slack.chat.postMessage({
-      channel: generalChannelId,
-      text: `🔥 NOVA Channel Access Test:\n\n${novaResponse.response}`,
-      username: "Nova Agent001",
-      icon_emoji: ":robot_face:"
-    });
-    
-    console.log('✅ Message posted to #general successfully!');
-    console.log('📱 Message timestamp:', result.ts);
-    
-    console.log('\n🎉 NOVA channel access test completed!');
-    console.log('💬 NOVA can now access #general channel properly!');
-    
+    const authTest = await slack.auth.test();
+    console.log('✅ Authenticated as:', authTest.user);
+    console.log('✅ Bot ID:', authTest.user_id);
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ Authentication failed:', error.message);
+    return;
   }
+
+  // 2. List all channels NOVA can access
+  console.log('\n2. Listing accessible channels...');
+  try {
+    const channels = await slack.conversations.list({
+      types: 'public_channel,private_channel',
+      limit: 50
+    });
+    
+    console.log(`✅ Found ${channels.channels?.length || 0} accessible channels:`);
+    if (channels.channels && channels.channels.length > 0) {
+      channels.channels.forEach((channel, index) => {
+        console.log(`   ${index + 1}. #${channel.name} (${channel.id}) - ${channel.is_member ? 'Member' : 'Not Member'}`);
+      });
+    }
+  } catch (error) {
+    console.error('❌ Cannot list channels:', error.message);
+  }
+
+  // 3. Test specific channels
+  const testChannels = ['#general', '#development', '#random', '#help', '#tech-support'];
+  
+  console.log('\n3. Testing specific channel access...');
+  for (const channelName of testChannels) {
+    try {
+      const messages = await slack.conversations.history({
+        channel: channelName,
+        limit: 1
+      });
+      console.log(`✅ Can read ${channelName}: ${messages.messages?.length || 0} messages found`);
+    } catch (error) {
+      console.log(`❌ Cannot read ${channelName}: ${error.message}`);
+    }
+  }
+
+  // 4. Test posting to different channels
+  console.log('\n4. Testing posting to different channels...');
+  for (const channelName of testChannels) {
+    try {
+      await slack.chat.postMessage({
+        channel: channelName,
+        text: `🧪 NOVA Channel Access Test: I can post to ${channelName}!`,
+        username: "Nova Agent001",
+        icon_emoji: ":robot_face:"
+      });
+      console.log(`✅ Can post to ${channelName}`);
+    } catch (error) {
+      console.log(`❌ Cannot post to ${channelName}: ${error.message}`);
+    }
+  }
+
+  console.log('\n🎉 Channel access test complete!');
+  console.log('💡 NOVA can monitor any channel she has access to!');
 }
 
-testNovaChannelAccess();
+testNovaChannelAccess().catch(console.error);
