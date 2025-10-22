@@ -200,15 +200,16 @@ export default function ClientCompanyPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-slate-400">Website</div>
-                    <a 
-                      href={company.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-sm font-semibold text-indigo-400 hover:underline truncate block"
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        window.open(company.website, '_blank', 'noopener,noreferrer')
+                      }}
+                      className="text-sm font-semibold text-indigo-400 hover:underline truncate block cursor-pointer"
                     >
                       {company.website.replace(/^https?:\/\//, "")}
-                    </a>
+                    </span>
                   </div>
                 </div>
               )}
