@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
           select: {
             currentRole: true,
             workSchedule: true,
-            startDate: true
+            startDate: true,
+            employmentStatus: true
           }
         },
         onboarding: {
@@ -132,8 +133,7 @@ export async function GET(req: NextRequest) {
       if (staffTimeMap.has(staffId)) {
         const existingData = staffTimeMap.get(staffId)
         existingData.timeEntries.push(entry)
-        // Update staff info from time entry (has more complete data)
-        existingData.staff = entry.staffUser
+        // Keep original staff data from staffUsers - it has all the fields we need
       }
     })
 
