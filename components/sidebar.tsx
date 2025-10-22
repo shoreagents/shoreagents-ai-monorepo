@@ -34,11 +34,11 @@ const navItems = [
   { href: "/team", icon: Users, label: "Staff" },
   { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/analytics", icon: Activity, label: "Analytics" },
+  { href: "/tickets", icon: Headphones, label: "Tickets" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/reviews", icon: Star, label: "Reviews" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
-  { href: "/tickets", icon: Headphones, label: "Support Tickets" },
   { href: "/activity", icon: FileText, label: "The Feed" },
 ]
 
