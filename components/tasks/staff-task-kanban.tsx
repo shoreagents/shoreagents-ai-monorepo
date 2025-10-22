@@ -205,8 +205,7 @@ export default function StaffTaskKanban({
                     >
                       {statusTasks.length === 0 ? (
                         <div className="text-center py-8 text-slate-500">
-                          <p className="text-3xl mb-2">📭</p>
-                          <p className="text-sm">No tasks yet</p>
+                          <p className="text-sm">No Tasks Yet</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
