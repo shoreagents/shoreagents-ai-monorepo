@@ -17,6 +17,8 @@ export async function POST(
     const { ticketId } = await params
     const body = await request.json()
     const { message, attachments } = body
+    
+    console.log("Received response data:", { message, attachments, ticketId })
 
     if (!message && (!attachments || attachments.length === 0)) {
       return NextResponse.json({ error: "Message or attachments are required" }, { status: 400 })
@@ -54,6 +56,13 @@ export async function POST(
     if (clientUser) createdByType = "CLIENT"
 
     // Create response
+    console.log("Creating response with data:", {
+      ticketId,
+      message,
+      createdByType,
+      attachments: attachments || []
+    })
+    
     const response = await prisma.ticketResponse.create({
       data: {
         ticketId,
