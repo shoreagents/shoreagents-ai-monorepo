@@ -95,6 +95,8 @@ export function createConfetti(config: ConfettiConfig = {}) {
   let animationId: number
 
   function animate() {
+    if (!ctx) return
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     
     particles.forEach((particle, index) => {
@@ -197,28 +199,14 @@ export function createHearts(config: HeartsConfig = {}) {
 // Trigger celebration based on task status
 export function triggerTaskCelebration(status: string, taskTitle: string) {
   switch (status) {
-    case 'FOR_REVIEW':
-      createHearts({
-        count: 20,
-        size: 25,
-        colors: ['#ff6b6b', '#ff8e8e', '#ffa8a8', '#ffc2c2', '#ffd6d6']
-      })
-      break
     case 'COMPLETED':
       createConfetti({
         particleCount: 100,
         colors: ['#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff']
       })
       break
-    case 'IN_PROGRESS':
-      createConfetti({
-        particleCount: 30,
-        colors: ['#45b7d1', '#54a0ff', '#4ecdc4'],
-        shapes: ['circle']
-      })
-      break
     default:
-      // No celebration for other statuses
+      // No celebration for other statuses (TODO, IN_PROGRESS, STUCK, FOR_REVIEW)
       break
   }
 }

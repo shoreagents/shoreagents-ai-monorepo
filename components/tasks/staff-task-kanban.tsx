@@ -160,17 +160,11 @@ export default function StaffTaskKanban({
     
     // Check if we dropped over a column or a task
     let newStatus: string
-<<<<<<< HEAD
     if (over.data?.current?.type === 'column' && over.data?.current?.status) {
       // Dropped over a column - use the status from column data
       newStatus = over.data.current.status as string
     } else if ((over.id as string).startsWith('column-')) {
       // Dropped over a column by ID
-=======
-    
-    // First check if we dropped directly on a column
-    if ((over.id as string).startsWith('column-')) {
->>>>>>> 10799b06f0b6891138a6f1165af4be4106ffbac0
       newStatus = (over.id as string).replace('column-', '')
     } 
     // Check if we dropped on a task - find which column that task is in
@@ -198,8 +192,10 @@ export default function StaffTaskKanban({
     })
 
     if (task && task.status !== newStatus && newStatus && ['TODO', 'IN_PROGRESS', 'STUCK', 'FOR_REVIEW', 'COMPLETED'].includes(newStatus)) {
-      // Trigger celebration animation IMMEDIATELY when drag ends
-      triggerTaskCelebration(newStatus, task.title)
+      // Trigger celebration animation ONLY for COMPLETED (confetti)
+      if (newStatus === 'COMPLETED') {
+        triggerTaskCelebration(newStatus, task.title)
+      }
       
       // Then call the status change handler
       onStatusChange(taskId, newStatus)
