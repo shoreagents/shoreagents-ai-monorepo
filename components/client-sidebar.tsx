@@ -92,6 +92,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/staff", label: "Staff", icon: Users },
     { href: "/client/time-tracking", label: "Time Tracking", icon: Clock },
     { href: "/client/analytics", label: "Analytics", icon: Monitor },
+    { href: "/client/tickets", label: "Tickets", icon: Headphones },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
