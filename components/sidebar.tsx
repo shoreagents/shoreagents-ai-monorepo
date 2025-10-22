@@ -37,8 +37,8 @@ const navItems = [
   { href: "/tickets", icon: Headphones, label: "Tickets" },
   { href: "/performance-reviews", icon: Star, label: "Performance Reviews" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
+  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/activity", icon: FileText, label: "The Feed" },
 ]
 
