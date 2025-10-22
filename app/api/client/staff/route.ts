@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
         },
         reviewsReceived: {
           where: {
-            isAcknowledged: true
+            acknowledgedDate: { not: null }
           },
           select: {
-            rating: true
+            overallScore: true
           }
         },
         timeEntries: {
@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
             }
           },
           select: {
-            startTime: true,
-            endTime: true
+            clockIn: true,
+            clockOut: true
           }
         },
         breaks: {
@@ -118,13 +118,13 @@ export async function GET(request: NextRequest) {
 
       // Calculate average review score
       const reviewScore = staff.reviewsReceived.length > 0
-        ? Math.round((staff.reviewsReceived.reduce((sum, r) => sum + r.rating, 0) / staff.reviewsReceived.length) * 10) / 10
+        ? Math.round((staff.reviewsReceived.reduce((sum, r) => sum + (r.overallScore ? Number(r.overallScore) : 0), 0) / staff.reviewsReceived.length) * 10) / 10
         : 0
 
       // Calculate total hours this month
       const totalHoursThisMonth = staff.timeEntries.reduce((total, entry) => {
-        if (entry.startTime && entry.endTime) {
-          const hours = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60)
+        if (entry.clockIn && entry.clockOut) {
+          const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)
           return total + hours
         }
         return total
