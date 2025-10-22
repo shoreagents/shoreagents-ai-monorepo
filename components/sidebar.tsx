@@ -20,6 +20,7 @@ import {
   Trophy,
   LogOut,
   Clock,
+  Building2,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { NotificationBadge } from "@/components/notification-badge"
@@ -27,6 +28,7 @@ import { NotificationBadge } from "@/components/notification-badge"
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/profile", icon: User, label: "My Profile" },
+  { href: "/client-company", icon: Building2, label: "Client" },
   { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/performance", icon: Activity, label: "Performance" },

@@ -784,14 +784,190 @@ export default function ProfileView() {
 
       {/* Documents Tab Content */}
       {activeTab === 'documents' && (
-        <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
-              <FileText className="h-6 w-6 text-white" />
+        <div className="space-y-6">
+          {/* Government Documents */}
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-purple-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Government Documents</h2>
             </div>
-            <h2 className="text-2xl font-black text-white">Documents</h2>
+            {profileData.personalRecords ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {profileData.personalRecords.sssDocUrl && (
+                  <a
+                    href={profileData.personalRecords.sssDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-orange-500 to-red-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">SSS Document</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-purple-400" />
+                  </a>
+                )}
+                {profileData.personalRecords.tinDocUrl && (
+                  <a
+                    href={profileData.personalRecords.tinDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-pink-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">TIN Document</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-pink-400" />
+                  </a>
+                )}
+                {profileData.personalRecords.philhealthDocUrl && (
+                  <a
+                    href={profileData.personalRecords.philhealthDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">PhilHealth Document</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-indigo-400" />
+                  </a>
+                )}
+                {profileData.personalRecords.pagibigDocUrl && (
+                  <a
+                    href={profileData.personalRecords.pagibigDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-cyan-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Pag-IBIG Document</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-cyan-400" />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No government documents available</p>
+            )}
           </div>
-          <p className="text-slate-400 text-center py-12">Coming soon...</p>
+
+          {/* Personal Documents */}
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-blue-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5">
+                <IdCard className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Personal Documents</h2>
+            </div>
+            {profileData.personalRecords ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {profileData.personalRecords.validIdUrl && (
+                  <a
+                    href={profileData.personalRecords.validIdUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-blue-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 p-3">
+                      <IdCard className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Valid ID</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-blue-400" />
+                  </a>
+                )}
+                {profileData.personalRecords.birthCertUrl && (
+                  <a
+                    href={profileData.personalRecords.birthCertUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Birth Certificate</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-purple-400" />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No personal documents available</p>
+            )}
+          </div>
+
+          {/* Clearance Documents */}
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-emerald-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-emerald-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 p-2.5">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Clearance Documents</h2>
+            </div>
+            {profileData.personalRecords ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {profileData.personalRecords.nbiClearanceUrl && (
+                  <a
+                    href={profileData.personalRecords.nbiClearanceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-emerald-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 p-3">
+                      <Shield className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">NBI Clearance</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-emerald-400" />
+                  </a>
+                )}
+                {profileData.personalRecords.policeClearanceUrl && (
+                  <a
+                    href={profileData.personalRecords.policeClearanceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-green-500/50 hover:scale-[1.02]"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-green-500 to-lime-500 p-3">
+                      <Shield className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Police Clearance</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-green-400" />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No clearance documents available</p>
+            )}
+          </div>
         </div>
       )}
 
