@@ -5,11 +5,15 @@ import { prisma } from "@/lib/prisma"
 // GET /api/client/time-tracking - Fetch time entries for client's assigned staff
 export async function GET(req: NextRequest) {
   try {
+    console.log("🔥 TIME TRACKING API CALLED")
     const session = await auth()
     
     if (!session?.user?.email) {
+      console.log("❌ No session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    
+    console.log("✅ Session:", session.user.email)
 
     // Get query parameters for filtering
     const { searchParams } = new URL(req.url)
@@ -18,16 +22,21 @@ export async function GET(req: NextRequest) {
     const staffId = searchParams.get('staffId')
 
     // Try to get client via ClientUser table
+    console.log("🔍 Finding client user...")
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
 
     if (!clientUser) {
+      console.log("❌ Client user not found")
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
+    
+    console.log("✅ Client found:", clientUser.email, "Company:", clientUser.company?.companyName)
 
     // Get all staff assigned to this company
+    console.log("🔍 Finding staff for company:", clientUser.company.id)
     const staffUsers = await prisma.staffUser.findMany({
       where: { 
         companyId: clientUser.company.id
@@ -49,6 +58,7 @@ export async function GET(req: NextRequest) {
       }
     })
     
+    console.log("✅ Found staff:", staffUsers.length)
     const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
@@ -144,7 +154,7 @@ export async function GET(req: NextRequest) {
       }, 0)
 
       // Check if currently clocked in
-      const activEntry = timeEntries.find(e => !e.clockOut)
+      const activeEntry = timeEntries.find(e => !e.clockOut)
       const isClockedIn = !!activeEntry
 
       // Check if on break
@@ -217,10 +227,12 @@ export async function GET(req: NextRequest) {
         totalStaff: staffTimeEntries.length
       }
     })
-  } catch (error) {
-    console.error("Error fetching client time tracking:", error)
+  } catch (error: any) {
+    console.error("❌❌❌ ERROR in client time tracking:", error)
+    console.error("Error message:", error?.message)
+    console.error("Error stack:", error?.stack)
     return NextResponse.json(
-      { error: "Failed to fetch time entries" },
+      { error: "Failed to fetch time entries", details: error?.message },
       { status: 500 }
     )
   }
