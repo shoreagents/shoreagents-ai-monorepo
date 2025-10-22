@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, Upload, Trash2, Users, CheckCircle2, AlertCircle } from "lucide-react"
+import { X, Upload, Trash2, Users, CheckCircle2, AlertCircle, Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/use-toast"
@@ -13,6 +13,14 @@ interface StaffUser {
   email: string
   avatar: string | null
   role: string
+}
+
+interface BulkTask {
+  id: string
+  title: string
+  description: string
+  priority: string
+  deadline: string
 }
 
 interface CreateTaskModalProps {
@@ -28,12 +36,22 @@ export default function CreateTaskModal({
   onClose,
   onSuccess,
 }: CreateTaskModalProps) {
+  const [isBulkMode, setIsBulkMode] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "MEDIUM",
     deadline: "",
   })
+  const [bulkTasks, setBulkTasks] = useState<BulkTask[]>([
+    {
+      id: "1",
+      title: "",
+      description: "",
+      priority: "MEDIUM",
+      deadline: "",
+    },
+  ])
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
   const [attachments, setAttachments] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
@@ -86,9 +104,118 @@ export default function CreateTaskModal({
     }
   }
 
+  const addBulkTask = () => {
+    const newTask: BulkTask = {
+      id: Date.now().toString(),
+      title: "",
+      description: "",
+      priority: "MEDIUM",
+      deadline: "",
+    }
+    setBulkTasks([...bulkTasks, newTask])
+  }
+
+  const removeBulkTask = (taskId: string) => {
+    if (bulkTasks.length > 1) {
+      setBulkTasks(bulkTasks.filter((task) => task.id !== taskId))
+    }
+  }
+
+  const updateBulkTask = (taskId: string, field: keyof BulkTask, value: string) => {
+    setBulkTasks(
+      bulkTasks.map((task) =>
+        task.id === taskId ? { ...task, [field]: value } : task
+      )
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (isBulkMode) {
+      // Validate bulk tasks
+      const validTasks = bulkTasks.filter((task) => task.title.trim())
+      if (validTasks.length === 0) {
+        toast({
+          title: "Error",
+          description: "At least one task must have a title",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (isClient && selectedStaffIds.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one staff member",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setSubmitting(true)
+      try {
+        // Upload attachments first if any
+        let attachmentUrls: string[] = []
+        if (attachments.length > 0) {
+          setUploading(true)
+          const formDataUpload = new FormData()
+          attachments.forEach((file) => {
+            formDataUpload.append("files", file)
+          })
+
+          const uploadResponse = await fetch("/api/tasks/attachments", {
+            method: "POST",
+            body: formDataUpload,
+          })
+
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            attachmentUrls = uploadData.urls || []
+          }
+          setUploading(false)
+        }
+
+        // Create bulk tasks
+        const endpoint = isClient ? "/api/client/tasks/bulk" : "/api/tasks/bulk"
+        const body = {
+          tasks: validTasks,
+          staffUserIds: selectedStaffIds,
+          attachments: attachmentUrls,
+        }
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to create bulk tasks")
+        }
+
+        toast({
+          title: "Success",
+          description: `Created ${validTasks.length} task${validTasks.length > 1 ? "s" : ""} for ${selectedStaffIds.length} staff member${selectedStaffIds.length > 1 ? "s" : ""}`,
+        })
+
+        onSuccess()
+      } catch (error) {
+        console.error("Error creating bulk tasks:", error)
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to create bulk tasks",
+          variant: "destructive",
+        })
+      } finally {
+        setSubmitting(false)
+        setUploading(false)
+      }
+      return
+    }
+
+    // Single task creation (existing logic)
     if (!formData.title.trim()) {
       toast({
         title: "Error",
@@ -188,13 +315,34 @@ export default function CreateTaskModal({
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className={`text-3xl font-bold ${
-            isDark 
-              ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
-              : "text-slate-900"
-          }`}>
-            {isClient ? "📋 Create Task for Staff" : "✨ Create New Task"}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className={`text-3xl font-bold ${
+              isDark 
+                ? "text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400" 
+                : "text-slate-900"
+            }`}>
+              {isClient ? "📋 Create Task for Staff" : "✨ Create New Task"}
+            </h2>
+            {isClient && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(!isBulkMode)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isBulkMode
+                      ? isDark
+                        ? "bg-indigo-500 text-white"
+                        : "bg-blue-500 text-white"
+                      : isDark
+                      ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                  }`}
+                >
+                  {isBulkMode ? "📝 Single Task" : "📋 Bulk Tasks"}
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClose}
             className={`rounded-xl p-2.5 transition-all hover:scale-110 ${
@@ -208,90 +356,230 @@ export default function CreateTaskModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Title */}
-          <div>
-            <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-              Task Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
-                isDark
-                  ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
-                  : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
-              }`}
-              placeholder="Enter task title..."
-              required
-            />
-          </div>
+          {isBulkMode ? (
+            /* Bulk Task Form */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className={`text-lg font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  📋 Bulk Tasks ({bulkTasks.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={addBulkTask}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isDark
+                      ? "bg-indigo-500 text-white hover:bg-indigo-600"
+                      : "bg-blue-500 text-white hover:bg-blue-600"
+                  }`}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Task
+                </button>
+              </div>
 
-          {/* Priority & Deadline */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                Priority
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
-                  isDark
-                    ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
-                    : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
-                }`}
-              >
-                {priorities.map((priority) => {
-                  const config = {
-                    LOW: "💤 Low",
-                    MEDIUM: "📋 Medium",
-                    HIGH: "⚡ High",
-                    URGENT: "🚨 Urgent",
-                  }[priority]
-                  return (
-                    <option key={priority} value={priority}>
-                      {config}
-                    </option>
-                  )
-                })}
-              </select>
+              {bulkTasks.map((task, index) => (
+                <div
+                  key={task.id}
+                  className={`rounded-xl p-4 ${
+                    isDark ? "bg-slate-800/50 ring-1 ring-white/10" : "bg-slate-50 border-2 border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                      Task {index + 1}
+                    </span>
+                    {bulkTasks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeBulkTask(task.id)}
+                        className={`p-1 rounded-lg transition-all ${
+                          isDark
+                            ? "text-red-400 hover:bg-red-500/20"
+                            : "text-red-600 hover:bg-red-100"
+                        }`}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Task Title */}
+                    <div>
+                      <label className={`mb-1 block text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={task.title}
+                        onChange={(e) => updateBulkTask(task.id, "title", e.target.value)}
+                        className={`w-full rounded-lg px-3 py-2 outline-none transition-all ${
+                          isDark
+                            ? "bg-slate-700/50 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500"
+                            : "bg-white text-slate-900 border border-slate-300 focus:border-blue-500"
+                        }`}
+                        placeholder="Enter task title..."
+                      />
+                    </div>
+
+                    {/* Priority & Deadline */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1 block text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                          Priority
+                        </label>
+                        <select
+                          value={task.priority}
+                          onChange={(e) => updateBulkTask(task.id, "priority", e.target.value)}
+                          className={`w-full rounded-lg px-3 py-2 outline-none transition-all ${
+                            isDark
+                              ? "bg-slate-700/50 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500"
+                              : "bg-white text-slate-900 border border-slate-300 focus:border-blue-500"
+                          }`}
+                        >
+                          {priorities.map((priority) => {
+                            const config = {
+                              LOW: "💤 Low",
+                              MEDIUM: "📋 Medium",
+                              HIGH: "⚡ High",
+                              URGENT: "🚨 Urgent",
+                            }[priority]
+                            return (
+                              <option key={priority} value={priority}>
+                                {config}
+                              </option>
+                            )
+                          })}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={`mb-1 block text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                          Deadline
+                        </label>
+                        <input
+                          type="date"
+                          value={task.deadline}
+                          onChange={(e) => updateBulkTask(task.id, "deadline", e.target.value)}
+                          className={`w-full rounded-lg px-3 py-2 outline-none transition-all ${
+                            isDark
+                              ? "bg-slate-700/50 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500"
+                              : "bg-white text-slate-900 border border-slate-300 focus:border-blue-500"
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className={`mb-1 block text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        Description
+                      </label>
+                      <textarea
+                        value={task.description}
+                        onChange={(e) => updateBulkTask(task.id, "description", e.target.value)}
+                        rows={2}
+                        className={`w-full rounded-lg px-3 py-2 outline-none transition-all ${
+                          isDark
+                            ? "bg-slate-700/50 text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
+                            : "bg-white text-slate-900 border border-slate-300 focus:border-blue-500 placeholder-slate-400"
+                        }`}
+                        placeholder="Add task details..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+          ) : (
+            /* Single Task Form */
+            <>
+              {/* Title */}
+              <div>
+                <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  Task Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
+                    isDark
+                      ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
+                      : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
+                  }`}
+                  placeholder="Enter task title..."
+                  required
+                />
+              </div>
 
-            <div>
-              <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                Deadline
-              </label>
-              <input
-                type="date"
-                value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
-                  isDark
-                    ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
-                    : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
-                }`}
-              />
-            </div>
-          </div>
+              {/* Priority & Deadline */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                    Priority
+                  </label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
+                      isDark
+                        ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
+                        : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
+                    }`}
+                  >
+                    {priorities.map((priority) => {
+                      const config = {
+                        LOW: "💤 Low",
+                        MEDIUM: "📋 Medium",
+                        HIGH: "⚡ High",
+                        URGENT: "🚨 Urgent",
+                      }[priority]
+                      return (
+                        <option key={priority} value={priority}>
+                          {config}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
 
-          {/* Description */}
-          <div>
-            <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
-                isDark
-                  ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80 placeholder-slate-500"
-                  : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white placeholder-slate-400"
-              }`}
-              placeholder="Add task details..."
-            />
-          </div>
+                <div>
+                  <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                    Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.deadline}
+                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                    className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
+                      isDark
+                        ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80"
+                        : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className={`mb-2 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={4}
+                  className={`w-full rounded-xl px-5 py-4 outline-none transition-all ${
+                    isDark
+                      ? "bg-slate-800/50 backdrop-blur-xl text-white ring-1 ring-white/10 focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80 placeholder-slate-500"
+                      : "bg-slate-50 text-slate-900 border-2 border-slate-200 focus:border-blue-500 focus:bg-white placeholder-slate-400"
+                  }`}
+                  placeholder="Add task details..."
+                />
+              </div>
+            </>
+          )}
 
           {/* Staff Selection (Client only) */}
           {isClient && (
@@ -508,9 +796,9 @@ export default function CreateTaskModal({
               {uploading ? (
                 <>⏳ Uploading files...</>
               ) : submitting ? (
-                <>📤 Creating task...</>
+                <>📤 {isBulkMode ? "Creating tasks..." : "Creating task..."}</>
               ) : (
-                <>🚀 Create Task</>
+                <>🚀 {isBulkMode ? "Create Tasks" : "Create Task"}</>
               )}
             </Button>
             <Button
