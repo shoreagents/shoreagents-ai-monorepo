@@ -20,9 +20,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Client user or company not found" }, { status: 404 })
     }
 
-    // Get all staff for this company with their onboarding status and profile
+    // Get all staff for this company who have completed onboarding but haven't started yet
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
     const staffList = await prisma.staffUser.findMany({
-      where: { companyId: clientUser.companyId },
+      where: { 
+        companyId: clientUser.companyId,
+        // Must have completed onboarding
+        onboarding: {
+          isComplete: true
+        },
+        // But start date must be in the future
+        profile: {
+          startDate: {
+            gt: today
+          }
+        }
+      },
       include: {
         onboarding: {
           select: {
