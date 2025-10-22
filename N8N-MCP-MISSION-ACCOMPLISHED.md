@@ -542,3 +542,8 @@ Ask AI: "Create a workflow that posts to Slack when tickets are created"
 
 **Next**: Follow `MCP-SETUP-VISUAL-GUIDE.md` to start creating workflows!
 
+
+
+
+
+
