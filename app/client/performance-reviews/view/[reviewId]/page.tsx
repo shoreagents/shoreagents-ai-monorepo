@@ -48,7 +48,7 @@ export default function ViewReviewPage({
 
   const fetchReview = async (id: string) => {
     try {
-      const response = await fetch(`/api/client/reviews/${id}`)
+      const response = await fetch(`/api/client/performance-reviews/${id}`)
       if (!response.ok) throw new Error("Failed to fetch review")
       
       const data = await response.json()

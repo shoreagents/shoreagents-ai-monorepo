@@ -396,3 +396,160 @@ input[type="file"]::-webkit-file-upload-button {
 .top-performers-scroll::-webkit-scrollbar-thumb:hover {
   background: #facc15;
 }
+
+/* Admin Tickets Page Scrollbar - Dark Theme */
+.admin-tickets-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(30, 41, 59, 0.3);
+}
+
+.admin-tickets-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-tickets-scrollbar::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 4px;
+}
+
+.admin-tickets-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.admin-tickets-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.admin-tickets-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Global dark scrollbar for admin pages */
+html.dark,
+body.dark,
+.dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(30, 41, 59, 0.3);
+}
+
+html.dark::-webkit-scrollbar,
+body.dark::-webkit-scrollbar,
+.dark::-webkit-scrollbar {
+  width: 8px;
+}
+
+html.dark::-webkit-scrollbar-track,
+body.dark::-webkit-scrollbar-track,
+.dark::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 4px;
+}
+
+html.dark::-webkit-scrollbar-thumb,
+body.dark::-webkit-scrollbar-thumb,
+.dark::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+html.dark::-webkit-scrollbar-thumb:hover,
+body.dark::-webkit-scrollbar-thumb:hover,
+.dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+html.dark::-webkit-scrollbar-thumb:active,
+body.dark::-webkit-scrollbar-thumb:active,
+.dark::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Force scrollbar styling for admin tickets page */
+body:has([href="/admin/tickets"]) {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(30, 41, 59, 0.3) !important;
+}
+
+body:has([href="/admin/tickets"])::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+body:has([href="/admin/tickets"])::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+body:has([href="/admin/tickets"])::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4) !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+body:has([href="/admin/tickets"])::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6) !important;
+}
+
+body:has([href="/admin/tickets"])::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.8) !important;
+}
+
+/* Universal dark scrollbar override */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(30, 41, 59, 0.3);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Create Ticket Modal Scrollbar - Matches card color scheme */
+.create-ticket-modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.6) rgba(15, 23, 42, 0.8);
+}
+
+.create-ticket-modal-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.create-ticket-modal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 4px;
+}
+
+.create-ticket-modal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.6);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.create-ticket-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+.create-ticket-modal-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(99, 102, 241, 1);
+}
