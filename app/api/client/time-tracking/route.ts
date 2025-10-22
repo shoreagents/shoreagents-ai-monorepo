@@ -115,21 +115,29 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Group time entries by staff
+    // Create a map of ALL staff, not just those with time entries
     const staffTimeMap = new Map()
     
+    // First, initialize ALL staff from the company
+    staffUsers.forEach(staffUser => {
+      staffTimeMap.set(staffUser.id, {
+        staff: staffUser,
+        timeEntries: []
+      })
+    })
+    
+    // Then, add time entries to staff who have them
     timeEntries.forEach(entry => {
       const staffId = entry.staffUserId
-      if (!staffTimeMap.has(staffId)) {
-        staffTimeMap.set(staffId, {
-          staff: entry.staffUser,
-          timeEntries: []
-        })
+      if (staffTimeMap.has(staffId)) {
+        const existingData = staffTimeMap.get(staffId)
+        existingData.timeEntries.push(entry)
+        // Update staff info from time entry (has more complete data)
+        existingData.staff = entry.staffUser
       }
-      staffTimeMap.get(staffId).timeEntries.push(entry)
     })
 
-    // Format response with staff and their time entries
+    // Format response with ALL staff and their time entries (or empty if none)
     const staffTimeEntries = Array.from(staffTimeMap.values()).map(({ staff, timeEntries }) => {
       const totalHours = timeEntries.reduce((sum, entry) => {
         return sum + (entry.totalHours ? Number(entry.totalHours) : 0)
