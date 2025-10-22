@@ -53,7 +53,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
 
   const fetchPendingReviewsCount = async () => {
     try {
-      const response = await fetch("/api/client/reviews/count")
+      const response = await fetch("/api/client/performance-reviews/count")
       if (response.ok) {
         const data = await response.json()
         setPendingReviewsCount(data.pendingCount || 0)
@@ -93,10 +93,10 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/time-tracking", label: "Time Tracking", icon: Clock },
     { href: "/client/analytics", label: "Analytics", icon: Monitor },
     { href: "/client/tickets", label: "Tickets", icon: Headphones },
+    { href: "/client/performance-reviews", label: "Performance Reviews", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
-    { href: "/client/reviews", label: "Reviews", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
     { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
