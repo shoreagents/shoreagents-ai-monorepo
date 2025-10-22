@@ -33,7 +33,15 @@ export default async function ClientDashboard() {
   // Get all staff IDs for this company
   const staffUsers = await prisma.staffUser.findMany({
     where: { companyId: clientUser.companyId },
-    select: { id: true, authUserId: true, name: true, position: true, avatar: true }
+    select: { 
+      id: true, 
+      authUserId: true, 
+      name: true, 
+      avatar: true,
+      profile: {
+        select: { currentRole: true }
+      }
+    }
   })
   const staffUserIds = staffUsers.map(s => s.id)
 
@@ -247,7 +255,7 @@ export default async function ClientDashboard() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">{staff.name}</p>
-                      <p className="text-sm text-gray-600 truncate">{staff.position || 'Staff Member'}</p>
+                      <p className="text-sm text-gray-600 truncate">{staff.profile?.currentRole || 'Staff Member'}</p>
                     </div>
                   </div>
                 </Link>

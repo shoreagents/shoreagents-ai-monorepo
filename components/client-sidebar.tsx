@@ -25,6 +25,7 @@ import {
   ChevronDown,
   Building2,
   Headphones,
+  ClipboardCheck,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -87,6 +88,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
     { href: "/client/profile", label: "Profile", icon: User },
     { href: "/client/company", label: "Company", icon: Building2 },
+    { href: "/client/onboarding", label: "Onboarding", icon: ClipboardCheck },
     { href: "/client/staff", label: "Staff", icon: Users },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
