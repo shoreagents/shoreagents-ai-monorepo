@@ -30,22 +30,19 @@ export async function GET(req: NextRequest) {
     // Get all staff assigned to this company
     const staffUsers = await prisma.staffUser.findMany({
       where: { 
-        companyId: clientUser.company.id,
-        // Only show staff who have completed onboarding and started
-        onboarding: {
-          isComplete: true
-        },
-        profile: {
-          startDate: {
-            lte: new Date() // Only show staff who have started
-          }
-        }
+        companyId: clientUser.company.id
       },
       include: {
         profile: {
           select: {
             currentRole: true,
-            workSchedule: true
+            workSchedule: true,
+            startDate: true
+          }
+        },
+        onboarding: {
+          select: {
+            isComplete: true
           }
         }
       }
