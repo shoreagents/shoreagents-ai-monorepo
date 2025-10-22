@@ -17,7 +17,7 @@ module.exports = {
   
   // API configuration
   API_BASE_URL: 'http://localhost:3000',
-  API_PERFORMANCE_ENDPOINT: '/api/performance',
+  API_PERFORMANCE_ENDPOINT: '/api/analytics',
   
   // Privacy settings
   TRACK_MOUSE: true,
