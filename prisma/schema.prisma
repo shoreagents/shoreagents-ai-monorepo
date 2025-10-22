@@ -191,10 +191,6 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  ispaused       Boolean?    @default(false)
-  pausedat       DateTime?   @db.Timestamp(6)
-  pausedduration Int?        @default(0)
-  pauseused      Boolean?    @default(false)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -506,24 +502,25 @@ model Company {
 }
 
 model ClientUser {
-  id               String           @id @default(uuid())
-  authUserId       String           @unique
-  name             String
-  role             ClientRole       @default(MANAGER)
-  avatar           String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  email            String           @unique
-  companyId        String
-  coverPhoto       String?
-  activity_posts   ActivityPost[]
-  profile          ClientProfile?
-  company          Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  post_comments    PostComment[]
-  post_reactions   PostReaction[]
-  tasks            Task[]
-  ticket_responses TicketResponse[]
-  tickets          Ticket[]
+  id                 String               @id @default(uuid())
+  authUserId         String               @unique
+  name               String
+  role               ClientRole           @default(MANAGER)
+  avatar             String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  email              String               @unique
+  companyId          String
+  coverPhoto         String?
+  activity_posts     ActivityPost[]
+  profile            ClientProfile?
+  company            Company              @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  interview_requests interview_requests[]
+  post_comments      PostComment[]
+  post_reactions     PostReaction[]
+  tasks              Task[]
+  ticket_responses   TicketResponse[]
+  tickets            Ticket[]
 
   @@map("client_users")
 }
@@ -627,6 +624,19 @@ model staff_personal_records {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
+
+model interview_requests {
+  id                   String     @id @default(dbgenerated("(gen_random_uuid())::text"))
+  client_user_id       String
+  bpoc_candidate_id    String
+  candidate_first_name String
+  preferred_times      Json
+  client_notes         String?
+  status               String     @default("pending")
+  created_at           DateTime   @default(now())
+  updated_at           DateTime   @default(now())
+  client_users         ClientUser @relation(fields: [client_user_id], references: [id], onDelete: Cascade)
 }
 
 enum ManagementRole {
