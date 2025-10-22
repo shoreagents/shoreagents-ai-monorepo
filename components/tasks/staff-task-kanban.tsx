@@ -14,10 +14,32 @@ import {
   DragOverEvent,
   DragEndEvent,
   useDroppable,
+  CollisionDetection,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import StaffTaskCard from "./staff-task-card"
 import { getStatusConfig, getAllStatuses } from "@/lib/task-utils"
+import { triggerTaskCelebration } from "@/lib/confetti"
+
+// Custom collision detection that prioritizes column boundaries
+const customCollisionDetection: CollisionDetection = (args) => {
+  // Get all collisions using closest center first
+  const collisions = closestCenter(args)
+  
+  // If we have collisions, prioritize column collisions
+  if (collisions && collisions.length > 0) {
+    const columnCollision = collisions.find(
+      (collision) => collision.data?.current?.type === 'column'
+    )
+    
+    if (columnCollision) {
+      return [columnCollision]
+    }
+  }
+  
+  // Fall back to all collisions
+  return collisions
+}
 
 interface Task {
   id: string
@@ -52,7 +74,7 @@ interface StaffTaskKanbanProps {
 function DroppableColumn({ id, children, isOver }: { id: string; children: React.ReactNode; isOver: boolean }) {
   const { setNodeRef } = useDroppable({ 
     id: `column-${id}`, // Prefix to avoid collision with task IDs
-    data: { status: id } // Store the actual status value
+    data: { type: 'column', status: id } // Store the actual status value with type
   })
   return (
     <div ref={setNodeRef} className="flex-1">
@@ -92,12 +114,32 @@ export default function StaffTaskKanban({
   const activeTask = tasks.find((task) => task.id === activeId)
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+    const taskId = event.active.id as string
+    const task = tasks.find((t) => t.id === taskId)
+    console.log("🚀 [Drag Start]:", {
+      taskId,
+      taskTitle: task?.title,
+      currentStatus: task?.status,
+      allStatuses: getAllStatuses()
+    })
+    setActiveId(taskId)
   }
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event
-    setOverId(over ? (over.id as string) : null)
+    const overId = over ? (over.id as string) : null
+    
+    if (overId && overId.startsWith('column-') && over) {
+      const status = overId.replace('column-', '')
+      console.log("🎯 [Drag Over Column]:", {
+        overId,
+        status,
+        isForReview: status === 'FOR_REVIEW',
+        overData: over.data?.current
+      })
+    }
+    
+    setOverId(overId)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -112,7 +154,7 @@ export default function StaffTaskKanban({
     
     // Check if we dropped over a column or a task
     let newStatus: string
-    if (over.data?.current?.status) {
+    if (over.data?.current?.type === 'column' && over.data?.current?.status) {
       // Dropped over a column - use the status from column data
       newStatus = over.data.current.status as string
     } else if ((over.id as string).startsWith('column-')) {
@@ -133,10 +175,15 @@ export default function StaffTaskKanban({
       overData: over.data?.current,
       taskCurrentStatus: task?.status,
       statusType: typeof newStatus,
-      droppedOver: (over.id as string).startsWith('column-') ? 'COLUMN' : 'TASK'
+      droppedOver: (over.id as string).startsWith('column-') ? 'COLUMN' : 'TASK',
+      isValidStatus: newStatus && ['TODO', 'IN_PROGRESS', 'STUCK', 'FOR_REVIEW', 'COMPLETED'].includes(newStatus)
     })
 
-    if (task && task.status !== newStatus && newStatus) {
+    if (task && task.status !== newStatus && newStatus && ['TODO', 'IN_PROGRESS', 'STUCK', 'FOR_REVIEW', 'COMPLETED'].includes(newStatus)) {
+      // Trigger celebration animation IMMEDIATELY when drag ends
+      triggerTaskCelebration(newStatus, task.title)
+      
+      // Then call the status change handler
       onStatusChange(taskId, newStatus)
     }
 
@@ -152,7 +199,7 @@ export default function StaffTaskKanban({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={customCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
