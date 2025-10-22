@@ -502,24 +502,25 @@ model Company {
 }
 
 model ClientUser {
-  id              String           @id @default(uuid())
-  authUserId      String           @unique
-  name            String
-  role            ClientRole       @default(MANAGER)
-  avatar          String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  email           String           @unique
-  companyId       String
-  coverPhoto      String?
-  activityPosts   ActivityPost[]
-  profile         ClientProfile?
-  company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  postComments    PostComment[]
-  postReactions   PostReaction[]
-  tasks           Task[]
-  ticketResponses TicketResponse[]
-  tickets         Ticket[]
+  id               String             @id @default(uuid())
+  authUserId       String             @unique
+  name             String
+  role             ClientRole         @default(MANAGER)
+  avatar           String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  email            String             @unique
+  companyId        String
+  coverPhoto       String?
+  activityPosts    ActivityPost[]
+  profile          ClientProfile?
+  company          Company            @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  postComments     PostComment[]
+  postReactions    PostReaction[]
+  tasks            Task[]
+  ticketResponses  TicketResponse[]
+  tickets          Ticket[]
+  interviewRequests InterviewRequest[]
 
   @@map("client_users")
 }
@@ -545,6 +546,21 @@ model ClientProfile {
   clientUser          ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
+}
+
+model InterviewRequest {
+  id                   String     @id @default(uuid())
+  clientUserId         String
+  bpocCandidateId      String
+  candidateFirstName   String
+  preferredTimes       Json
+  clientNotes          String?
+  status               String     @default("pending")
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  clientUser           ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  
+  @@map("interview_requests")
 }
 
 model StaffOnboarding {
