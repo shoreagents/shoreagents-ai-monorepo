@@ -54,7 +54,7 @@ export default function SubmitReviewPage({
 
   const fetchReview = async (id: string) => {
     try {
-      const response = await fetch(`/api/client/reviews/${id}`)
+      const response = await fetch(`/api/client/performance-reviews/${id}`)
       if (!response.ok) throw new Error("Failed to fetch review")
       
       const data = await response.json()
@@ -94,7 +94,7 @@ export default function SubmitReviewPage({
         throw new Error("Please provide areas for improvement")
       }
 
-      const response = await fetch("/api/client/reviews", {
+      const response = await fetch("/api/client/performance-reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

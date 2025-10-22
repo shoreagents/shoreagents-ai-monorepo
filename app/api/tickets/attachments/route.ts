@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error("Supabase upload error:", error)
+        console.error("Bucket:", bucket, "Folder:", folder, "FileName:", fileName)
+        console.error("File size:", file.size, "File type:", file.type)
         continue
       }
 
@@ -89,6 +91,7 @@ export async function POST(request: NextRequest) {
         .from(bucket)
         .getPublicUrl(fileName)
 
+      console.log("Generated public URL:", publicUrlData.publicUrl)
       uploadedUrls.push(publicUrlData.publicUrl)
     }
 

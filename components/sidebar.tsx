@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   User,
   CheckSquare,
+  Coffee,
   Activity,
   Star,
   Users,
@@ -22,6 +23,7 @@ import {
   Clock,
   Building2,
   ClipboardCheck,
+  Settings,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { NotificationBadge } from "@/components/notification-badge"
@@ -34,12 +36,13 @@ const navItems = [
   { href: "/team", icon: Users, label: "Staff" },
   { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/analytics", icon: Activity, label: "Analytics" },
+  { href: "/tickets", icon: Headphones, label: "Tickets" },
+  { href: "/performance-reviews", icon: Star, label: "Performance Reviews" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
-  { href: "/reviews", icon: Star, label: "Reviews" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
-  { href: "/tickets", icon: Headphones, label: "Support Tickets" },
   { href: "/activity", icon: FileText, label: "The Feed" },
+  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ]
 
 export default function Sidebar() {
