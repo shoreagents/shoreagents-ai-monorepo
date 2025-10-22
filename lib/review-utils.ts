@@ -155,9 +155,8 @@ export function formatReviewDateTime(date: Date | string): string {
  * Check if review is overdue
  */
 export function isReviewOverdue(dueDate: Date | string): boolean {
-  const due = typeof dueDate === "string" ? new Date(dueDate) : dueDate
-  const now = new Date()
-  return now > due
+  const days = getDaysUntilDue(dueDate)
+  return days < 0
 }
 
 /**

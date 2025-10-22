@@ -1,395 +1,528 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Users, TrendingUp, Search, Calendar, Download, RefreshCw } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { 
+  Clock, 
+  Coffee, 
+  Users, 
+  Calendar,
+  Grid3x3,
+  List,
+  TrendingUp,
+  Play,
+  Pause,
+  LogOut,
+  AlertCircle,
+  CheckCircle2,
+  Loader2
+} from "lucide-react"
 
-interface TimeEntry {
+type BreakType = "MORNING" | "LUNCH" | "AFTERNOON" | "AWAY"
+
+type Break = {
   id: string
-  userId: string
-  clockIn: string
-  clockOut: string | null
-  totalHours: number | null
-  user: {
+  type: BreakType
+  scheduledStart: string | null
+  scheduledEnd: string | null
+  actualStart: Date | null
+  actualEnd: Date | null
+  duration: number | null
+  isLate: boolean
+  lateBy: number | null
+}
+
+type TimeEntry = {
+  id: string
+  clockIn: Date
+  clockOut: Date | null
+  totalHours: number
+  wasLate: boolean
+  lateBy: number | null
+  clockOutReason: string | null
+  breaks: Break[]
+}
+
+type StaffTimeEntry = {
+  staff: {
     id: string
     name: string
     email: string
     avatar: string | null
     role: string
+    employmentStatus: string
   }
-}
-
-interface Summary {
+  isClockedIn: boolean
+  isOnBreak: boolean
+  currentBreakType: BreakType | null
+  currentEntry: {
+    id: string
+    clockIn: Date
+    breaks: Break[]
+  } | null
+  timeEntries: TimeEntry[]
   totalHours: number
-  activeStaff: number
   totalEntries: number
 }
 
-interface StaffMember {
-  id: string
-  name: string
-  avatar: string | null
-  role: string
-}
-
 export default function ClientTimeTrackingPage() {
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
-  const [summary, setSummary] = useState<Summary>({ totalHours: 0, activeStaff: 0, totalEntries: 0 })
-  const [staffList, setStaffList] = useState<StaffMember[]>([])
+  const [staffData, setStaffData] = useState<StaffTimeEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedStaff, setSelectedStaff] = useState<string>("all")
-  const [dateRange, setDateRange] = useState<string>("today")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [selectedStaff, setSelectedStaff] = useState<StaffTimeEntry | null>(null)
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  
+  const [summary, setSummary] = useState({
+    totalHours: 0,
+    activeStaff: 0,
+    totalEntries: 0,
+    totalStaff: 0
+  })
 
   useEffect(() => {
     fetchTimeEntries()
-  }, [selectedStaff, dateRange, startDate, endDate])
+  }, [selectedDate])
 
-  const fetchTimeEntries = async () => {
+  async function fetchTimeEntries() {
     try {
       setLoading(true)
-      
-      // Calculate date range based on selection
-      let start = ""
-      let end = ""
-      const now = new Date()
-
-      if (dateRange === "today") {
-        start = now.toISOString().split('T')[0]
-        end = start
-      } else if (dateRange === "week") {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        start = weekAgo.toISOString().split('T')[0]
-        end = now.toISOString().split('T')[0]
-      } else if (dateRange === "month") {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        start = monthAgo.toISOString().split('T')[0]
-        end = now.toISOString().split('T')[0]
-      } else if (dateRange === "custom") {
-        start = startDate
-        end = endDate
+      const res = await fetch(`/api/client/time-tracking?startDate=${selectedDate}&endDate=${selectedDate}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStaffData(data.staffTimeEntries)
+        setSummary(data.summary)
       }
-
-      // Build query params
-      const params = new URLSearchParams()
-      if (start) params.append('startDate', start)
-      if (end) params.append('endDate', end)
-      if (selectedStaff !== "all") params.append('staffId', selectedStaff)
-
-      const response = await fetch(`/api/client/time-tracking?${params.toString()}`)
-      if (!response.ok) throw new Error('Failed to fetch time entries')
-      
-      const data = await response.json()
-      setTimeEntries(data.timeEntries || [])
-      setSummary(data.summary || { totalHours: 0, activeStaff: 0, totalEntries: 0 })
-      setStaffList(data.staffList || [])
     } catch (error) {
-      console.error('Error fetching time entries:', error)
+      console.error("Failed to fetch time entries:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+  const formatTime = (date: Date | string | null) => {
+    if (!date) return "—"
+    return new Date(date).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit"
     })
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
+  const formatDuration = (minutes: number | null) => {
+    if (!minutes) return "0m"
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
 
-    if (date.toDateString() === today.toDateString()) {
-      return "Today"
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday"
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
+  const getBreakIcon = (type: BreakType) => {
+    switch (type) {
+      case "MORNING": return <Coffee className="h-4 w-4" />
+      case "LUNCH": return <Coffee className="h-4 w-4" />
+      case "AFTERNOON": return <Coffee className="h-4 w-4" />
+      case "AWAY": return <Pause className="h-4 w-4" />
     }
   }
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  const getStatusBadge = (staff: StaffTimeEntry) => {
+    if (staff.isClockedIn && staff.isOnBreak) {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">
+          <Pause className="h-3 w-3 mr-1" />
+          On Break ({staff.currentBreakType})
+        </Badge>
+      )
+    }
+    if (staff.isClockedIn) {
+      return (
+        <Badge className="bg-green-100 text-green-700 border-green-200">
+          <Play className="h-3 w-3 mr-1" />
+          Working
+        </Badge>
+      )
+    }
+    return (
+      <Badge className="bg-gray-100 text-gray-600 border-gray-200">
+        <LogOut className="h-3 w-3 mr-1" />
+        Clocked Out
+      </Badge>
+    )
   }
-
-  // Filter entries by search term
-  const filteredEntries = timeEntries.filter(entry =>
-    entry.user.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center p-4 pt-20 md:p-8 lg:pt-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading time entries...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading time tracking data...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 backdrop-blur-sm bg-white/80">
-        <div className="max-w-[1800px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-7xl animate-in fade-in duration-700">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                Staff Time Tracking
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">Monitor your team's clock in/out history</p>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Clock className="h-6 w-6 text-blue-600" />
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900">Time Tracking</h1>
+              </div>
+              <p className="text-gray-600 text-lg">
+                Monitor your team's attendance and work hours
+              </p>
             </div>
+            <div className="flex items-center gap-3">
+              {/* Date Selector */}
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className={viewMode === 'list' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-            <Button 
-              onClick={fetchTimeEntries}
-              variant="outline"
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-l-blue-500 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Active Staff</p>
+                  <p className="text-2xl font-bold text-gray-900">{summary.activeStaff}/{summary.totalStaff}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-l-green-500 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Clock className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Hours</p>
+                  <p className="text-2xl font-bold text-gray-900">{summary.totalHours}h</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-500 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Entries</p>
+                  <p className="text-2xl font-bold text-gray-900">{summary.totalEntries}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 border-l-4 border-l-orange-500 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Avg Hours/Staff</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summary.totalStaff > 0 ? Math.round((summary.totalHours / summary.totalStaff) * 10) / 10 : 0}h
+                  </p>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-[1800px] mx-auto px-6 py-8">
-        {/* Summary Cards */}
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <Card className="border-blue-100 bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">
-                Total Hours
-              </CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {summary.totalHours.toFixed(2)}h
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {summary.totalEntries} entries
-              </p>
-            </CardContent>
+        {/* Staff Time Entries */}
+        {staffData.length === 0 ? (
+          <Card className="p-12 text-center bg-white shadow-sm border">
+            <Clock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No time entries found</h3>
+            <p className="text-gray-600">No staff clocked in on this date</p>
           </Card>
+        ) : (
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+            {staffData.map((staffEntry) => {
+              const initials = staffEntry.staff.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)
 
-          <Card className="border-green-100 bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">
-                Active Staff
-              </CardTitle>
-              <Users className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {summary.activeStaff}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Currently clocked in
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-purple-100 bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">
-                Average Hours
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                {summary.totalEntries > 0 ? (summary.totalHours / summary.totalEntries).toFixed(2) : '0.00'}h
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Per entry
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-6 border-gray-200 bg-white">
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search staff..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Staff Filter */}
-              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  {staffList.map(staff => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Date Range */}
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Last 7 Days</SelectItem>
-                  <SelectItem value="month">Last 30 Days</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Custom Date Inputs */}
-              {dateRange === "custom" && (
-                <>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="md:col-span-2"
-                  />
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="md:col-span-2"
-                  />
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Time Entries List */}
-        <Card className="border-gray-200 bg-white">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Time Entry History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredEntries.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
-                <Clock className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                <p className="font-medium">No time entries found</p>
-                <p className="text-sm mt-1">Try adjusting your filters or date range</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between rounded-lg bg-gray-50 p-4 hover:bg-gray-100 transition-colors"
+              if (viewMode === 'grid') {
+                // GRID VIEW
+                return (
+                  <Card
+                    key={staffEntry.staff.id}
+                    className="p-6 bg-white border shadow-sm hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-500"
+                    onClick={() => setSelectedStaff(staffEntry)}
                   >
-                    {/* Staff Info */}
-                    <div className="flex items-center gap-4 flex-1">
-                      <Avatar className="h-12 w-12 ring-2 ring-blue-100">
-                        <AvatarImage src={entry.user.avatar || ''} alt={entry.user.name} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                          {entry.user.name.split(' ').map(n => n[0]).join('')}
+                    <div className="flex flex-col items-center text-center mb-4">
+                      <Avatar className="h-20 w-20 mb-3 ring-4 ring-blue-100">
+                        <AvatarImage src={staffEntry.staff.avatar || undefined} />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-lg font-semibold">
+                          {initials}
                         </AvatarFallback>
                       </Avatar>
-                      
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{entry.user.name}</div>
-                        <div className="text-sm text-gray-500">{entry.user.role}</div>
-                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">{staffEntry.staff.name}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{staffEntry.staff.role}</p>
+                      {getStatusBadge(staffEntry)}
                     </div>
 
-                    {/* Date */}
-                    <div className="text-center px-4">
-                      <div className="font-medium text-gray-900">
-                        {formatDate(entry.clockIn)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(entry.clockIn).toLocaleDateString('en-US', { weekday: 'short' })}
-                      </div>
-                    </div>
-
-                    {/* Clock In Time */}
-                    <div className="text-center px-4">
-                      <div className="text-sm text-gray-500 mb-1">Clock In</div>
-                      <div className="font-medium text-green-600">
-                        {formatTime(entry.clockIn)}
-                      </div>
-                    </div>
-
-                    {/* Clock Out Time */}
-                    <div className="text-center px-4">
-                      <div className="text-sm text-gray-500 mb-1">Clock Out</div>
-                      {entry.clockOut ? (
-                        <div className="font-medium text-red-600">
-                          {formatTime(entry.clockOut)}
+                    {staffEntry.currentEntry && (
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Clock In:</span>
+                          <span className="font-semibold text-green-600">{formatTime(staffEntry.currentEntry.clockIn)}</span>
                         </div>
-                      ) : (
-                        <Badge className="bg-green-500 text-white">
-                          <div className="h-2 w-2 rounded-full bg-white animate-pulse mr-1" />
-                          Active
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Total Hours */}
-                    <div className="text-right px-4">
-                      {entry.totalHours !== null ? (
-                        <>
-                          <div className="text-xl font-bold text-blue-600">
-                            {Number(entry.totalHours).toFixed(2)}h
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {Math.round(Number(entry.totalHours) * 60)} min
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2 text-green-600">
-                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                          <span className="text-sm font-medium">In Progress</span>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Breaks:</span>
+                          <span className="font-semibold">{staffEntry.currentEntry.breaks.length}</span>
                         </div>
-                      )}
+                      </div>
+                    )}
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Total Hours</span>
+                        <span className="text-xl font-bold text-blue-600">{staffEntry.totalHours}h</span>
+                      </div>
+                    </div>
+                  </Card>
+                )
+              }
+
+              // LIST VIEW
+              return (
+                <Card
+                  key={staffEntry.staff.id}
+                  className="p-6 bg-white border shadow-sm hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-500"
+                  onClick={() => setSelectedStaff(staffEntry)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-16 w-16 ring-4 ring-blue-100">
+                        <AvatarImage src={staffEntry.staff.avatar || undefined} />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-lg font-semibold">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">{staffEntry.staff.name}</h3>
+                        <p className="text-sm text-gray-600 mb-2">{staffEntry.staff.role}</p>
+                        {getStatusBadge(staffEntry)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Total Hours Today</p>
+                      <p className="text-3xl font-bold text-blue-600">{staffEntry.totalHours}h</p>
                     </div>
                   </div>
-                ))}
+
+                  {staffEntry.currentEntry && (
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Clock In</p>
+                        <div className="flex items-center gap-2">
+                          <Play className="h-4 w-4 text-green-600" />
+                          <p className="font-semibold text-green-600">{formatTime(staffEntry.currentEntry.clockIn)}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Breaks</p>
+                        <div className="flex items-center gap-2">
+                          <Coffee className="h-4 w-4 text-orange-600" />
+                          <p className="font-semibold text-gray-900">
+                            {staffEntry.currentEntry.breaks.length} breaks
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Status</p>
+                        {staffEntry.isOnBreak ? (
+                          <p className="font-semibold text-yellow-600">On Break</p>
+                        ) : (
+                          <p className="font-semibold text-green-600">Working</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!staffEntry.currentEntry && staffEntry.timeEntries.length > 0 && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-600">
+                        Completed {staffEntry.timeEntries.length} {staffEntry.timeEntries.length === 1 ? 'shift' : 'shifts'} today
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Detail Modal */}
+        <Dialog open={!!selectedStaff} onOpenChange={() => setSelectedStaff(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {selectedStaff && (
+                  <>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={selectedStaff.staff.avatar || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white">
+                        {selectedStaff.staff.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-xl font-bold">{selectedStaff.staff.name}</p>
+                      <p className="text-sm text-gray-600 font-normal">{selectedStaff.staff.role}</p>
+                    </div>
+                  </>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedStaff && (
+              <div className="space-y-6">
+                {/* Summary */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="p-4 bg-blue-50 border-blue-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Hours</p>
+                    <p className="text-2xl font-bold text-blue-600">{selectedStaff.totalHours}h</p>
+                  </Card>
+                  <Card className="p-4 bg-green-50 border-green-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Shifts</p>
+                    <p className="text-2xl font-bold text-green-600">{selectedStaff.totalEntries}</p>
+                  </Card>
+                  <Card className="p-4 bg-purple-50 border-purple-200">
+                    <p className="text-sm text-gray-600 mb-1">Status</p>
+                    <div className="mt-1">{getStatusBadge(selectedStaff)}</div>
+                  </Card>
+                </div>
+
+                {/* Time Entries */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Time Entries</h3>
+                  <div className="space-y-4">
+                    {selectedStaff.timeEntries.map((entry) => (
+                      <Card key={entry.id} className="p-4 border-l-4 border-l-blue-500">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Play className="h-4 w-4 text-green-600" />
+                              <span className="font-semibold">Clock In: {formatTime(entry.clockIn)}</span>
+                              {entry.wasLate && (
+                                <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Late {entry.lateBy}m
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {entry.clockOut ? (
+                                <>
+                                  <LogOut className="h-4 w-4 text-gray-600" />
+                                  <span className="font-semibold">Clock Out: {formatTime(entry.clockOut)}</span>
+                                </>
+                              ) : (
+                                <Badge className="bg-green-100 text-green-700 border-green-200">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Currently Active
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Total Hours</p>
+                            <p className="text-2xl font-bold text-blue-600">{entry.totalHours}h</p>
+                          </div>
+                        </div>
+
+                        {/* Breaks */}
+                        {entry.breaks.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <p className="text-sm font-semibold text-gray-700 mb-3">Breaks</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              {entry.breaks.map((brk) => (
+                                <div key={brk.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {getBreakIcon(brk.type)}
+                                    <span className="text-sm font-semibold">{brk.type}</span>
+                                  </div>
+                                  <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Start:</span>
+                                      <span className="font-medium">{formatTime(brk.actualStart)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">End:</span>
+                                      <span className="font-medium">{formatTime(brk.actualEnd)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Duration:</span>
+                                      <span className="font-medium">{formatDuration(brk.duration)}</span>
+                                    </div>
+                                    {brk.isLate && (
+                                      <Badge className="bg-red-100 text-red-700 border-red-200 text-xs w-full justify-center mt-1">
+                                        Late {brk.lateBy}m
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </main>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }
-
