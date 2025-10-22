@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   X,
@@ -101,12 +101,36 @@ export default function TicketDetailModal({
   const [attachments, setAttachments] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [currentTicket, setCurrentTicket] = useState(ticket)
   const [selectedStatus, setSelectedStatus] = useState(ticket.status)
   const [lightboxImages, setLightboxImages] = useState<string[]>([])
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [showLightbox, setShowLightbox] = useState(false)
 
   const CategoryIcon = categoryConfig[ticket.category]?.icon || HelpCircle
+
+  // Update currentTicket when ticket prop changes
+  useEffect(() => {
+    setCurrentTicket(ticket)
+    setSelectedStatus(ticket.status)
+  }, [ticket])
+
+  // Fetch fresh ticket data
+  const fetchFreshTicketData = async () => {
+    try {
+      const response = await fetch(`/api/client/tickets`)
+      if (response.ok) {
+        const data = await response.json()
+        const freshTicket = data.tickets?.find((t: Ticket) => t.id === ticket.id)
+        if (freshTicket) {
+          setCurrentTicket(freshTicket)
+          setSelectedStatus(freshTicket.status)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch fresh ticket data:", error)
+    }
+  }
 
   const openLightbox = (images: string[], index: number) => {
     setLightboxImages(images)
@@ -167,12 +191,8 @@ export default function TicketDetailModal({
       })
 
       setAttachments([])
+      await fetchFreshTicketData()
       onUpdate()
-      
-      // Auto-close modal after 500ms to show success message
-      setTimeout(() => {
-        onClose()
-      }, 500)
     } catch (error) {
       toast({
         title: "Error",
@@ -251,7 +271,7 @@ export default function TicketDetailModal({
   }
 
   const handleStatusChange = async () => {
-    if (selectedStatus === ticket.status) return
+    if (selectedStatus === currentTicket.status) return
 
     try {
       const response = await fetch(`/api/tickets/${ticket.id}/status`, {
@@ -336,7 +356,7 @@ export default function TicketDetailModal({
 
         {/* Assigned To - Account Manager */}
         {/* Relationship Display - FULL CHAIN */}
-        {(ticket.accountManager || ticket.clientUser || ticket.managementUser || ticket.staffUser) && (
+        {(ticket.accountManager || ticket.clientUser || ticket.staffUser) && (
           <div className={`mb-6 rounded-xl p-5 ${
             isDark 
               ? "bg-gradient-to-r from-purple-900/30 to-indigo-900/30 ring-1 ring-purple-500/30 backdrop-blur-xl" 
@@ -418,48 +438,12 @@ export default function TicketDetailModal({
               )}
 
               {/* Arrow */}
-              {(ticket.staffUser || ticket.clientUser) && (ticket.accountManager || ticket.managementUser) && (
+              {(ticket.staffUser || ticket.clientUser) && ticket.accountManager && (
                 <div className={`text-3xl font-bold ${isDark ? "text-indigo-400" : "text-gray-300"}`}>
                   →
                 </div>
               )}
 
-              {/* MANAGEMENT + DEPARTMENT - Who will handle it (for Staff tickets) */}
-              {ticket.staffUser && ticket.managementUser && (
-                <div className="flex items-center gap-3 flex-1 justify-end">
-                  <div className="text-right">
-                    <p className={`text-xs font-semibold ${isDark ? "text-indigo-300" : "text-indigo-600"} uppercase tracking-wide`}>
-                      Assigned to
-                    </p>
-                    <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {ticket.managementUser.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 justify-end">
-                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
-                        {ticket.managementUser.email}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isDark 
-                          ? "bg-indigo-500/30 text-indigo-300" 
-                          : "bg-indigo-200 text-indigo-700"
-                      }`}>
-                        {getDepartmentEmoji(ticket.managementUser.department)} {getDepartmentLabel(ticket.managementUser.department)}
-                      </span>
-                    </div>
-                  </div>
-                  <Avatar className="h-14 w-14 ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-500/20">
-                    <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
-                      {ticket.managementUser.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
 
               {/* Client / For (for Client tickets) */}
               {ticket.clientUser && (
@@ -589,17 +573,17 @@ export default function TicketDetailModal({
         </div>
 
         {/* Responses/Comments - FUN STYLE! */}
-        {ticket.responses && ticket.responses.length > 0 && (
+        {currentTicket.responses && currentTicket.responses.length > 0 && (
           <div className="mb-6">
             <h3 className="mb-4 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 flex items-center gap-2">
-              💬 Responses ({ticket.responses.length})
+              💬 Responses ({currentTicket.responses.length})
             </h3>
             <div className="space-y-3">
-              {ticket.responses.map((response) => {
+              {currentTicket.responses.map((response) => {
                 const user = response.staffUser || response.managementUser || response.clientUser
                 const initials = user?.name
                   .split(" ")
-                  .map((n) => n[0])
+                  .map((n: string) => n[0])
                   .join("")
                   .toUpperCase()
                   .slice(0, 2)
