@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -75,13 +75,13 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -98,14 +98,14 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
                 avatar: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -130,9 +130,9 @@ export async function GET(request: NextRequest) {
     
     const taggedUsersMap = new Map(taggedUsers.map(u => [u.id, u]))
 
-    // Transform data to match frontend expectations (user instead of staffUser/clientUser/managementUser)
+    // Transform data to match frontend expectations (user instead of staffUser/client_users/management_users)
     const transformedPosts = posts.map(post => {
-      const postUser = post.staffUser || post.clientUser || post.managementUser
+      const postUser = post.staffUser || post.client_users || post.management_users
       return {
         id: post.id,
         content: post.content,
@@ -145,10 +145,10 @@ export async function GET(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: post.staffUser?.role || post.managementUser?.role || 'Client'
+          role: post.staffUser?.role || post.management_users?.role || 'Client'
         },
         reactions: post.reactions.map(r => {
-          const reactUser = r.staffUser || r.clientUser || r.managementUser
+          const reactUser = r.staffUser || r.client_users || r.management_users
           return {
             id: r.id,
             type: r.type,
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
           }
         }),
         comments: post.comments.map(c => {
-          const commentUser = c.staffUser || c.clientUser || c.managementUser
+          const commentUser = c.staffUser || c.client_users || c.management_users
           return {
             id: c.id,
             content: c.content,
@@ -221,23 +221,23 @@ export async function POST(request: NextRequest) {
       where: { authUserId: session.user.id }
     })
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const client_users = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const management_users = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    if (!staffUser && !clientUser && !managementUser) {
+    if (!staffUser && !client_users && !management_users) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
     const post = await prisma.activityPost.create({
       data: {
         staffUserId: staffUser?.id || null,
-        clientUserId: clientUser?.id || null,
-        managementUserId: managementUser?.id || null,
+        client_usersId: client_users?.id || null,
+        management_usersId: management_users?.id || null,
         content,
         type,
         achievement: achievement || null,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
 
     // 🔔 Create notifications for tagged users
     if (taggedUserIds && taggedUserIds.length > 0) {
-      const postUser = staffUser || clientUser || managementUser
+      const postUser = staffUser || client_users || management_users
       const postUserName = postUser.name
       
       // Create notification for each tagged user
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
     // 🔥 Emit real-time event to all connected clients
     const io = global.socketServer
     if (io) {
-      const postUser = staffUser || clientUser || managementUser
+      const postUser = staffUser || client_users || management_users
       io.emit('activity:newPost', {
         id: post.id,
         content: post.content,
@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: staffUser?.role || managementUser?.role || 'Client'
+          role: staffUser?.role || management_users?.role || 'Client'
         },
         reactions: [],
         comments: []

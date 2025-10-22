@@ -56,7 +56,7 @@ export default function ClientReviewsPage() {
       // First, trigger review creation for this client's staff
       setAutoCreating(true)
       try {
-        const autoCreateResponse = await fetch("/api/client/reviews/auto-create", {
+        const autoCreateResponse = await fetch("/api/client/performance-reviews/auto-create", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -78,7 +78,7 @@ export default function ClientReviewsPage() {
       }
 
       // Fetch all reviews once
-      const allReviewsResponse = await fetch("/api/client/reviews")
+      const allReviewsResponse = await fetch("/api/client/performance-reviews")
       if (!allReviewsResponse.ok) throw new Error("Failed to fetch reviews")
       const allReviewsData = await allReviewsResponse.json()
       
