@@ -99,7 +99,6 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
-    { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
   ]
 
   return (
