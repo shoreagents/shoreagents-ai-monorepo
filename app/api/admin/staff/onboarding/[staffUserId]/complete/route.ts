@@ -90,18 +90,34 @@ export async function POST(
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 })
     }
 
-    // Check if all sections are approved
+    // Check if all 8 sections are approved (GUNTING 8-step system)
     const { onboarding } = staffUser
     const allApproved = 
       onboarding.personalInfoStatus === "APPROVED" &&
       onboarding.govIdStatus === "APPROVED" &&
       onboarding.documentsStatus === "APPROVED" &&
       onboarding.signatureStatus === "APPROVED" &&
-      onboarding.emergencyContactStatus === "APPROVED"
+      onboarding.emergencyContactStatus === "APPROVED" &&
+      onboarding.resumeStatus === "APPROVED" &&
+      onboarding.educationStatus === "APPROVED" &&
+      onboarding.medicalStatus === "APPROVED" &&
+      onboarding.dataPolicyStatus === "APPROVED" &&
+      onboarding.bankStatus === "APPROVED"
 
     if (!allApproved) {
       return NextResponse.json({ 
-        error: "All sections must be approved before completing onboarding" 
+        error: "All 8 onboarding sections must be approved before completing onboarding" 
+      }, { status: 400 })
+    }
+
+    // Check if contract is signed
+    const employmentContract = await prisma.employmentContract.findFirst({
+      where: { staffUserId: staffUser.id }
+    })
+
+    if (!employmentContract || !employmentContract.contractSigned) {
+      return NextResponse.json({ 
+        error: "Employment contract must be signed before completing onboarding" 
       }, { status: 400 })
     }
 

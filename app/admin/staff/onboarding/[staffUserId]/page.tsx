@@ -24,7 +24,11 @@ import {
   PenTool,
   Users,
   ArrowLeft,
-  Briefcase
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Shield,
+  Building
 } from "lucide-react"
 
 interface OnboardingData {
@@ -58,6 +62,13 @@ interface OnboardingData {
   philhealthDocUrl: string
   pagibigDocUrl: string
   
+  // New GUNTING 8-step fields
+  resumeUrl: string
+  educationDocsUrl: string
+  medicalCertUrl: string
+  dataPolicyUrl: string
+  bankDocsUrl: string
+  
   // Emergency Contact
   emergencyContactName: string
   emergencyContactNo: string
@@ -70,12 +81,26 @@ interface OnboardingData {
   signatureStatus: string
   emergencyContactStatus: string
   
+  // New GUNTING 8-step status
+  resumeStatus: string
+  educationStatus: string
+  medicalStatus: string
+  dataPolicyStatus: string
+  bankStatus: string
+  
   // Feedback
   personalInfoFeedback: string
   govIdFeedback: string
   documentsFeedback: string
   signatureFeedback: string
   emergencyContactFeedback: string
+  
+  // New GUNTING 8-step feedback
+  resumeFeedback: string
+  educationFeedback: string
+  medicalFeedback: string
+  dataPolicyFeedback: string
+  bankFeedback: string
   
   completionPercent: number
   isComplete: boolean
@@ -109,7 +134,12 @@ export default function AdminOnboardingDetailPage() {
     govId: { approve: false, reject: false },
     documents: { approve: false, reject: false },
     signature: { approve: false, reject: false },
-    emergencyContact: { approve: false, reject: false }
+    emergencyContact: { approve: false, reject: false },
+    resume: { approve: false, reject: false },
+    education: { approve: false, reject: false },
+    medical: { approve: false, reject: false },
+    dataPolicy: { approve: false, reject: false },
+    bank: { approve: false, reject: false }
   })
   
   const [staff, setStaff] = useState<any>(null)
@@ -160,13 +190,23 @@ export default function AdminOnboardingDetailPage() {
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
-          data.onboarding.emergencyContactStatus === "APPROVED",
+          data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.dataPolicyStatus === "APPROVED" &&
+          data.onboarding.bankStatus === "APPROVED",
         shouldShowForm: 
           data.onboarding.personalInfoStatus === "APPROVED" &&
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
           data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.dataPolicyStatus === "APPROVED" &&
+          data.onboarding.bankStatus === "APPROVED" &&
           !data.onboarding.isComplete
       })
       setStaff(data.staff)
@@ -748,6 +788,30 @@ export default function AdminOnboardingDetailPage() {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Contract Section */}
+        {onboarding.contractSigned && (
+          <Card className="mb-6 border-green-200 bg-green-900/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-green-300">
+                  <FileText className="h-5 w-5" />
+                  Employment Contract
+                </CardTitle>
+                <Badge variant="default" className="bg-green-600 text-white">Signed</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-200 mb-4">Employment contract has been signed and is ready for review.</p>
+              <Button 
+                onClick={() => router.push(`/admin/contracts/${staffUserId}`)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                View Contract
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -1637,6 +1701,616 @@ export default function AdminOnboardingDetailPage() {
                     {getButtonLabels("emergencyContact").reject}
                   </Button>
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 6: Resume Upload */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-blue-400" />
+                <CardTitle className="text-white">Resume Upload</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.resumeStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Resume File</p>
+              {onboarding.resumeUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.resumeUrl, title: "Resume" })}
+                  variant="outline"
+                  className="border-blue-600 text-blue-300 hover:bg-blue-900"
+                >
+                  View Resume
+                </Button>
+              ) : (
+                <p className="text-slate-500">No resume uploaded</p>
+              )}
+            </div>
+
+            {onboarding.resumeFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.resumeFeedback}
+                    </div>
+                    {!editingFeedback.resume && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, resume: onboarding.resumeFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, resume: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.resume && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.resume || ""}
+                        onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('resume')}
+                          disabled={savingFeedback.resume}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.resume ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, resume: false })
+                            setFeedback({ ...feedback, resume: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.resumeStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("resume", "APPROVED")}
+                  disabled={processingStates.resume.approve || processingStates.resume.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.resume.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("resume").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("resume", "REJECTED")}
+                  disabled={processingStates.resume.approve || processingStates.resume.reject}
+                  variant="destructive"
+                >
+                  {processingStates.resume.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("resume").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 7: Education Documents */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GraduationCap className="h-5 w-5 text-green-400" />
+                <CardTitle className="text-white">Education Documents</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.educationStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Education Documents</p>
+              {onboarding.educationDocsUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.educationDocsUrl, title: "Education Documents" })}
+                  variant="outline"
+                  className="border-green-600 text-green-300 hover:bg-green-900"
+                >
+                  View Documents
+                </Button>
+              ) : (
+                <p className="text-slate-500">No education documents uploaded</p>
+              )}
+            </div>
+
+            {onboarding.educationFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.educationFeedback}
+                    </div>
+                    {!editingFeedback.education && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, education: onboarding.educationFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, education: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.education && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.education || ""}
+                        onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('education')}
+                          disabled={savingFeedback.education}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.education ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, education: false })
+                            setFeedback({ ...feedback, education: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.educationStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("education", "APPROVED")}
+                  disabled={processingStates.education.approve || processingStates.education.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.education.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("education").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("education", "REJECTED")}
+                  disabled={processingStates.education.approve || processingStates.education.reject}
+                  variant="destructive"
+                >
+                  {processingStates.education.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("education").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 8: Medical Certificate */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Heart className="h-5 w-5 text-red-400" />
+                <CardTitle className="text-white">Medical Certificate</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.medicalStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Medical Certificate</p>
+              {onboarding.medicalCertUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.medicalCertUrl, title: "Medical Certificate" })}
+                  variant="outline"
+                  className="border-red-600 text-red-300 hover:bg-red-900"
+                >
+                  View Certificate
+                </Button>
+              ) : (
+                <p className="text-slate-500">No medical certificate uploaded</p>
+              )}
+            </div>
+
+            {onboarding.medicalFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.medicalFeedback}
+                    </div>
+                    {!editingFeedback.medical && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, medical: onboarding.medicalFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, medical: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.medical && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.medical || ""}
+                        onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('medical')}
+                          disabled={savingFeedback.medical}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.medical ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, medical: false })
+                            setFeedback({ ...feedback, medical: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.medicalStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("medical", "APPROVED")}
+                  disabled={processingStates.medical.approve || processingStates.medical.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.medical.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("medical").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("medical", "REJECTED")}
+                  disabled={processingStates.medical.approve || processingStates.medical.reject}
+                  variant="destructive"
+                >
+                  {processingStates.medical.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("medical").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 9: Data Privacy & Consent */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-indigo-400" />
+                <CardTitle className="text-white">Data Privacy & Consent</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.dataPolicyStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Data Privacy Documents</p>
+              {onboarding.dataPolicyUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.dataPolicyUrl, title: "Data Privacy Documents" })}
+                  variant="outline"
+                  className="border-indigo-600 text-indigo-300 hover:bg-indigo-900"
+                >
+                  View Documents
+                </Button>
+              ) : (
+                <p className="text-slate-500">No data privacy documents uploaded</p>
+              )}
+            </div>
+
+            {onboarding.dataPolicyFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.dataPolicyFeedback}
+                    </div>
+                    {!editingFeedback.dataPolicy && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, dataPolicy: onboarding.dataPolicyFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, dataPolicy: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.dataPolicy && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.dataPolicy || ""}
+                        onChange={(e) => setFeedback({ ...feedback, dataPolicy: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('dataPolicy')}
+                          disabled={savingFeedback.dataPolicy}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.dataPolicy ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, dataPolicy: false })
+                            setFeedback({ ...feedback, dataPolicy: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.dataPolicyStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("dataPolicy", "APPROVED")}
+                  disabled={processingStates.dataPolicy.approve || processingStates.dataPolicy.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.dataPolicy.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("dataPolicy").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("dataPolicy", "REJECTED")}
+                  disabled={processingStates.dataPolicy.approve || processingStates.dataPolicy.reject}
+                  variant="destructive"
+                >
+                  {processingStates.dataPolicy.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("dataPolicy").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 10: Bank Details */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building className="h-5 w-5 text-orange-400" />
+                <CardTitle className="text-white">Bank Details</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.bankStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Bank Documents</p>
+              {onboarding.bankDocsUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.bankDocsUrl, title: "Bank Documents" })}
+                  variant="outline"
+                  className="border-orange-600 text-orange-300 hover:bg-orange-900"
+                >
+                  View Documents
+                </Button>
+              ) : (
+                <p className="text-slate-500">No bank documents uploaded</p>
+              )}
+            </div>
+
+            {onboarding.bankFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.bankFeedback}
+                    </div>
+                    {!editingFeedback.bank && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, bank: onboarding.bankFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, bank: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.bank && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.bank || ""}
+                        onChange={(e) => setFeedback({ ...feedback, bank: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('bank')}
+                          disabled={savingFeedback.bank}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.bank ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, bank: false })
+                            setFeedback({ ...feedback, bank: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.bankStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("bank", "APPROVED")}
+                  disabled={processingStates.bank.approve || processingStates.bank.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.bank.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("bank").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("bank", "REJECTED")}
+                  disabled={processingStates.bank.approve || processingStates.bank.reject}
+                  variant="destructive"
+                >
+                  {processingStates.bank.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("bank").reject}
+                </Button>
               </div>
             )}
           </CardContent>

@@ -265,3 +265,4 @@ Once copied and configured, you'll have:
 - ✅ NOVA agent for autonomous AI assistance
 
 **Happy coding with MCP!** 🚀
+

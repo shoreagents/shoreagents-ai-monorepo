@@ -566,21 +566,45 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
+  // New GUNTING 8-step fields
+  resumeUrl                  String?
+  educationDocsUrl           String?
+  medicalCertUrl             String?
+  dataPolicyUrl              String?
+  bankDocsUrl                String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
   documentsStatus            OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
+  // New GUNTING 8-step status fields
+  resumeStatus               OnboardingStatus @default(PENDING)
+  educationStatus            OnboardingStatus @default(PENDING)
+  medicalStatus              OnboardingStatus @default(PENDING)
+  dataPolicyStatus           OnboardingStatus @default(PENDING)
+  bankStatus                 OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
   govIdFeedback              String?
   documentsFeedback          String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
+  // New GUNTING 8-step feedback fields
+  resumeFeedback             String?
+  educationFeedback          String?
+  medicalFeedback            String?
+  dataPolicyFeedback         String?
+  bankFeedback               String?
   personalInfoVerifiedAt     DateTime?
   govIdVerifiedAt            DateTime?
   documentsVerifiedAt        DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
+  // New GUNTING 8-step verification timestamps
+  resumeVerifiedAt           DateTime?
+  educationVerifiedAt        DateTime?
+  medicalVerifiedAt          DateTime?
+  dataPolicyVerifiedAt       DateTime?
+  bankVerifiedAt             DateTime?
   verifiedBy                 String?
   isComplete                 Boolean          @default(false)
   completionPercent          Int              @default(0)

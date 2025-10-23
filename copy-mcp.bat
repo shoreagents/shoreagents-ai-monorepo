@@ -142,3 +142,4 @@ echo 📖 See MCP-SETUP-INSTRUCTIONS.md for detailed steps
 echo.
 echo 🎉 Happy coding with MCP!
 pause
+

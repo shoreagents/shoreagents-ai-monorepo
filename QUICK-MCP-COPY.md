@@ -104,3 +104,4 @@ node nova-agent-server.js
 ## **🎯 You're Done!**
 
 Your MCP setup is now copied and ready to use in your new project! 🚀
+

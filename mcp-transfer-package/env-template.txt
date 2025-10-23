@@ -27,3 +27,4 @@ BPOC_DATABASE_URL=postgresql://user:password@host:port/database
 DATABASE_URL=postgresql://user:password@host:port/database
 NEXTAUTH_SECRET=your-nextauth-secret
 NEXTAUTH_URL=http://localhost:3000
+
