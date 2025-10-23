@@ -194,11 +194,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  // Pause mechanism fields
   isPaused       Boolean     @default(false)
+  pauseUsed      Boolean     @default(false)
   pausedAt       DateTime?
   pausedDuration Int         @default(0)
-  pauseUsed      Boolean     @default(false)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
