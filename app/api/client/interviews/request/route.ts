@@ -54,48 +54,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    // Create interview request in our Supabase database
-    const interviewRequest = await prisma.$executeRaw`
-      INSERT INTO interview_requests (
-        client_user_id,
-        bpoc_candidate_id,
-        candidate_first_name,
-        preferred_times,
-        client_notes,
-        status
-      ) VALUES (
-        ${session.user.id}::uuid,
-        ${bpoc_candidate_id}::uuid,
-        ${candidate.first_name},
-        ${JSON.stringify(preferred_times)}::jsonb,
-        ${client_notes || null},
-        'pending'::interview_request_status
-      )
-    `
-=======
     // Create interview request using Prisma ORM (handles column mapping automatically)
-    const interviewRequest = await prisma.interviewRequest.create({
+    const interviewRequest = await prisma.interview_requests.create({
       data: {
+        id: crypto.randomUUID(),
         clientUserId: clientUser.id,  // Use clientUser.id, not session.user.id!
-=======
-    // Create interview request using Prisma ORM (handles column mapping automatically)
-    const interviewRequest = await prisma.interviewRequest.create({
-      data: {
-        clientUserId: session.user.id,
->>>>>>> 15b4dc5 (fix: Replace raw SQL with Prisma ORM in interview request API)
         bpocCandidateId: bpoc_candidate_id,
         candidateFirstName: candidate.first_name || 'Unknown',
         preferredTimes: preferred_times,
         clientNotes: client_notes || null,
-        status: 'PENDING'
+        status: 'PENDING',
+        updatedAt: new Date()
       }
     })
-<<<<<<< HEAD
->>>>>>> a83ec4d (fix: Lookup clientUser by authUserId before creating interview request)
-=======
->>>>>>> 15b4dc5 (fix: Replace raw SQL with Prisma ORM in interview request API)
 
     console.log(`✅ Interview request created successfully:`, interviewRequest.id)
 

@@ -93,9 +93,26 @@ export default function ClientInterviewsPage() {
     })
   }
 
+  function formatPreferredTime(timeString: string) {
+    try {
+      const date = new Date(timeString)
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    } catch (error) {
+      // Fallback to original string if parsing fails
+      return timeString
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -108,7 +125,7 @@ export default function ClientInterviewsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 p-8">
         <div className="max-w-6xl mx-auto">
           <Card className="p-6 bg-red-50 border-red-200">
             <div className="flex items-center gap-3">
@@ -125,7 +142,7 @@ export default function ClientInterviewsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
@@ -143,7 +160,7 @@ export default function ClientInterviewsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <Card className="p-4 bg-linear-to-br from-yellow-50 to-yellow-100 border-yellow-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-yellow-800">Pending</p>
@@ -155,7 +172,7 @@ export default function ClientInterviewsPage() {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="p-4 bg-linear-to-br from-blue-50 to-blue-100 border-blue-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">Scheduled</p>
@@ -167,7 +184,7 @@ export default function ClientInterviewsPage() {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <Card className="p-4 bg-linear-to-br from-green-50 to-green-100 border-green-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-800">Completed</p>
@@ -179,7 +196,7 @@ export default function ClientInterviewsPage() {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <Card className="p-4 bg-linear-to-br from-purple-50 to-purple-100 border-purple-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-800">Hired</p>
@@ -206,14 +223,14 @@ export default function ClientInterviewsPage() {
         ) : (
           <div className="space-y-4">
             {interviews.map((interview) => (
-              <Card key={interview.id} className="p-6 hover:shadow-lg transition-shadow">
+              <Card key={interview.id} className="p-6 bg-white hover:shadow-lg transition-shadow border border-gray-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-4">
                     
                     {/* Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                           <User className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -229,13 +246,19 @@ export default function ClientInterviewsPage() {
                     </div>
 
                     {/* Status Message */}
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="bg-linear-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border-l-4 border-l-yellow-500 shadow-sm">
                       {interview.status === 'PENDING' && (
-                        <div className="flex items-start gap-3">
-                          <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-gray-900">Waiting for Admin</p>
-                            <p className="text-sm text-gray-600 mt-1">
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0">
+                            <div className="h-12 w-12 rounded-full bg-yellow-200 flex items-center justify-center">
+                              <Clock className="h-6 w-6 text-yellow-700" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                              Waiting for Admin
+                            </h3>
+                            <p className="text-sm text-yellow-800 leading-relaxed">
                               Our admin team is coordinating with the candidate to schedule your interview. 
                               You'll be notified once a time is confirmed.
                             </p>
@@ -299,8 +322,9 @@ export default function ClientInterviewsPage() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {interview.preferredTimes.map((time, idx) => (
-                          <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {time}
+                          <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {formatPreferredTime(time)}
                           </Badge>
                         ))}
                       </div>

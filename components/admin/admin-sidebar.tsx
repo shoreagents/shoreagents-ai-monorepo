@@ -149,6 +149,12 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  Briefcase: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
 }
 
 const navItems = [
@@ -157,6 +163,7 @@ const navItems = [
   { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
   { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
   { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
+  { icon: "Briefcase", label: "Recruitment", href: "/admin/recruitment", badge: null },
   { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },
   { icon: "CheckSquare", label: "Task Oversight", href: "/admin/tasks", badge: null },
   { icon: "Ticket", label: "Support Tickets", href: "/admin/tickets", badge: null },

@@ -58,7 +58,6 @@ model StaffUser {
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
-  staff_welcome_forms    staff_welcome_forms?
   taskAssignments        TaskAssignment[]
   legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
   ticketResponses        TicketResponse[]
@@ -194,11 +193,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  // Pause mechanism fields
-  isPaused       Boolean     @default(false)
-  pausedAt       DateTime?
-  pausedDuration Int         @default(0)
-  pauseUsed      Boolean     @default(false)
+  isPaused       Boolean?    @default(false)
+  pauseUsed      Boolean?    @default(false)
+  pausedAt       DateTime?   @db.Timestamp(6)
+  pausedDuration Int?        @default(0)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -608,27 +606,6 @@ model StaffOnboarding {
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
-  bankAccountDetails         String?
-  bankDetailsFeedback        String?
-  bankDetailsStatus          OnboardingStatus @default(PENDING)
-  bankDetailsVerifiedAt      DateTime?
-  dataPrivacyConsentUrl      String?
-  dataPrivacyFeedback        String?
-  dataPrivacyStatus          OnboardingStatus @default(PENDING)
-  dataPrivacyVerifiedAt      DateTime?
-  diplomaTorUrl              String?
-  educationFeedback          String?
-  educationStatus            OnboardingStatus @default(PENDING)
-  educationVerifiedAt        DateTime?
-  employmentContractId       String?
-  medicalCertUrl             String?
-  medicalFeedback            String?
-  medicalStatus              OnboardingStatus @default(PENDING)
-  medicalVerifiedAt          DateTime?
-  resumeFeedback             String?
-  resumeStatus               OnboardingStatus @default(PENDING)
-  resumeUrl                  String?
-  resumeVerifiedAt           DateTime?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
@@ -693,18 +670,19 @@ model employment_contracts {
 }
 
 model interview_requests {
-  id                 String           @id
+  id                 String                 @id
   clientUserId       String
   bpocCandidateId    String
   candidateFirstName String
   preferredTimes     Json
   clientNotes        String?
-  status             String           @default("pending")
-  hiredAt            DateTime?
-  hiredByAdminId     String?
-  createdAt          DateTime         @default(now())
+  createdAt          DateTime               @default(now())
   updatedAt          DateTime
-  client_users       ClientUser       @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  adminNotes         String?
+  meetingLink        String?
+  scheduledTime      DateTime?
+  status             InterviewRequestStatus @default(PENDING)
+  client_users       ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
   job_acceptances    job_acceptances?
 }
 
@@ -729,49 +707,6 @@ model job_acceptances {
   company              Company               @relation(fields: [companyId], references: [id])
   interview_requests   interview_requests    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
   staff_users          StaffUser?            @relation(fields: [staffUserId], references: [id])
-}
-
-model partner_clinics {
-  id        String   @id
-  name      String
-  address   String
-  city      String
-  province  String
-  latitude  Decimal  @db.Decimal(10, 7)
-  longitude Decimal  @db.Decimal(10, 7)
-  phone     String?
-  email     String?
-  services  String[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-}
-
-model staff_welcome_forms {
-  id                   String    @id
-  staffUserId          String    @unique
-  name                 String
-  clientCompany        String
-  startDate            DateTime
-  goalAtShoreAgents    String?
-  financialGoal        String?
-  favoriteVacationSpot String?
-  leaveNoticeAmount    String?
-  firstDayPlans        String?
-  handoverProcess      String?
-  favoriteMovie        String?
-  dayOffActivities     String?
-  favoriteFastFood     String
-  spareTimeActivities  String?
-  pets                 String?
-  grewUpLocation       String?
-  partyTricks          String?
-  interestingFact      String?
-  completed            Boolean   @default(false)
-  completedAt          DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime
-  staff_users          StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 }
 
 enum ManagementRole {
@@ -988,4 +923,13 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum InterviewRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }

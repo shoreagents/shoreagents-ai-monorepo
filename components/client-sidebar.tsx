@@ -27,6 +27,7 @@ import {
   Building2,
   Headphones,
   Ticket,
+  Calendar,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -101,6 +102,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
+    { href: "/client/interviews", label: "Interviews", icon: Calendar },
   ]
 
   return (

@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     console.log(`🎯 [ADMIN] Hiring candidate for position: ${position}`)
 
     // Check if interview request exists
-    const interviewRequest = await prisma.interviewRequest.findUnique({
+    const interviewRequest = await prisma.interview_requests.findUnique({
       where: { id: interviewRequestId }
     })
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already hired
-    const existingJobAcceptance = await prisma.jobAcceptance.findUnique({
+    const existingJobAcceptance = await prisma.job_acceptances.findUnique({
       where: { interviewRequestId }
     })
 
@@ -87,25 +87,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Update interview request status
-    await prisma.interviewRequest.update({
+    await prisma.interview_requests.update({
       where: { id: interviewRequestId },
       data: {
-        status: 'hired',
-        hiredAt: new Date(),
-        hiredByAdminId: managementUser.id
+        status: 'COMPLETED',
+        updatedAt: new Date()
       }
     })
 
     // Create job acceptance record
-    const jobAcceptance = await prisma.jobAcceptance.create({
+    const jobAcceptance = await prisma.job_acceptances.create({
       data: {
+        id: crypto.randomUUID(),
         interviewRequestId,
         bpocCandidateId,
         candidateEmail,
         candidatePhone: candidatePhone || null,
         position,
         companyId,
-        acceptedByAdminId: managementUser.id
+        acceptedByAdminId: managementUser.id,
+        updatedAt: new Date()
       }
     })
 
