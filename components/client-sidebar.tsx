@@ -26,7 +26,6 @@ import {
   ChevronDown,
   Building2,
   Headphones,
-  ClipboardCheck,
   Settings,
 } from "lucide-react"
 
