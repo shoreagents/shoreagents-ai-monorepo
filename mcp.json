@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "linear-mcp": {
+      "command": "node",
+      "args": ["linear-mcp-server.js"],
+      "cwd": "C:\\Users\\Agent002-Cypher\\Documents\\Github\\shoreagents-ai-monorepo"
+    },
+    "cipher-slack": {
+      "command": "node",
+      "args": ["cipher_slack_mcp_enhanced.js"],
+      "cwd": "C:\\Users\\Agent002-Cypher\\Documents\\Github\\shoreagents-ai-monorepo"
+    },
+    "github-mcp": {
+      "command": "node",
+      "args": ["github-mcp-server.js"],
+      "cwd": "C:\\Users\\Agent002-Cypher\\Documents\\Github\\shoreagents-ai-monorepo"
+    }
+  }
+}
