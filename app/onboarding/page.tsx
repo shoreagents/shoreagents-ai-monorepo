@@ -134,6 +134,15 @@ export default function OnboardingPage() {
   const [isDrawing, setIsDrawing] = useState(false)
   const [signatureImageLoading, setSignatureImageLoading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  
+  // NEW: States for new onboarding steps
+  const [nearbyClinics, setNearbyClinics] = useState<any[]>([])
+  const [privacyData, setPrivacyData] = useState({
+    dataPrivacyConsent: false,
+    bankName: '',
+    accountName: '',
+    accountNumber: ''
+  })
 
   useEffect(() => {
     fetchOnboardingData()
@@ -249,6 +258,151 @@ export default function OnboardingPage() {
       setSaving(false)
     }
   }
+
+  // NEW: Resume upload handler
+  async function handleResumeUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, resume: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('resume', file)
+
+      const response = await fetch('/api/onboarding/resume', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Resume uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload resume')
+    } finally {
+      setUploading({ ...uploading, resume: false })
+    }
+  }
+
+  // NEW: Education upload handler
+  async function handleEducationUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, education: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('education', file)
+
+      const response = await fetch('/api/onboarding/education', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Education document uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload education document')
+    } finally {
+      setUploading({ ...uploading, education: false })
+    }
+  }
+
+  // NEW: Medical upload handler
+  async function handleMedicalUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, medical: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('medical', file)
+
+      const response = await fetch('/api/onboarding/medical', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Medical certificate uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload medical certificate')
+    } finally {
+      setUploading({ ...uploading, medical: false })
+    }
+  }
+
+  // NEW: Data privacy and bank details handler
+  async function handleSaveDataPrivacy() {
+    setSaving(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/onboarding/data-privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(privacyData)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save')
+      }
+
+      setSuccess('Data privacy consent and bank details saved!')
+      setTimeout(() => setCurrentStep(currentStep + 1), 1000)
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save data privacy consent')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // NEW: Fetch nearby clinics on mount
+  useEffect(() => {
+    async function fetchNearbyClinics() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const response = await fetch(`/api/clinics/nearby?lat=${latitude}&lng=${longitude}`)
+            const data = await response.json()
+            if (data.success) {
+              setNearbyClinics(data.clinics)
+            }
+          } catch (error) {
+            console.error('Error fetching clinics:', error)
+          }
+        })
+      }
+    }
+    fetchNearbyClinics()
+  }, [])
 
   const handleGovIdsSubmit = async () => {
     setSaving(true)
@@ -831,8 +985,70 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 2: Government IDs */}
+            {/* NEW STEP 2: Resume Upload */}
             {currentStep === 2 && (
+              <div className="space-y-6">
+                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
+                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <Label htmlFor="resume-upload" className="cursor-pointer">
+                    <span className="text-lg font-semibold text-white">Click to upload resume</span>
+                    <p className="text-sm text-slate-400 mt-2">PDF, DOC, or DOCX (Max 5MB)</p>
+                  </Label>
+                  <Input
+                    id="resume-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => handleResumeUpload(e)}
+                    className="hidden"
+                    disabled={uploading.resume || formData.resumeStatus === "APPROVED"}
+                  />
+                  {uploading.resume && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+                      <span className="text-purple-300">Uploading...</span>
+                    </div>
+                  )}
+                </div>
+
+                {formData.resumeUrl && (
+                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      <span className="text-green-100">Resume uploaded</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(formData.resumeUrl, '_blank')}
+                      className="border-green-600 text-green-400 hover:bg-green-900/50"
+                    >
+                      View
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(1)}
+                    className="border-slate-600 text-slate-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => setCurrentStep(3)} 
+                    disabled={!formData.resumeUrl}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Government IDs */}
+            {currentStep === 3 && (
               <div className="space-y-6">
                 {/* SSS Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
