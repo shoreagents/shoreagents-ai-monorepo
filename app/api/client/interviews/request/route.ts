@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // Create interview request in our Supabase database
     const interviewRequest = await prisma.$executeRaw`
       INSERT INTO interview_requests (
@@ -78,6 +79,12 @@ export async function POST(request: NextRequest) {
     const interviewRequest = await prisma.interviewRequest.create({
       data: {
         clientUserId: clientUser.id,  // Use clientUser.id, not session.user.id!
+=======
+    // Create interview request using Prisma ORM (handles column mapping automatically)
+    const interviewRequest = await prisma.interviewRequest.create({
+      data: {
+        clientUserId: session.user.id,
+>>>>>>> 15b4dc5 (fix: Replace raw SQL with Prisma ORM in interview request API)
         bpocCandidateId: bpoc_candidate_id,
         candidateFirstName: candidate.first_name || 'Unknown',
         preferredTimes: preferred_times,
@@ -85,23 +92,17 @@ export async function POST(request: NextRequest) {
         status: 'PENDING'
       }
     })
+<<<<<<< HEAD
 >>>>>>> a83ec4d (fix: Lookup clientUser by authUserId before creating interview request)
+=======
+>>>>>>> 15b4dc5 (fix: Replace raw SQL with Prisma ORM in interview request API)
 
-    // Get the created request
-    const createdRequest = await prisma.$queryRaw<any[]>`
-      SELECT * FROM interview_requests
-      WHERE client_user_id = ${session.user.id}::uuid
-        AND bpoc_candidate_id = ${bpoc_candidate_id}::uuid
-      ORDER BY created_at DESC
-      LIMIT 1
-    `
-
-    console.log(`✅ Interview request created successfully`)
+    console.log(`✅ Interview request created successfully:`, interviewRequest.id)
 
     return NextResponse.json({
       success: true,
       message: 'Interview request submitted successfully',
-      request: createdRequest[0],
+      request: interviewRequest,
     })
   } catch (error) {
     console.error('❌ Error creating interview request:', error)
