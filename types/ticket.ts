@@ -1,3 +1,5 @@
+import { Department } from "@/lib/category-department-map"
+
 export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
 export type TicketCategory =
   // Staff & Management shared
@@ -95,6 +97,14 @@ export interface Ticket {
     email: string
     avatar?: string
     role: string
+  } | null
+  managementUser?: {
+    id: string
+    name: string
+    email: string
+    avatar?: string
+    role: string
+    department: Department
   } | null
 }
 

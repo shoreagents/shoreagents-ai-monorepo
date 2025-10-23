@@ -138,9 +138,27 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
             </div>
           </div>
 
-          {/* Account Manager (for Client tickets) */}
-          {ticket.accountManager && (
-            <div className="flex items-center gap-2">
+          {/* Assigned Manager (for Staff tickets) or Account Manager (for Client tickets) */}
+          {ticket.managementUser && (
+            <div className="relative group/assigned">
+              <Avatar className="h-8 w-8 border-2 border-indigo-500/50 shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-500/20">
+                <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-bold">
+                  {ticket.managementUser.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
+                 Assigned to: {ticket.managementUser.name}
+               </div>
+            </div>
+          )}
+          {!ticket.managementUser && ticket.accountManager && (
+            <div className="relative group/assigned">
               <Avatar className="h-8 w-8 border-2 border-purple-500/50 shadow-lg shadow-purple-500/50 ring-2 ring-purple-500/20">
                 <AvatarImage src={ticket.accountManager.avatar} alt={ticket.accountManager.name} />
                 <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs font-bold">
@@ -152,19 +170,13 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
                     .slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
+               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
+                 Assigned to: {ticket.accountManager.name}
+               </div>
             </div>
           )}
         </div>
 
-        {/* Account Manager tooltip on hover (for Client tickets) */}
-        {ticket.accountManager && (
-          <div className="absolute bottom-full right-4 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            <div className="bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg whitespace-nowrap shadow-lg">
-              Assigned to {ticket.accountManager.name}
-              <div className="absolute bottom-0 right-6 transform translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900" />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Hover effect overlay - Subtle shimmer for white background */}
