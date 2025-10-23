@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     
     const taggedUsersMap = new Map(taggedUsers.map(u => [u.id, u]))
 
-    // Transform data to match frontend expectations (user instead of staffUser/client_users/managementUser)
+    // Transform data to match frontend expectations (user instead of staffUser/client_users/management_users)
     const transformedPosts = posts.map(post => {
       const postUser = post.staffUser || post.clientUser || post.managementUser
       if (!postUser) {
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: post.staffUser?.role || post.managementUser?.role || 'Client'
+          role: post.staffUser?.role || post.management_users?.role || 'Client'
         },
         // 🚀 Enhanced reaction data
         reactions: post.reactions.map(r => {
@@ -338,11 +338,11 @@ export async function POST(request: NextRequest) {
       where: { authUserId: session.user.id }
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const management_users = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    if (!staffUser && !client_users && !managementUser) {
+    if (!staffUser && !client_users && !management_users) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
       data: {
         staffUserId: staffUser?.id || null,
         client_usersId: client_users?.id || null,
-        managementUserId: managementUser?.id || null,
+        management_usersId: management_users?.id || null,
         content,
         type,
         achievement: achievement || null,
@@ -376,7 +376,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -435,7 +435,7 @@ export async function POST(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: staffUser?.role || managementUser?.role || 'Client'
+          role: staffUser?.role || management_users?.role || 'Client'
         },
         reactions: [],
         comments: []
