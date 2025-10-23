@@ -32,7 +32,7 @@ async function main() {
   })
   assignments.forEach(a => console.log(`✅ ${a.user.name} (${a.user.email}) → ${a.client.companyName}`))
 
-  console.log('\n\n🔐 DEFAULT PASSWORD FOR ALL USERS: password123sss')
+  console.log('\n\n🔐 DEFAULT PASSWORD FOR ALL USERS: password123')
   console.log('\n📍 DEV SERVER: http://localhost:3000')
   console.log('   Staff Login:  http://localhost:3000/login/staff')
   console.log('   Client Login: http://localhost:3000/login/client')
