@@ -11,8 +11,14 @@ async function testLinearConnection() {
     console.log('🔗 Testing Linear MCP Connection...\n');
     
     // Initialize Linear client
+    const linearToken = process.env.LINEAR_TOKEN;
+    
+    if (!linearToken) {
+      throw new Error('LINEAR_TOKEN environment variable is required');
+    }
+    
     const client = new LinearClient({
-      apiKey: 'lin_api_2FjQiXW8CFuS9yYVO6XC3Qyc36Eo60141ZzhIOfa',
+      apiKey: linearToken,
     });
     
     console.log('✅ Linear client initialized successfully');
@@ -53,7 +59,7 @@ async function testLinearConnection() {
     console.log('\n🚀 Testing: Create Test Issue');
     if (testingTeam) {
       try {
-        const newIssue = await client.issueCreate({
+        const newIssue = await client.createIssue({
           teamId: testingTeam.id,
           title: 'Linear MCP Connection Test Issue - Cipher Agent002',
           description: `This is a test issue created via Linear MCP to verify the connection is working properly.
