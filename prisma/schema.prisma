@@ -296,7 +296,7 @@ model Ticket {
   clientUserId     String?
   responses        TicketResponse[]
   clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser    ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  managementUser ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
@@ -313,7 +313,7 @@ model TicketResponse {
   attachments      String[]        @default([])
   clientUserId     String?
   clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser    ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  managementUser ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
