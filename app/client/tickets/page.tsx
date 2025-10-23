@@ -537,9 +537,9 @@ export default function ClientTicketsPage() {
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-6 h-11 border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="px-6 h-11 border border-gray-900 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400"
                 >
                   Cancel
                 </Button>
