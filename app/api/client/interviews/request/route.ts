@@ -39,12 +39,22 @@ export async function POST(request: NextRequest) {
 
     console.log(`📅 Interview request from client ${session.user.id} for candidate ${bpoc_candidate_id}`)
 
+    // Get the client user record (session.user.id is authUserId, we need clientUser.id)
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: 'Client user not found' }, { status: 404 })
+    }
+
     // Verify candidate exists in BPOC database
     const candidate = await getCandidateById(bpoc_candidate_id)
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
+<<<<<<< HEAD
     // Create interview request in our Supabase database
     const interviewRequest = await prisma.$executeRaw`
       INSERT INTO interview_requests (
@@ -63,6 +73,19 @@ export async function POST(request: NextRequest) {
         'pending'::interview_request_status
       )
     `
+=======
+    // Create interview request using Prisma ORM (handles column mapping automatically)
+    const interviewRequest = await prisma.interviewRequest.create({
+      data: {
+        clientUserId: clientUser.id,  // Use clientUser.id, not session.user.id!
+        bpocCandidateId: bpoc_candidate_id,
+        candidateFirstName: candidate.first_name || 'Unknown',
+        preferredTimes: preferred_times,
+        clientNotes: client_notes || null,
+        status: 'PENDING'
+      }
+    })
+>>>>>>> a83ec4d (fix: Lookup clientUser by authUserId before creating interview request)
 
     // Get the created request
     const createdRequest = await prisma.$queryRaw<any[]>`
