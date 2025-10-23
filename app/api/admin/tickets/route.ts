@@ -1,31 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-
 // GET /api/admin/tickets - Get all tickets for management view
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Verify user is management
     const managementUser = await prisma.managementUser.findUnique({
       where: { authUserId: session.user.id }
     })
-
     if (!managementUser) {
       return NextResponse.json({ error: "Management user not found" }, { status: 404 })
     }
-
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const category = searchParams.get("category")
     const staffId = searchParams.get("staffId")
     const creatorType = searchParams.get("creatorType") // "staff", "client", or "management"
-
     const tickets = await prisma.ticket.findMany({
       where: {
         ...(status && { status: status as any }),
@@ -94,7 +88,6 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     })
-
     return NextResponse.json({ tickets })
   } catch (error) {
     console.error("Error fetching admin tickets:", error)
@@ -104,35 +97,28 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 // POST /api/admin/tickets - Create a new ticket as management
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Verify user is management
     const managementUser = await prisma.managementUser.findUnique({
       where: { authUserId: session.user.id }
     })
-
     if (!managementUser) {
       return NextResponse.json({ error: "Management user not found" }, { status: 404 })
     }
-
     const body = await request.json()
     const { title, description, category, priority, attachments, staffUserId, managementUserId: targetManagementUserId, clientUserId } = body
-
     if (!title || !description || !category) {
       return NextResponse.json(
         { error: "Title, description, and category are required" },
         { status: 400 }
       )
     }
-
     // Validate that at least one user ID is provided
     if (!staffUserId && !targetManagementUserId && !clientUserId) {
       return NextResponse.json(
@@ -140,11 +126,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     // Generate unique ticket ID
     const ticketCount = await prisma.ticket.count()
     const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
-
     const ticket = await prisma.ticket.create({
       data: {
         staffUserId: staffUserId || null,
@@ -218,7 +202,6 @@ export async function POST(request: NextRequest) {
         },
       },
     })
-
     return NextResponse.json({ success: true, ticket }, { status: 201 })
   } catch (error) {
     console.error("Error creating admin ticket:", error)

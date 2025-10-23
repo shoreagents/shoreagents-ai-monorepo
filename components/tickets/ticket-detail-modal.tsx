@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   X,
@@ -101,36 +101,12 @@ export default function TicketDetailModal({
   const [attachments, setAttachments] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [currentTicket, setCurrentTicket] = useState(ticket)
   const [selectedStatus, setSelectedStatus] = useState(ticket.status)
   const [lightboxImages, setLightboxImages] = useState<string[]>([])
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [showLightbox, setShowLightbox] = useState(false)
 
   const CategoryIcon = categoryConfig[ticket.category]?.icon || HelpCircle
-
-  // Update currentTicket when ticket prop changes
-  useEffect(() => {
-    setCurrentTicket(ticket)
-    setSelectedStatus(ticket.status)
-  }, [ticket])
-
-  // Fetch fresh ticket data
-  const fetchFreshTicketData = async () => {
-    try {
-      const response = await fetch(`/api/client/tickets`)
-      if (response.ok) {
-        const data = await response.json()
-        const freshTicket = data.tickets?.find((t: Ticket) => t.id === ticket.id)
-        if (freshTicket) {
-          setCurrentTicket(freshTicket)
-          setSelectedStatus(freshTicket.status)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch fresh ticket data:", error)
-    }
-  }
 
   const openLightbox = (images: string[], index: number) => {
     setLightboxImages(images)
@@ -199,8 +175,12 @@ export default function TicketDetailModal({
       })
 
       setAttachments([])
-      await fetchFreshTicketData()
       onUpdate()
+      
+      // Auto-close modal after 500ms to show success message
+      setTimeout(() => {
+        onClose()
+      }, 500)
     } catch (error) {
       toast({
         title: "Error",
@@ -280,7 +260,7 @@ export default function TicketDetailModal({
   }
 
   const handleStatusChange = async () => {
-    if (selectedStatus === currentTicket.status) return
+    if (selectedStatus === ticket.status) return
 
     try {
       const response = await fetch(`/api/tickets/${ticket.id}/status`, {
@@ -317,60 +297,55 @@ export default function TicketDetailModal({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xl animate-in fade-in duration-300">
-      <div className="w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-900 ring-2 ring-indigo-500/30 backdrop-blur-2xl animate-in slide-in-from-bottom duration-500 flex flex-col">
-        {/* Header - FUN STYLE! - STICKY */}
-        <div className="sticky top-0 z-10 bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-900 backdrop-blur-xl p-8 pb-6 rounded-t-3xl ">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <span className="font-mono text-sm font-bold text-indigo-300 bg-indigo-500/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
-                  {ticket.ticketId}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold backdrop-blur-sm ring-1 shadow-lg ${
-                    categoryConfig[ticket.category]?.color
-                  }`}
-                >
-                  <CategoryIcon className="h-3 w-3" />
-                  {categoryConfig[ticket.category]?.label}
-                </span>
-                <span
-                  className={`rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-lg ${
-                    statusConfig[ticket.status]?.color
-                  }`}
-                >
-                  {statusConfig[ticket.status]?.label}
-                </span>
-              </div>
-              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-                {ticket.title}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleStartVideoCall}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/50 hover:scale-105 transition-all rounded-xl px-4 py-2"
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-8 shadow-2xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-900 ring-2 ring-indigo-500/30 backdrop-blur-2xl animate-in slide-in-from-bottom duration-500">
+        {/* Header - FUN STYLE! */}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="font-mono text-sm font-bold text-indigo-300 bg-indigo-500/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
+                {ticket.ticketId}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold backdrop-blur-sm ring-1 shadow-lg ${
+                  categoryConfig[ticket.category]?.color
+                }`}
               >
-                <Video className="h-4 w-4" />
-                Video Call 📹
-              </Button>
-              <button
-                onClick={onClose}
-                className="rounded-xl p-2.5 transition-all hover:scale-110 text-slate-400 hover:bg-red-500/20 hover:text-red-400 ring-1 ring-slate-700 hover:ring-red-500 backdrop-blur-sm"
-                title="Close"
+                <CategoryIcon className="h-3 w-3" />
+                {categoryConfig[ticket.category]?.label}
+              </span>
+              <span
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-lg ${
+                  statusConfig[ticket.status]?.color
+                }`}
               >
-                <X className="h-6 w-6" />
-              </button>
+                {statusConfig[ticket.status]?.label}
+              </span>
             </div>
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+              {ticket.title}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleStartVideoCall}
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/50 hover:scale-105 transition-all rounded-xl px-4 py-2"
+            >
+              <Video className="h-4 w-4" />
+              Video Call 📹
+            </Button>
+            <button
+              onClick={onClose}
+              className="rounded-xl p-2.5 transition-all hover:scale-110 text-slate-400 hover:bg-red-500/20 hover:text-red-400 ring-1 ring-slate-700 hover:ring-red-500 backdrop-blur-sm"
+              title="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
         </div>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8">
-
         {/* Assigned To - Account Manager */}
         {/* Relationship Display - FULL CHAIN */}
-        {(ticket.accountManager || ticket.clientUser || ticket.staffUser) && (
+        {(ticket.accountManager || ticket.clientUser || ticket.managementUser || ticket.staffUser) && (
           <div className={`mb-6 rounded-xl p-5 ${
             isDark 
               ? "bg-gradient-to-r from-purple-900/30 to-indigo-900/30 ring-1 ring-purple-500/30 backdrop-blur-xl" 
@@ -452,12 +427,48 @@ export default function TicketDetailModal({
               )}
 
               {/* Arrow */}
-              {(ticket.staffUser || ticket.clientUser) && ticket.accountManager && (
+              {(ticket.staffUser || ticket.clientUser) && (ticket.accountManager || ticket.managementUser) && (
                 <div className={`text-3xl font-bold ${isDark ? "text-indigo-400" : "text-gray-300"}`}>
                   →
                 </div>
               )}
 
+              {/* MANAGEMENT + DEPARTMENT - Who will handle it (for Staff tickets) */}
+              {ticket.staffUser && ticket.managementUser && (
+                <div className="flex items-center gap-3 flex-1 justify-end">
+                  <div className="text-right">
+                    <p className={`text-xs font-semibold ${isDark ? "text-indigo-300" : "text-indigo-600"} uppercase tracking-wide`}>
+                      Assigned to
+                    </p>
+                    <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {ticket.managementUser.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 justify-end">
+                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
+                        {ticket.managementUser.email}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isDark 
+                          ? "bg-indigo-500/30 text-indigo-300" 
+                          : "bg-indigo-200 text-indigo-700"
+                      }`}>
+                        {getDepartmentEmoji(ticket.managementUser.department as any)} {getDepartmentLabel(ticket.managementUser.department as any)}
+                      </span>
+                    </div>
+                  </div>
+                  <Avatar className="h-14 w-14 ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-500/20">
+                    <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
+                      {ticket.managementUser.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              )}
 
               {/* Client / For (for Client tickets) */}
               {ticket.clientUser && (
@@ -527,39 +538,32 @@ export default function TicketDetailModal({
           </div>
         )}
 
-        {/* Ticket Description */}
+        {/* Ticket Description - FUN STYLE! */}
         <div className="mb-6 space-y-4">
           <div className="rounded-2xl p-6 bg-slate-800/50 backdrop-blur-xl ring-1 ring-white/10">
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                📝 Description
-              </h3>
-              <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-2">
-                  🕐 Created {new Date(ticket.createdAt).toLocaleString()}
-                </span>
-                {(ticket.staffUser || ticket.clientUser) && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Created by:</span>
-                    <span className="font-bold text-white">
-                      {ticket.staffUser?.name || ticket.clientUser?.name}
-                    </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm ${
-                      ticket.createdByType === "CLIENT"
-                        ? "bg-green-500/30 text-green-300 border border-green-500/30"
-                        : ticket.createdByType === "MANAGEMENT"
-                        ? "bg-purple-500/30 text-purple-300 border border-purple-500/30"
-                        : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/30"
-                    }`}>
-                      {ticket.createdByType === "STAFF" ? "👤 STAFF" : ticket.createdByType === "CLIENT" ? "👔 CLIENT" : "📋 MANAGEMENT"}
-                    </span>
-                  </div>
-                )}
-              </div>
+            <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
+              <span className="flex items-center gap-2">
+                🕐 Created {new Date(ticket.createdAt).toLocaleString()}
+              </span>
+              {(ticket.staffUser || ticket.clientUser) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Created by:</span>
+                  <span className="font-bold text-white">
+                    {ticket.staffUser?.name || ticket.clientUser?.name}
+                  </span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm ${
+                    ticket.createdByType === "CLIENT"
+                      ? "bg-green-500/30 text-green-300 border border-green-500/30"
+                      : ticket.createdByType === "MANAGEMENT"
+                      ? "bg-purple-500/30 text-purple-300 border border-purple-500/30"
+                      : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/30"
+                  }`}>
+                    {ticket.createdByType === "STAFF" ? "👤 STAFF" : ticket.createdByType === "CLIENT" ? "👔 CLIENT" : "📋 MANAGEMENT"}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
-              <p className="whitespace-pre-wrap text-slate-200 leading-relaxed">{ticket.description}</p>
-            </div>
+            <p className="whitespace-pre-wrap text-slate-200 leading-relaxed">{ticket.description}</p>
 
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div className="mt-6 space-y-3">
@@ -594,17 +598,17 @@ export default function TicketDetailModal({
         </div>
 
         {/* Responses/Comments - FUN STYLE! */}
-        {currentTicket.responses && currentTicket.responses.length > 0 && (
+        {ticket.responses && ticket.responses.length > 0 && (
           <div className="mb-6">
             <h3 className="mb-4 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 flex items-center gap-2">
-              💬 Responses ({currentTicket.responses.length})
+              💬 Responses ({ticket.responses.length})
             </h3>
             <div className="space-y-3">
-              {currentTicket.responses.map((response) => {
+              {ticket.responses.map((response) => {
                 const user = response.staffUser || response.managementUser || response.clientUser
                 const initials = user?.name
                   .split(" ")
-                  .map((n: string) => n[0])
+                  .map((n) => n[0])
                   .join("")
                   .toUpperCase()
                   .slice(0, 2)
@@ -823,7 +827,6 @@ export default function TicketDetailModal({
             </div>
           </div>
         </div>
-        </div>
       </div>
       
       {/* Image Lightbox */}
@@ -837,4 +840,3 @@ export default function TicketDetailModal({
     </div>
   )
 }
-
