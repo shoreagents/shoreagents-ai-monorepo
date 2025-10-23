@@ -20,10 +20,7 @@ model ManagementUser {
   updatedAt        DateTime         @updatedAt
   email            String           @unique
   coverPhoto       String?
-  activity_posts   ActivityPost[]
   managedCompanies Company[]
-  post_comments    PostComment[]
-  post_reactions   PostReaction[]
   ticket_responses TicketResponse[]
   tickets          Ticket[]
 
@@ -47,7 +44,6 @@ model StaffUser {
   gamificationProfile    GamificationProfile?
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
-  notifications          Notification[]
   performanceMetrics     PerformanceMetric[]
   postComments           PostComment[]
   postReactions          PostReaction[]
@@ -191,10 +187,6 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  ispaused       Boolean?    @default(false)
-  pausedat       DateTime?   @db.Timestamp(6)
-  pausedduration Int?        @default(0)
-  pauseused      Boolean?    @default(false)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -244,9 +236,6 @@ model PerformanceMetric {
   screenshotUrls    Json?     @default("[]") @map("screenshoturls")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  applicationsused  Json?     @default("[]")
-  visitedurls       Json?     @default("[]")
-  screenshoturls    Json?     @default("[]")
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("performance_metrics")
@@ -298,8 +287,8 @@ model Ticket {
   managementUserId String?
   clientUserId     String?
   responses        TicketResponse[]
-  clientUser       ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser   ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  client_users     ClientUser?      @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  management_users ManagementUser?  @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("tickets")
@@ -315,8 +304,8 @@ model TicketResponse {
   createdByType    String
   attachments      String[]        @default([])
   clientUserId     String?
-  clientUser       ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  managementUser   ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
   staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   ticket           Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
@@ -324,87 +313,44 @@ model TicketResponse {
 }
 
 model ActivityPost {
-  id               String          @id @default(uuid())
-  staffUserId      String?
-  type             PostType
-  content          String
-  achievement      Json?
-  images           String[]
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  clientUserId     String?
-  taggedUserIds    String[]        @default([])
-  audience         PostAudience?   @default(ALL)
-  managementUserId String?
-  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_clientuserid_fkey")
-  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_managementuserid_fkey")
-  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  notifications    Notification[]
-  comments         PostComment[]
-  reactions        PostReaction[]
+  id          String         @id @default(uuid())
+  staffUserId String
+  type        PostType
+  content     String
+  achievement Json?
+  images      String[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  staffUser   StaffUser      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  comments    PostComment[]
+  reactions   PostReaction[]
 
-  @@index([audience])
-  @@index([taggedUserIds], map: "activity_posts_tagged_users_idx", type: Gin)
-  @@index([audience, createdAt(sort: Desc)], map: "idx_posts_audience_created")
-  @@index([taggedUserIds], map: "idx_posts_tagged_users", type: Gin)
-  @@index([type, createdAt(sort: Desc)], map: "idx_posts_type_created")
   @@map("activity_posts")
 }
 
 model PostReaction {
-  id               String          @id @default(uuid())
-  postId           String
-  staffUserId      String?
-  type             ReactionType
-  createdAt        DateTime        @default(now())
-  clientUserId     String?
-  managementUserId String?
-  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_clientuserid_fkey")
-  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_reactions_managementuserid_fkey")
-  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  postId      String
+  staffUserId String
+  type        ReactionType
+  createdAt   DateTime     @default(now())
+  post        ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser   StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@unique([postId, staffUserId, type])
-  @@index([postId], map: "idx_reactions_post")
-  @@index([postId, type], map: "idx_reactions_post_type")
   @@map("post_reactions")
 }
 
 model PostComment {
-  id               String          @id @default(uuid())
-  postId           String
-  staffUserId      String?
-  content          String
-  createdAt        DateTime        @default(now())
-  clientUserId     String?
-  managementUserId String?
-  client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_clientuserid_fkey")
-  management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "post_comments_managementuserid_fkey")
-  post             ActivityPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  postId      String
+  staffUserId String
+  content     String
+  createdAt   DateTime     @default(now())
+  post        ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staffUser   StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
-  @@index([postId, createdAt], map: "idx_comments_post_created")
   @@map("post_comments")
-}
-
-model Notification {
-  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
-  userId    String
-  type      NotificationType @default(TAG)
-  title     String
-  message   String
-  postId    String?
-  actionUrl String?
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  readAt    DateTime?
-  post      ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId], map: "idx_notifications_post")
-  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
-  @@index([userId, read], map: "idx_notifications_user_read")
-  @@map("notifications")
 }
 
 model GamificationProfile {
@@ -519,11 +465,8 @@ model ClientUser {
   email            String             @unique
   companyId        String
   coverPhoto       String?
-  activityPosts    ActivityPost[]
   profile          ClientProfile?
-  company          Company            @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  postComments     PostComment[]
-  postReactions    PostReaction[]
+  company          Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
   tasks            Task[]
   ticketResponses  TicketResponse[]
   tickets          Ticket[]
@@ -794,21 +737,6 @@ enum PostType {
   CELEBRATION
   UPDATE
   ANNOUNCEMENT
-}
-
-enum PostAudience {
-  STAFF
-  CLIENT
-  MANAGEMENT
-  ALL
-}
-
-enum NotificationType {
-  TAG
-  MENTION
-  COMMENT
-  REACTION
-  SYSTEM
 }
 
 enum ReactionType {

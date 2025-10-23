@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     // Get StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      select: { id: true, name: true }
+      select: { id: true, name: true, companyId: true }
     })
 
     if (!staffUser) {
@@ -275,11 +275,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-share with assigned company
+    // Auto-share with assigned company (always)
     let sharedWith: string[] = []
     if (staffUser.companyId) {
       sharedWith = [staffUser.companyId]
-      console.log('📤 [STAFF] Auto-sharing with company:', staffUser.companyId)
+      console.log('📤 [STAFF] Auto-sharing with assigned client company:', staffUser.companyId)
     }
 
     // Create the document
@@ -293,6 +293,7 @@ export async function POST(req: NextRequest) {
         uploadedBy: staffUser.name,
         size: fileSize,
         fileUrl,
+        sharedWithAll: false,  // For STAFF docs, use sharedWith array
         sharedWith
       },
       include: {
