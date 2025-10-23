@@ -13,6 +13,7 @@ import {
   Gift,
   Bus,
   Paperclip,
+  Clock,
 } from "lucide-react"
 import { Ticket } from "@/types/ticket"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -70,6 +71,21 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
     if (!isSortableDragging && onClick) {
       onClick()
     }
+  }
+
+  // Format date for timestamps
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
   }
 
   const CategoryIcon = categoryConfig[ticket.category]?.icon || HelpCircle
@@ -178,6 +194,11 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
               {ticket.responses.length}
             </span>
           )}
+          {/* Timestamp */}
+          <span className="flex items-center gap-1 text-slate-400">
+            <Clock className="h-3 w-3" />
+            {formatDate(ticket.createdAt)}
+          </span>
         </div>
 
         {/* User Avatars */}
@@ -192,7 +213,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
-                For: {displayUser.name}
+                Created by: {displayUser.name}
               </div>
             </div>
           )}
@@ -207,7 +228,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
-                Assigned: {assignedTo.name}
+                Assigned to: {assignedTo.name}
               </div>
             </div>
           )}
@@ -217,4 +238,3 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
     </div>
   )
 }
-

@@ -92,6 +92,16 @@ export default function ClientTimeTrackingPage() {
     fetchTimeEntries()
   }, [selectedDate])
 
+  // Update active staff hours every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render to update calculated hours for active staff
+      setStaffData(prevData => [...prevData])
+    }, 60000) // Update every minute
+
+    return () => clearInterval(interval)
+  }, [])
+
   async function fetchTimeEntries() {
     try {
       setLoading(true)
@@ -122,6 +132,23 @@ export default function ClientTimeTrackingPage() {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+
+  const calculateCurrentHours = (clockIn: Date | string) => {
+    const clockInTime = new Date(clockIn)
+    const now = new Date()
+    const diffInMs = now.getTime() - clockInTime.getTime()
+    const diffInHours = diffInMs / (1000 * 60 * 60)
+    return Math.round(diffInHours * 100) / 100 // Round to 2 decimal places
+  }
+
+  const getDisplayHours = (staff: StaffTimeEntry) => {
+    if (staff.isClockedIn && staff.currentEntry) {
+      // For active staff, calculate hours from clock-in to now
+      return calculateCurrentHours(staff.currentEntry.clockIn)
+    }
+    // For inactive staff, use the total hours from completed entries
+    return staff.totalHours
   }
 
   const getBreakIcon = (type: BreakType) => {
@@ -192,7 +219,7 @@ export default function ClientTimeTrackingPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               />
               {/* View Toggle */}
               <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
@@ -200,7 +227,7 @@ export default function ClientTimeTrackingPage() {
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className={viewMode === 'list' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                  className={viewMode === 'list' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -208,7 +235,7 @@ export default function ClientTimeTrackingPage() {
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
@@ -323,7 +350,7 @@ export default function ClientTimeTrackingPage() {
                     <div className="pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Total Hours</span>
-                        <span className="text-xl font-bold text-blue-600">{staffEntry.totalHours}h</span>
+                        <span className="text-xl font-bold text-blue-600">{getDisplayHours(staffEntry)}h</span>
                       </div>
                     </div>
                   </Card>
@@ -353,7 +380,7 @@ export default function ClientTimeTrackingPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600">Total Hours Today</p>
-                      <p className="text-3xl font-bold text-blue-600">{staffEntry.totalHours}h</p>
+                      <p className="text-3xl font-bold text-blue-600">{getDisplayHours(staffEntry)}h</p>
                     </div>
                   </div>
 
@@ -429,7 +456,7 @@ export default function ClientTimeTrackingPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <Card className="p-4 bg-blue-50 border-blue-200">
                     <p className="text-sm text-gray-600 mb-1">Total Hours</p>
-                    <p className="text-2xl font-bold text-blue-600">{selectedStaff.totalHours}h</p>
+                    <p className="text-2xl font-bold text-blue-600">{getDisplayHours(selectedStaff)}h</p>
                   </Card>
                   <Card className="p-4 bg-green-50 border-green-200">
                     <p className="text-sm text-gray-600 mb-1">Total Shifts</p>

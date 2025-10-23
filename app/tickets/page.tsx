@@ -254,9 +254,9 @@ export default function TicketsPage() {
                 </div>
 
                 {/* Tickets Column with Individual Scrollbar */}
-                <div className="flex flex-col h-[800px] rounded-2xl bg-slate-900/30 backdrop-blur-xl ring-1 ring-white/5 transition-all duration-300 min-w-0 w-full max-w-full">
+                <div className="flex flex-col h-[800px] rounded-2xl bg-slate-900/30 backdrop-blur-xl ring-1 ring-white/5 transition-all duration-300 min-w-0 w-full max-w-full overflow-visible">
                   {/* Scrollable content area */}
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden admin-tickets-scrollbar p-4 space-y-3 w-full max-w-full">
+                  <div className="flex-1 overflow-y-auto overflow-x-visible admin-tickets-scrollbar p-4 space-y-3 w-full max-w-full">
                     {columnTickets.map((ticket) => (
                       <div
                         key={ticket.id}
