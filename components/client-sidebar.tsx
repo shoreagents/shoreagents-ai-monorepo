@@ -26,7 +26,8 @@ import {
   ChevronDown,
   Building2,
   Headphones,
-  Ticket,
+  ClipboardCheck,
+  Settings,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -101,6 +102,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
+    { href: "/client/settings", label: "Settings", icon: Settings },
   ]
 
   return (

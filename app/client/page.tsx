@@ -52,31 +52,31 @@ export default async function ClientDashboard() {
 
   const tasksCompletedThisWeek = await prisma.task.count({
     where: {
-      staffUserId: { in: staffUserIds },
+      OR: [
+        { staffUserId: { in: staffUserIds } },
+        { assignedStaff: { some: { staffUserId: { in: staffUserIds } } } }
+      ],
       status: 'COMPLETED',
       updatedAt: { gte: startOfWeek }
     }
   })
 
   // Fetch real hours worked this week
-  const timeLogs = await prisma.timeEntry.findMany({
+  const timeEntries = await prisma.timeEntry.findMany({
     where: {
       staffUserId: { in: staffUserIds },
-      createdAt: { gte: startOfWeek }
+      clockIn: { gte: startOfWeek }
     },
     select: { 
       clockIn: true,
-      clockOut: true,
-      totalHours: true
+      clockOut: true
     }
   })
 
   // Calculate total hours
-  const hoursThisWeek = timeLogs.reduce((total, log) => {
-    if (log.totalHours) {
-      return total + Number(log.totalHours)
-    } else if (log.clockIn && log.clockOut) {
-      const hours = (new Date(log.clockOut).getTime() - new Date(log.clockIn).getTime()) / (1000 * 60 * 60)
+  const hoursThisWeek = timeEntries.reduce((total, entry) => {
+    if (entry.clockIn && entry.clockOut) {
+      const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)
       return total + hours
     }
     return total
@@ -98,16 +98,21 @@ export default async function ClientDashboard() {
   // Fetch recent activities (last 10)
   const recentActivities = await prisma.activityPost.findMany({
     where: {
-      OR: [
-        { staffUserId: { in: staffUserIds } },
-        { taggedUserIds: { hasSome: staffUserIds } }
-      ]
+      staffUserId: { in: staffUserIds }
     },
     orderBy: { createdAt: 'desc' },
     take: 10,
     include: {
       staffUser: {
-        select: { name: true, avatar: true }
+        select: { 
+          name: true, 
+          avatar: true,
+          profile: {
+            select: {
+              currentRole: true
+            }
+          }
+        }
       }
     }
   })

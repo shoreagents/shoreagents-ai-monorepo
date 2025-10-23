@@ -7,11 +7,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("🔍 [CLIENT/STAFF/DETAIL] API called")
     const session = await auth()
     
     if (!session?.user?.email) {
+      console.log("❌ [CLIENT/STAFF/DETAIL] No session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("✅ [CLIENT/STAFF/DETAIL] Session found:", session.user.email)
 
     // Get ClientUser to verify they have access
     const clientUser = await prisma.clientUser.findUnique({
@@ -20,12 +24,17 @@ export async function GET(
     })
 
     if (!clientUser || !clientUser.company) {
+      console.log("❌ [CLIENT/STAFF/DETAIL] Client user or company not found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("✅ [CLIENT/STAFF/DETAIL] Client found:", clientUser.email, "Company:", clientUser.company.companyName)
     
     const { id: userId } = await params
+    console.log("🔍 [CLIENT/STAFF/DETAIL] Looking for staff:", userId, "in company:", clientUser.company.id)
 
     // Get staff member details with all relations (ONLY from staff_users and staff_profiles)
+    console.log("🔍 [CLIENT/STAFF/DETAIL] Querying database for staff:", userId)
     const user = await prisma.staffUser.findUnique({
       where: { 
         id: userId,
@@ -83,10 +92,14 @@ export async function GET(
     })
 
     if (!user) {
+      console.log("❌ [CLIENT/STAFF/DETAIL] Staff member not found:", userId)
       return NextResponse.json({ error: "Staff member not found" }, { status: 404 })
     }
 
+    console.log("✅ [CLIENT/STAFF/DETAIL] Staff found:", user.name, user.email)
+
     // Calculate stats
+    console.log("🔍 [CLIENT/STAFF/DETAIL] Calculating stats...")
     const avgProductivity = user.performanceMetrics.length > 0
       ? Math.round(
           user.performanceMetrics.reduce((sum, m) => sum + m.productivityScore, 0) /
@@ -107,7 +120,15 @@ export async function GET(
     const isClockedIn = currentEntry && !currentEntry.clockOut
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-    const todaySchedule = user.profile?.workSchedule.find(s => s.dayOfWeek === today)
+    const todaySchedule = user.profile?.workSchedule?.find(s => s.dayOfWeek === today)
+    
+    console.log("✅ [CLIENT/STAFF/DETAIL] Stats calculated:", {
+      avgProductivity,
+      reviewScore,
+      totalHoursThisMonth,
+      isClockedIn,
+      todaySchedule: todaySchedule ? `${todaySchedule.startTime} - ${todaySchedule.endTime}` : 'N/A'
+    })
 
     // Calculate task stats
     const taskStats = {
@@ -165,7 +186,7 @@ export async function GET(
       assignment: user.company ? {
         role: user.profile?.currentRole || null,
         rate: null,
-        startDate: user.profile?.startDate || user.createdAt,
+        startDate: user.profile?.startDate?.toISOString() || user.createdAt.toISOString(),
         client: user.company.companyName,
         manager: {
           name: user.company.accountManager?.name || null,
@@ -179,11 +200,11 @@ export async function GET(
         phone: user.profile.phone,
         location: user.profile.location,
         employmentStatus: user.profile.employmentStatus,
-        startDate: user.profile.startDate,
+        startDate: user.profile.startDate.toISOString(),
         daysEmployed: Math.floor((new Date().getTime() - new Date(user.profile.startDate).getTime()) / (1000 * 60 * 60 * 24)),
         currentRole: user.profile.currentRole,
         salary: user.profile.salary,
-        lastPayIncrease: user.profile.lastPayIncrease,
+        lastPayIncrease: user.profile.lastPayIncrease?.toISOString() || null,
         lastIncreaseAmount: user.profile.lastIncreaseAmount,
         totalLeave: user.profile.totalLeave,
         usedLeave: user.profile.usedLeave,
@@ -239,7 +260,7 @@ export async function GET(
         type: r.type,
         overallScore: Number(r.overallScore),
         previousScore: r.previousScore ? Number(r.previousScore) : null,
-        submittedDate: r.submittedDate,
+        submittedDate: r.submittedDate.toISOString(),
         reviewer: r.reviewer,
         status: r.status,
       })),
@@ -247,8 +268,8 @@ export async function GET(
       // Time entries (history)
       timeEntries: user.timeEntries.map(e => ({
         id: e.id,
-        clockIn: e.clockIn,
-        clockOut: e.clockOut,
+        clockIn: e.clockIn.toISOString(),
+        clockOut: e.clockOut?.toISOString() || null,
         totalHours: e.totalHours ? Number(e.totalHours) : null,
         notes: e.notes,
       })),
@@ -258,7 +279,7 @@ export async function GET(
         id: p.id,
         type: p.type,
         content: p.content,
-        createdAt: p.createdAt,
+        createdAt: p.createdAt.toISOString(),
       })),
 
       // Tickets
@@ -269,9 +290,10 @@ export async function GET(
       },
     }
 
-    return NextResponse.json(staffDetail)
+    console.log("📤 [CLIENT/STAFF/DETAIL] Returning staff detail data")
+    return NextResponse.json({ staff: staffDetail })
   } catch (error) {
-    console.error("Error fetching staff details:", error)
+    console.error("❌ [CLIENT/STAFF/DETAIL] Error fetching staff details:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

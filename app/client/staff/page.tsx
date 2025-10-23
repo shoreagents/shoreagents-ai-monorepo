@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -37,12 +37,14 @@ interface StaffMember {
   isClockedIn: boolean
   level: number
   points: number
+  onboardingComplete: boolean
+  onboardingProgress: number
 }
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   useEffect(() => {
     fetchStaff()
@@ -94,7 +96,7 @@ export default function StaffPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl animate-in fade-in duration-700">
+      <div className="w-full animate-in fade-in duration-700">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -116,7 +118,7 @@ export default function StaffPage() {
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className={viewMode === 'list' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                  className={viewMode === 'list' ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'hover:bg-green-50 text-gray-600 hover:text-green-600'}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -124,7 +126,7 @@ export default function StaffPage() {
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover:bg-gray-50'}
+                  className={viewMode === 'grid' ? 'bg-blue-50 text-blue-700 hover:bg-blue-200' : 'hover:bg-blue-50 text-gray-600 hover:text-blue-600'}
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
@@ -166,7 +168,7 @@ export default function StaffPage() {
                         {member.name.split(" ").map((n) => n[0]).join("")}
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                         {member.name}
                       </h3>
@@ -179,15 +181,19 @@ export default function StaffPage() {
                       <Badge className={getStatusColor(member.employmentStatus)}>
                         {member.employmentStatus}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
                         Level {member.level}
                       </Badge>
+                      <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs font-semibold px-2 py-1">
+                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-1" />
+                        {member.avgProductivity}
+                      </Badge>
+                      {!member.onboardingComplete && (
+                        <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                          Onboarding {member.onboardingProgress}%
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-1 mb-4 pb-4 border-b border-gray-200">
-                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-2xl font-bold text-gray-900">{member.avgProductivity}</span>
                   </div>
 
                   <div className="space-y-2 mb-4 text-sm">
@@ -201,22 +207,48 @@ export default function StaffPage() {
                         <span>{member.phone}</span>
                       </div>
                     )}
+                    {member.location && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <MapPin className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                        <span className="truncate">{member.location}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Calendar className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">Started {formatDate(member.startDate)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Clock className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">Shift: {member.shift}</span>
+                    </div>
                     {member.rate && (
                       <div className="flex items-center gap-2 text-gray-700">
                         <DollarSign className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
                         <span>${member.rate}/month</span>
                       </div>
                     )}
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                      <span className="truncate">Managed by {member.managedBy}</span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
                     <div className="text-center">
                       <p className="text-xl font-bold text-blue-600">{member.totalHoursThisMonth}h</p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Hours</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">This Month</p>
                     </div>
                     <div className="text-center">
                       <p className="text-xl font-bold text-purple-600">{member.activeTasks}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Tasks</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">Active Tasks</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-green-600">{member.totalLeave - member.usedLeave}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">Leave Days</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-orange-600">{member.daysEmployed}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">Days</p>
                     </div>
                   </div>
                 </Card>
@@ -245,7 +277,7 @@ export default function StaffPage() {
                         </div>
                       )}
                       <div>
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-3">
                           <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {member.name}
                           </h3>
@@ -261,20 +293,24 @@ export default function StaffPage() {
                           <Badge className={getStatusColor(member.employmentStatus)}>
                             {member.employmentStatus}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
                             Level {member.level}
                           </Badge>
+                          <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs font-semibold px-2 py-1">
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-1" />
+                            {member.avgProductivity}
+                          </Badge>
+                          {!member.onboardingComplete && (
+                            <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                              Onboarding {member.onboardingProgress}%
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="flex items-center gap-1 justify-end mb-1">
-                        <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                        <p className="text-2xl font-bold text-gray-900">{member.avgProductivity}</p>
-                      </div>
-                      <p className="text-xs text-gray-500 font-medium">Performance Score</p>
                       {member.reviewScore > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">Review: {member.reviewScore}/5.0</p>
+                        <p className="text-xs text-gray-400">Review: {member.reviewScore}/5.0</p>
                       )}
                     </div>
                   </div>

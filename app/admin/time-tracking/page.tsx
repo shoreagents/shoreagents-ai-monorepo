@@ -1,227 +1,326 @@
-import { Button } from "@/components/ui/button"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, Clock, Calendar } from "@/components/admin/icons"
-import { prisma } from "@/lib/prisma"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { 
+  Clock, 
+  Search, 
+  Calendar,
+  Coffee,
+  PlayCircle,
+  StopCircle,
+  Timer,
+  Building2
+} from "lucide-react"
+import Link from "next/link"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-async function getTimeEntries() {
-  try {
-    const entries = await prisma.timeEntry.findMany({
-      include: {
-        user: {
-          include: {
-            profile: true
-          }
-        }
-      },
-      orderBy: {
-        clockIn: 'desc'
-      },
-      take: 100
-    })
-    return entries
-  } catch (error) {
-    console.error('Error fetching time entries:', error)
-    return []
+interface TimeEntry {
+  id: string
+  clockIn: string
+  clockOut: string | null
+  totalHours: number | null
+  wasLate: boolean
+  lateBy: number | null
+  notes: string | null
+  createdAt: string
+  staffUser: {
+    id: string
+    name: string
+    email: string
+    avatar: string | null
+    role: string
+    company: {
+      id: string
+      companyName: string
+      tradingName: string | null
+      logo: string | null
+    } | null
   }
+  breaks: {
+    id: string
+    type: string
+    actualStart: string | null
+    actualEnd: string | null
+    duration: number | null
+  }[]
 }
 
-function calculateDuration(clockIn: Date, clockOut: Date | null) {
-  if (!clockOut) {
-    const now = new Date()
-    const diff = now.getTime() - new Date(clockIn).getTime()
-    return Math.floor(diff / (1000 * 60)) // minutes
+export default function AdminTimeTrackingPage() {
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
+
+  useEffect(() => {
+    fetchTimeEntries()
+  }, [])
+
+  const fetchTimeEntries = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/admin/time-tracking')
+      const data = await response.json()
+      setTimeEntries(data.entries || [])
+    } catch (error) {
+      console.error('Error fetching time entries:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-  const diff = new Date(clockOut).getTime() - new Date(clockIn).getTime()
-  return Math.floor(diff / (1000 * 60)) // minutes
-}
 
-function formatDuration(minutes: number) {
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  return `${hours}h ${mins}m`
-}
+  const calculateDuration = (clockIn: string, clockOut: string | null) => {
+    const start = new Date(clockIn).getTime()
+    const end = clockOut ? new Date(clockOut).getTime() : Date.now()
+    const diff = end - start
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return { hours, minutes, total: `${hours}h ${minutes}m` }
+  }
 
-export default async function TimeTrackingPage() {
-  const entries = await getTimeEntries()
+  const filteredEntries = timeEntries.filter(entry => {
+    // Status filter
+    if (statusFilter === 'active' && entry.clockOut) return false
+    if (statusFilter === 'completed' && !entry.clockOut) return false
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      return (
+        entry.staffUser.name.toLowerCase().includes(query) ||
+        entry.staffUser.email.toLowerCase().includes(query) ||
+        entry.staffUser.company?.companyName.toLowerCase().includes(query)
+      )
+    }
+
+    return true
+  })
+
+  const stats = {
+    total: timeEntries.length,
+    active: timeEntries.filter(e => !e.clockOut).length,
+    completed: timeEntries.filter(e => e.clockOut).length,
+    lateToday: timeEntries.filter(e => e.wasLate).length,
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="grid gap-4 md:grid-cols-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-24 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-foreground">Time Tracking</h1>
-          <p className="text-sm text-muted-foreground mt-1">Monitor staff time entries and productivity</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Monitor staff clock in/out times, breaks, and attendance
+          </p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
-            <Download className="size-4" />
-            Export Report
-          </Button>
-        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Total Entries</div>
+          <div className="text-2xl font-semibold text-foreground mt-1">{stats.total}</div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Currently Clocked In</div>
+          <div className="text-2xl font-semibold text-emerald-500 mt-1">{stats.active}</div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Completed Today</div>
+          <div className="text-2xl font-semibold text-blue-500 mt-1">{stats.completed}</div>
+        </Card>
+        <Card className="p-4 border-border bg-card">
+          <div className="text-sm text-muted-foreground">Late Clock-Ins</div>
+          <div className="text-2xl font-semibold text-amber-500 mt-1">{stats.lateToday}</div>
+        </Card>
       </div>
 
       {/* Filters */}
       <Card className="p-4 border-border bg-card">
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search by staff name..." className="pl-9" />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by staff name, email, or company..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
-          <Select defaultValue="today">
-            <SelectTrigger className="w-48">
-              <SelectValue />
+          <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Filter by Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="all">All Entries</SelectItem>
+              <SelectItem value="active">Currently Active</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </Card>
 
-      {/* Time Entries Table */}
-      <Card className="border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-border bg-muted/30">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Staff Member
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Client
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Clock In
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Clock Out
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Duration
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Break Time
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {entries.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No time entries found.
-                  </td>
-                </tr>
-              ) : (
-                entries.map((entry: any) => {
-                  const duration = calculateDuration(entry.clockIn, entry.clockOut)
-                  const isActive = !entry.clockOut
+      {/* Time Entries Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredEntries.map((entry) => {
+          const duration = calculateDuration(entry.clockIn, entry.clockOut)
+          const isActive = !entry.clockOut
 
-                  return (
-                    <tr key={entry.id} className="hover:bg-muted/20">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-8">
-                            <AvatarImage src={entry.user?.avatar || "/placeholder.svg"} />
-                            <AvatarFallback>{entry.user?.name?.charAt(0) || "U"}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-foreground">{entry.user?.name || "Unknown"}</div>
-                            <div className="text-xs text-muted-foreground">{entry.user?.profile?.currentRole || "Staff"}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-foreground">
-                        N/A
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-foreground">
-                          {new Date(entry.clockIn).toLocaleString()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-foreground">
-                          {entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "-"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-foreground">
-                          {formatDuration(duration)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-muted-foreground">
-                          {entry.breakDuration ? `${entry.breakDuration}m` : "0m"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className={isActive ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}>
-                          {isActive ? (
-                            <><Clock className="size-3 mr-1 inline" /> Active</>
-                          ) : (
-                            "Completed"
-                          )}
-                        </Badge>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          return (
+            <Link 
+              key={entry.id}
+              href={`/admin/time-tracking/${entry.id}`}
+              className="block"
+            >
+              <Card className="p-6 border-border bg-card hover:bg-card/80 transition-colors cursor-pointer">
+                {/* Staff Info */}
+                <div className="flex items-start gap-4 mb-4">
+                  <Avatar className="h-12 w-12 ring-2 ring-white/10">
+                    <AvatarImage src={entry.staffUser.avatar || undefined} alt={entry.staffUser.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+                      {entry.staffUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{entry.staffUser.name}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{entry.staffUser.email}</p>
+                    {entry.staffUser.company && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Building2 className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground truncate">
+                          {entry.staffUser.company.companyName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-5 gap-4">
-        <Card className="p-4 border-border bg-card">
-          <div className="text-sm text-muted-foreground">Total Entries</div>
-          <div className="text-2xl font-semibold text-foreground mt-1">{entries.length}</div>
-        </Card>
-        <Card className="p-4 border-border bg-card">
-          <div className="text-sm text-muted-foreground">Active Now</div>
-          <div className="text-2xl font-semibold text-emerald-500 mt-1">
-            {entries.filter(e => !e.clockOut).length}
-          </div>
-        </Card>
-        <Card className="p-4 border-border bg-card">
-          <div className="text-sm text-muted-foreground">Total Hours</div>
-          <div className="text-2xl font-semibold text-blue-500 mt-1">
-            {formatDuration(entries.reduce((acc, e) => acc + calculateDuration(e.clockIn, e.clockOut), 0))}
-          </div>
-        </Card>
-        <Card className="p-4 border-border bg-card">
-          <div className="text-sm text-muted-foreground">Avg Per Day</div>
-          <div className="text-2xl font-semibold text-purple-500 mt-1">
-            {entries.length > 0 ? formatDuration(Math.floor(entries.reduce((acc, e) => acc + calculateDuration(e.clockIn, e.clockOut), 0) / entries.length)) : "0h 0m"}
-          </div>
-        </Card>
-        <Card className="p-4 border-border bg-card">
-          <div className="text-sm text-muted-foreground">Break Time</div>
-          <div className="text-2xl font-semibold text-orange-500 mt-1">
-            {entries.reduce((acc, e) => acc + (e.breakDuration || 0), 0)}m
-          </div>
-        </Card>
+                {/* Status Badge */}
+                <div className="flex items-center gap-2 mb-4">
+                  {isActive ? (
+                    <Badge className="bg-emerald-600 gap-1">
+                      <PlayCircle className="h-3 w-3" />
+                      Clocked In
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <StopCircle className="h-3 w-3" />
+                      Completed
+                    </Badge>
+                  )}
+                  {entry.wasLate && (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+                      Late {entry.lateBy}m
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Time Details */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Clock className="h-3 w-3" />
+                      Clock In:
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {new Date(entry.clockIn).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  {entry.clockOut && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        Clock Out:
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {new Date(entry.clockOut).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Timer className="h-3 w-3" />
+                      Duration:
+                    </span>
+                    <span className="font-semibold text-foreground">{duration.total}</span>
+                  </div>
+                  {entry.breaks.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Coffee className="h-3 w-3" />
+                        Breaks:
+                      </span>
+                      <span className="font-medium text-foreground">{entry.breaks.length}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Date */}
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(entry.clockIn).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+
+                {/* View Details Button */}
+                <div className="mt-4">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Details
+                  </Button>
+                </div>
+              </Card>
+            </Link>
+          )
+        })}
       </div>
+
+      {filteredEntries.length === 0 && (
+        <Card className="p-12 border-border bg-card text-center">
+          <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No Time Entries Found</h3>
+          <p className="text-sm text-muted-foreground">
+            {searchQuery || statusFilter !== 'all' 
+              ? 'Try adjusting your search or filters'
+              : 'Time entries will appear here when staff clock in'}
+          </p>
+        </Card>
+      )}
     </div>
   )
 }
