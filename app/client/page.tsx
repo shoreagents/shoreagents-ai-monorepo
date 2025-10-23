@@ -14,7 +14,7 @@ export default async function ClientDashboard() {
   }
 
   const clientUser = await prisma.clientUser.findUnique({
-    where: { email: session.user.email },
+    where: { email: session.user.email || undefined },
     include: { 
       company: true,
       profile: true
@@ -122,7 +122,7 @@ export default async function ClientDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to {clientUser.company.companyName} Portal</p>
+        <p className="text-gray-600 mt-1">Welcome to {clientUser.companyId} Portal</p>
       </div>
 
       {/* Quick Stats - Styled like Profile page */}
@@ -319,16 +319,20 @@ export default async function ClientDashboard() {
                       <p className="text-sm text-gray-900">
                         <span className="font-medium">{activity.staffUser?.name || 'Unknown'}</span>
                         {' '}
-                        <span className="text-gray-600">{activity.message}</span>
+                        <span className="text-gray-600">{activity.content}</span>
                       </p>
                       <div className="flex items-center gap-3 mt-1">
                         <p className="text-xs text-gray-500">
                           {new Date(activity.createdAt).toLocaleString()}
                         </p>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          activity.type === 'TASK' ? 'bg-blue-100 text-blue-700' :
-                          activity.type === 'REVIEW' ? 'bg-purple-100 text-purple-700' :
-                          activity.type === 'TIME' ? 'bg-green-100 text-green-700' :
+                          activity.type === 'ACHIEVEMENT' ? 'bg-blue-100 text-blue-700' :
+                          activity.type === 'MILESTONE' ? 'bg-purple-100 text-purple-700' :
+                          activity.type === 'KUDOS' ? 'bg-green-100 text-green-700' :
+                          activity.type === 'WIN' ? 'bg-yellow-100 text-yellow-700' :
+                          activity.type === 'CELEBRATION' ? 'bg-pink-100 text-pink-700' :
+                          activity.type === 'UPDATE' ? 'bg-indigo-100 text-indigo-700' :
+                          activity.type === 'ANNOUNCEMENT' ? 'bg-red-100 text-red-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
                           {activity.type}
