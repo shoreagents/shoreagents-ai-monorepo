@@ -24,8 +24,11 @@ interface StaffOnboarding {
     completionPercent: number
     isComplete: boolean
     personalInfoStatus: string
+    resumeStatus: string
     govIdStatus: string
-    documentsStatus: string
+    educationStatus: string
+    medicalStatus: string
+    dataPrivacyStatus: string
     signatureStatus: string
     emergencyContactStatus: string
     updatedAt: string
@@ -78,8 +81,11 @@ export default function AdminOnboardingPage() {
     if (!onboarding) return 0
     let count = 0
     if (onboarding.personalInfoStatus === "SUBMITTED") count++
+    if (onboarding.resumeStatus === "SUBMITTED") count++
     if (onboarding.govIdStatus === "SUBMITTED") count++
-    if (onboarding.documentsStatus === "SUBMITTED") count++
+    if (onboarding.educationStatus === "SUBMITTED") count++
+    if (onboarding.medicalStatus === "SUBMITTED") count++
+    if (onboarding.dataPrivacyStatus === "SUBMITTED") count++
     if (onboarding.signatureStatus === "SUBMITTED") count++
     if (onboarding.emergencyContactStatus === "SUBMITTED") count++
     return count
