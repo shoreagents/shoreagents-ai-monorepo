@@ -45,9 +45,17 @@
 - [x] Creates staff onboarding record
 - [x] Redirects to contract signing page
 
-### ⏳ Phase 4: Contract Signing Interface (PENDING)
-- [ ] Create `/app/contract/page.tsx` - Staff contract signing page
-- [ ] Create `/app/api/contract/sign/route.ts` - Save signature API
+### ✅ Phase 4: Contract Signing Interface (COMPLETE)
+- [x] Created `/app/contract/page.tsx` - Staff contract signing page
+- [x] Implemented 5-section contract review with checkboxes
+- [x] Added progress tracking (0-100%)
+- [x] Built signature canvas for drawing signature
+- [x] Created `/app/api/contract/route.ts` - Fetch contract API
+- [x] Created `/app/api/contract/sign/route.ts` - Save signature API
+- [x] Upload signature to Supabase storage
+- [x] Mark contract as signed and update job acceptance
+- [x] Redirect to onboarding after signing
+- [x] Beautiful gradient UI matching staff theme
 
 ### ⏳ Phase 5: Contract Template (PENDING)
 - [ ] Create `/lib/contract-template.ts` - HTML generation function
