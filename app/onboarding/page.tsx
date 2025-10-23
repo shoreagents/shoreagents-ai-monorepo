@@ -1795,8 +1795,263 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 4: Signature */}
+            {/* NEW STEP 4: Education Documents */}
             {currentStep === 4 && (
+              <div className="space-y-6">
+                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
+                  <GraduationCap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <Label htmlFor="education-upload" className="cursor-pointer">
+                    <span className="text-lg font-semibold text-white">Upload Diploma or Transcript of Records (TOR)</span>
+                    <p className="text-sm text-slate-400 mt-2">PDF, JPG, or PNG (Max 5MB)</p>
+                  </Label>
+                  <Input
+                    id="education-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.png,.jpeg"
+                    onChange={(e) => handleEducationUpload(e)}
+                    className="hidden"
+                    disabled={uploading.education || formData.educationStatus === "APPROVED"}
+                  />
+                  {uploading.education && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+                      <span className="text-purple-300">Uploading...</span>
+                    </div>
+                  )}
+                </div>
+
+                {formData.diplomaTorUrl && (
+                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      <span className="text-green-100">Education document uploaded</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(formData.diplomaTorUrl, '_blank')}
+                      className="border-green-600 text-green-400 hover:bg-green-900/50"
+                    >
+                      View
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(3)}
+                    className="border-slate-600 text-slate-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => setCurrentStep(5)} 
+                    disabled={!formData.diplomaTorUrl}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* NEW STEP 5: Medical Certificate */}
+            {currentStep === 5 && (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Stethoscope className="h-8 w-8 text-purple-400" />
+                    <h3 className="text-xl font-semibold text-white">Medical Certificate (Fit to Work)</h3>
+                  </div>
+
+                  {nearbyClinics.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-medium text-slate-200">Partner Clinics Near You</h4>
+                      <div className="grid gap-3">
+                        {nearbyClinics.slice(0, 3).map((clinic: any) => (
+                          <div key={clinic.id} className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
+                            <h5 className="font-semibold text-white">{clinic.name}</h5>
+                            <p className="text-sm text-slate-300 mt-1">{clinic.address}</p>
+                            <p className="text-xs text-slate-400 mt-1">Distance: {clinic.distance.toFixed(1)}km away</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-blue-200">Visit Any Licensed Clinic</h4>
+                    <p className="text-sm text-blue-100">Request a "Fit to Work" certificate with:</p>
+                    <ul className="text-sm text-blue-100 list-disc list-inside space-y-1 ml-2">
+                      <li>Complete physical exam</li>
+                      <li>Chest X-ray</li>
+                      <li>Drug test</li>
+                      <li>Blood test (CBC, Blood type)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
+                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <Label htmlFor="medical-upload" className="cursor-pointer">
+                    <span className="text-lg font-semibold text-white">Upload Medical Certificate</span>
+                    <p className="text-sm text-slate-400 mt-2">PDF, JPG, or PNG (Max 5MB)</p>
+                  </Label>
+                  <Input
+                    id="medical-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.png,.jpeg"
+                    onChange={(e) => handleMedicalUpload(e)}
+                    className="hidden"
+                    disabled={uploading.medical || formData.medicalStatus === "APPROVED"}
+                  />
+                  {uploading.medical && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+                      <span className="text-purple-300">Uploading...</span>
+                    </div>
+                  )}
+                </div>
+
+                {formData.medicalCertUrl && (
+                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      <span className="text-green-100">Medical certificate uploaded</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(formData.medicalCertUrl, '_blank')}
+                      className="border-green-600 text-green-400 hover:bg-green-900/50"
+                    >
+                      View
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(4)}
+                    className="border-slate-600 text-slate-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => setCurrentStep(6)} 
+                    disabled={!formData.medicalCertUrl}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* NEW STEP 6: Data Privacy & Bank Details */}
+            {currentStep === 6 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Shield className="h-8 w-8 text-purple-400" />
+                  <h3 className="text-xl font-semibold text-white">Data Privacy Consent & Bank Details</h3>
+                </div>
+
+                <div className="p-6 bg-slate-700/50 border border-slate-600 rounded-lg space-y-4">
+                  <h4 className="font-semibold text-white">Data Privacy Consent (Annex C)</h4>
+                  <div className="max-h-64 overflow-y-auto p-4 bg-slate-800/50 border border-slate-600 rounded text-sm text-slate-300 space-y-2">
+                    <p>I hereby consent to the collection, use, and disclosure of my personal information by ShoreAgents for the purpose of employment processing, payroll management, and compliance with legal requirements.</p>
+                    <p>I understand that my information will be kept confidential and will only be shared with authorized personnel and government agencies as required by law.</p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      id="privacy-consent"
+                      checked={privacyData.dataPrivacyConsent}
+                      onChange={(e) => setPrivacyData({ ...privacyData, dataPrivacyConsent: e.target.checked })}
+                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-700"
+                    />
+                    <Label htmlFor="privacy-consent" className="text-slate-300 cursor-pointer">
+                      I have read and agree to the Data Privacy Consent
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-white">Bank Account Details</h4>
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-slate-300">Bank Name *</Label>
+                      <Select
+                        value={privacyData.bankName}
+                        onValueChange={(value) => setPrivacyData({ ...privacyData, bankName: value })}
+                      >
+                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectValue placeholder="Select your bank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BDO">BDO (Banco de Oro)</SelectItem>
+                          <SelectItem value="BPI">BPI (Bank of the Philippine Islands)</SelectItem>
+                          <SelectItem value="Metrobank">Metrobank</SelectItem>
+                          <SelectItem value="PNB">PNB (Philippine National Bank)</SelectItem>
+                          <SelectItem value="UnionBank">UnionBank</SelectItem>
+                          <SelectItem value="Security Bank">Security Bank</SelectItem>
+                          <SelectItem value="Landbank">Landbank</SelectItem>
+                          <SelectItem value="RCBC">RCBC (Rizal Commercial Banking Corporation)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-300">Account Name *</Label>
+                      <Input
+                        placeholder="As shown on your bank account"
+                        value={privacyData.accountName}
+                        onChange={(e) => setPrivacyData({ ...privacyData, accountName: e.target.value })}
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-300">Account Number *</Label>
+                      <Input
+                        placeholder="Your bank account number"
+                        value={privacyData.accountNumber}
+                        onChange={(e) => setPrivacyData({ ...privacyData, accountNumber: e.target.value })}
+                        className="bg-slate-700 border-slate-600 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(5)}
+                    className="border-slate-600 text-slate-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={handleSaveDataPrivacy}
+                    disabled={!privacyData.dataPrivacyConsent || !privacyData.bankName || !privacyData.accountName || !privacyData.accountNumber || saving}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  >
+                    {saving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </span>
+                    ) : "Save & Continue"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Signature (was Step 4) */}
+            {currentStep === 7 && (
               <div className="space-y-6">
                 {!isDrawMode && (
                   <div className="space-y-2">
@@ -2005,8 +2260,8 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 5: Emergency Contact */}
-            {currentStep === 5 && (
+            {/* Step 8: Emergency Contact (was Step 5) */}
+            {currentStep === 8 && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="emergencyName" className="text-slate-300">Emergency Contact Name *</Label>
