@@ -64,7 +64,7 @@ export async function PATCH(
             role: true,
           },
         },
-        management_users: {
+        managementUser: {
           select: {
             id: true,
             name: true,
@@ -73,7 +73,7 @@ export async function PATCH(
             role: true,
           },
         },
-        client_users: {
+        clientUser: {
           select: {
             id: true,
             name: true,
@@ -93,7 +93,7 @@ export async function PATCH(
                 role: true,
               },
             },
-            management_users: {
+            managementUser: {
               select: {
                 id: true,
                 name: true,
@@ -102,7 +102,7 @@ export async function PATCH(
                 role: true,
               },
             },
-            client_users: {
+            clientUser: {
               select: {
                 id: true,
                 name: true,

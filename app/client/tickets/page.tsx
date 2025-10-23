@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Grid3X3, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import TicketKanbanLight from "@/components/tickets/ticket-kanban-light"
+import TicketListLight from "@/components/tickets/ticket-list-light"
 import TicketDetailModal from "@/components/tickets/ticket-detail-modal"
 import { Ticket } from "@/types/ticket"
 import { getCategoriesForUserType, getCategoryLabel } from "@/lib/ticket-categories"
@@ -35,6 +36,7 @@ export default function ClientTicketsPage() {
   const [uploading, setUploading] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [accountManager, setAccountManager] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -55,13 +57,25 @@ export default function ClientTicketsPage() {
     try {
       const res = await fetch("/api/client/tickets")
       const data = await res.json()
-      setTickets(data.tickets)
-      // Get account manager from first ticket (all tickets have same account manager)
-      if (data.tickets?.length > 0 && data.tickets[0].accountManager) {
-        setAccountManager(data.tickets[0].accountManager)
+      
+      if (res.ok) {
+        setTickets(data.tickets || [])
+        // Get account manager from first ticket (all tickets have same account manager)
+        if (data.tickets?.length > 0 && data.tickets[0].accountManager) {
+          setAccountManager(data.tickets[0].accountManager)
+        }
+      } else {
+        console.error("API Error:", data.error)
+        setTickets([])
+        toast({
+          title: "Error",
+          description: data.error || "Failed to load tickets",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error fetching tickets:", error)
+      setTickets([])
       toast({
         title: "Error",
         description: "Failed to load tickets",
@@ -169,9 +183,15 @@ export default function ClientTicketsPage() {
     setSelectedTicket(null)
   }
 
-  const handleModalUpdate = () => {
-    fetchTickets()
-    setSelectedTicket(null)
+  const handleModalUpdate = async () => {
+    await fetchTickets()
+    // Keep the modal open but update the selected ticket with fresh data
+    if (selectedTicket) {
+      const updatedTicket = tickets.find(t => t.id === selectedTicket.id)
+      if (updatedTicket) {
+        setSelectedTicket(updatedTicket)
+      }
+    }
   }
 
   if (loading) {
@@ -185,10 +205,10 @@ export default function ClientTicketsPage() {
   }
 
   const stats = {
-    total: tickets.length,
-    open: tickets.filter((t) => t.status === "OPEN").length,
-    inProgress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
-    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+    total: tickets?.length || 0,
+    open: tickets?.filter((t) => t.status === "OPEN").length || 0,
+    inProgress: tickets?.filter((t) => t.status === "IN_PROGRESS").length || 0,
+    resolved: tickets?.filter((t) => t.status === "RESOLVED").length || 0,
   }
 
   return (
@@ -201,10 +221,38 @@ export default function ClientTicketsPage() {
               View and manage your support requests
             </p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            New Ticket
-          </Button>
+          <div className="flex items-center gap-4">
+            {/* View Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('board')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'board'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+                Board
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                List
+              </button>
+            </div>
+            
+            <Button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              New Ticket
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -231,12 +279,20 @@ export default function ClientTicketsPage() {
           </div>
         </div>
 
-        {/* Kanban Board */}
-        <TicketKanbanLight
-          tickets={tickets}
-          onTicketClick={handleTicketClick}
-          onStatusChange={() => {}}
-        />
+        {/* Tickets Display */}
+        {viewMode === 'board' ? (
+          <TicketKanbanLight
+            tickets={tickets || []}
+            onTicketClick={handleTicketClick}
+            onStatusChange={() => {}}
+          />
+        ) : (
+          <TicketListLight
+            tickets={tickets || []}
+            onTicketClick={handleTicketClick}
+            onStatusChange={() => {}}
+          />
+        )}
 
         {/* Create Ticket Modal */}
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>

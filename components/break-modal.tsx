@@ -34,7 +34,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   const [originalStartTime, setOriginalStartTime] = useState<number | null>(null)
   const [hasUsedPause, setHasUsedPause] = useState(breakData?.pauseUsed || false)
   const [localRemainingTime, setLocalRemainingTime] = useState(() => {
-    // For new breaks, use full duration; for paused breaks, use pausedDuration
+    // For paused breaks, pausedDuration represents the remaining time when paused
     if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
       return breakData.pausedDuration
     }
@@ -44,13 +44,11 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   
   // Update hasUsedPause when breakData changes
   useEffect(() => {
-    console.log("🔍 BREAK MODAL - pauseUsed changed:", breakData?.pauseUsed)
     setHasUsedPause(breakData?.pauseUsed || false)
   }, [breakData?.pauseUsed])
   
   // Update isPaused when breakData changes
   useEffect(() => {
-    console.log("🔍 BREAK MODAL - isPaused changed:", breakData?.isPaused)
     const wasPaused = isPaused
     const nowPaused = breakData?.isPaused || false
     
@@ -62,40 +60,31 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
       const actualElapsed = Math.floor((now - (originalStartTime || 0)) / 1000)
       const trueElapsed = actualElapsed - totalPausedDuration
       setElapsedWhenPaused(trueElapsed)
-      console.log("⏸️ BREAK PAUSED - Storing elapsed time:", trueElapsed, "seconds")
     }
   }, [breakData?.isPaused, isPaused, originalStartTime, totalPausedDuration])
   
   // Update totalPausedDuration when breakData changes
   useEffect(() => {
-    console.log("🔍 BREAK MODAL - pausedDuration changed:", breakData?.pausedDuration)
-    console.log("🔍 BREAK MODAL - Setting totalPausedDuration to:", breakData?.pausedDuration || 0)
     setTotalPausedDuration(breakData?.pausedDuration || 0)
   }, [breakData?.pausedDuration])
   
   // Update local remaining time when breakData changes
   useEffect(() => {
-    console.log("🔍 BREAK MODAL - Updating local remaining time:", breakData?.pausedDuration)
     if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
-      // For paused breaks, use the remaining time from database
+      // For paused breaks, pausedDuration represents the remaining time when paused
       setLocalRemainingTime(breakData.pausedDuration)
     } else {
       // For new breaks, use full duration
       const fullDuration = breakData?.type === 'LUNCH' ? 3600 : 900
       setLocalRemainingTime(fullDuration)
     }
-  }, [breakData?.pausedDuration, breakData?.type])
+  }, [breakData?.pausedDuration, breakData?.type, breakData?.actualStart])
   
   // Wait for break data to be fully loaded before showing pause button
   useEffect(() => {
     if (breakData && breakData.id) {
       // Add a small delay to ensure all break data is properly loaded
       const timer = setTimeout(() => {
-        console.log("🔍 BREAK MODAL - Break data loaded:", {
-          id: breakData.id,
-          pauseUsed: breakData.pauseUsed,
-          isPaused: breakData.isPaused
-        })
         setIsBreakDataLoaded(true)
       }, 500) // Wait 500ms for data to be fully loaded
       
@@ -110,12 +99,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   
   const expectedDurationMinutes = breakData?.duration || 15
   const expectedDurationSeconds = expectedDurationMinutes * 60
-  
-  console.log("🔍 BREAK MODAL DURATION DEBUG:")
-  console.log("  - breakData:", breakData)
-  console.log("  - breakData?.duration:", breakData?.duration)
-  console.log("  - expectedDurationMinutes:", expectedDurationMinutes)
-  console.log("  - expectedDurationSeconds:", expectedDurationSeconds)
   
   const breakEmojis: Record<string, string> = {
     MORNING: "☕",
@@ -175,12 +158,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
       setElapsedWhenPaused(0) // Reset paused state
       // Always sync hasUsedPause with breakData.pauseUsed
       setHasUsedPause(breakData.pauseUsed || false)
-      if (breakData.pauseUsed) {
-        console.log("🔄 EXISTING BREAK - Setting hasUsedPause to true (pause was used)")
-      } else {
-        console.log("🔄 NEW BREAK - Setting hasUsedPause to false (pause not used)")
-      }
-      console.log("🔄 BREAK DATA CHANGED - Resetting all timer state")
     }
   }, [breakData?.id]) // Reset when break ID changes
 
@@ -198,8 +175,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
       setElapsedSeconds(Math.max(0, actualElapsed)) // Ensure it's never negative
       
       setIsInitializing(false) // Timer is ready to start
-      console.log("🔒 LOCKED ORIGINAL START TIME (from database):", new Date(startTime).toLocaleTimeString())
-      console.log("🔒 CALCULATED ELAPSED TIME:", actualElapsed, "seconds")
     }
   }, [breakData, originalStartTime])
   
@@ -207,8 +182,7 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   useEffect(() => {
     if (!isOpen || !breakData || !originalStartTime || isInitializing) return
     
-    console.log("⏰ TIMER STARTED - Original start:", new Date(originalStartTime).toLocaleTimeString(), "| Total paused:", totalPausedDuration, "seconds", "| isPaused:", isPaused)
-    console.log("⏰ TIMER - Break data pausedDuration:", breakData?.pausedDuration, "| Local totalPausedDuration:", totalPausedDuration)
+    
     
     const interval = setInterval(() => {
       if (!isPaused) {
@@ -222,15 +196,8 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
           const trueElapsed = expectedDuration - newRemaining
           setElapsedSeconds(trueElapsed)
           
-          // Debug logging inside the callback where trueElapsed is available
-          console.log(`⏱️ TICK #${debugCount} - True Elapsed: ${trueElapsed}s (actual: ${actualElapsed}s - paused: ${totalPausedDuration}s), Remaining: ${expectedDurationSeconds - trueElapsed}s`)
-          console.log(`⏱️ TICK #${debugCount} - Break data pausedDuration: ${breakData?.pausedDuration}, Local totalPausedDuration: ${totalPausedDuration}`)
-          console.log(`⏱️ TICK #${debugCount} - Elapsed when paused: ${elapsedWhenPaused}s`)
-          
           // Show "I'm Back" popup when duration is reached
           if (trueElapsed >= expectedDurationSeconds) {
-            console.log("⏰ BREAK TIME COMPLETE - Showing return popup")
-            console.log(`⏰ Auto-end triggered: ${trueElapsed}s >= ${expectedDurationSeconds}s`)
             clearInterval(interval)
             setShowReturnPopup(true)
           }
@@ -239,18 +206,15 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
         })
         setDebugCount(prev => prev + 1)
       } else {
-        console.log("⏸️ Timer tick skipped - break is paused")
       }
     }, 1000)
     
     return () => {
-      console.log("🛑 TIMER STOPPED")
       clearInterval(interval)
     }
   }, [isOpen, breakData?.id, isPaused, totalPausedDuration, originalStartTime, isInitializing])
   
   const handlePause = () => {
-    console.log("⏸️ PAUSING at", elapsedSeconds, "seconds (ONE-TIME USE)")
     setIsPaused(true)
     setHasUsedPause(true) // Mark pause as used - can't pause again!
     setElapsedWhenPaused(elapsedSeconds)
@@ -266,8 +230,6 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   }
   
   const handleImBack = () => {
-    console.log("✅ STAFF CONFIRMED RETURN - Actual return time:", new Date().toLocaleTimeString())
-    console.log("🔄 Calling onEndDirect() to end break automatically")
     // Reset all state
     setOriginalStartTime(null)
     setTotalPausedDuration(0)

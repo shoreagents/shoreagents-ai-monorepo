@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
   Star, ThumbsUp, Clock, TrendingUp,
-  ChevronDown, ChevronUp, Eye, Calendar, User
+  ChevronDown, ChevronUp, Eye, Calendar, User, CheckCircle
 } from "lucide-react"
 
 type ReviewStatus = "PENDING_APPROVAL" | "APPROVED" | "FINALIZED" | "ACKNOWLEDGED" | "ARCHIVED"
@@ -42,7 +42,7 @@ export default function ReviewsSystem() {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch("/api/reviews")
+      const response = await fetch("/api/performance-reviews")
       if (!response.ok) throw new Error("Failed to fetch reviews")
       const data = await response.json()
       setReviews(data.reviews)
@@ -180,25 +180,12 @@ export default function ReviewsSystem() {
                 className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 hover:ring-white/20 transition-all"
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-white">{getReviewTypeLabel(review.type)} Review</CardTitle>
-                        <CardDescription className="text-slate-400">{review.client}</CardDescription>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">{getReviewTypeLabel(review.type)} Review</CardTitle>
                     <div className="flex items-center gap-2">
                       {review.status === "FINALIZED" && (
                         <Badge className="bg-red-500/20 text-red-400 ring-red-500/30">
                           🔴 New Review
-                        </Badge>
-                      )}
-                      {review.status === "UNDER_REVIEW" && (
-                        <Badge className="bg-yellow-500/20 text-yellow-400 ring-yellow-500/30">
-                          ⏳ Waiting for Acknowledgement
                         </Badge>
                       )}
                       {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
@@ -211,10 +198,6 @@ export default function ReviewsSystem() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-sm text-slate-400 mb-1">Company</div>
-                      <div className="text-white font-medium">{review.client}</div>
-                    </div>
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Reviewer</div>
                       <div className="text-white font-medium">{review.reviewerName || review.reviewer}</div>
@@ -250,21 +233,23 @@ export default function ReviewsSystem() {
                   </div>
 
                   <div className="pt-4 border-t border-slate-700">
+                    <div className="flex items-center justify-between gap-4 text-sm text-slate-400 mb-3 pb-3 border-b border-slate-700">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Due: {review.dueDate ? new Date(review.dueDate).toLocaleDateString() : "N/A"}
+                      </div>
+                      {review.submittedDate && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Submitted: {new Date(review.submittedDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        {review.status === "FINALIZED" && (
-                          <Badge className="bg-red-500/20 text-red-400 ring-red-500/30">
-                            🔴 New Review
-                          </Badge>
-                        )}
                         {review.status === "UNDER_REVIEW" && (
-                          <Badge className="bg-yellow-500/20 text-yellow-400 ring-yellow-500/30">
-                            ⏳ Waiting for Acknowledgement
-                          </Badge>
-                        )}
-                        {review.status === "ACKNOWLEDGED" && review.acknowledgedDate && (
-                          <Badge className="bg-emerald-500/20 text-emerald-400 ring-emerald-500/30">
-                            Acknowledged
+                          <Badge className="bg-purple-500/20 text-purple-400 ring-purple-500/30">
+                            Waiting for Acknowledgement
                           </Badge>
                         )}
                       </div>

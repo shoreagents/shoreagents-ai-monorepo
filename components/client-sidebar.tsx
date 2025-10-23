@@ -20,11 +20,14 @@ import {
   Activity,
   Coffee,
   ClipboardList,
+  ClipboardCheck,
   Clock,
   LogOut,
   ChevronDown,
   Building2,
   Headphones,
+  ClipboardCheck,
+  Settings,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -52,7 +55,7 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
 
   const fetchPendingReviewsCount = async () => {
     try {
-      const response = await fetch("/api/client/reviews/count")
+      const response = await fetch("/api/client/performance-reviews/count")
       if (response.ok) {
         const data = await response.json()
         setPendingReviewsCount(data.pendingCount || 0)
@@ -87,16 +90,19 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client", label: "Dashboard", icon: LayoutDashboard },
     { href: "/client/profile", label: "Profile", icon: User },
     { href: "/client/company", label: "Company", icon: Building2 },
+    { href: "/client/onboarding", label: "Onboarding", icon: ClipboardCheck },
     { href: "/client/staff", label: "Staff", icon: Users },
-    { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/time-tracking", label: "Time Tracking", icon: Clock },
+    { href: "/client/analytics", label: "Analytics", icon: Monitor },
+    { href: "/client/tickets", label: "Tickets", icon: Headphones },
+    { href: "/client/performance-reviews", label: "Performance", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
     { href: "/client/monitoring", label: "Monitoring", icon: Monitor },
-    { href: "/client/reviews", label: "Reviews", icon: FileText, badge: pendingReviewsCount },
-    { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
-    { href: "/client/talent-pool", label: "Talent Pool", icon: UserSearch },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+    { href: "/client/news-feed", label: "The Feed", icon: Bell },
+    { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
+    { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
+    { href: "/client/settings", label: "Settings", icon: Settings },
   ]
 
   return (

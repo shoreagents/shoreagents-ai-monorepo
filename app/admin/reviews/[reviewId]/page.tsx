@@ -22,7 +22,8 @@ import {
   getReviewTypeBadge, 
   getStatusBadge, 
   getPerformanceBadge,
-  formatReviewDate
+  formatReviewDate,
+  getDueDateText
 } from "@/lib/review-utils"
 import { getReviewTemplate, getAllQuestions } from "@/lib/review-templates"
 
@@ -253,6 +254,13 @@ export default function AdminReviewDetailPage({
   const template = getReviewTemplate(review.type as any)
   const questions = getAllQuestions(template)
 
+  const getAcknowledgmentDueDate = (reviewedDate: string) => {
+    const reviewed = new Date(reviewedDate)
+    const dueDate = new Date(reviewed)
+    dueDate.setDate(reviewed.getDate() + 7) // Add 7 days
+    return dueDate
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -430,15 +438,28 @@ export default function AdminReviewDetailPage({
             
             <div className="border-t border-border pt-3 mt-4">
               <div className="space-y-2">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Due:</span>
-                  <div className="font-medium text-foreground">
-                    {formatReviewDate(review.dueDate)}
-                  </div>
-                </div>
+                 <div className="text-sm">
+                   <span className="text-muted-foreground">
+                     {review.status === 'UNDER_REVIEW' ? 'Acknowledgment Due Date:' : 'Due Date:'}
+                   </span>
+                   <div className={`font-medium ${
+                     review.status === 'UNDER_REVIEW' && review.reviewedDate
+                       ? getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due today" || 
+                         getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due tomorrow" ||
+                         getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)).includes("overdue")
+                         ? "text-red-400" 
+                         : "text-foreground"
+                       : "text-foreground"
+                   }`}>
+                     {review.status === 'UNDER_REVIEW' && review.reviewedDate
+                       ? getDueDateText(getAcknowledgmentDueDate(review.reviewedDate))
+                       : formatReviewDate(review.dueDate)
+                     }
+                   </div>
+                 </div>
                 {review.submittedDate && (
                   <div className="text-sm">
-                    <span className="text-muted-foreground">Submitted:</span>
+                    <span className="text-muted-foreground">Client Reviewed Date:</span>
                     <div className="font-medium text-foreground">
                       {formatReviewDate(review.submittedDate)}
                     </div>
