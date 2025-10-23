@@ -23,15 +23,22 @@ import {
   Loader2,
   Pencil,
   Eraser,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase,
+  GraduationCap,
+  Stethoscope,
+  Shield
 } from "lucide-react"
 
 const STEPS = [
   { id: 1, name: "Personal Info", icon: User, field: "personalInfoStatus" },
-  { id: 2, name: "Government IDs & Documents", icon: CreditCard, field: "govIdStatus" },
-  { id: 3, name: "Additional Documents", icon: FileText, field: "documentsStatus" },
-  { id: 4, name: "Signature", icon: PenTool, field: "signatureStatus" },
-  { id: 5, name: "Emergency Contact", icon: Users, field: "emergencyContactStatus" },
+  { id: 2, name: "Resume", icon: Briefcase, field: "resumeStatus" },
+  { id: 3, name: "Government IDs & Documents", icon: CreditCard, field: "govIdStatus" },
+  { id: 4, name: "Education Documents", icon: GraduationCap, field: "educationStatus" },
+  { id: 5, name: "Medical Certificate", icon: Stethoscope, field: "medicalStatus" },
+  { id: 6, name: "Data Privacy & Bank", icon: Shield, field: "dataPrivacyStatus" },
+  { id: 7, name: "Signature", icon: PenTool, field: "signatureStatus" },
+  { id: 8, name: "Emergency Contact", icon: Users, field: "emergencyContactStatus" },
 ]
 
 interface OnboardingData {
@@ -69,6 +76,24 @@ interface OnboardingData {
   emergencyContactName: string
   emergencyContactNo: string
   emergencyRelationship: string
+  
+  // NEW: Resume, Medical, Education, Data Privacy
+  resumeUrl?: string
+  resumeStatus: string
+  resumeFeedback?: string
+  
+  medicalCertUrl?: string
+  medicalStatus: string
+  medicalFeedback?: string
+  
+  diplomaTorUrl?: string
+  educationStatus: string
+  educationFeedback?: string
+  
+  dataPrivacyConsentUrl?: string
+  bankAccountDetails?: string
+  dataPrivacyStatus: string
+  dataPrivacyFeedback?: string
   
   // Status
   personalInfoStatus: string
