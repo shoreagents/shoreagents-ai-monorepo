@@ -191,10 +191,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  ispaused       Boolean?    @default(false)
-  pausedat       DateTime?   @db.Timestamp(6)
-  pausedduration Int?        @default(0)
-  pauseused      Boolean?    @default(false)
+  isPaused       Boolean?    @default(false) @map("isPaused")
+  pausedAt       DateTime?   @db.Timestamp(6) @map("pausedAt")
+  pausedDuration Int?        @default(0) @map("pausedDuration")
+  pauseUsed      Boolean?    @default(false) @map("pauseUsed")
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -504,6 +504,7 @@ model ClientUser {
   tasks           Task[]
   ticketResponses TicketResponse[]
   tickets         Ticket[]
+  interviewRequests InterviewRequest[]
 
   @@map("client_users")
 }
@@ -843,4 +844,33 @@ enum PostAudience {
   CLIENT
   MANAGEMENT
   ALL
+}
+
+enum InterviewRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model InterviewRequest {
+  id                String                @id @default(uuid())
+  clientUserId      String
+  bpocCandidateId   String
+  candidateFirstName String
+  preferredTimes    Json                  // Array of preferred time slots
+  clientNotes       String?
+  status            InterviewRequestStatus @default(PENDING)
+  scheduledTime     DateTime?
+  meetingLink       String?
+  adminNotes        String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  
+  // Relations
+  clientUser        ClientUser            @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  
+  @@map("interview_requests")
 }
