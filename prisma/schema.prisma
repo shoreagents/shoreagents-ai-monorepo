@@ -47,7 +47,7 @@ model StaffUser {
   gamificationProfile    GamificationProfile?
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
-  notifications          Notification[]
+  notifications          notifications[]
   performanceMetrics     PerformanceMetric[]
   postComments           PostComment[]
   postReactions          PostReaction[]
@@ -241,9 +241,9 @@ model PerformanceMetric {
   productivityScore Int       @default(0)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  applicationsused  Json?     @default("[]")
-  visitedurls       Json?     @default("[]")
-  screenshoturls    Json?     @default("[]")
+  applicationsUsed  Json?     @default("[]") @map("applicationsused")
+  visitedUrls       Json?     @default("[]") @map("visitedurls")
+  screenshotUrls    Json?     @default("[]") @map("screenshoturls")
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("performance_metrics")
@@ -336,7 +336,7 @@ model ActivityPost {
   client_users     ClientUser?     @relation(fields: [clientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_clientuserid_fkey")
   management_users ManagementUser? @relation(fields: [managementUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activity_posts_managementuserid_fkey")
   staffUser        StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  notifications    Notification[]
+  notifications    notifications[]
   comments         PostComment[]
   reactions        PostReaction[]
 
@@ -382,26 +382,6 @@ model PostComment {
 
   @@index([postId, createdAt], map: "idx_comments_post_created")
   @@map("post_comments")
-}
-
-model Notification {
-  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
-  userId    String
-  type      NotificationType @default(TAG)
-  title     String
-  message   String
-  postId    String?
-  actionUrl String?
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  readAt    DateTime?
-  post      ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId], map: "idx_notifications_post")
-  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
-  @@index([userId, read], map: "idx_notifications_user_read")
-  @@map("notifications")
 }
 
 model GamificationProfile {
@@ -506,24 +486,24 @@ model Company {
 }
 
 model ClientUser {
-  id               String           @id @default(uuid())
-  authUserId       String           @unique
-  name             String
-  role             ClientRole       @default(MANAGER)
-  avatar           String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  email            String           @unique
-  companyId        String
-  coverPhoto       String?
-  activity_posts   ActivityPost[]
-  profile          ClientProfile?
-  company          Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  post_comments    PostComment[]
-  post_reactions   PostReaction[]
-  tasks            Task[]
-  ticket_responses TicketResponse[]
-  tickets          Ticket[]
+  id              String           @id @default(uuid())
+  authUserId      String           @unique
+  name            String
+  role            ClientRole       @default(MANAGER)
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  email           String           @unique
+  companyId       String
+  coverPhoto      String?
+  activity_posts  ActivityPost[]
+  profile         ClientProfile?
+  company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  post_comments   PostComment[]
+  post_reactions  PostReaction[]
+  tasks           Task[]
+  ticketResponses TicketResponse[]
+  tickets         Ticket[]
 
   @@map("client_users")
 }
@@ -627,6 +607,26 @@ model staff_personal_records {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notifications {
+  id             String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId         String
+  type           NotificationType @default(TAG)
+  title          String
+  message        String
+  postId         String?
+  actionUrl      String?
+  read           Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  readAt         DateTime?
+  activity_posts ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  staff_users    StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "idx_notifications_post")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
+  @@index([userId, read], map: "idx_notifications_user_read")
 }
 
 enum ManagementRole {
@@ -777,21 +777,6 @@ enum PostType {
   ANNOUNCEMENT
 }
 
-enum PostAudience {
-  STAFF
-  CLIENT
-  MANAGEMENT
-  ALL
-}
-
-enum NotificationType {
-  TAG
-  MENTION
-  COMMENT
-  REACTION
-  SYSTEM
-}
-
 enum ReactionType {
   LIKE
   LOVE
@@ -843,4 +828,19 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum NotificationType {
+  TAG
+  MENTION
+  COMMENT
+  REACTION
+  SYSTEM
+}
+
+enum PostAudience {
+  STAFF
+  CLIENT
+  MANAGEMENT
+  ALL
 }

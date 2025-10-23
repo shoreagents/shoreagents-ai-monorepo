@@ -4,32 +4,48 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("🔍 [CLIENT/STAFF] API called")
     const session = await auth()
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
+      console.log("❌ [CLIENT/STAFF] No session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    console.log("✅ [CLIENT/STAFF] Session found:", session.user.email)
+
     const clientUser = await prisma.clientUser.findUnique({
-      where: { authUserId: session.user.id },
-      include: { company: true },
+      where: { email: session.user.email },
+      include: { 
+        company: {
+          include: {
+            accountManager: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      },
     })
 
     if (!clientUser || !clientUser.company) {
+      console.log("❌ [CLIENT/STAFF] Client user or company not found")
       return NextResponse.json({ error: "Client user or company not found" }, { status: 404 })
     }
 
-    // Get all staff for this company who have completed onboarding AND have started
+    console.log("✅ [CLIENT/STAFF] Client found:", clientUser.email, "Company:", clientUser.company.companyName)
+
+    // Get all staff for this company who have started (regardless of onboarding status)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    console.log("🔍 [CLIENT/STAFF] Looking for staff in company:", clientUser.company.id)
+    
     const staffList = await prisma.staffUser.findMany({
       where: {
         companyId: clientUser.company.id,
-        // Only show staff who have completed onboarding
-        onboarding: {
-          isComplete: true
-        },
+        // Show all staff regardless of onboarding status
         // And whose start date is today or in the past
         profile: {
           startDate: {
@@ -38,6 +54,12 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
+        onboarding: {
+          select: {
+            isComplete: true,
+            completionPercent: true
+          }
+        },
         profile: {
           select: {
             phone: true,
@@ -105,6 +127,11 @@ export async function GET(request: NextRequest) {
       orderBy: { name: "asc" },
     })
 
+    console.log("✅ [CLIENT/STAFF] Found staff:", staffList.length)
+    staffList.forEach((staff, index) => {
+      console.log(`  ${index + 1}. ${staff.name} (${staff.email}) - Start: ${staff.profile?.startDate}`)
+    })
+
     // Format the response with calculated fields
     const formattedStaff = staffList.map(staff => {
       // Calculate days employed
@@ -166,10 +193,13 @@ export async function GET(request: NextRequest) {
         isClockedIn,
         level: staff.gamificationProfile?.level || 1,
         points: staff.gamificationProfile?.points || 0,
+        onboardingComplete: staff.onboarding?.isComplete || false,
+        onboardingProgress: staff.onboarding?.completionPercent || 0,
       }
     })
 
-    return NextResponse.json(formattedStaff)
+    console.log("📤 [CLIENT/STAFF] Returning staff data:", formattedStaff.length, "staff members")
+    return NextResponse.json({ staff: formattedStaff })
   } catch (error) {
     console.error("Error fetching client staff:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

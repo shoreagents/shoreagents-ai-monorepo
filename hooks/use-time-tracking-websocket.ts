@@ -230,7 +230,9 @@ export function useTimeTrackingWebSocket() {
       } : null
       
       console.log('[WebSocket] Active break from API:', statusData.activeBreak)
-      console.log('[WebSocket] pauseused value:', statusData.activeBreak.pauseused, 'type:', typeof statusData.activeBreak.pauseused)
+      if (statusData.activeBreak) {
+        console.log('[WebSocket] pauseused value:', statusData.activeBreak.pauseused, 'type:', typeof statusData.activeBreak.pauseused)
+      }
       console.log('[WebSocket] Mapped active break:', activeBreak)
 
       // Update state with fetched data
@@ -324,7 +326,10 @@ export function useTimeTrackingWebSocket() {
       startTime: data.break.actualStart, // Use actualStart as startTime
       actualStart: data.break.actualStart,
       duration: data.break.type === 'LUNCH' ? 60 : 15, // Always set proper duration: 60min for lunch, 15min for others
-      awayReason: data.break.awayReason
+      awayReason: data.break.awayReason,
+      isPaused: data.break.ispaused || false,
+      pausedDuration: data.break.pausedduration || 0,
+      pauseUsed: data.break.pauseused || false
     }
     
     setState(prev => ({
@@ -415,37 +420,25 @@ export function useTimeTrackingWebSocket() {
   }, [])
 
   const handleBreakPaused = useCallback((data: any) => {
-    console.log('[WebSocket] Break paused:', data)
-    console.log('[WebSocket] Break paused - pausedDuration:', data.break?.pausedduration)
-    setState(prev => {
-      const updatedBreak = prev.activeBreak ? { 
+    setState(prev => ({
+      ...prev,
+      activeBreak: prev.activeBreak ? { 
         ...prev.activeBreak, 
         isPaused: true,
         pausedDuration: data.break?.pausedduration || prev.activeBreak.pausedDuration
       } : null
-      console.log('[WebSocket] Updated activeBreak (paused):', updatedBreak)
-      return {
-        ...prev,
-        activeBreak: updatedBreak
-      }
-    })
+    }))
   }, [])
 
   const handleBreakResumed = useCallback((data: any) => {
-    console.log('[WebSocket] Break resumed:', data)
-    console.log('[WebSocket] Break resumed - pausedDuration:', data.break?.pausedduration)
-    setState(prev => {
-      const updatedBreak = prev.activeBreak ? { 
+    setState(prev => ({
+      ...prev,
+      activeBreak: prev.activeBreak ? { 
         ...prev.activeBreak, 
         isPaused: false,
         pausedDuration: data.break?.pausedduration || 0
       } : null
-      console.log('[WebSocket] Updated activeBreak:', updatedBreak)
-      return {
-        ...prev,
-        activeBreak: updatedBreak
-      }
-    })
+    }))
   }, [])
 
   const handleBreakAutoStartTrigger = useCallback(async (data: any) => {

@@ -149,23 +149,51 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  User: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  FileText: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  ),
+  BookOpen: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  ),
+  Briefcase: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
 }
 
 const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
-  { icon: "Users", label: "Staff Management", href: "/admin/staff", badge: null },
-  { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
-  { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
-  { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
-  { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },
-  { icon: "CheckSquare", label: "Task Oversight", href: "/admin/tasks", badge: null },
-  { icon: "Ticket", label: "Support Tickets", href: "/admin/tickets", badge: null },
-  { icon: "FolderOpen", label: "Document Management", href: "/admin/documents", badge: null },
+  { icon: "User", label: "My Profile", href: "/admin/profile", badge: null },
+  { icon: "Building2", label: "Client", href: "/admin/clients", badge: null },
+  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/onboarding", badge: null },
+  { icon: "Users", label: "Staff", href: "/admin/staff", badge: null },
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
-  { icon: "Trophy", label: "Gamification", href: "/admin/gamification", badge: null },
-  { icon: "TrendingUp", label: "Performance Analytics", href: "/admin/analytics", badge: null },
+  { icon: "TrendingUp", label: "Analytics", href: "/admin/analytics", badge: null },
+  { icon: "Ticket", label: "Tickets", href: "/admin/tickets", badge: null },
+  { icon: "FileText", label: "Performance", href: "/admin/performance-reviews", badge: null },
+  { icon: "CheckSquare", label: "Tasks", href: "/admin/tasks", badge: null },
+  { icon: "BookOpen", label: "Knowledge Base", href: "/admin/knowledge-base", badge: null },
   { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
-  { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
+  { icon: "Trophy", label: "Leaderboard", href: "/admin/leaderboard", badge: null },
+  { icon: "Briefcase", label: "Recruitment", href: "/admin/recruitment", badge: null },
+  { icon: "Settings", label: "Settings", href: "/admin/settings", badge: null },
 ]
 
 type ManagementUser = {

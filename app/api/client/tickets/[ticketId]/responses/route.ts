@@ -18,8 +18,8 @@ export async function POST(
     const body = await request.json()
     const { message, attachments } = body
 
-    if (!message) {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 })
+    if (!message && (!attachments || attachments.length === 0)) {
+      return NextResponse.json({ error: "Message or attachments are required" }, { status: 400 })
     }
 
     // Check if ticket exists

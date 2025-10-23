@@ -29,3 +29,7 @@ next-env.d.ts.env.local
 /lib/generated/prisma
 .env
 server-output.log
+
+# MCP configuration (contains API tokens)
+mcp-config.json
+test-n8n-connection.js

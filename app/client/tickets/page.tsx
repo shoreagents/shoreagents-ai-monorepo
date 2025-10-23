@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Grid3X3, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import TicketKanbanLight from "@/components/tickets/ticket-kanban-light"
+import TicketListLight from "@/components/tickets/ticket-list-light"
 import TicketDetailModal from "@/components/tickets/ticket-detail-modal"
 import { Ticket } from "@/types/ticket"
 import { getCategoriesForUserType, getCategoryLabel } from "@/lib/ticket-categories"
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
+import { TicketKanbanSkeleton, TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function ClientTicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -35,6 +36,8 @@ export default function ClientTicketsPage() {
   const [uploading, setUploading] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [accountManager, setAccountManager] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
+  const [isHydrated, setIsHydrated] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -47,21 +50,50 @@ export default function ClientTicketsPage() {
 
   const clientCategories = getCategoriesForUserType('client')
 
+  // Handle view mode change and save to localStorage
+  const handleViewModeChange = (mode: 'board' | 'list') => {
+    setViewMode(mode)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('client-tickets-view-mode', mode)
+    }
+  }
+
   useEffect(() => {
     fetchTickets()
+  }, [])
+
+  // Handle hydration and localStorage reading
+  useEffect(() => {
+    setIsHydrated(true)
+    const savedViewMode = localStorage.getItem('client-tickets-view-mode') as 'board' | 'list'
+    if (savedViewMode) {
+      setViewMode(savedViewMode)
+    }
   }, [])
 
   const fetchTickets = async () => {
     try {
       const res = await fetch("/api/client/tickets")
       const data = await res.json()
-      setTickets(data.tickets)
-      // Get account manager from first ticket (all tickets have same account manager)
-      if (data.tickets?.length > 0 && data.tickets[0].accountManager) {
-        setAccountManager(data.tickets[0].accountManager)
+      
+      if (res.ok) {
+        setTickets(data.tickets || [])
+        // Get account manager from first ticket (all tickets have same account manager)
+        if (data.tickets?.length > 0 && data.tickets[0].accountManager) {
+          setAccountManager(data.tickets[0].accountManager)
+        }
+      } else {
+        console.error("API Error:", data.error)
+        setTickets([])
+        toast({
+          title: "Error",
+          description: data.error || "Failed to load tickets",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error fetching tickets:", error)
+      setTickets([])
       toast({
         title: "Error",
         description: "Failed to load tickets",
@@ -169,31 +201,62 @@ export default function ClientTicketsPage() {
     setSelectedTicket(null)
   }
 
-  const handleModalUpdate = () => {
-    fetchTickets()
-    setSelectedTicket(null)
+  const handleModalUpdate = async () => {
+    await fetchTickets()
+    // Keep the modal open but update the selected ticket with fresh data
+    if (selectedTicket) {
+      const updatedTicket = tickets.find(t => t.id === selectedTicket.id)
+      if (updatedTicket) {
+        setSelectedTicket(updatedTicket)
+      }
+    }
   }
 
   if (loading) {
     return (
       <div className="p-8 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <TicketListSkeleton count={5} />
+        <div className="w-full">
+          {/* Header skeleton */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-8 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-64 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <div className={`h-8 w-16 rounded-md ${viewMode === 'board' ? 'bg-gray-300' : 'bg-gray-200'}`}></div>
+                <div className={`h-8 w-16 rounded-md ${viewMode === 'list' ? 'bg-gray-300' : 'bg-gray-200'}`}></div>
+              </div>
+              <div className="h-10 w-24 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+
+          {/* Stats skeleton */}
+          <TicketStatsSkeleton />
+
+          {/* Dynamic skeleton based on current view mode */}
+          <div className="mt-8">
+            {viewMode === 'board' ? (
+              <TicketKanbanSkeleton count={3} />
+            ) : (
+              <TicketListSkeleton count={5} />
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
   const stats = {
-    total: tickets.length,
-    open: tickets.filter((t) => t.status === "OPEN").length,
-    inProgress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
-    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+    total: tickets?.length || 0,
+    open: tickets?.filter((t) => t.status === "OPEN").length || 0,
+    inProgress: tickets?.filter((t) => t.status === "IN_PROGRESS").length || 0,
+    resolved: tickets?.filter((t) => t.status === "RESOLVED").length || 0,
   }
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
@@ -201,10 +264,38 @@ export default function ClientTicketsPage() {
               View and manage your support requests
             </p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            New Ticket
-          </Button>
+          <div className="flex items-center gap-4">
+            {/* View Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => handleViewModeChange('board')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'board'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+                Board
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                List
+              </button>
+            </div>
+            
+            <Button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              New Ticket
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -231,12 +322,20 @@ export default function ClientTicketsPage() {
           </div>
         </div>
 
-        {/* Kanban Board */}
-        <TicketKanbanLight
-          tickets={tickets}
-          onTicketClick={handleTicketClick}
-          onStatusChange={() => {}}
-        />
+        {/* Tickets Display */}
+        {viewMode === 'board' ? (
+          <TicketKanbanLight
+            tickets={tickets || []}
+            onTicketClick={handleTicketClick}
+            onStatusChange={() => {}}
+          />
+        ) : (
+          <TicketListLight
+            tickets={tickets || []}
+            onTicketClick={handleTicketClick}
+            onStatusChange={() => {}}
+          />
+        )}
 
         {/* Create Ticket Modal */}
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -438,9 +537,9 @@ export default function ClientTicketsPage() {
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-6 h-11 border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="px-6 h-11 border border-gray-900 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400"
                 >
                   Cancel
                 </Button>

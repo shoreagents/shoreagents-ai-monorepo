@@ -20,12 +20,13 @@ import {
   Activity,
   Coffee,
   ClipboardList,
+  ClipboardCheck,
   Clock,
   LogOut,
   ChevronDown,
   Building2,
   Headphones,
-  ClipboardCheck,
+  Settings,
 } from "lucide-react"
 
 type ClientUserWithCompany = {
@@ -95,10 +96,12 @@ export function ClientSidebar({ user }: { user: ClientUserWithCompany }) {
     { href: "/client/tickets", label: "Tickets", icon: Headphones },
     { href: "/client/performance-reviews", label: "Performance", icon: FileText, badge: pendingReviewsCount },
     { href: "/client/tasks", label: "Tasks", icon: ClipboardList },
+    { href: "/client/monitoring", label: "Monitoring", icon: Monitor },
     { href: "/client/knowledge-base", label: "Knowledge Base", icon: BookOpen },
     { href: "/client/news-feed", label: "The Feed", icon: Bell },
     { href: "/client/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/client/recruitment", label: "Recruitment", icon: Briefcase },
+    { href: "/client/settings", label: "Settings", icon: Settings },
   ]
 
   return (
