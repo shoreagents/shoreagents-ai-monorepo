@@ -27,6 +27,13 @@
 - [x] Creates job acceptance record
 - [x] Placeholder for email notification (Phase 12)
 
+### ✅ Phase 2.5: Admin UI for Hire (COMPLETE)
+- [x] Updated `/app/admin/recruitment/page.tsx` with Hire button and modal
+- [x] Added hire form with position, company selection, email, phone fields
+- [x] Created `/app/api/admin/companies/route.ts` to fetch companies list
+- [x] Integrated with hire API endpoint
+- [x] Added success toast notifications
+
 ### 🔄 Phase 3: Staff Signup Auto-fill (IN PROGRESS)
 - [ ] Update `/app/login/staff/signup/page.tsx` - Check for jobAcceptanceId param
 - [ ] Update `/app/api/auth/signup/staff/route.ts` - Link to job acceptance, fetch BPOC data

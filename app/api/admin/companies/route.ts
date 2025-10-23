@@ -1,46 +1,54 @@
-import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+/**
+ * Admin Companies API
+ * GET /api/admin/companies
+ * 
+ * Fetches all companies for admin dropdowns
+ */
 
-export async function GET(req: NextRequest) {
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export async function GET(request: NextRequest) {
   try {
+    // Verify admin is authenticated
     const session = await auth()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin/management
+    // Verify user is admin/manager
     const managementUser = await prisma.managementUser.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    if (!managementUser || managementUser.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    if (!managementUser) {
+      return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
     }
 
-    // Get all companies
+    // Fetch all active companies
     const companies = await prisma.company.findMany({
+      where: {
+        isActive: true
+      },
       select: {
         id: true,
-        companyName: true,
-        industry: true,
-        location: true,
-        accountManagerId: true,
+        companyName: true
       },
       orderBy: {
-        companyName: "asc"
+        companyName: 'asc'
       }
     })
 
-    return NextResponse.json({ companies })
-
+    return NextResponse.json({
+      success: true,
+      companies
+    })
   } catch (error) {
-    console.error("Admin companies list error:", error)
+    console.error('❌ [ADMIN] Error fetching companies:', error)
     return NextResponse.json(
-      { error: "Failed to fetch companies" },
+      { error: 'Failed to fetch companies', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
-
