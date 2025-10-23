@@ -28,12 +28,12 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
     LOW: "💤",
   }
 
-  // Status colors - VIBRANT!
+  // Status colors - PROMINENT TOP BORDER!
   const statusColors = {
-    OPEN: "bg-gradient-to-r from-blue-500 to-cyan-500",
-    IN_PROGRESS: "bg-gradient-to-r from-amber-500 to-orange-500",
-    RESOLVED: "bg-gradient-to-r from-emerald-500 to-green-500",
-    CLOSED: "bg-gradient-to-r from-slate-500 to-gray-500",
+    OPEN: "bg-blue-500",
+    IN_PROGRESS: "bg-orange-500", 
+    RESOLVED: "bg-green-500",
+    CLOSED: "bg-gray-500",
   }
 
   // Format date
@@ -56,8 +56,8 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
       onClick={onClick}
       className="group relative rounded-2xl bg-slate-900/50 backdrop-blur-xl shadow-xl border border-white/10 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-300 cursor-pointer overflow-hidden hover:scale-[1.02] transform"
     >
-      {/* Status indicator bar - GLOWING! */}
-      <div className={`h-2 w-full ${statusColors[ticket.status]} shadow-lg`} />
+      {/* Status indicator bar - PROMINENT TOP BORDER! */}
+      <div className={`h-4 w-full ${statusColors[ticket.status]} shadow-lg`} />
 
       <div className="p-5">
         {/* Header */}

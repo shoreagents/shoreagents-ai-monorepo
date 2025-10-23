@@ -87,7 +87,7 @@ export default function GamifiedDashboard() {
     try {
       const [tasksRes, reviewsRes, ticketsRes, postsRes, leaderboardRes] = await Promise.all([
         fetch("/api/tasks"),
-        fetch("/api/reviews"),
+        fetch("/api/performance-reviews"),
         fetch("/api/tickets"),
         fetch("/api/posts"),
         fetch("/api/leaderboard?period=all_time"),

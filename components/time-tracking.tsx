@@ -692,17 +692,18 @@ export default function TimeTracking() {
         console.log("📡 WebSocket event emitted: break:resume")
       }
       
-      // Now update UI state and open modal after API success
-      setBreakIsPaused(false)
-      setBreakModalOpen(true)
-
-      console.log("✅ RESUME API SUCCESS - breakIsPaused: false, modal opened, performance tracking paused")
-
-      // Request fresh data to get updated pausedDuration
+      // Request fresh data to get updated pausedDuration first
       if (socket) {
         console.log("🔄 Requesting fresh data after break resume")
         socket.emit('time:request-data')
       }
+
+      // Wait a moment for fresh data to arrive, then update UI state and open modal
+      setTimeout(() => {
+        setBreakIsPaused(false)
+        setBreakModalOpen(true)
+        console.log("✅ RESUME API SUCCESS - breakIsPaused: false, modal opened with fresh data")
+      }, 500) // Wait 500ms for fresh data to arrive
 
       // Show success toast
       toast({

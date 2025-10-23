@@ -34,8 +34,12 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   const [originalStartTime, setOriginalStartTime] = useState<number | null>(null)
   const [hasUsedPause, setHasUsedPause] = useState(breakData?.pauseUsed || false)
   const [localRemainingTime, setLocalRemainingTime] = useState(() => {
-    // For new breaks, use full duration; for paused breaks, use pausedDuration
+    // For paused breaks, pausedDuration represents the remaining time when paused
     if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
+      console.log("🔍 CALCULATING REMAINING TIME (PAUSED):", {
+        pausedDuration: breakData.pausedDuration,
+        type: breakData.type
+      })
       return breakData.pausedDuration
     }
     // For new breaks, calculate full duration
@@ -77,14 +81,18 @@ export function BreakModal({ isOpen, breakData, onEnd, onEndDirect, onPause, onC
   useEffect(() => {
     console.log("🔍 BREAK MODAL - Updating local remaining time:", breakData?.pausedDuration)
     if (breakData?.pausedDuration && breakData.pausedDuration > 0) {
-      // For paused breaks, use the remaining time from database
+      // For paused breaks, pausedDuration represents the remaining time when paused
+      console.log("🔍 UPDATING REMAINING TIME (PAUSED):", {
+        pausedDuration: breakData.pausedDuration,
+        type: breakData.type
+      })
       setLocalRemainingTime(breakData.pausedDuration)
     } else {
       // For new breaks, use full duration
       const fullDuration = breakData?.type === 'LUNCH' ? 3600 : 900
       setLocalRemainingTime(fullDuration)
     }
-  }, [breakData?.pausedDuration, breakData?.type])
+  }, [breakData?.pausedDuration, breakData?.type, breakData?.actualStart])
   
   // Wait for break data to be fully loaded before showing pause button
   useEffect(() => {

@@ -143,13 +143,17 @@ export default function TicketDetailModal({
       })
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload attachments")
+        const errorData = await uploadResponse.json()
+        console.error("Upload failed:", errorData)
+        throw new Error(`Failed to upload attachments: ${errorData.error || "Unknown error"}`)
       }
 
       const uploadData = await uploadResponse.json()
+      console.log("Upload successful:", uploadData)
       const attachmentUrls = uploadData.urls || []
 
       // Add attachments as a response (with empty message, just images)
+      console.log("Creating response with attachments:", attachmentUrls)
       const response = await fetch(`/api/tickets/${ticket.id}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -159,7 +163,11 @@ export default function TicketDetailModal({
         }),
       })
 
-      if (!response.ok) throw new Error("Failed to add attachments to ticket")
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Response creation failed:", errorData)
+        throw new Error(`Failed to add attachments to ticket: ${errorData.error || "Unknown error"}`)
+      }
 
       toast({
         title: "✅ Success!",
@@ -219,6 +227,7 @@ export default function TicketDetailModal({
       }
 
       // Submit response
+      console.log("Submitting response with message:", message, "attachments:", attachmentUrls)
       const response = await fetch(`/api/tickets/${ticket.id}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -658,7 +667,9 @@ export default function TicketDetailModal({
                         </span>
                       </div>
                     </div>
-                    <p className="text-slate-200 leading-relaxed">{response.message}</p>
+                    {response.message && response.message.trim() && (
+                      <p className="text-slate-200 leading-relaxed">{response.message}</p>
+                    )}
 
                     {response.attachments && response.attachments.length > 0 && (
                       <div className="mt-3 grid grid-cols-3 gap-2">
