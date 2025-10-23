@@ -194,6 +194,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
+  isPaused       Boolean?    @default(false) @map("ispaused")
+  pausedAt       DateTime?   @db.Timestamp(6) @map("pausedat")
+  pausedDuration Int?        @default(0) @map("pausedduration")
+  pauseUsed      Boolean?    @default(false) @map("pauseused")
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -554,18 +558,21 @@ model ClientProfile {
 }
 
 model InterviewRequest {
-  id                   String         @id @default(uuid())
+  id                   String                   @id @default(uuid())
   clientUserId         String
   bpocCandidateId      String
   candidateFirstName   String
   preferredTimes       Json
   clientNotes          String?
-  status               String         @default("pending")
+  status               InterviewRequestStatus   @default(PENDING)
+  scheduledTime        DateTime?
+  meetingLink          String?
+  adminNotes           String?
   hiredAt              DateTime?
   hiredByAdminId       String?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  clientUser           ClientUser     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  clientUser           ClientUser               @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
   jobAcceptance        JobAcceptance?
   
   @@map("interview_requests")
@@ -806,6 +813,14 @@ enum TicketStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+enum InterviewRequestStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  HIRED
 }
 
 enum PostType {

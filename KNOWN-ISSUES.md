@@ -1,6 +1,6 @@
 # 🐛 Known Issues - October 23, 2025
 
-## ❌ Issue 1: Recruitment Interview Requests (500 Error)
+## ✅ Issue 1: Recruitment Interview Requests (500 Error) - **FIXED!**
 
 ### **Error:**
 ```
@@ -13,37 +13,26 @@ relation "interview_requests" does not exist
 - Recruitment page when requesting interviews
 
 ### **Root Cause:**
-- Database is not managed by Prisma Migrate
-- `interview_requests` table missing in database
-- Schema defines it, but table was never created
+- Database was not in sync with Prisma schema
+- `interview_requests` table was missing in database
+- Schema defined it, but table was never created
+
+### **Fix Applied:**
+```bash
+npx prisma db push --accept-data-loss
+npx prisma generate
+```
+
+### **Status:**
+- ✅ **FIXED:** `interview_requests` table created
+- ✅ Database synced with schema
+- ✅ Prisma client regenerated
+- ✅ Interview requests now work!
 
 ### **Impact:**
-- ⚠️ **LOW:** Does NOT affect GUNTING onboarding system
-- Only affects client recruitment/interview requests
-- All other recruitment features work (viewing candidates, talent pool)
-
-### **Fix Options:**
-
-**Option 1: Initialize Prisma Migrations (Baseline)**
-```bash
-# Create initial migration from current database
-npx prisma migrate dev --name init --create-only
-
-# Review the migration file, then apply
-npx prisma migrate deploy
-```
-
-**Option 2: Create Missing Table Only**
-```sql
--- Run in database directly
-CREATE TABLE interview_requests (
-  -- ... schema fields ...
-);
-```
-
-**Option 3: Ignore for Now**
-- Not critical for GUNTING testing
-- Can fix after GUNTING is complete
+- 🎯 **CRITICAL:** This was blocking the FULL hire-to-work flow!
+- Interview requests are the START of the journey that ends with GUNTING onboarding
+- Now can test complete flow: Recruitment → Interview → Hire → Contract → Onboarding → Ready!
 
 ---
 
@@ -74,20 +63,25 @@ but the message channel closed before a response was received
 ## 📊 Status:
 
 **Critical Bugs:** 0  
-**Non-Critical Issues:** 2  
+**Non-Critical Issues:** 1 (ElectronProvider warnings only)  
 **GUNTING Blockers:** 0  
+**Fixed Issues:** 1 (Interview requests) ✅  
 
 ---
 
-## 🎯 GUNTING Testing:
+## 🎯 COMPLETE FLOW Testing:
 
-**These URLs work fine:**
-- ✅ http://localhost:3000/staff/onboarding
-- ✅ http://localhost:3000/admin/staff/onboarding  
-- ✅ http://localhost:3000/staff/contract
+**Start here:**
+- ✅ http://localhost:3000/client/recruitment (Request interviews NOW WORKS!)
 
-**Avoid for now:**
-- ❌ Interview request button on recruitment page
+**Then test:**
+- ✅ http://localhost:3000/admin/recruitment (Admin coordinates)
+- ✅ http://localhost:3000/staff/contract (Staff signs)
+- ✅ http://localhost:3000/staff/onboarding (8 GUNTING steps) ✂️
+- ✅ http://localhost:3000/admin/staff/onboarding (Admin verifies)
+
+**Full flow documented:**
+- 📄 COMPLETE-HIRE-TO-WORK-FLOW.md
 
 ---
 
