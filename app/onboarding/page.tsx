@@ -23,15 +23,22 @@ import {
   Loader2,
   Pencil,
   Eraser,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase,
+  GraduationCap,
+  Stethoscope,
+  Shield
 } from "lucide-react"
 
 const STEPS = [
   { id: 1, name: "Personal Info", icon: User, field: "personalInfoStatus" },
-  { id: 2, name: "Government IDs & Documents", icon: CreditCard, field: "govIdStatus" },
-  { id: 3, name: "Additional Documents", icon: FileText, field: "documentsStatus" },
-  { id: 4, name: "Signature", icon: PenTool, field: "signatureStatus" },
-  { id: 5, name: "Emergency Contact", icon: Users, field: "emergencyContactStatus" },
+  { id: 2, name: "Resume", icon: Briefcase, field: "resumeStatus" },
+  { id: 3, name: "Government IDs & Documents", icon: CreditCard, field: "govIdStatus" },
+  { id: 4, name: "Education Documents", icon: GraduationCap, field: "educationStatus" },
+  { id: 5, name: "Medical Certificate", icon: Stethoscope, field: "medicalStatus" },
+  { id: 6, name: "Data Privacy & Bank", icon: Shield, field: "dataPrivacyStatus" },
+  { id: 7, name: "Signature", icon: PenTool, field: "signatureStatus" },
+  { id: 8, name: "Emergency Contact", icon: Users, field: "emergencyContactStatus" },
 ]
 
 interface OnboardingData {
@@ -70,10 +77,27 @@ interface OnboardingData {
   emergencyContactNo: string
   emergencyRelationship: string
   
+  // NEW: Resume, Medical, Education, Data Privacy
+  resumeUrl?: string
+  resumeStatus: string
+  resumeFeedback?: string
+  
+  medicalCertUrl?: string
+  medicalStatus: string
+  medicalFeedback?: string
+  
+  diplomaTorUrl?: string
+  educationStatus: string
+  educationFeedback?: string
+  
+  dataPrivacyConsentUrl?: string
+  bankAccountDetails?: string
+  dataPrivacyStatus: string
+  dataPrivacyFeedback?: string
+  
   // Status
   personalInfoStatus: string
   govIdStatus: string
-  documentsStatus: string
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
@@ -81,7 +105,6 @@ interface OnboardingData {
   // Feedback
   personalInfoFeedback?: string
   govIdFeedback?: string
-  documentsFeedback?: string
   signatureFeedback?: string
   emergencyContactFeedback?: string
 }
@@ -328,6 +351,132 @@ export default function OnboardingPage() {
     }
   }
 
+  // Add new handler functions for 8-step onboarding
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, resume: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('resume', file)
+
+      const response = await fetch('/api/onboarding/resume', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Resume uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload resume')
+    } finally {
+      setUploading({ ...uploading, resume: false })
+    }
+  }
+
+  const handleEducationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, education: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('education', file)
+
+      const response = await fetch('/api/onboarding/education', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Education document uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload education document')
+    } finally {
+      setUploading({ ...uploading, education: false })
+    }
+  }
+
+  const handleMedicalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, medical: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('medical', file)
+
+      const response = await fetch('/api/onboarding/medical', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Medical certificate uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload medical certificate')
+    } finally {
+      setUploading({ ...uploading, medical: false })
+    }
+  }
+
+  const handleSaveDataPrivacy = async () => {
+    setSaving(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/onboarding/data-privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataPrivacyConsent: true,
+          bankName: 'BDO', // Default for now
+          accountName: 'Sample Account',
+          accountNumber: '1234567890'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save')
+      }
+
+      setSuccess('Data privacy consent and bank details saved!')
+      setCurrentStep(currentStep + 1)
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save data privacy consent')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleFileUpload = async (file: File, documentType: string) => {
     setUploading({ ...uploading, [documentType]: true })
     setError("")
@@ -549,10 +698,13 @@ export default function OnboardingPage() {
                 </CardTitle>
                 <CardDescription className="text-slate-400">
                   {currentStep === 1 && "Tell us about yourself"}
-                  {currentStep === 2 && "Enter your government ID numbers and upload supporting documents"}
-                  {currentStep === 3 && "Upload your additional documents below."}
-                  {currentStep === 4 && "Upload your signature image (white background recommended). You can also skip and add it later."}
-                  {currentStep === 5 && "Who should we contact in case of emergency?"}
+                  {currentStep === 2 && "Upload your resume/CV"}
+                  {currentStep === 3 && "Enter your government ID numbers and upload supporting documents"}
+                  {currentStep === 4 && "Upload your education documents"}
+                  {currentStep === 5 && "Upload your medical certificate"}
+                  {currentStep === 6 && "Data privacy consent and bank account details"}
+                  {currentStep === 7 && "Upload your signature image (white background recommended). You can also skip and add it later."}
+                  {currentStep === 8 && "Who should we contact in case of emergency?"}
                 </CardDescription>
               </div>
               {/* Status Badge */}
@@ -568,49 +720,85 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 2 && formData.govIdStatus === "APPROVED" && (
+              {currentStep === 2 && formData.resumeStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 2 && formData.govIdStatus === "REJECTED" && (
+              {currentStep === 2 && formData.resumeStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "APPROVED" && (
+              {currentStep === 3 && formData.govIdStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "REJECTED" && (
+              {currentStep === 3 && formData.govIdStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 4 && formData.signatureStatus === "APPROVED" && (
+              {currentStep === 4 && formData.educationStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 4 && formData.signatureStatus === "REJECTED" && (
+              {currentStep === 4 && formData.educationStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 5 && formData.emergencyContactStatus === "APPROVED" && (
+              {currentStep === 5 && formData.medicalStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 5 && formData.emergencyContactStatus === "REJECTED" && (
+              {currentStep === 5 && formData.medicalStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 6 && formData.dataPrivacyStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 6 && formData.dataPrivacyStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 7 && formData.signatureStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 7 && formData.signatureStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 8 && formData.emergencyContactStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 8 && formData.emergencyContactStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
@@ -628,7 +816,15 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 2 && formData.govIdFeedback && (
+            {currentStep === 2 && formData.resumeFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.resumeFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 3 && formData.govIdFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -636,15 +832,31 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 3 && formData.documentsFeedback && (
+            {currentStep === 4 && formData.educationFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
-                  <strong>Admin Feedback:</strong> {formData.documentsFeedback}
+                  <strong>Admin Feedback:</strong> {formData.educationFeedback}
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 4 && formData.signatureFeedback && (
+            {currentStep === 5 && formData.medicalFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.medicalFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 6 && formData.dataPrivacyFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.dataPrivacyFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 7 && formData.signatureFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -652,7 +864,7 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 5 && formData.emergencyContactFeedback && (
+            {currentStep === 8 && formData.emergencyContactFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -806,7 +1018,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 2: Government IDs */}
+            {/* Step 2: Resume Upload */}
             {currentStep === 2 && (
               <div className="space-y-6">
                 {/* SSS Row */}
