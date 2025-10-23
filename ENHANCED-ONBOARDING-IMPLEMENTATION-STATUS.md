@@ -34,10 +34,16 @@
 - [x] Integrated with hire API endpoint
 - [x] Added success toast notifications
 
-### 🔄 Phase 3: Staff Signup Auto-fill (IN PROGRESS)
-- [ ] Update `/app/login/staff/signup/page.tsx` - Check for jobAcceptanceId param
-- [ ] Update `/app/api/auth/signup/staff/route.ts` - Link to job acceptance, fetch BPOC data
-- [ ] Create employment contract on signup
+### ✅ Phase 3: Staff Signup Auto-fill (COMPLETE)
+- [x] Updated `/app/login/staff/signup/page.tsx` - Checks for jobAcceptanceId param
+- [x] Added job acceptance banner with position and company info
+- [x] Pre-fills email and phone from job acceptance
+- [x] Created `/app/api/auth/job-acceptance/[jobAcceptanceId]/route.ts` - Fetch endpoint
+- [x] Updated `/app/api/auth/signup/staff/route.ts` - Links to job acceptance
+- [x] Auto-assigns company to staff user
+- [x] Creates employment contract on signup
+- [x] Creates staff onboarding record
+- [x] Redirects to contract signing page
 
 ### ⏳ Phase 4: Contract Signing Interface (PENDING)
 - [ ] Create `/app/contract/page.tsx` - Staff contract signing page
