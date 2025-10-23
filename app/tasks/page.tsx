@@ -77,9 +77,15 @@ export default function StaffTasksPage() {
         throw new Error("Failed to update task")
       }
 
+      // Show appropriate toast message
+      let toastMessage = "Task status updated"
+      if (newStatus === "COMPLETED") {
+        toastMessage = "Task completed! 🎉"
+      }
+
       toast({
         title: "Success! 🎉",
-        description: "Task status updated",
+        description: toastMessage,
       })
     } catch (error) {
       console.error("Error updating task:", error)
