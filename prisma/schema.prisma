@@ -61,6 +61,9 @@ model StaffUser {
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
+  jobAcceptance          JobAcceptance?
+  employmentContract     EmploymentContract?
+  welcomeForm            StaffWelcomeForm?
 
   @@map("staff_users")
 }
@@ -235,6 +238,9 @@ model PerformanceMetric {
   urlsVisited       Int       @default(0)
   tabsSwitched      Int       @default(0)
   productivityScore Int       @default(0)
+  visitedUrls       Json?     @default("[]") @map("visitedurls")
+  applicationsUsed  Json?     @default("[]") @map("applicationsused")
+  screenshotUrls    Json?     @default("[]") @map("screenshoturls")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
@@ -473,50 +479,53 @@ model DocumentComment {
 }
 
 model Company {
-  id               String          @id @default(uuid())
-  companyName      String
-  industry         String?
-  location         String?
-  billingEmail     String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  organizationId   String          @unique @default(cuid())
-  logo             String?
-  accountManagerId String?
-  bio              String?
-  contractStart    DateTime?
-  isActive         Boolean         @default(true)
-  phone            String?
-  tradingName      String?
-  website          String?
-  coverPhoto       String?
-  clientUsers      ClientUser[]    @relation("CompanyUsers")
-  accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
-  staffUsers       StaffUser[]     @relation("CompanyStaff")
-  tasks            Task[]
+  id                  String               @id @default(uuid())
+  companyName         String
+  industry            String?
+  location            String?
+  billingEmail        String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  organizationId      String               @unique @default(cuid())
+  logo                String?
+  accountManagerId    String?
+  bio                 String?
+  contractStart       DateTime?
+  isActive            Boolean              @default(true)
+  phone               String?
+  tradingName         String?
+  website             String?
+  coverPhoto          String?
+  clientUsers         ClientUser[]         @relation("CompanyUsers")
+  accountManager      ManagementUser?      @relation(fields: [accountManagerId], references: [id])
+  staffUsers          StaffUser[]          @relation("CompanyStaff")
+  tasks               Task[]
+  jobAcceptances      JobAcceptance[]
+  employmentContracts EmploymentContract[]
 
   @@map("company")
 }
 
 model ClientUser {
-  id              String           @id @default(uuid())
-  authUserId      String           @unique
-  name            String
-  role            ClientRole       @default(MANAGER)
-  avatar          String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  email           String           @unique
-  companyId       String
-  coverPhoto      String?
-  activityPosts   ActivityPost[]
-  profile         ClientProfile?
-  company         Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  postComments    PostComment[]
-  postReactions   PostReaction[]
-  tasks           Task[]
-  ticketResponses TicketResponse[]
-  tickets         Ticket[]
+  id               String             @id @default(uuid())
+  authUserId       String             @unique
+  name             String
+  role             ClientRole         @default(MANAGER)
+  avatar           String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  email            String             @unique
+  companyId        String
+  coverPhoto       String?
+  activityPosts    ActivityPost[]
+  profile          ClientProfile?
+  company          Company            @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  postComments     PostComment[]
+  postReactions    PostReaction[]
+  tasks            Task[]
+  ticketResponses  TicketResponse[]
+  tickets          Ticket[]
+  interviewRequests InterviewRequest[]
 
   @@map("client_users")
 }
@@ -542,6 +551,24 @@ model ClientProfile {
   clientUser          ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
+}
+
+model InterviewRequest {
+  id                   String         @id @default(uuid())
+  clientUserId         String
+  bpocCandidateId      String
+  candidateFirstName   String
+  preferredTimes       Json
+  clientNotes          String?
+  status               String         @default("pending")
+  hiredAt              DateTime?
+  hiredByAdminId       String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  clientUser           ClientUser     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  jobAcceptance        JobAcceptance?
+  
+  @@map("interview_requests")
 }
 
 model StaffOnboarding {
@@ -574,22 +601,43 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
+  resumeUrl                  String?
+  medicalCertUrl             String?
+  diplomaTorUrl              String?
+  dataPrivacyConsentUrl      String?
+  bankAccountDetails         String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
   documentsStatus            OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
+  resumeStatus               OnboardingStatus @default(PENDING)
+  medicalStatus              OnboardingStatus @default(PENDING)
+  educationStatus            OnboardingStatus @default(PENDING)
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
+  bankDetailsStatus          OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
   govIdFeedback              String?
   documentsFeedback          String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
+  resumeFeedback             String?
+  medicalFeedback            String?
+  educationFeedback          String?
+  dataPrivacyFeedback        String?
+  bankDetailsFeedback        String?
   personalInfoVerifiedAt     DateTime?
   govIdVerifiedAt            DateTime?
   documentsVerifiedAt        DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
+  resumeVerifiedAt           DateTime?
+  medicalVerifiedAt          DateTime?
+  educationVerifiedAt        DateTime?
+  dataPrivacyVerifiedAt      DateTime?
+  bankDetailsVerifiedAt      DateTime?
   verifiedBy                 String?
+  employmentContractId       String?
   isComplete                 Boolean          @default(false)
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
@@ -836,4 +884,124 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+model JobAcceptance {
+  id                  String              @id @default(uuid())
+  interviewRequestId  String              @unique
+  bpocCandidateId     String
+  candidateEmail      String
+  candidatePhone      String?
+  position            String
+  companyId           String
+  acceptedByAdminId   String
+  acceptedAt          DateTime            @default(now())
+  signupEmailSent     Boolean             @default(false)
+  signupEmailSentAt   DateTime?
+  staffUserId         String?             @unique
+  contractSigned      Boolean             @default(false)
+  contractSignedAt    DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  
+  interviewRequest    InterviewRequest    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
+  company             Company             @relation(fields: [companyId], references: [id])
+  staffUser           StaffUser?          @relation(fields: [staffUserId], references: [id])
+  employmentContract  EmploymentContract?
+  
+  @@map("job_acceptances")
+}
+
+model EmploymentContract {
+  id                    String         @id @default(uuid())
+  jobAcceptanceId       String         @unique
+  staffUserId           String         @unique
+  companyId             String
+  
+  employeeName          String
+  employeeAddress       String
+  contactType           String
+  assignedClient        String
+  position              String
+  startDate             DateTime
+  workSchedule          String
+  basicSalary           Decimal        @db.Decimal(10, 2)
+  deMinimis             Decimal        @db.Decimal(10, 2)
+  totalMonthlyGross     Decimal        @db.Decimal(10, 2)
+  hmoOffer              String
+  paidLeave             String
+  probationaryPeriod    String
+  
+  pageInitials          Json?
+  finalSignatureUrl     String?
+  
+  pagesInitialed        Int            @default(0)
+  totalPages            Int            @default(5)
+  fullyInitialed        Boolean        @default(false)
+  signed                Boolean        @default(false)
+  signedAt              DateTime?
+  
+  adminApproved         Boolean        @default(false)
+  adminApprovedAt       DateTime?
+  adminApprovedBy       String?
+  
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  
+  jobAcceptance         JobAcceptance  @relation(fields: [jobAcceptanceId], references: [id], onDelete: Cascade)
+  staffUser             StaffUser      @relation(fields: [staffUserId], references: [id])
+  company               Company        @relation(fields: [companyId], references: [id])
+  
+  @@map("employment_contracts")
+}
+
+model PartnerClinic {
+  id          String   @id @default(uuid())
+  name        String
+  address     String
+  city        String
+  province    String
+  latitude    Decimal  @db.Decimal(10, 7)
+  longitude   Decimal  @db.Decimal(10, 7)
+  phone       String?
+  email       String?
+  services    String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("partner_clinics")
+}
+
+model StaffWelcomeForm {
+  id                      String    @id @default(uuid())
+  staffUserId             String    @unique
+  
+  name                    String
+  clientCompany           String
+  startDate               DateTime
+  
+  goalAtShoreAgents       String?
+  financialGoal           String?
+  favoriteVacationSpot    String?
+  leaveNoticeAmount       String?
+  firstDayPlans           String?
+  handoverProcess         String?
+  favoriteMovie           String?
+  dayOffActivities        String?
+  favoriteFastFood        String
+  spareTimeActivities     String?
+  pets                    String?
+  grewUpLocation          String?
+  partyTricks             String?
+  interestingFact         String?
+  
+  completed               Boolean   @default(false)
+  completedAt             DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  staffUser               StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@map("staff_welcome_forms")
 }

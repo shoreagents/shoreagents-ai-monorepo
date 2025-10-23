@@ -787,12 +787,12 @@ export default function ProfileView() {
         <div className="space-y-6">
           {/* Government Documents */}
           <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-purple-500/20">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              <h2 className="text-2xl font-black text-white">Government Documents</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
+              <FileText className="h-6 w-6 text-white" />
             </div>
+              <h2 className="text-2xl font-black text-white">Government Documents</h2>
+          </div>
             {profileData.personalRecords ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {profileData.personalRecords.sssDocUrl && (
@@ -804,7 +804,7 @@ export default function ProfileView() {
                   >
                     <div className="rounded-lg bg-gradient-to-br from-orange-500 to-red-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
-                    </div>
+        </div>
                     <div className="flex-1">
                       <div className="font-semibold text-white">SSS Document</div>
                       <div className="text-sm text-slate-400">Click to view</div>
