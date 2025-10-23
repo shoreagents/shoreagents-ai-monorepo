@@ -1,0 +1,3 @@
+# Remove problematic Windows-incompatible files
+Ai\ Bots\ >\ Nova/* export-ignore
+public/On\ Boarding\ Off\ Boarding\ /* export-ignore
