@@ -26,7 +26,7 @@ interface TicketListLightProps {
   onRefresh?: () => void
 }
 
-type SortField = 'createdAt' | 'title' | 'status' | 'priority' | 'category'
+type SortField = 'createdAt' | 'title' | 'status' | 'priority' | 'category' | 'ticketId'
 type SortDirection = 'asc' | 'desc'
 
 export default function TicketListLight({
@@ -67,7 +67,7 @@ export default function TicketListLight({
       bValue = new Date(b.createdAt).getTime()
     }
 
-    // Handle string sorting
+    // Handle string sorting (including ticketId)
     if (typeof aValue === 'string') {
       aValue = aValue.toLowerCase()
       bValue = bValue.toLowerCase()
@@ -114,11 +114,20 @@ export default function TicketListLight({
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
+        <div className="grid grid-cols-12 text-sm font-medium text-gray-500">
           <div className="col-span-1"></div>
           <button
+            onClick={() => handleSort('ticketId')}
+            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
+          >
+            Ticket ID
+            {sortField === 'ticketId' && (
+              sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+          <button
             onClick={() => handleSort('title')}
-            className="col-span-3 text-left hover:text-gray-700 flex items-center gap-1"
+            className="col-span-3 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
           >
             Title
             {sortField === 'title' && (
@@ -127,7 +136,7 @@ export default function TicketListLight({
           </button>
           <button
             onClick={() => handleSort('status')}
-            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1"
+            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
           >
             Status
             {sortField === 'status' && (
@@ -136,7 +145,7 @@ export default function TicketListLight({
           </button>
           <button
             onClick={() => handleSort('priority')}
-            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1"
+            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
           >
             Priority
             {sortField === 'priority' && (
@@ -145,7 +154,7 @@ export default function TicketListLight({
           </button>
           <button
             onClick={() => handleSort('category')}
-            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1"
+            className="col-span-1 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
           >
             Category
             {sortField === 'category' && (
@@ -154,7 +163,7 @@ export default function TicketListLight({
           </button>
           <button
             onClick={() => handleSort('createdAt')}
-            className="col-span-2 text-left hover:text-gray-700 flex items-center gap-1"
+            className="col-span-1 text-left hover:text-gray-700 flex items-center gap-1 pl-2 cursor-pointer"
           >
             Created
             {sortField === 'createdAt' && (
@@ -177,7 +186,7 @@ export default function TicketListLight({
               className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
               onClick={() => onTicketClick?.(ticket)}
             >
-              <div className="grid grid-cols-12 gap-4 items-center">
+              <div className="grid grid-cols-12 items-center">
                 {/* Expand/Collapse Button */}
                 <div className="col-span-1">
                   <Button
@@ -187,7 +196,7 @@ export default function TicketListLight({
                       e.stopPropagation()
                       toggleExpanded(ticket.id)
                     }}
-                    className="p-1 h-8 w-8"
+                    className="p-1 h-8 w-8 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 rounded"
                   >
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4" />
@@ -197,18 +206,22 @@ export default function TicketListLight({
                   </Button>
                 </div>
 
-                {/* Title */}
-                <div className="col-span-3">
-                  <div className="font-medium text-gray-900 truncate">
-                    {ticket.title}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
+                {/* Ticket ID */}
+                <div className="col-span-2 pl-2">
+                  <div className="font-mono text-sm font-medium text-gray-900">
                     #{ticket.ticketId}
                   </div>
                 </div>
 
+                {/* Title */}
+                <div className="col-span-3 pl-2">
+                  <div className="font-medium text-gray-900 truncate">
+                    {ticket.title}
+                  </div>
+                </div>
+
                 {/* Status */}
-                <div className="col-span-2">
+                <div className="col-span-2 pl-2">
                   <div className="flex items-center gap-2">
                     {getStatusIcon(ticket.status)}
                     <Badge 
@@ -221,7 +234,7 @@ export default function TicketListLight({
                 </div>
 
                 {/* Priority */}
-                <div className="col-span-2">
+                <div className="col-span-2 pl-2">
                   <div className="flex items-center gap-2">
                     {getPriorityIcon(ticket.priority)}
                     <Badge 
@@ -234,14 +247,14 @@ export default function TicketListLight({
                 </div>
 
                 {/* Category */}
-                <div className="col-span-2">
+                <div className="col-span-1 pl-2">
                   <Badge variant="secondary" className="text-xs">
                     {getCategoryLabel(ticket.category)}
                   </Badge>
                 </div>
 
                 {/* Created Date */}
-                <div className="col-span-2">
+                <div className="col-span-1 pl-2">
                   <div className="text-sm text-gray-500">
                     {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                   </div>
