@@ -32,7 +32,7 @@ export function anonymizeCandidateForList(candidate: any) {
     avatar: candidate.avatar_url,
     position: candidate.position || 'Professional',
     location: formatLocation(candidate),
-    bio: candidate.bio ? truncateText(candidate.bio, 150) : null,
+    bio: candidate.bio ? sanitizeContactInfo(truncateText(candidate.bio, 150)) : null,
     
     // Professional highlights
     skills,
@@ -69,12 +69,12 @@ export function anonymizeCandidateForProfile(candidate: any) {
     avatar: candidate.avatar_url,
     position: candidate.position || 'Professional',
     location: formatLocation(candidate),
-    bio: candidate.bio,
+    bio: sanitizeContactInfo(candidate.bio),
     memberSince: candidate.created_at,
     
     // Resume Data (anonymized)
     resume: {
-      summary: resumeData.summary,
+      summary: sanitizeContactInfo(resumeData.summary),
       skills: resumeData.skills || [],
       experience: anonymizeExperience(resumeData.experience || []),
       education: anonymizeEducation(resumeData.education || []),
@@ -174,21 +174,20 @@ function parseAIStrengthsAnalysis(analysis: any): any {
 
 /**
  * Anonymize work experience
- * Keep roles and responsibilities but optionally hide company names for extreme privacy
+ * Keep roles and responsibilities but strip any contact info
  */
 function anonymizeExperience(experience: any[]) {
   return experience.map(exp => ({
     position: exp.position,
-    company: exp.company, // Can show or hide based on requirements
+    company: exp.company, // Company names are OK (public info)
     duration: exp.duration,
-    description: exp.description,
-    // Redact any contact info in descriptions
+    description: sanitizeContactInfo(exp.description), // Sanitize descriptions
   }))
 }
 
 /**
  * Anonymize education
- * Keep degrees and institutions (public info)
+ * Keep degrees and institutions (public info) but sanitize any descriptions
  */
 function anonymizeEducation(education: any[]) {
   return education.map(edu => ({
@@ -197,6 +196,7 @@ function anonymizeEducation(education: any[]) {
     year: edu.year,
     major: edu.major,
     gpa: edu.gpa, // Optional
+    description: edu.description ? sanitizeContactInfo(edu.description) : undefined,
   }))
 }
 
@@ -219,6 +219,31 @@ function formatLocation(candidate: any): string {
 function truncateText(text: string, maxLength: number): string {
   if (!text || text.length <= maxLength) return text
   return text.substring(0, maxLength).trim() + '...'
+}
+
+/**
+ * Sanitize text to remove potential contact information
+ * Removes emails, phone numbers, and other PII patterns
+ */
+function sanitizeContactInfo(text: string | null | undefined): string {
+  if (!text) return ''
+  
+  let sanitized = text
+  
+  // Remove email addresses (various patterns)
+  sanitized = sanitized.replace(/[\w.-]+@[\w.-]+\.\w+/gi, '[email hidden]')
+  
+  // Remove phone numbers (various formats)
+  // Matches: +63 123 456 7890, 09123456789, (123) 456-7890, 123-456-7890, etc.
+  sanitized = sanitized.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g, '[phone hidden]')
+  
+  // Remove variations with "contact:" or "phone:" or "email:"
+  sanitized = sanitized.replace(/(contact|phone|mobile|tel|email|e-mail)\s*[:=]\s*[\w\s@.+-]+/gi, '[contact info hidden]')
+  
+  // Remove Skype/Viber/WhatsApp usernames
+  sanitized = sanitized.replace(/(skype|viber|whatsapp|telegram)\s*[:=]\s*[\w.@-]+/gi, '[messaging hidden]')
+  
+  return sanitized.trim()
 }
 
 /**
