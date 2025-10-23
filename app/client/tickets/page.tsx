@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
+import { TicketKanbanSkeleton, TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function ClientTicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -37,6 +37,7 @@ export default function ClientTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [accountManager, setAccountManager] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
+  const [isHydrated, setIsHydrated] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -49,8 +50,25 @@ export default function ClientTicketsPage() {
 
   const clientCategories = getCategoriesForUserType('client')
 
+  // Handle view mode change and save to localStorage
+  const handleViewModeChange = (mode: 'board' | 'list') => {
+    setViewMode(mode)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('client-tickets-view-mode', mode)
+    }
+  }
+
   useEffect(() => {
     fetchTickets()
+  }, [])
+
+  // Handle hydration and localStorage reading
+  useEffect(() => {
+    setIsHydrated(true)
+    const savedViewMode = localStorage.getItem('client-tickets-view-mode') as 'board' | 'list'
+    if (savedViewMode) {
+      setViewMode(savedViewMode)
+    }
   }, [])
 
   const fetchTickets = async () => {
@@ -197,8 +215,33 @@ export default function ClientTicketsPage() {
   if (loading) {
     return (
       <div className="p-8 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <TicketListSkeleton count={5} />
+        <div className="w-full">
+          {/* Header skeleton */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-8 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-64 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <div className={`h-8 w-16 rounded-md ${viewMode === 'board' ? 'bg-gray-300' : 'bg-gray-200'}`}></div>
+                <div className={`h-8 w-16 rounded-md ${viewMode === 'list' ? 'bg-gray-300' : 'bg-gray-200'}`}></div>
+              </div>
+              <div className="h-10 w-24 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+
+          {/* Stats skeleton */}
+          <TicketStatsSkeleton />
+
+          {/* Dynamic skeleton based on current view mode */}
+          <div className="mt-8">
+            {viewMode === 'board' ? (
+              <TicketKanbanSkeleton count={3} />
+            ) : (
+              <TicketListSkeleton count={5} />
+            )}
+          </div>
         </div>
       </div>
     )
@@ -213,7 +256,7 @@ export default function ClientTicketsPage() {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
@@ -225,7 +268,7 @@ export default function ClientTicketsPage() {
             {/* View Toggle */}
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('board')}
+                onClick={() => handleViewModeChange('board')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'board'
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -236,7 +279,7 @@ export default function ClientTicketsPage() {
                 Board
               </button>
               <button
-                onClick={() => setViewMode('list')}
+                onClick={() => handleViewModeChange('list')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'list'
                     ? 'bg-white text-gray-900 shadow-sm'
