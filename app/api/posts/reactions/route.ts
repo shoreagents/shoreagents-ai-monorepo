@@ -8,17 +8,14 @@ const pendingRequests = new Map<string, Promise<NextResponse>>()
 export async function POST(request: NextRequest) {
   try {
     const { postId, type } = await request.json()
-    console.log('📥 [API] Received reaction request:', { postId: postId?.substring(0, 8), type })
 
     if (!postId || !type) {
-      console.error('❌ [API] Missing required fields')
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Get authenticated user
     const session = await auth()
     if (!session?.user?.id) {
-      console.error('❌ [API] Unauthorized - no session')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -27,17 +24,16 @@ export async function POST(request: NextRequest) {
     
     // If there's already a pending request for this exact reaction, return it
     if (pendingRequests.has(requestKey)) {
-      console.log('🚫 [API] Duplicate request detected, returning existing promise:', requestKey)
+      console.log('🚫 Duplicate request detected, returning existing promise:', requestKey)
       return pendingRequests.get(requestKey)!
     }
 
     // Create the processing promise
     const processingPromise = (async () => {
       try {
-        console.log('⚡ [API] Processing reaction:', requestKey)
+        console.log('⚡ Processing reaction:', requestKey)
 
         // 🚀 First determine user type to get the correct user ID
-        console.log('🔍 [API] Finding user type for:', session.user.id)
         const [staffUser, clientUser, managementUser] = await Promise.all([
           prisma.staffUser.findUnique({ where: { authUserId: session.user.id } }),
           prisma.clientUser.findUnique({ where: { authUserId: session.user.id } }),
@@ -45,15 +41,12 @@ export async function POST(request: NextRequest) {
         ])
 
         const userType = staffUser ? 'staff' : clientUser ? 'client' : managementUser ? 'management' : null
-        console.log('👤 [API] User type:', userType)
         
         if (!userType) {
-          console.error('❌ [API] User not found in any user table')
           return NextResponse.json({ error: 'User not found in any user table' }, { status: 404 })
         }
 
         const userId = staffUser?.id || clientUser?.id || managementUser?.id
-        console.log('🆔 [API] User DB ID:', userId)
 
         // 🚀 Check if user already has this reaction (toggle behavior)
         const existingReaction = await prisma.postReaction.findFirst({
@@ -131,19 +124,6 @@ export async function POST(request: NextRequest) {
             throw error
           }
         }
-      } catch (innerError: any) {
-        // Catch any errors from the inner try-catch blocks
-        console.error('❌ [API] Inner error caught:', innerError)
-        console.error('❌ [API] Inner error details:', {
-          message: innerError.message,
-          code: innerError.code,
-          name: innerError.name
-        })
-        return NextResponse.json({ 
-          error: 'Failed to process reaction',
-          details: innerError.message,
-          code: innerError.code
-        }, { status: 500 })
       } finally {
         // Remove from pending requests after processing
         pendingRequests.delete(requestKey)
@@ -156,16 +136,8 @@ export async function POST(request: NextRequest) {
     
     // Return the promise
     return processingPromise
-  } catch (error: any) {
-    console.error('❌ [API] Error toggling reaction:', error)
-    console.error('❌ [API] Error details:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack?.split('\n')[0]
-    })
-    return NextResponse.json({ 
-      error: 'Failed to toggle reaction',
-      details: error.message 
-    }, { status: 500 })
+  } catch (error) {
+    console.error('Error toggling reaction:', error)
+    return NextResponse.json({ error: 'Failed to toggle reaction' }, { status: 500 })
   }
 }
