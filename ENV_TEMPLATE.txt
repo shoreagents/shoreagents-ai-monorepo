@@ -35,6 +35,13 @@ NEXTAUTH_SECRET="generate-a-random-secret-here"
 # Get this from: https://dashboard.daily.co/developers
 DAILY_API_KEY="your-daily-api-key-here"
 
+# ==================================
+# GITHUB API TOKEN (for MCP Extensions)
+# ==================================
+# Get this from: GitHub → Settings → Developer settings → Personal access tokens
+# Required scopes: repo, user, admin:org (for full functionality)
+GITHUB_TOKEN="your-github-token-here"
+
 
 # ==================================
 # 📋 HOW TO GET YOUR SUPABASE CREDENTIALS:
