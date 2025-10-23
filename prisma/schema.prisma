@@ -337,7 +337,11 @@ model PostReaction {
   post        ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   staffUser   StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
-  @@unique([postId, staffUserId, type])
+  @@unique([postId, staffUserId, type], map: "unique_staff_reaction")
+  @@unique([postId, clientUserId, type], map: "unique_client_reaction")
+  @@unique([postId, managementUserId, type], map: "unique_management_reaction")
+  @@index([postId], map: "idx_reactions_post")
+  @@index([postId, type], map: "idx_reactions_post_type")
   @@map("post_reactions")
 }
 
