@@ -31,6 +31,7 @@ const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/profile", icon: User, label: "My Profile" },
   { href: "/client-company", icon: Building2, label: "Client" },
+  { href: "/contract", icon: FileText, label: "Contract" },
   { href: "/onboarding", icon: ClipboardCheck, label: "Onboarding" },
   { href: "/time-tracking", icon: Clock, label: "Time Tracking" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },

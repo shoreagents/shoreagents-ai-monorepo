@@ -149,12 +149,22 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  FileText: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+      <polyline points="14,2 14,8 20,8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10,9 9,9 8,9" />
+    </svg>
+  ),
 }
 
 const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
   { icon: "Users", label: "Staff Management", href: "/admin/staff", badge: null },
   { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
+  { icon: "FileText", label: "Contracts", href: "/admin/contracts", badge: null },
   { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
   { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
   { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },

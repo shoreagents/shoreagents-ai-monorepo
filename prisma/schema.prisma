@@ -44,7 +44,9 @@ model StaffUser {
   activityPosts          ActivityPost[]
   breaks                 Break[]
   documents              Document[]
+  employment_contracts   employment_contracts?
   gamificationProfile    GamificationProfile?
+  job_acceptances        job_acceptances?
   kudosGiven             Kudos[]                 @relation("KudosGiven")
   kudosReceived          Kudos[]                 @relation("KudosReceived")
   notifications          Notification[]
@@ -191,10 +193,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  ispaused       Boolean?    @default(false)
-  pausedat       DateTime?   @db.Timestamp(6)
-  pausedduration Int?        @default(0)
-  pauseused      Boolean?    @default(false)
+  isPaused       Boolean?    @default(false)
+  pauseUsed      Boolean?    @default(false)
+  pausedAt       DateTime?   @db.Timestamp(6)
+  pausedDuration Int?        @default(0)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -480,50 +482,53 @@ model DocumentComment {
 }
 
 model Company {
-  id               String          @id @default(uuid())
-  companyName      String
-  industry         String?
-  location         String?
-  billingEmail     String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  organizationId   String          @unique @default(cuid())
-  logo             String?
-  accountManagerId String?
-  bio              String?
-  contractStart    DateTime?
-  isActive         Boolean         @default(true)
-  phone            String?
-  tradingName      String?
-  website          String?
-  coverPhoto       String?
-  clientUsers      ClientUser[]    @relation("CompanyUsers")
-  accountManager   ManagementUser? @relation(fields: [accountManagerId], references: [id])
-  staffUsers       StaffUser[]     @relation("CompanyStaff")
-  tasks            Task[]
+  id                   String                 @id @default(uuid())
+  companyName          String
+  industry             String?
+  location             String?
+  billingEmail         String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  organizationId       String                 @unique @default(cuid())
+  logo                 String?
+  accountManagerId     String?
+  bio                  String?
+  contractStart        DateTime?
+  isActive             Boolean                @default(true)
+  phone                String?
+  tradingName          String?
+  website              String?
+  coverPhoto           String?
+  clientUsers          ClientUser[]           @relation("CompanyUsers")
+  accountManager       ManagementUser?        @relation(fields: [accountManagerId], references: [id])
+  employment_contracts employment_contracts[]
+  job_acceptances      job_acceptances[]
+  staffUsers           StaffUser[]            @relation("CompanyStaff")
+  tasks                Task[]
 
   @@map("company")
 }
 
 model ClientUser {
-  id               String           @id @default(uuid())
-  authUserId       String           @unique
-  name             String
-  role             ClientRole       @default(MANAGER)
-  avatar           String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  email            String           @unique
-  companyId        String
-  coverPhoto       String?
-  activity_posts   ActivityPost[]
-  profile          ClientProfile?
-  company          Company          @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
-  post_comments    PostComment[]
-  post_reactions   PostReaction[]
-  tasks            Task[]
-  ticket_responses TicketResponse[]
-  tickets          Ticket[]
+  id                 String               @id @default(uuid())
+  authUserId         String               @unique
+  name               String
+  role               ClientRole           @default(MANAGER)
+  avatar             String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  email              String               @unique
+  companyId          String
+  coverPhoto         String?
+  activity_posts     ActivityPost[]
+  profile            ClientProfile?
+  company            Company              @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: Cascade)
+  interview_requests interview_requests[]
+  post_comments      PostComment[]
+  post_reactions     PostReaction[]
+  tasks              Task[]
+  ticket_responses   TicketResponse[]
+  tickets            Ticket[]
 
   @@map("client_users")
 }
@@ -601,6 +606,26 @@ model StaffOnboarding {
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
+  bankDocsUrl                String?
+  bankFeedback               String?
+  bankStatus                 OnboardingStatus @default(PENDING)
+  bankVerifiedAt             DateTime?
+  dataPolicyFeedback         String?
+  dataPolicyStatus           OnboardingStatus @default(PENDING)
+  dataPolicyUrl              String?
+  dataPolicyVerifiedAt       DateTime?
+  educationDocsUrl           String?
+  educationFeedback          String?
+  educationStatus            OnboardingStatus @default(PENDING)
+  educationVerifiedAt        DateTime?
+  medicalCertUrl             String?
+  medicalFeedback            String?
+  medicalStatus              OnboardingStatus @default(PENDING)
+  medicalVerifiedAt          DateTime?
+  resumeFeedback             String?
+  resumeStatus               OnboardingStatus @default(PENDING)
+  resumeUrl                  String?
+  resumeVerifiedAt           DateTime?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
@@ -627,6 +652,81 @@ model staff_personal_records {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+}
+
+model employment_contracts {
+  id                 String          @id
+  jobAcceptanceId    String          @unique
+  staffUserId        String          @unique
+  companyId          String
+  employeeName       String
+  employeeAddress    String
+  contactType        String
+  assignedClient     String
+  position           String
+  startDate          DateTime
+  workSchedule       String
+  basicSalary        Decimal         @db.Decimal(10, 2)
+  deMinimis          Decimal         @db.Decimal(10, 2)
+  totalMonthlyGross  Decimal         @db.Decimal(10, 2)
+  hmoOffer           String
+  paidLeave          String
+  probationaryPeriod String
+  pageInitials       Json?
+  finalSignatureUrl  String?
+  pagesInitialed     Int             @default(0)
+  totalPages         Int             @default(5)
+  fullyInitialed     Boolean         @default(false)
+  signed             Boolean         @default(false)
+  signedAt           DateTime?
+  adminApproved      Boolean         @default(false)
+  adminApprovedAt    DateTime?
+  adminApprovedBy    String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime
+  company            Company         @relation(fields: [companyId], references: [id])
+  job_acceptances    job_acceptances @relation(fields: [jobAcceptanceId], references: [id], onDelete: Cascade)
+  staff_users        StaffUser       @relation(fields: [staffUserId], references: [id])
+}
+
+model interview_requests {
+  id                 String                 @id
+  clientUserId       String
+  bpocCandidateId    String
+  candidateFirstName String
+  preferredTimes     Json
+  clientNotes        String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime
+  adminNotes         String?
+  meetingLink        String?
+  scheduledTime      DateTime?
+  status             InterviewRequestStatus @default(PENDING)
+  client_users       ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  job_acceptances    job_acceptances?
+}
+
+model job_acceptances {
+  id                   String                @id
+  interviewRequestId   String                @unique
+  bpocCandidateId      String
+  candidateEmail       String
+  candidatePhone       String?
+  position             String
+  companyId            String
+  acceptedByAdminId    String
+  acceptedAt           DateTime              @default(now())
+  signupEmailSent      Boolean               @default(false)
+  signupEmailSentAt    DateTime?
+  staffUserId          String?               @unique
+  contractSigned       Boolean               @default(false)
+  contractSignedAt     DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime
+  employment_contracts employment_contracts?
+  company              Company               @relation(fields: [companyId], references: [id])
+  interview_requests   interview_requests    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
+  staff_users          StaffUser?            @relation(fields: [staffUserId], references: [id])
 }
 
 enum ManagementRole {
@@ -843,4 +943,13 @@ enum OnboardingStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum InterviewRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }
