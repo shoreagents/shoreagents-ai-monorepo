@@ -508,7 +508,7 @@ model ClientUser {
   post_comments      PostComment[]
   post_reactions     PostReaction[]
   tasks              Task[]
-  ticketResponses    TicketResponse[]
+  ticket_responses   TicketResponse[]
   tickets            Ticket[]
 
   @@map("client_users")
@@ -634,26 +634,6 @@ model staff_personal_records {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
   staff_users           StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model notifications {
-  id             String           @id @default(dbgenerated("(gen_random_uuid())::text"))
-  userId         String
-  type           NotificationType @default(TAG)
-  title          String
-  message        String
-  postId         String?
-  actionUrl      String?
-  read           Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  readAt         DateTime?
-  activity_posts ActivityPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  staff_users    StaffUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId], map: "idx_notifications_post")
-  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_created")
-  @@index([userId, read], map: "idx_notifications_user_read")
 }
 
 model employment_contracts {
