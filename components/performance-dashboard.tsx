@@ -88,7 +88,7 @@ export default function PerformanceDashboard() {
 
   const fetchMetrics = async () => {
     try {
-      const response = await fetch("/api/performance")
+      const response = await fetch("/api/analytics")
       if (!response.ok) throw new Error("Failed to fetch performance metrics")
       const data = await response.json()
       setMetrics(data.metrics)

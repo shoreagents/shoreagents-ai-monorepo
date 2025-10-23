@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { getStaffUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
+// Global declaration for socket server
+declare global {
+  var socketServer: any
+}
+
 // PATCH /api/breaks/[id]/pause - Pause a break
 export async function PATCH(
   request: NextRequest,
@@ -59,6 +64,16 @@ export async function PATCH(
         pausedduration: remainingTime // Store the remaining break time
       }
     })
+
+    // Emit WebSocket event for real-time updates
+    const io = global.socketServer
+    if (io) {
+      io.to(`user:${staffUser.authUserId}`).emit('break:paused', {
+        break: updatedBreak,
+        message: "Break paused successfully"
+      })
+      console.log('📡 [WebSocket] Break paused event emitted for user:', staffUser.authUserId)
+    }
 
     return NextResponse.json({
       success: true,

@@ -50,7 +50,10 @@ interface StaffTaskKanbanProps {
 }
 
 function DroppableColumn({ id, children, isOver }: { id: string; children: React.ReactNode; isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ id })
+  const { setNodeRef } = useDroppable({ 
+    id: `column-${id}`, // Prefix to avoid collision with task IDs
+    data: { status: id } // Store the actual status value
+  })
   return (
     <div ref={setNodeRef} className="flex-1">
       {children}
@@ -106,10 +109,34 @@ export default function StaffTaskKanban({
     }
 
     const taskId = active.id as string
-    const newStatus = over.id as string
+    
+    // Check if we dropped over a column or a task
+    let newStatus: string
+    if (over.data?.current?.status) {
+      // Dropped over a column - use the status from column data
+      newStatus = over.data.current.status as string
+    } else if ((over.id as string).startsWith('column-')) {
+      // Dropped over a column by ID
+      newStatus = (over.id as string).replace('column-', '')
+    } else {
+      // Dropped over a task - find which column that task is in
+      const targetTask = tasks.find((t) => t.id === over.id)
+      newStatus = targetTask?.status || ''
+    }
+
     const task = tasks.find((t) => t.id === taskId)
 
-    if (task && task.status !== newStatus) {
+    console.log("🔍 [Drag End Debug]:", {
+      taskId,
+      newStatus,
+      overId: over.id,
+      overData: over.data?.current,
+      taskCurrentStatus: task?.status,
+      statusType: typeof newStatus,
+      droppedOver: (over.id as string).startsWith('column-') ? 'COLUMN' : 'TASK'
+    })
+
+    if (task && task.status !== newStatus && newStatus) {
       onStatusChange(taskId, newStatus)
     }
 
@@ -135,7 +162,7 @@ export default function StaffTaskKanban({
         {statuses.map((status) => {
           const statusTasks = tasks.filter((task) => task.status === status)
           const config = getStatusConfig(status as any)
-          const isOver = overId === status
+          const isOver = overId === `column-${status}`
 
           return (
             <DroppableColumn key={status} id={status} isOver={isOver}>

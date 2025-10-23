@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-// GET /api/admin/clients - Get all client users for management
+// GET /api/admin/clients - Get all companies for management
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -23,25 +23,40 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const clients = await prisma.clientUser.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatar: true,
-        role: true,
-        company: {
+    const companies = await prisma.company.findMany({
+      include: {
+        clientUsers: {
           select: {
-            companyName: true,
-          },
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          }
         },
+        staffUsers: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
+        accountManager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            department: true,
+          }
+        }
       },
-      orderBy: { name: "asc" },
+      orderBy: {
+        createdAt: 'desc'
+      }
     })
 
-    return NextResponse.json({ clients })
+    return NextResponse.json({ companies })
   } catch (error) {
-    console.error("Error fetching clients:", error)
+    console.error("Error fetching companies:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

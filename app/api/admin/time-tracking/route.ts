@@ -1,77 +1,78 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getAdminUser } from "@/lib/auth-helpers"
+import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 
-// GET /api/admin/time-tracking - Get ALL time entries (admin view)
-export async function GET(request: NextRequest) {
+// GET /api/admin/time-tracking - Get all time entries for staff
+export async function GET() {
   try {
-    const user = await getAdminUser()
+    const session = await auth()
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const staffId = searchParams.get("staffId")
-    const clientId = searchParams.get("clientId")
-    const startDate = searchParams.get("startDate")
-    const endDate = searchParams.get("endDate")
+    // Check if user is management
+    const managementUser = await prisma.managementUser.findUnique({
+      where: { authUserId: session.user.id },
+    })
 
-    const where: any = {}
-
-    // Filter by specific staff
-    if (staffId) {
-      where.staffUserId = staffId
+    if (!managementUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    // Filter by client/company
-    if (clientId) {
-      const staffUsers = await prisma.staffUser.findMany({
-        where: { companyId: clientId },
-        select: { id: true }
-      })
-      where.staffUserId = { in: staffUsers.map(s => s.id) }
-    }
-
-    // Filter by date range
-    if (startDate && endDate) {
-      where.clockIn = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      }
-    }
-
+    // Get all time entries with staff and company info
     const entries = await prisma.timeEntry.findMany({
-      where,
-      include: {
+      select: {
+        id: true,
+        clockIn: true,
+        clockOut: true,
+        totalHours: true,
+        notes: true,
+        wasLate: true,
+        lateBy: true,
+        createdAt: true,
         staffUser: {
           select: {
             id: true,
             name: true,
             email: true,
             avatar: true,
-            role: true
-          }
-        }
+            role: true,
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+                tradingName: true,
+                logo: true,
+              },
+            },
+          },
+        },
+        breaks: {
+          select: {
+            id: true,
+            type: true,
+            actualStart: true,
+            actualEnd: true,
+            duration: true,
+          },
+          orderBy: {
+            actualStart: 'asc',
+          },
+        },
       },
       orderBy: {
-        clockIn: "desc",
+        clockIn: 'desc',
       },
+      take: 100,
     })
 
-    // Calculate total hours
-    const totalHours = entries
-      .filter((e) => e.totalHours)
-      .reduce((sum, e) => sum + Number(e.totalHours), 0)
-
-    return NextResponse.json({
-      entries,
-      totalHours: totalHours.toFixed(2),
-      count: entries.length,
-    })
+    return NextResponse.json({ success: true, entries })
   } catch (error) {
-    console.error("Error fetching admin time entries:", error)
-    return NextResponse.json({ error: "Failed to fetch time entries" }, { status: 500 })
+    console.error("Error fetching time entries:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
-

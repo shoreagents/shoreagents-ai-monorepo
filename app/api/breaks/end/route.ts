@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getStaffUser } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logBreakEnded } from "@/lib/activity-generator"
 
 // POST /api/breaks/end - End the active break
 export async function POST(request: NextRequest) {
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
         lateBy: lateBy || null,
       },
     })
+
+    // ✨ Auto-generate activity post (skip AWAY breaks)
+    if (activeBreak.type !== "AWAY") {
+      await logBreakEnded(staffUser.id, staffUser.name)
+    }
 
     return NextResponse.json({
       success: true,

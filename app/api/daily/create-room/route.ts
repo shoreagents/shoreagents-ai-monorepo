@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now()
     const roomName = `${roomNamePrefix}-${timestamp}`
 
+    const DAILY_API_KEY = process.env.DAILY_API_KEY
+    const NEXT_PUBLIC_DAILY_DOMAIN = process.env.NEXT_PUBLIC_DAILY_DOMAIN
+    
     if (!DAILY_API_KEY || !NEXT_PUBLIC_DAILY_DOMAIN) {
       return NextResponse.json({ error: "Daily.co API keys not configured" }, { status: 500 })
     }
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${DAILY_API_KEY}`,
       },
       body: JSON.stringify({
-        name: `quick-call-${staffId}-${clientUser.id}-${Date.now()}`,
+        name: `quick-call-${finalStaffId}-${finalClientId}-${Date.now()}`,
         properties: {
           exp: Math.round(Date.now() / 1000) + 60 * 60, // 1 hour expiration
           enable_screenshare: true,
@@ -175,7 +178,7 @@ export async function POST(request: NextRequest) {
       staffName: finalStaffName || "Staff Member",
       clientName: finalClientName || "Client",
       callId: call.id,
-      expiresAt: exp
+      expiresAt: Math.round(Date.now() / 1000) + 60 * 60
     })
   } catch (error) {
     console.error("Error creating Daily.co room:", error)

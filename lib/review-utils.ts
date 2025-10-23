@@ -66,17 +66,17 @@ export function getStatusBadge(status: ReviewStatusType): {
 } {
   const badges = {
     PENDING: {
-      label: "Pending Client",
+      label: "Pending Client Review",
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/20"
     },
     SUBMITTED: {
-      label: "Submitted",
+      label: "Client Reviewed",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20"
     },
     UNDER_REVIEW: {
-      label: "Under Review",
+      label: "Waiting for Acknowledgement",
       color: "text-purple-400",
       bgColor: "bg-purple-500/20"
     },
@@ -100,25 +100,25 @@ export function getReviewTypeBadge(type: ReviewType): {
 } {
   const badges = {
     MONTH_1: {
-      label: "Month 1",
+      label: "M1",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20",
       icon: "🔵"
     },
     MONTH_3: {
-      label: "Month 3",
+      label: "M3",
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/20",
       icon: "🟢"
     },
     MONTH_5: {
-      label: "Month 5",
+      label: "M5",
       color: "text-purple-400",
       bgColor: "bg-purple-500/20",
       icon: "🟣"
     },
     RECURRING: {
-      label: "6-Month Check-In",
+      label: "M6",
       color: "text-amber-400",
       bgColor: "bg-amber-500/20",
       icon: "🟠"

@@ -159,50 +159,95 @@ export default function ReviewDetailModal({ review, isOpen, onClose, onProcess }
             <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
               <h4 className="text-sm font-medium text-slate-400 mb-2">Overall Performance Score</h4>
               <div className="flex items-center gap-3">
-                <div className="text-3xl font-bold text-purple-400">{review.overallScore}</div>
+                <div className="text-3xl font-bold text-purple-400">
+                  {(() => {
+                    const score = typeof review.overallScore === 'number' ? review.overallScore : parseFloat(review.overallScore) || 0
+                    // Cap the score at 5 if it's higher
+                    const cappedScore = Math.min(score, 5)
+                    return cappedScore.toFixed(1)
+                  })()}
+                </div>
                 <div className="text-slate-400">out of 5</div>
                 <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-5 w-5 ${
-                        i < Math.floor(review.overallScore!) 
-                          ? 'text-yellow-400 fill-yellow-400' 
-                          : 'text-slate-600'
-                      }`}
-                    />
-                  ))}
+                  {[...Array(5)].map((_, i) => {
+                    const score = typeof review.overallScore === 'number' ? review.overallScore : parseFloat(review.overallScore) || 0
+                    const cappedScore = Math.min(score, 5)
+                    return (
+                      <Star
+                        key={i}
+                        className={`h-5 w-5 ${
+                          i < Math.floor(cappedScore) 
+                            ? 'text-yellow-400 fill-yellow-400' 
+                            : i < cappedScore ? 'text-yellow-400 fill-yellow-400 opacity-50' : 'text-slate-600'
+                        }`}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             </div>
           )}
 
           {/* Detailed Ratings */}
-          {review.ratings && (
+          {review.ratings && Object.keys(review.ratings).length > 0 ? (
             <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
               <h4 className="text-sm font-medium text-slate-400 mb-3">Detailed Ratings</h4>
               <div className="space-y-2">
-                {Object.entries(review.ratings).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-slate-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(value as number) 
-                                ? 'text-yellow-400 fill-yellow-400' 
-                                : 'text-slate-600'
-                            }`}
-                          />
-                        ))}
+                {Object.entries(review.ratings).map(([key, value]) => {
+                  // Convert numeric keys to meaningful names
+                  const getCategoryName = (key: string) => {
+                    const categoryMap: { [key: string]: string } = {
+                      '0': 'Communication',
+                      '1': 'Technical Skills',
+                      '2': 'Problem Solving',
+                      '3': 'Teamwork',
+                      '4': 'Time Management',
+                      '5': 'Quality of Work',
+                      '6': 'Initiative',
+                      '7': 'Adaptability',
+                      'communication': 'Communication',
+                      'technicalSkills': 'Technical Skills',
+                      'problemSolving': 'Problem Solving',
+                      'teamwork': 'Teamwork',
+                      'timeManagement': 'Time Management',
+                      'qualityOfWork': 'Quality of Work',
+                      'initiative': 'Initiative',
+                      'adaptability': 'Adaptability'
+                    }
+                    return categoryMap[key] || key.replace(/([A-Z])/g, ' $1').trim()
+                  }
+
+                  const score = typeof value === 'number' ? value : parseFloat(value) || 0
+                  const cappedScore = Math.min(score, 5)
+                  const categoryName = getCategoryName(key)
+
+                  return (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-slate-300 capitalize">{categoryName}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.floor(cappedScore) 
+                                  ? 'text-yellow-400 fill-yellow-400' 
+                                  : i < cappedScore ? 'text-yellow-400 fill-yellow-400 opacity-50' : 'text-slate-600'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-white font-medium">{cappedScore.toFixed(1)}/5</span>
                       </div>
-                      <span className="text-white font-medium">{value}/5</span>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
+              <h4 className="text-sm font-medium text-slate-400 mb-2">Detailed Ratings</h4>
+              <p className="text-slate-500 italic">No detailed ratings available for this review.</p>
             </div>
           )}
 

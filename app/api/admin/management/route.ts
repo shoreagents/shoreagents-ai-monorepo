@@ -20,7 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    // Get all management users
+    // Get all management users with full info
     const management = await prisma.managementUser.findMany({
       select: {
         id: true,
@@ -28,6 +28,9 @@ export async function GET() {
         email: true,
         role: true,
         avatar: true,
+        department: true,
+        createdAt: true,
+        phone: true,
       },
       orderBy: {
         name: "asc",

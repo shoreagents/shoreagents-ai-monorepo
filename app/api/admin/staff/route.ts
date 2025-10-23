@@ -20,7 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    // Get all staff users
+    // Get all staff users with company info
     const staff = await prisma.staffUser.findMany({
       select: {
         id: true,
@@ -28,6 +28,23 @@ export async function GET() {
         email: true,
         role: true,
         avatar: true,
+        createdAt: true,
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+            tradingName: true,
+            industry: true,
+            logo: true,
+          },
+        },
+        profile: {
+          select: {
+            phone: true,
+            location: true,
+            currentRole: true,
+          },
+        },
       },
       orderBy: {
         name: "asc",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logTaskCompleted } from "@/lib/activity-generator"
 
 // PUT /api/tasks/[id] - Update a task
 export async function PUT(
@@ -55,6 +56,9 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden: Task not assigned to you" }, { status: 403 })
     }
 
+    // Check if task is being marked as completed (status changing to COMPLETED)
+    const isBeingCompleted = status === "COMPLETED" && existingTask.status !== "COMPLETED"
+
     const task = await prisma.task.update({
       where: { id },
       data: {
@@ -99,6 +103,16 @@ export async function PUT(
         }
       }
     })
+
+    // 🎉 Auto-generate activity post when task is completed
+    if (isBeingCompleted) {
+      await logTaskCompleted(
+        staffUser.id,
+        staffUser.name,
+        title || existingTask.title,
+        priority || existingTask.priority
+      )
+    }
 
     return NextResponse.json({ success: true, task })
   } catch (error) {

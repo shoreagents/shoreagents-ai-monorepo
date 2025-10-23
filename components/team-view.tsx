@@ -61,11 +61,11 @@ export default function TeamView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
+        <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-700">
+          <div className="h-32 rounded-xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-96 rounded-xl bg-slate-800/50 animate-pulse" />
+              <div key={i} className="h-96 rounded-xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             ))}
           </div>
         </div>
@@ -88,9 +88,9 @@ export default function TeamView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-700">
         {/* Header with Team Stats */}
-        <div className="rounded-2xl bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-blue-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+        <div className="rounded-2xl bg-slate-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
@@ -131,15 +131,19 @@ export default function TeamView() {
           {teamMembers.map((member) => (
             <div
               key={member.id}
-              className={`space-y-4 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 transition-all hover:scale-[1.02] ${
+              className={`space-y-4 rounded-2xl bg-slate-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 transition-all hover:scale-[1.02] ${
                 member.status === "online" ? "ring-emerald-500/50" : "ring-white/10"
               }`}
             >
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xl font-bold text-white ring-1 ring-white/20">
-                    {member.avatar}
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xl font-bold text-white ring-1 ring-white/20 overflow-hidden">
+                    {member.avatar && member.avatar !== "/placeholder-user.jpg" ? (
+                      <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{member.name.split(" ").map(n => n[0]).join("").toUpperCase()}</span>
+                    )}
                     <div
                       className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-slate-900 ${statusConfig[member.status].dotColor}`}
                     />

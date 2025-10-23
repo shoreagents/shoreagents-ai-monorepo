@@ -971,18 +971,25 @@ export default function CompanyPage() {
 
       {/* Account Manager */}
       {company.accountManager && (
-        <Card className="p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Your Account Manager</h3>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 ring-4 ring-blue-100">
-              <AvatarImage src={company.accountManager.avatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-lg font-semibold">
-                {company.accountManager.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-lg font-semibold text-gray-900">{company.accountManager.name}</p>
-              <p className="text-gray-600">{company.accountManager.email}</p>
+        <Card className="p-6 border-l-4 border-l-indigo-500 bg-white shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <User className="h-6 w-6 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">Your Account Manager</h3>
+          </div>
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg border border-indigo-200">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 ring-4 ring-indigo-200">
+                <AvatarImage src={company.accountManager.avatar || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-lg font-semibold">
+                  {company.accountManager.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{company.accountManager.name}</p>
+                <p className="text-indigo-700 font-medium text-sm">{company.accountManager.email}</p>
+              </div>
             </div>
           </div>
         </Card>
