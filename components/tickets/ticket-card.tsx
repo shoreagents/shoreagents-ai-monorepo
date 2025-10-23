@@ -213,7 +213,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
-                For: {displayUser.name}
+                Created by: {displayUser.name}
               </div>
             </div>
           )}
@@ -228,7 +228,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
-                Assigned: {assignedTo.name}
+                Assigned to: {assignedTo.name}
               </div>
             </div>
           )}

@@ -452,7 +452,7 @@ export default function TicketDetailModal({
                           ? "bg-indigo-500/30 text-indigo-300" 
                           : "bg-indigo-200 text-indigo-700"
                       }`}>
-                        {getDepartmentEmoji(ticket.managementUser.department)} {getDepartmentLabel(ticket.managementUser.department)}
+                        {getDepartmentEmoji(ticket.managementUser.department as any)} {getDepartmentLabel(ticket.managementUser.department as any)}
                       </span>
                     </div>
                   </div>
@@ -461,7 +461,7 @@ export default function TicketDetailModal({
                     <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
                       {ticket.managementUser.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")
                         .toUpperCase()
                         .slice(0, 2)}
