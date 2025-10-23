@@ -12,12 +12,12 @@ interface ClientTicketCardProps {
 }
 
 export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardProps) {
-  // Priority colors - Clean and bright for white background
+  // Priority colors - FUN GRADIENTS!
   const priorityColors = {
-    URGENT: "bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border border-red-200 shadow-sm",
-    HIGH: "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border border-orange-200 shadow-sm",
-    MEDIUM: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200 shadow-sm",
-    LOW: "bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200 shadow-sm",
+    URGENT: "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-500/30 shadow-lg shadow-red-500/20",
+    HIGH: "bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300 border border-orange-500/30 shadow-lg shadow-orange-500/20",
+    MEDIUM: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/20",
+    LOW: "bg-gradient-to-r from-slate-500/20 to-gray-500/20 text-slate-300 border border-slate-500/30 shadow-lg shadow-slate-500/20",
   }
 
   // Priority emojis
@@ -54,7 +54,7 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
   return (
     <div
       onClick={onClick}
-      className="group relative rounded-2xl bg-white shadow-lg border border-gray-200 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 cursor-pointer overflow-hidden hover:scale-[1.02] transform"
+      className="group relative rounded-2xl bg-slate-900/50 backdrop-blur-xl shadow-xl border border-white/10 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-300 cursor-pointer overflow-visible hover:scale-[1.02] transform"
     >
       {/* Status indicator bar - PROMINENT TOP BORDER! */}
       <div className={`h-4 w-full ${statusColors[ticket.status]} shadow-lg`} />
@@ -64,7 +64,7 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 shadow-sm">
+              <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-500/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
                 {ticket.ticketId}
               </span>
               <span
@@ -75,7 +75,7 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
                 {priorityEmojis[ticket.priority]} {ticket.priority}
               </span>
             </div>
-            <h3 className="text-base font-bold text-gray-900 line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-600 group-hover:to-purple-600 transition-all">
+            <h3 className="text-base font-bold text-white line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-purple-400 transition-all">
               {ticket.title}
             </h3>
           </div>
@@ -83,13 +83,13 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
 
         {/* Category */}
         <div className="mb-3">
-          <span className="inline-flex items-center text-xs font-bold text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full border border-purple-200 shadow-sm">
+          <span className="inline-flex items-center text-xs font-bold text-purple-300 bg-purple-500/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-purple-500/30 shadow-lg shadow-purple-500/20">
             {getCategoryIcon(ticket.category)} {ticket.category.replace(/_/g, " ")}
           </span>
         </div>
 
         {/* Description preview */}
-        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+        <p className="text-sm text-slate-300 line-clamp-2 mb-3">
           {ticket.description}
         </p>
 
@@ -113,28 +113,28 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+          <div className="flex items-center gap-4 text-sm text-slate-400">
             {/* Responses count */}
             {ticket.responses && ticket.responses.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-blue-100 px-2 py-1 rounded-lg border border-blue-200">
-                <MessageSquare className="w-4 h-4 text-blue-600" />
-                <span className="font-bold text-blue-700">{ticket.responses.length}</span>
+              <div className="flex items-center gap-1.5 bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-500/30">
+                <MessageSquare className="w-4 h-4 text-blue-400" />
+                <span className="font-bold text-blue-300">{ticket.responses.length}</span>
               </div>
             )}
 
             {/* Attachments count */}
             {ticket.attachments && ticket.attachments.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-200">
-                <Paperclip className="w-4 h-4 text-emerald-600" />
-                <span className="font-bold text-emerald-700">{ticket.attachments.length}</span>
+              <div className="flex items-center gap-1.5 bg-emerald-500/20 px-2 py-1 rounded-lg border border-emerald-500/30">
+                <Paperclip className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-emerald-300">{ticket.attachments.length}</span>
               </div>
             )}
 
             {/* Time */}
             <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-400">{formatDate(ticket.createdAt)}</span>
+              <Clock className="w-4 h-4 text-slate-400" />
+              <span className="text-xs text-slate-400">{formatDate(ticket.createdAt)}</span>
             </div>
           </div>
 
@@ -179,9 +179,8 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
 
       </div>
 
-      {/* Hover effect overlay - Subtle shimmer for white background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      {/* Hover effect overlay - MAGICAL SHIMMER! */}
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/10 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </div>
   )
 }
-

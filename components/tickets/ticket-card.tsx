@@ -238,4 +238,3 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
     </div>
   )
 }
-
