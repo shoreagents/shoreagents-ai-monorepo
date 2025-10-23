@@ -10,10 +10,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { FileText, CheckCircle, AlertCircle, Pen } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { generateContractHTML, contractSections } from "@/lib/contract-template"
 
 interface ContractData {
   id: string
   employeeName: string
+  employeeAddress: string
+  contactType: string
   position: string
   assignedClient: string
   startDate: string
@@ -25,6 +28,9 @@ interface ContractData {
   paidLeave: string
   probationaryPeriod: string
   signed: boolean
+  company?: {
+    companyName: string
+  }
 }
 
 export default function ContractSigningPage() {
@@ -32,20 +38,15 @@ export default function ContractSigningPage() {
   const router = useRouter()
   const [contract, setContract] = useState<ContractData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [sectionsChecked, setSectionsChecked] = useState<boolean[]>([false, false, false, false, false])
+  const [sectionsChecked, setSectionsChecked] = useState<boolean[]>(
+    new Array(contractSections.length).fill(false)
+  )
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState("")
+  const [contractHTML, setContractHTML] = useState("")
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [hasSignature, setHasSignature] = useState(false)
-
-  const sections = [
-    { title: "Employment Details", key: "employment" },
-    { title: "Compensation & Benefits", key: "compensation" },
-    { title: "Work Schedule & Duration", key: "schedule" },
-    { title: "Leave & Time Off", key: "leave" },
-    { title: "Terms & Conditions", key: "terms" }
-  ]
 
   useEffect(() => {
     fetchContract()
@@ -67,6 +68,9 @@ export default function ContractSigningPage() {
       }
 
       setContract(data.contract)
+      // Generate HTML for contract
+      const html = generateContractHTML(data.contract)
+      setContractHTML(html)
     } catch (error) {
       console.error('Error fetching contract:', error)
       setError('Failed to load contract')
@@ -83,7 +87,7 @@ export default function ContractSigningPage() {
 
   const allSectionsChecked = sectionsChecked.every(checked => checked)
   const checkedCount = sectionsChecked.filter(c => c).length
-  const progress = (checkedCount / sections.length) * 100
+  const progress = (checkedCount / contractSections.length) * 100
 
   // Canvas drawing functions
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -218,7 +222,7 @@ export default function ContractSigningPage() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-slate-300">
-                Progress: {checkedCount} of {sections.length} sections reviewed
+                Progress: {checkedCount} of {contractSections.length} sections reviewed
               </span>
               <span className="text-sm text-slate-300">{Math.round(progress)}%</span>
             </div>
@@ -226,212 +230,33 @@ export default function ContractSigningPage() {
           </div>
         </Card>
 
-        {/* Contract Content */}
+        {/* Contract Content - Scrollable HTML */}
         <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
-          <div className="max-h-[60vh] overflow-y-auto space-y-8 pr-2">
-            {/* Section 1: Employment Details */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-slate-600 pb-2">
-                Section 1: Employment Details
-              </h3>
-              <div className="grid gap-4 text-slate-300">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-slate-400">Employee Name</Label>
-                    <p className="text-white font-medium">{contract.employeeName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-slate-400">Position</Label>
-                    <p className="text-white font-medium">{contract.position}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-slate-400">Assigned Client</Label>
-                    <p className="text-white font-medium">{contract.assignedClient}</p>
-                  </div>
-                  <div>
-                    <Label className="text-slate-400">Start Date</Label>
-                    <p className="text-white font-medium">
-                      {new Date(contract.startDate).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-slate-400">Contract Type</Label>
-                  <p className="text-white font-medium">Project Employment Contract</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
+          <div 
+            className="max-h-[60vh] overflow-y-auto pr-2"
+            dangerouslySetInnerHTML={{ __html: contractHTML }}
+          />
+          
+          {/* Section Checkboxes */}
+          <div className="mt-8 space-y-4 border-t border-slate-600 pt-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Confirm Your Understanding</h3>
+            {contractSections.map((section, index) => (
+              <div key={section.id} className="flex items-start space-x-3 p-3 rounded-lg bg-slate-700/30">
                 <Checkbox 
-                  id="section-0" 
-                  checked={sectionsChecked[0]}
-                  onCheckedChange={() => toggleSection(0)}
+                  id={`section-${index}`}
+                  checked={sectionsChecked[index]}
+                  onCheckedChange={() => toggleSection(index)}
+                  className="mt-1"
                 />
                 <Label 
-                  htmlFor="section-0" 
-                  className="text-slate-300 cursor-pointer"
+                  htmlFor={`section-${index}`}
+                  className="text-slate-300 cursor-pointer flex-1"
                 >
-                  I have read and understood Section 1: Employment Details
+                  <div className="font-semibold text-white mb-1">Section {section.id}: {section.title}</div>
+                  <div className="text-sm text-slate-400">{section.description}</div>
                 </Label>
               </div>
-            </div>
-
-            {/* Section 2: Compensation & Benefits */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-slate-600 pb-2">
-                Section 2: Compensation & Benefits
-              </h3>
-              <div className="grid gap-4 text-slate-300">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-slate-400">Basic Salary</Label>
-                    <p className="text-white font-medium">PHP {contract.basicSalary.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-slate-400">De Minimis</Label>
-                    <p className="text-white font-medium">PHP {contract.deMinimis.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-slate-400">Total Monthly Gross</Label>
-                    <p className="text-white font-medium text-green-400">
-                      PHP {contract.totalMonthlyGross.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-slate-400">HMO Coverage</Label>
-                  <p className="text-white">{contract.hmoOffer}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox 
-                  id="section-1" 
-                  checked={sectionsChecked[1]}
-                  onCheckedChange={() => toggleSection(1)}
-                />
-                <Label 
-                  htmlFor="section-1" 
-                  className="text-slate-300 cursor-pointer"
-                >
-                  I have read and understood Section 2: Compensation & Benefits
-                </Label>
-              </div>
-            </div>
-
-            {/* Section 3: Work Schedule & Duration */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-slate-600 pb-2">
-                Section 3: Work Schedule & Duration
-              </h3>
-              <div className="grid gap-4 text-slate-300">
-                <div>
-                  <Label className="text-slate-400">Work Schedule</Label>
-                  <p className="text-white font-medium">{contract.workSchedule}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-400">Probationary Period</Label>
-                  <p className="text-white">{contract.probationaryPeriod}</p>
-                </div>
-                <Alert className="bg-blue-900/30 border-blue-600">
-                  <AlertCircle className="h-4 w-4 text-blue-400" />
-                  <AlertDescription className="text-blue-100">
-                    During the probationary period, your performance will be evaluated. 
-                    Successful completion leads to regular employment status.
-                  </AlertDescription>
-                </Alert>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox 
-                  id="section-2" 
-                  checked={sectionsChecked[2]}
-                  onCheckedChange={() => toggleSection(2)}
-                />
-                <Label 
-                  htmlFor="section-2" 
-                  className="text-slate-300 cursor-pointer"
-                >
-                  I have read and understood Section 3: Work Schedule & Duration
-                </Label>
-              </div>
-            </div>
-
-            {/* Section 4: Leave & Time Off */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-slate-600 pb-2">
-                Section 4: Leave & Time Off
-              </h3>
-              <div className="grid gap-4 text-slate-300">
-                <div>
-                  <Label className="text-slate-400">Paid Leave Policy</Label>
-                  <p className="text-white">{contract.paidLeave}</p>
-                </div>
-                <Alert className="bg-green-900/30 border-green-600">
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <AlertDescription className="text-green-100">
-                    Leave credits are earned monthly and can be used for vacation, sick leave, 
-                    or personal matters. Please coordinate with your manager for leave requests.
-                  </AlertDescription>
-                </Alert>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox 
-                  id="section-3" 
-                  checked={sectionsChecked[3]}
-                  onCheckedChange={() => toggleSection(3)}
-                />
-                <Label 
-                  htmlFor="section-3" 
-                  className="text-slate-300 cursor-pointer"
-                >
-                  I have read and understood Section 4: Leave & Time Off
-                </Label>
-              </div>
-            </div>
-
-            {/* Section 5: Terms & Conditions */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-slate-600 pb-2">
-                Section 5: Terms & Conditions
-              </h3>
-              <div className="space-y-3 text-slate-300">
-                <p>
-                  By signing this contract, you acknowledge and agree to:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>Comply with all company policies and procedures</li>
-                  <li>Maintain confidentiality of company and client information</li>
-                  <li>Perform your duties to the best of your ability</li>
-                  <li>Report to your designated supervisor/manager</li>
-                  <li>Follow the work schedule and attendance requirements</li>
-                  <li>Comply with Philippine labor laws and regulations</li>
-                </ul>
-                <Alert className="bg-yellow-900/30 border-yellow-600 mt-4">
-                  <AlertCircle className="h-4 w-4 text-yellow-400" />
-                  <AlertDescription className="text-yellow-100">
-                    This contract is governed by Philippine labor laws. Any disputes shall be 
-                    resolved in accordance with applicable laws and regulations.
-                  </AlertDescription>
-                </Alert>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
-                <Checkbox 
-                  id="section-4" 
-                  checked={sectionsChecked[4]}
-                  onCheckedChange={() => toggleSection(4)}
-                />
-                <Label 
-                  htmlFor="section-4" 
-                  className="text-slate-300 cursor-pointer"
-                >
-                  I have read and understood Section 5: Terms & Conditions
-                </Label>
-              </div>
-            </div>
+            ))}
           </div>
         </Card>
 
@@ -508,7 +333,7 @@ export default function ContractSigningPage() {
             <Alert>
               <AlertCircle className="h-4 w-4 text-blue-400" />
               <AlertDescription className="text-blue-100">
-                Please review and check all {sections.length} sections before you can sign the contract.
+                Please review and check all {contractSections.length} sections before you can sign the contract.
               </AlertDescription>
             </Alert>
           </Card>

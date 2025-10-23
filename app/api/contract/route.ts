@@ -1,70 +1,49 @@
-/**
- * Contract API
- * GET /api/contract
- * 
- * Fetch employment contract for authenticated staff
- */
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    // Verify staff is authenticated
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find staff user
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      include: {
-        employmentContract: true,
-        jobAcceptance: true
-      }
-    })
+      select: { id: true }
+    });
 
     if (!staffUser) {
-      return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
+      return NextResponse.json({ error: "Staff user not found" }, { status: 404 });
     }
 
-    // Check if they have a contract
-    if (!staffUser.employmentContract) {
-      return NextResponse.json({ error: 'No contract found' }, { status: 404 })
-    }
-
-    // Check if already signed
-    if (staffUser.employmentContract.signed) {
-      return NextResponse.json({ error: 'Contract already signed' }, { status: 400 })
-    }
-
-    // Return contract data
-    return NextResponse.json({
-      success: true,
-      contract: {
-        id: staffUser.employmentContract.id,
-        employeeName: staffUser.employmentContract.employeeName,
-        position: staffUser.employmentContract.position,
-        assignedClient: staffUser.employmentContract.assignedClient,
-        startDate: staffUser.employmentContract.startDate,
-        workSchedule: staffUser.employmentContract.workSchedule,
-        basicSalary: Number(staffUser.employmentContract.basicSalary),
-        deMinimis: Number(staffUser.employmentContract.deMinimis),
-        totalMonthlyGross: Number(staffUser.employmentContract.totalMonthlyGross),
-        hmoOffer: staffUser.employmentContract.hmoOffer,
-        paidLeave: staffUser.employmentContract.paidLeave,
-        probationaryPeriod: staffUser.employmentContract.probationaryPeriod,
-        signed: staffUser.employmentContract.signed
+    const contract = await prisma.employmentContract.findUnique({
+      where: { staffUserId: staffUser.id },
+      include: {
+        company: {
+          select: { companyName: true }
+        }
       }
-    })
+    });
+
+    if (!contract) {
+      return NextResponse.json({ error: "No contract found" }, { status: 404 });
+    }
+
+    if (contract.signed) {
+      return NextResponse.json({ 
+        success: true, 
+        contract, 
+        message: "Contract already signed" 
+      }, { status: 200 });
+    }
+
+    return NextResponse.json({ success: true, contract }, { status: 200 });
   } catch (error) {
-    console.error('❌ Error fetching contract:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch contract', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    console.error("Error fetching employment contract:", error);
+    return NextResponse.json({ error: "Failed to fetch employment contract" }, { status: 500 });
   }
 }
-
