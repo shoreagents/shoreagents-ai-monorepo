@@ -19,6 +19,12 @@ yarn-error.log*
 # env files
 .env*
 
+# MCP configuration (contains API keys)
+.cursor/mcp.json
+
+# Test files with API keys
+test-linear-connection.js
+
 # vercel
 .vercel
 
