@@ -466,4 +466,3 @@ try {
 
 The client profile and company pages provide a comprehensive solution for managing user and company information with robust error handling, excellent loading states, and a professional user experience. The implementation follows modern React patterns and provides a solid foundation for future enhancements.
 
-For questions or issues, please refer to the troubleshooting section or contact the development team.
