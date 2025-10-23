@@ -5,16 +5,57 @@
  */
 
 const { LinearClient } = require('@linear/sdk');
+const fs = require('fs');
+const path = require('path');
+
+// Load environment variables from .env.local and .env files
+function loadEnvFiles() {
+  const envFiles = ['.env.local', '.env'];
+  
+  console.log('🔍 Debug: Checking for environment files...');
+  
+  envFiles.forEach(envFile => {
+    const envPath = path.join(__dirname, envFile);
+    console.log(`   Checking: ${envPath}`);
+    
+    if (fs.existsSync(envPath)) {
+      console.log(`   ✅ Found: ${envFile}`);
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      console.log(`   Content preview: ${envContent.substring(0, 100)}...`);
+      
+      envContent.split('\n').forEach(line => {
+        const [key, ...valueParts] = line.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').trim();
+          process.env[key.trim()] = value;
+          console.log(`   Loaded: ${key.trim()} = ${value.substring(0, 20)}...`);
+        }
+      });
+    } else {
+      console.log(`   ❌ Not found: ${envFile}`);
+    }
+  });
+}
+
+// Load environment variables
+loadEnvFiles();
 
 async function testLinearConnection() {
   try {
     console.log('🔗 Testing Linear MCP Connection...\n');
     
+    // Debug: Check if environment variables are loaded
+    console.log('🔍 Debug: Environment variables loaded:');
+    console.log(`   LINEAR_API_KEY: ${process.env.LINEAR_API_KEY ? 'Found' : 'Not found'}`);
+    console.log(`   LINEAR_TOKEN: ${process.env.LINEAR_TOKEN ? 'Found' : 'Not found'}`);
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'Not set'}`);
+    console.log('');
+    
     // Initialize Linear client
-    const linearToken = process.env.LINEAR_TOKEN;
+    const linearToken = process.env.LINEAR_API_KEY || process.env.LINEAR_TOKEN;
     
     if (!linearToken) {
-      throw new Error('LINEAR_TOKEN environment variable is required');
+      throw new Error('LINEAR_API_KEY or LINEAR_TOKEN environment variable is required');
     }
     
     const client = new LinearClient({
