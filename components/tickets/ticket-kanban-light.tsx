@@ -62,35 +62,45 @@ export default function TicketKanbanLight({
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-4 gap-4">
-        {columns.map((column) => {
-          const columnTickets = tickets.filter((ticket) => ticket.status === column.status)
-
-          return (
-            <div key={column.status} className="flex flex-col">
-              {/* Column Header */}
-              <div className={`border-t-4 ${column.color} rounded-t-lg bg-white p-3 shadow-sm`}>
+      <div className="space-y-4">
+        {/* Sticky Headers Row */}
+        <div className="sticky top-0 z-20 grid grid-cols-4 gap-4 bg-gray-50 pb-4">
+          {columns.map((column) => {
+            const columnTickets = tickets.filter((ticket) => ticket.status === column.status)
+            return (
+              <div key={column.status} className={`border-t-4 ${column.color} rounded-t-lg bg-white p-3 shadow-sm`}>
                 <h3 className="text-sm font-semibold text-gray-900">{column.label}</h3>
                 <span className="text-xs text-gray-500">{columnTickets.length}</span>
               </div>
+            )
+          })}
+        </div>
 
-              {/* Column Content */}
-              <div className="flex-1 space-y-3 rounded-b-lg bg-gray-100 p-3 min-h-[500px]">
-                {columnTickets.length === 0 ? (
-                  <p className="text-center text-sm text-gray-400 mt-8">No tickets</p>
-                ) : (
-                  columnTickets.map((ticket) => (
-                    <ClientTicketCard
-                      key={ticket.id}
-                      ticket={ticket}
-                      onClick={() => onTicketClick?.(ticket)}
-                    />
-                  ))
-                )}
+        {/* Content Rows */}
+        <div className="grid grid-cols-4 gap-4">
+          {columns.map((column) => {
+            const columnTickets = tickets.filter((ticket) => ticket.status === column.status)
+
+            return (
+              <div key={column.status} className="flex flex-col">
+                {/* Column Content */}
+                <div className="flex-1 space-y-3 rounded-b-lg bg-gray-100 p-3 min-h-[500px]">
+                  {columnTickets.length === 0 ? (
+                    <p className="text-center text-sm text-gray-400 mt-8">No tickets</p>
+                  ) : (
+                    columnTickets.map((ticket) => (
+                      <ClientTicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onClick={() => onTicketClick?.(ticket)}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       <DragOverlay>
