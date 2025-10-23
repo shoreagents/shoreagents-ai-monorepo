@@ -39,6 +39,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`📅 Interview request from client ${session.user.id} for candidate ${bpoc_candidate_id}`)
 
+    // Get the client user record (session.user.id is authUserId, we need clientUser.id)
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!clientUser) {
+      return NextResponse.json({ error: 'Client user not found' }, { status: 404 })
+    }
+
     // Verify candidate exists in BPOC database
     const candidate = await getCandidateById(bpoc_candidate_id)
     if (!candidate) {
@@ -48,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Create interview request using Prisma ORM (handles column mapping automatically)
     const interviewRequest = await prisma.interviewRequest.create({
       data: {
-        clientUserId: session.user.id,
+        clientUserId: clientUser.id,  // Use clientUser.id, not session.user.id!
         bpocCandidateId: bpoc_candidate_id,
         candidateFirstName: candidate.first_name || 'Unknown',
         preferredTimes: preferred_times,
