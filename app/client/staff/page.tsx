@@ -133,9 +133,8 @@ export default function StaffPage() {
             </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="w-full px-6 py-8">
         {staff.length === 0 ? (
           <Card className="p-12 text-center bg-white">
             <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -375,7 +374,8 @@ export default function StaffPage() {
             ))}
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
