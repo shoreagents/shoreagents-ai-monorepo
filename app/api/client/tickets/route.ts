@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     const tickets = await prisma.ticket.findMany({
       where: {
         clientUserId: clientUser.id,
-        ...(status && { status: status as any }),
-        ...(category && { category: category as any }),
+        ...(status && { status }),
+        ...(category && { category }),
       },
       include: {
         clientUser: {

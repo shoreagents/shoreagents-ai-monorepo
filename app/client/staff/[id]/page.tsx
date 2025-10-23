@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -124,7 +124,7 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
       const response = await fetch(`/api/client/staff/${staffId}`)
       if (!response.ok) throw new Error("Failed to fetch staff details")
       const data = await response.json()
-      setStaff(data.staff)
+      setStaff(data)
     } catch (error) {
       console.error("Error fetching staff details:", error)
     } finally {

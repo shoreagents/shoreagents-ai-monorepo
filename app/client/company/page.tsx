@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Building2, Mail, Phone, MapPin, Globe, Briefcase, Edit2, Save, X, User, Calendar, Upload, Camera, MessageCircle } from "lucide-react"
+import { Building2, Mail, Phone, MapPin, Globe, Briefcase, Edit2, Save, X, User, Calendar, Upload, Camera } from "lucide-react"
 import { uploadCompanyFile, deleteCompanyFile } from "@/lib/supabase-upload"
 import { useToast } from "@/hooks/use-toast"
 
@@ -971,31 +971,24 @@ export default function CompanyPage() {
 
       {/* Account Manager */}
       {company.accountManager && (
-        <Card className="p-6 border-l-4 border-l-blue-500 bg-white shadow-sm">
+        <Card className="p-6 border-l-4 border-l-indigo-500 bg-white shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <User className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <User className="h-6 w-6 text-indigo-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900">Your Account Manager</h3>
           </div>
-          
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg mt-1">
-              <User className="h-4 w-4 text-gray-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Account Manager</p>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 ring-2 ring-blue-100">
-                  <AvatarImage src={company.accountManager.avatar || undefined} />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-sm font-semibold">
-                    {company.accountManager.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-gray-900 font-medium">{company.accountManager.name}</p>
-                  <p className="text-sm text-gray-600">{company.accountManager.email}</p>
-                </div>
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg border border-indigo-200">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 ring-4 ring-indigo-200">
+                <AvatarImage src={company.accountManager.avatar || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-lg font-semibold">
+                  {company.accountManager.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{company.accountManager.name}</p>
+                <p className="text-indigo-700 font-medium text-sm">{company.accountManager.email}</p>
               </div>
             </div>
           </div>

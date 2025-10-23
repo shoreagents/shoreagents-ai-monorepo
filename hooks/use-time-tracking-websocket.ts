@@ -230,9 +230,6 @@ export function useTimeTrackingWebSocket() {
       } : null
       
       console.log('[WebSocket] Active break from API:', statusData.activeBreak)
-      if (statusData.activeBreak) {
-        console.log('[WebSocket] pauseused value:', statusData.activeBreak.pauseused, 'type:', typeof statusData.activeBreak.pauseused)
-      }
       console.log('[WebSocket] Mapped active break:', activeBreak)
 
       // Update state with fetched data
@@ -326,10 +323,7 @@ export function useTimeTrackingWebSocket() {
       startTime: data.break.actualStart, // Use actualStart as startTime
       actualStart: data.break.actualStart,
       duration: data.break.type === 'LUNCH' ? 60 : 15, // Always set proper duration: 60min for lunch, 15min for others
-      awayReason: data.break.awayReason,
-      isPaused: data.break.ispaused || false,
-      pausedDuration: data.break.pausedduration || 0,
-      pauseUsed: data.break.pauseused || false
+      awayReason: data.break.awayReason
     }
     
     setState(prev => ({
@@ -420,24 +414,18 @@ export function useTimeTrackingWebSocket() {
   }, [])
 
   const handleBreakPaused = useCallback((data: any) => {
+    console.log('[WebSocket] Break paused:', data)
     setState(prev => ({
       ...prev,
-      activeBreak: prev.activeBreak ? { 
-        ...prev.activeBreak, 
-        isPaused: true,
-        pausedDuration: data.break?.pausedduration || prev.activeBreak.pausedDuration
-      } : null
+      activeBreak: prev.activeBreak ? { ...prev.activeBreak, isPaused: true } : null
     }))
   }, [])
 
   const handleBreakResumed = useCallback((data: any) => {
+    console.log('[WebSocket] Break resumed:', data)
     setState(prev => ({
       ...prev,
-      activeBreak: prev.activeBreak ? { 
-        ...prev.activeBreak, 
-        isPaused: false,
-        pausedDuration: data.break?.pausedduration || 0
-      } : null
+      activeBreak: prev.activeBreak ? { ...prev.activeBreak, isPaused: false } : null
     }))
   }, [])
 

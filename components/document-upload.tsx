@@ -1,16 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Upload, X, FileText, Loader2, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Upload, X, FileText, Loader2 } from "lucide-react"
 
 type DocumentCategory = "CLIENT" | "TRAINING" | "PROCEDURE" | "CULTURE" | "SEO"
 
@@ -19,102 +10,91 @@ interface DocumentUploadProps {
   onClose: () => void
 }
 
-interface DocumentToUpload {
-  id: string
-  title: string
-  category: DocumentCategory
-  file: File | null
-}
-
 export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadProps) {
-  const [documentsToUpload, setDocumentsToUpload] = useState<DocumentToUpload[]>([
-    { id: crypto.randomUUID(), title: "", category: "TRAINING", file: null }
-  ])
+  const [file, setFile] = useState<File | null>(null)
+  const [category, setCategory] = useState<DocumentCategory>("TRAINING")
+  const [title, setTitle] = useState("")
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
   const [showSuccess, setShowSuccess] = useState(false)
 
-  const addAnotherDocument = () => {
-    setDocumentsToUpload([
-      ...documentsToUpload,
-      { id: crypto.randomUUID(), title: "", category: "TRAINING", file: null }
-    ])
-  }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'text/plain', 'text/markdown', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      const allowedExtensions = ['.pdf', '.txt', '.md', '.doc', '.docx']
+      
+      const fileExt = '.' + selectedFile.name.split('.').pop()?.toLowerCase()
+      
+      if (!allowedTypes.includes(selectedFile.type) && !allowedExtensions.includes(fileExt)) {
+        setError('Invalid file type. Only PDF, TXT, MD, DOC, and DOCX files are allowed.')
+        return
+      }
 
-  const removeDocument = (id: string) => {
-    if (documentsToUpload.length === 1) {
-      return
+      // Validate file size (10MB max)
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        setError('File size exceeds 10MB limit')
+        return
+      }
+
+      setFile(selectedFile)
+      setTitle(selectedFile.name)
+      setError(null)
     }
-    setDocumentsToUpload(documentsToUpload.filter(doc => doc.id !== id))
-  }
-
-  const updateDocument = (id: string, updates: Partial<DocumentToUpload>) => {
-    setDocumentsToUpload(documentsToUpload.map(doc => 
-      doc.id === id ? { ...doc, ...updates } : doc
-    ))
-  }
-
-  const resetUploadForm = () => {
-    setDocumentsToUpload([
-      { id: crypto.randomUUID(), title: "", category: "TRAINING", file: null }
-    ])
-    setUploadProgress({ current: 0, total: 0 })
-    setError(null)
   }
 
   const handleUpload = async () => {
-    // Validate all documents
-    const invalidDocs = documentsToUpload.filter(doc => !doc.title || !doc.file)
-    if (invalidDocs.length > 0) {
-      setError("Please provide a title and file for all documents.")
+    if (!file) {
+      setError('Please select a file')
       return
     }
 
     setUploading(true)
-    setUploadProgress({ current: 0, total: documentsToUpload.length })
     setError(null)
+    setProgress(0)
 
-    let successCount = 0
-    let failCount = 0
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', title)
+      formData.append('category', category)
 
-    // Upload each document sequentially
-    for (let i = 0; i < documentsToUpload.length; i++) {
-      const doc = documentsToUpload[i]
-      setUploadProgress({ current: i + 1, total: documentsToUpload.length })
-
-      try {
-        const formData = new FormData()
-        formData.append('file', doc.file!)
-        formData.append('title', doc.title)
-        formData.append('category', doc.category)
-
-        const response = await fetch("/api/documents", {
-          method: "POST",
-          body: formData,
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
         })
+      }, 200)
 
-        if (!response.ok) {
-          throw new Error(`Failed to upload document`)
-        }
-        
-        successCount++
-      } catch (error: any) {
-        console.error(`Error uploading document "${doc.title}":`, error)
-        failCount++
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
+      setProgress(100)
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Upload failed')
       }
-    }
 
-    setUploading(false)
-    
-    if (failCount === 0) {
+      // Success - show success message
       setShowSuccess(true)
       setTimeout(() => {
         onSuccess()
-        onClose()
-      }, 1500)
-    } else {
-      setError(`${successCount} succeeded, ${failCount} failed`)
+      }, 100)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+      setProgress(0)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -126,195 +106,136 @@ export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadPro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-[600px] max-h-[85vh] overflow-y-auto rounded-2xl bg-slate-900 p-6 shadow-2xl ring-1 ring-white/10">
+      <div className="w-full max-w-lg rounded-2xl bg-slate-900 p-6 shadow-2xl ring-1 ring-white/10">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">Upload Document</h2>
-            <p className="text-sm text-indigo-400 mt-1">Share documents with your clients. They will be able to view and reference these documents.</p>
+            <h2 className="text-xl font-bold text-white">Upload Training Document</h2>
+            <p className="text-sm text-indigo-400 mt-1">📤 Documents are shared with your client</p>
           </div>
           <button
-            onClick={() => {
-              onClose()
-              resetUploadForm()
-            }}
+            onClick={onClose}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid gap-4">
-          {documentsToUpload.map((doc, index) => (
-            <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
-              {documentsToUpload.length > 1 && (
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                  <h4 className="text-sm font-bold text-white">
-                    Document {index + 1}
-                  </h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDocument(doc.id)}
-                    className="h-7 text-xs"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Remove
-                  </Button>
+        {/* File Upload Area */}
+        <div className="space-y-4">
+          {!file ? (
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-700 bg-slate-800/50 p-8 transition-all hover:border-indigo-500 hover:bg-slate-800">
+              <Upload className="mb-3 h-12 w-12 text-slate-400" />
+              <p className="mb-1 text-sm font-medium text-white">Click to upload or drag and drop</p>
+              <p className="text-xs text-slate-400">PDF, TXT, MD, DOC, or DOCX (max 10MB)</p>
+              <input
+                type="file"
+                className="hidden"
+                accept=".pdf,.txt,.md,.doc,.docx"
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : (
+            <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/10">
+              <div className="flex items-start gap-3">
+                <FileText className="h-5 w-5 flex-shrink-0 text-indigo-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-white">{file.name}</p>
+                  <p className="text-xs text-slate-400">{formatFileSize(file.size)}</p>
                 </div>
-              )}
-
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor={`title-${doc.id}`} className="text-white">Document Title *</Label>
-                  <input
-                    id={`title-${doc.id}`}
-                    placeholder="e.g., Customer Service Guidelines"
-                    value={doc.title}
-                    onChange={(e) => updateDocument(doc.id, { title: e.target.value })}
-                    disabled={uploading}
-                    className="w-full rounded-lg bg-slate-800/50 px-4 py-2 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor={`category-${doc.id}`} className="text-white">Category *</Label>
-                  <Select 
-                    value={doc.category} 
-                    onValueChange={(value) => updateDocument(doc.id, { category: value as DocumentCategory })}
-                    disabled={uploading}
-                  >
-                    <SelectTrigger className="bg-slate-800/50 border-gray-200 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CLIENT">Client Resources</SelectItem>
-                      <SelectItem value="PROCEDURE">Procedures & SOPs</SelectItem>
-                      <SelectItem value="TRAINING">Training Materials</SelectItem>
-                      <SelectItem value="CULTURE">Company Culture</SelectItem>
-                      <SelectItem value="SEO">SEO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor={`file-${doc.id}`} className="text-white">Document File *</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-500 transition-colors cursor-pointer">
-                    <input
-                      id={`file-${doc.id}`}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.txt,.md"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null
-                        updateDocument(doc.id, { file })
-                        // Auto-fill title from filename if title is empty
-                        if (file && !doc.title) {
-                          const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "")
-                          updateDocument(doc.id, { title: fileNameWithoutExt })
-                        }
-                      }}
-                      className="hidden"
-                      disabled={uploading}
-                    />
-                    <label htmlFor={`file-${doc.id}`} className="cursor-pointer">
-                      {doc.file ? (
-                        <div className="space-y-2">
-                          <FileText className="h-8 w-8 text-indigo-600 mx-auto" />
-                          <p className="text-sm font-medium text-white">{doc.file.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {formatFileSize(doc.file.size)}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                          <p className="text-sm font-medium text-white">
-                            Click to upload or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            PDF, DOC, DOCX, TXT, or MD (Max 10MB)
-                          </p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                  {index === 0 && (
-                    <p className="text-xs text-gray-500">
-                      Text will be extracted automatically using CloudConvert and made searchable
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {uploading && uploadProgress.total > 0 && (
-            <div className="bg-indigo-500/10 border border-indigo-200 rounded-lg p-3 ring-1 ring-indigo-500/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-indigo-300">
-                  Uploading documents...
-                </span>
-                <span className="text-sm text-indigo-400">
-                  {uploadProgress.current} of {uploadProgress.total}
-                </span>
-              </div>
-              <div className="w-full bg-indigo-200 rounded-full h-2">
-                <div 
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                />
+                <button
+                  onClick={() => setFile(null)}
+                  className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
           )}
 
+          {/* Title Input */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">Document Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter document title..."
+              className="w-full rounded-lg bg-slate-800/50 px-4 py-2 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+            />
+          </div>
+
+          {/* Category Selector */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as DocumentCategory)}
+              className="w-full rounded-lg bg-slate-800/50 px-4 py-2 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+            >
+              <option value="CLIENT">Client Docs</option>
+              <option value="TRAINING">Training</option>
+              <option value="PROCEDURE">Procedures</option>
+              <option value="CULTURE">Culture</option>
+              <option value="SEO">SEO</option>
+            </select>
+          </div>
+
+          {/* Progress Bar */}
+          {uploading && (
+            <div className="space-y-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-center text-xs text-slate-400">
+                {progress < 90 ? 'Uploading...' : 'Extracting text for AI...'} {progress}%
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
             <div className="rounded-lg bg-red-500/10 p-3 ring-1 ring-red-500/30">
               <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
-          {!uploading && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addAnotherDocument}
-              className="w-full"
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={uploading}
+              className="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-700 disabled:opacity-50"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Document
-            </Button>
-          )}
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              onClose()
-              resetUploadForm()
-            }}
-            disabled={uploading}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpload} 
-            disabled={uploading} 
-            className="bg-indigo-600 hover:bg-indigo-700 flex-1"
-          >
-            {uploading 
-              ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...` 
-              : `Upload ${documentsToUpload.length > 1 ? `All (${documentsToUpload.length})` : 'Document'}`
-            }
-          </Button>
+              Cancel
+            </button>
+            <button
+              onClick={handleUpload}
+              disabled={!file || uploading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Upload & Extract
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Success Modal Overlay */}
         {showSuccess && (
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-900/95 backdrop-blur-sm">
-            <div className="max-w-md text-center p-6">
+            <div className="max-w-md text-center">
               <div className="mb-4 flex justify-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-500/30 to-emerald-500/30 ring-2 ring-green-400/50">
                   <svg className="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -322,14 +243,22 @@ export default function DocumentUpload({ onSuccess, onClose }: DocumentUploadPro
                   </svg>
                 </div>
               </div>
-              <h3 className="mb-2 text-xl font-bold text-white">Documents Uploaded!</h3>
+              <h3 className="mb-2 text-xl font-bold text-white">Document Ready!</h3>
               <p className="mb-6 text-sm text-slate-300">
-                Your {documentsToUpload.length > 1 ? 'documents have' : 'document has'} been uploaded successfully.
+                Your document has been uploaded and the text content has been extracted successfully. 
                 <br /><br />
-                <span className="font-semibold text-indigo-400">Your AI assistant now has full access!</span>
+                <span className="font-semibold text-indigo-400">Your AI assistant now has full access to this document!</span>
                 <br />
-                <span className="font-semibold text-blue-400">🔄 Automatically shared with your assigned client</span>
+                <span className="font-semibold text-blue-400">🔄 This document is also visible to your client</span>
+                <br /><br />
+                Use <code className="rounded bg-slate-800 px-2 py-1 text-xs text-indigo-300">@{title || file?.name}</code> in your chat to reference it.
               </p>
+              <button
+                onClick={onClose}
+                className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-2 text-sm font-medium text-white transition-all hover:from-indigo-700 hover:to-purple-700"
+              >
+                Got it!
+              </button>
             </div>
           </div>
         )}

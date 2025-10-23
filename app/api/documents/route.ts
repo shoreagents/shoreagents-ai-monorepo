@@ -13,50 +13,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get StaffUser record using authUserId (include company info)
+    // Get StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
-      where: { authUserId: session.user.id },
-      include: { company: true }
+      where: { authUserId: session.user.id }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
     }
 
-    // Fetch documents with proper filtering based on source:
-    // 1. Staff's own uploads (any source)
-    // 2. CLIENT documents - if sharedWithAll AND company name matches, OR staff ID in sharedWith array
-    // 3. ADMIN documents - if sharedWithAll (global) OR staff ID in sharedWith array
+    // Fetch:
+    // 1. Documents uploaded by this staff member
+    // 2. Documents shared with this staff member (sharedWithAll OR in sharedWith array)
     const documents = await prisma.document.findMany({
       where: {
         OR: [
-          // Staff's own uploads - show regardless of sharing settings
+          // Staff's own uploads
           { staffUserId: staffUser.id },
-          
-          // CLIENT documents shared with ALL staff in the same company (dynamic)
-          {
-            source: 'CLIENT',
-            sharedWithAll: true,
-            uploadedBy: staffUser.company?.companyName  // Match by company name
-          },
-          
-          // CLIENT documents specifically shared with this user
-          {
-            source: 'CLIENT',
-            sharedWith: { has: staffUser.id }
-          },
-          
-          // ADMIN documents shared with all (global)
-          {
-            source: 'ADMIN',
-            sharedWithAll: true
-          },
-          
-          // ADMIN documents specifically shared with this user
-          {
-            source: 'ADMIN',
-            sharedWith: { has: staffUser.id }
-          }
+          // Documents shared with all
+          { sharedWithAll: true },
+          // Documents specifically shared with this user
+          { sharedWith: { has: staffUser.id } }
         ]
       },
       include: {
@@ -73,8 +50,6 @@ export async function GET(req: NextRequest) {
         createdAt: 'desc'
       }
     })
-
-    console.log(`📚 [STAFF] Fetched ${documents.length} documents for staff user ${staffUser.id} (${staffUser.name}, Company: ${staffUser.company?.companyName})`)
 
     return NextResponse.json({ documents })
   } catch (error) {
@@ -99,7 +74,7 @@ export async function POST(req: NextRequest) {
     // Get StaffUser record using authUserId
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      select: { id: true, name: true, companyId: true }
+      select: { id: true, name: true }
     })
 
     if (!staffUser) {
@@ -275,11 +250,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-share with assigned company (always)
+    // Auto-share with assigned company
     let sharedWith: string[] = []
     if (staffUser.companyId) {
       sharedWith = [staffUser.companyId]
-      console.log('📤 [STAFF] Auto-sharing with assigned client company:', staffUser.companyId)
+      console.log('📤 [STAFF] Auto-sharing with company:', staffUser.companyId)
     }
 
     // Create the document
@@ -293,7 +268,6 @@ export async function POST(req: NextRequest) {
         uploadedBy: staffUser.name,
         size: fileSize,
         fileUrl,
-        sharedWithAll: false,  // For STAFF docs, use sharedWith array
         sharedWith
       },
       include: {

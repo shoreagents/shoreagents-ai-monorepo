@@ -1,0 +1,98 @@
+/**
+ * Resume Upload API
+ * POST /api/onboarding/resume
+ * 
+ * Upload resume document for staff onboarding
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { supabaseAdmin } from '@/lib/supabase'
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify staff is authenticated
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Find staff user
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id },
+      include: { staffOnboarding: true }
+    })
+
+    if (!staffUser) {
+      return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
+    }
+
+    if (!staffUser.staffOnboarding) {
+      return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
+    }
+
+    // Get resume file from form data
+    const formData = await request.formData()
+    const resumeFile = formData.get('resume') as File
+
+    if (!resumeFile) {
+      return NextResponse.json({ error: 'Resume file is required' }, { status: 400 })
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    if (!allowedTypes.includes(resumeFile.type)) {
+      return NextResponse.json({ error: 'Invalid file type. Only PDF, DOC, and DOCX are allowed' }, { status: 400 })
+    }
+
+    // Upload to Supabase Storage
+    const fileName = `${staffUser.id}/resume.${resumeFile.name.split('.').pop()}`
+    const fileBuffer = await resumeFile.arrayBuffer()
+
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from('staff')
+      .upload(`staff_resume/${fileName}`, fileBuffer, {
+        contentType: resumeFile.type,
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError)
+      return NextResponse.json({ error: 'Failed to upload resume' }, { status: 500 })
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin
+      .storage
+      .from('staff')
+      .getPublicUrl(`staff_resume/${fileName}`)
+
+    const resumeUrl = urlData.publicUrl
+
+    // Update onboarding record
+    await prisma.staffOnboarding.update({
+      where: { staffUserId: staffUser.id },
+      data: {
+        resumeUrl: resumeUrl,
+        resumeStatus: 'IN_REVIEW'
+      }
+    })
+
+    console.log(`✅ [ONBOARDING] Resume uploaded for staff: ${staffUser.name}`)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Resume uploaded successfully',
+      resumeUrl
+    })
+  } catch (error) {
+    console.error('❌ Error uploading resume:', error)
+    return NextResponse.json(
+      { error: 'Failed to upload resume', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+

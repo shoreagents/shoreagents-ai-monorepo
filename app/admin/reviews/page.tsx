@@ -95,10 +95,10 @@ export default function AdminReviewsPage() {
     }
   }
 
-  const getAcknowledgmentDueDate = (reviewedDate: string) => {
-    const reviewed = new Date(reviewedDate)
-    const dueDate = new Date(reviewed)
-    dueDate.setDate(reviewed.getDate() + 7) // Add 7 days
+  const getAcknowledgmentDueDate = (submittedDate: string) => {
+    const submitted = new Date(submittedDate)
+    const dueDate = new Date(submitted)
+    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
     return dueDate
   }
 
@@ -317,26 +317,26 @@ export default function AdminReviewsPage() {
                           </div>
                         </div>
                       )}
-           {review.submittedDate && review.status === 'UNDER_REVIEW' && (
-             <>
-               <div>
-                 <div className="text-sm text-muted-foreground mb-1">Acknowledgment Due Date</div>
-                 <div className={`font-medium ${
-                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate!)) === "Due today" || 
-                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate!)) === "Due tomorrow" ||
-                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate!)).includes("overdue")
-                     ? "text-red-400" 
-                     : "text-foreground"
-                 }`}>
-                   {getDueDateText(getAcknowledgmentDueDate(review.reviewedDate!))}
-                 </div>
-               </div>
-               <div>
-                 <div className="text-sm text-muted-foreground mb-1">Client Reviewed Date</div>
-                 <div className="font-medium text-foreground">{new Date(review.submittedDate).toLocaleDateString()}</div>
-               </div>
-             </>
-           )}
+                      {review.submittedDate && review.status === 'UNDER_REVIEW' && (
+                        <>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Acknowledgment Due Date</div>
+                            <div className={`font-medium ${
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due tomorrow" ||
+                              getDueDateText(getAcknowledgmentDueDate(review.submittedDate)).includes("overdue")
+                                ? "text-red-400" 
+                                : "text-foreground"
+                            }`}>
+                              {getDueDateText(getAcknowledgmentDueDate(review.submittedDate))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">Client Reviewed Date</div>
+                            <div className="font-medium text-foreground">{new Date(review.submittedDate).toLocaleDateString()}</div>
+                          </div>
+                        </>
+                      )}
                       {review.submittedDate && review.status !== 'UNDER_REVIEW' && (
                         <div>
                           <div className="text-sm text-muted-foreground mb-1">Client Reviewed Date</div>

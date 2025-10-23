@@ -77,15 +77,9 @@ export default function StaffTasksPage() {
         throw new Error("Failed to update task")
       }
 
-      // Show appropriate toast message
-      let toastMessage = "Task status updated"
-      if (newStatus === "COMPLETED") {
-        toastMessage = "Task completed! 🎉"
-      }
-
       toast({
         title: "Success! 🎉",
-        description: toastMessage,
+        description: "Task status updated",
       })
     } catch (error) {
       console.error("Error updating task:", error)
@@ -136,7 +130,7 @@ export default function StaffTasksPage() {
             </div>
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-4 font-bold text-white transition-all hover:from-indigo-700 hover:to-purple-700 hover:scale-105 shadow-2xl shadow-indigo-500/50"
+              className="rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-4 font-bold text-white transition-all hover:from-indigo-700 hover:to-purple-700 hover:scale-105 shadow-2xl shadow-indigo-500/50 animate-pulse"
             >
               <Plus className="h-5 w-5 mr-2" />
               Create Task 🎯

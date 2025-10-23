@@ -66,11 +66,6 @@ function createWindow() {
         performanceTracker.stop()
         activityTracker.destroy()
         screenshotService.destroy()
-        // Also stop sync service for non-staff portals
-        if (syncService.getStatus().isRunning) {
-          console.log('[Main] Stopping sync service for non-staff portal...')
-          syncService.stop()
-        }
         updateTrayMenuForClient()
       } else if (!shouldDisableTracking && !performanceTracker.getStatus().isTracking) {
         console.log('[Main] ✅ User switched to staff portal - starting performance tracking')
@@ -93,11 +88,6 @@ function createWindow() {
         performanceTracker.stop()
         activityTracker.destroy()
         screenshotService.destroy()
-        // Also stop sync service for non-staff portals
-        if (syncService.getStatus().isRunning) {
-          console.log('[Main] Stopping sync service for non-staff portal...')
-          syncService.stop()
-        }
         updateTrayMenuForClient()
       } else if (!shouldDisableTracking && !performanceTracker.getStatus().isTracking) {
         console.log('[Main] ✅ Staff page loaded - starting performance tracking')
@@ -346,7 +336,7 @@ async function initializeTracking() {
   
   if (shouldDisableTracking) {
     console.log('[Main] 🚫 NON-STAFF PORTAL DETECTED - Performance tracking disabled')
-    console.log('[Main] No sync service needed for client/admin portals')
+    console.log('[Main] Only basic sync service will be started for non-staff users')
     
     // Stop any existing tracking first
     if (performanceTracker.getStatus().isTracking) {
@@ -356,11 +346,9 @@ async function initializeTracking() {
       screenshotService.destroy()
     }
     
-    // Stop sync service for non-staff users (no performance data to sync)
-    if (syncService.getStatus().isRunning) {
-      console.log('[Main] Stopping sync service for non-staff user...')
-      syncService.stop()
-    }
+    // Only start sync service for clients (no performance tracking)
+    syncService.start()
+    console.log('[Main] Sync service started (client mode)')
     
     // Update tray menu (minimal for clients)
     updateTrayMenuForClient()

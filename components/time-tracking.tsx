@@ -94,9 +94,6 @@ export default function TimeTracking() {
   
   // End break confirmation modal
   const [showEndBreakModal, setShowEndBreakModal] = useState(false)
-  
-  // Local state for fresh break data
-  const [freshBreakData, setFreshBreakData] = useState<any>(null)
 
   // WebSocket automatically handles data fetching, no need for manual API calls
   
@@ -205,6 +202,7 @@ export default function TimeTracking() {
         const scheduledTime = b.scheduledStart.trim()
         const normalizedCurrent = currentTime.trim()
         
+        console.log(`  🔍 Comparing: "${scheduledTime}" === "${normalizedCurrent}"`)
         
         // Check if scheduledStart matches current time
         const shouldStart = scheduledTime === normalizedCurrent
@@ -222,6 +220,7 @@ export default function TimeTracking() {
         const awayReason = breakToStart.type === "AWAY" ? breakToStart.awayReason : undefined
         handleStartBreak(breakToStart.id, breakToStart.type, awayReason)
       } else {
+        console.log("  ⏸️ No breaks to start right now")
       }
     }
     
@@ -369,6 +368,7 @@ export default function TimeTracking() {
           duration: 5000
         })
         
+        console.log("✅ Auto clock-out successful")
       } else {
         console.log("⚠️ Auto clock-out failed:", data.error)
         toast({
@@ -403,6 +403,7 @@ export default function TimeTracking() {
   }
 
   const handleCancelEndBreak = () => {
+    console.log("🔄 CANCEL END BREAK CALLED - isEndingBreak:", isEndingBreak)
     setShowEndBreakModal(false)
   }
   
@@ -466,6 +467,7 @@ export default function TimeTracking() {
   }
 
   const handleConfirmEndBreak = async () => {
+    console.log("🔄 CONFIRM END BREAK CALLED - activeBreak:", !!activeBreak, "isEndingBreak:", isEndingBreak)
     if (!activeBreak || !isConnected) return
     if (isEndingBreak) {
       console.log("⚠️ ALREADY ENDING BREAK - Ignoring duplicate click")
@@ -481,7 +483,6 @@ export default function TimeTracking() {
     setShowEndBreakModal(false)
     setBreakModalOpen(false)
     setBreakIsPaused(false)
-    setFreshBreakData(null) // Clear fresh data when break ends
     setForceCloseBreakModal(true) // Force close the break modal immediately
     
     // Show success toast immediately
@@ -525,7 +526,6 @@ export default function TimeTracking() {
     // ⚡ IMMEDIATE UI UPDATE - Close modals instantly for better UX
     setBreakModalOpen(false)
     setBreakIsPaused(false)
-    setFreshBreakData(null) // Clear fresh data when break ends
     console.log("✨ BREAK MODAL CLOSED IMMEDIATELY (direct)")
     
     // Show success toast immediately
@@ -538,6 +538,7 @@ export default function TimeTracking() {
     // Continue with the actual end logic in the background
     try {
       await endBreak(breakId)
+      console.log("✅ BREAK ENDED SUCCESSFULLY IN BACKGROUND (direct)")
     } catch (error) {
       console.error("❌ Error ending break in background (direct):", error)
       // Show error toast if API fails
@@ -569,9 +570,11 @@ export default function TimeTracking() {
     
     // ⚡ IMMEDIATE UI UPDATE - Close modal instantly for better UX
     setBreakIsPaused(true)
+    setBreakPauseUsed(true)
     setBreakModalOpen(false)
     setForceCloseBreakModal(true)
     
+    console.log("⏸️ PAUSING BREAK (Modal closes immediately, staff can work)")
     
     // Show success toast immediately
     toast({
@@ -594,14 +597,18 @@ export default function TimeTracking() {
       
       // Resume performance tracking when break is paused (staff can work)
       if (typeof window !== 'undefined' && (window as any).electron?.performance?.resume) {
+        console.log("🔄 RESUMING PERFORMANCE TRACKING - Staff can work during paused break")
         await (window as any).electron.performance.resume()
+        console.log("✅ Performance tracking resumed in Electron")
       } else {
         console.log("⚠️ Electron performance API not available (running in browser)")
       }
       
       // Disable break mode when break is paused (staff can work)
       if (typeof window !== 'undefined' && (window as any).electron?.activityTracker?.setBreakMode) {
+        console.log("🔄 DISABLING BREAK MODE - Staff can work during paused break")
         await (window as any).electron.activityTracker.setBreakMode(false)
+        console.log("✅ Break mode disabled in Electron")
       } else {
         console.log("⚠️ Electron activity tracker API not available (running in browser)")
       }
@@ -609,15 +616,16 @@ export default function TimeTracking() {
       // Emit WebSocket event for break pause
       if (socket) {
         socket.emit('break:pause', { breakId: activeBreak.id, staffUserId: activeBreak.staffUserId })
+        console.log("📡 WebSocket event emitted: break:pause")
       }
 
       // Request fresh data to get updated break status
       if (socket) {
+        console.log("🔄 Requesting fresh data after break pause")
         socket.emit('time:request-data')
       }
-      
-      // Only set pause as used after successful API call
-      setBreakPauseUsed(true)
+
+      console.log("✅ PAUSE API SUCCESS - breakIsPaused: true, modal closed, performance tracking resumed")
     } catch (error) {
       console.error("Error pausing break:", error)
       // Show error toast if API fails
@@ -662,14 +670,18 @@ export default function TimeTracking() {
       
       // Pause performance tracking when break is resumed (staff is back on break)
       if (typeof window !== 'undefined' && (window as any).electron?.performance?.pause) {
+        console.log("⏸️ PAUSING PERFORMANCE TRACKING - Staff is back on break")
         await (window as any).electron.performance.pause()
+        console.log("✅ Performance tracking paused in Electron")
       } else {
         console.log("⚠️ Electron performance API not available (running in browser)")
       }
       
       // Enable break mode when break is resumed (staff is back on break)
       if (typeof window !== 'undefined' && (window as any).electron?.activityTracker?.setBreakMode) {
+        console.log("⏸️ ENABLING BREAK MODE - Staff is back on break")
         await (window as any).electron.activityTracker.setBreakMode(true)
+        console.log("✅ Break mode enabled in Electron")
       } else {
         console.log("⚠️ Electron activity tracker API not available (running in browser)")
       }
@@ -677,43 +689,20 @@ export default function TimeTracking() {
       // Emit WebSocket event for break resume
       if (socket) {
         socket.emit('break:resume', { breakId: activeBreak.id, staffUserId: activeBreak.staffUserId })
+        console.log("📡 WebSocket event emitted: break:resume")
       }
       
-      // Fetch fresh break data directly
-      try {
-        const breakResponse = await fetch(`/api/breaks/${activeBreak.id}`)
-        if (breakResponse.ok) {
-          const breakData = await breakResponse.json()
-          
-          // Format the data to match BreakModal expectations
-          const formattedBreakData = {
-            id: breakData.break.id,
-            type: breakData.break.type,
-            startTime: breakData.break.actualStart,
-            actualStart: breakData.break.actualStart,
-            duration: breakData.break.duration || (breakData.break.type === 'LUNCH' ? 60 : 15),
-            awayReason: breakData.break.awayReason,
-            isPaused: breakData.break.ispaused || false,
-            pausedDuration: breakData.break.pausedduration || 0,
-            pauseUsed: breakData.break.pauseused || false
-          }
-          
-          setFreshBreakData(formattedBreakData)
-        }
-      } catch (error) {
-        console.error("Error fetching fresh break data:", error)
-      }
+      // Now update UI state and open modal after API success
+      setBreakIsPaused(false)
+      setBreakModalOpen(true)
 
-      // Request fresh data to get updated pausedDuration first
+      console.log("✅ RESUME API SUCCESS - breakIsPaused: false, modal opened, performance tracking paused")
+
+      // Request fresh data to get updated pausedDuration
       if (socket) {
+        console.log("🔄 Requesting fresh data after break resume")
         socket.emit('time:request-data')
       }
-
-      // Wait a moment for fresh data to arrive, then update UI state and open modal
-      setTimeout(() => {
-        setBreakIsPaused(false)
-        setBreakModalOpen(true)
-      }, 1000) // Wait 1 second for fresh data to arrive
 
       // Show success toast
       toast({
@@ -742,7 +731,6 @@ export default function TimeTracking() {
   const handleCloseBreakModal = () => {
     console.log("🚪 CLOSING BREAK MODAL (break still active)")
     setBreakModalOpen(false)
-    setFreshBreakData(null) // Clear fresh data when modal is closed
   }
 
   // WebSocket handles stats calculation automatically
@@ -751,6 +739,7 @@ export default function TimeTracking() {
     if (isClockingIn || !isConnected) return // Prevent duplicate clicks or if not connected
     
     try {
+      console.log("🚀 CLOCK IN CLICKED - WebSocket Version!")
       
       setIsClockingIn(true)
       
@@ -875,6 +864,7 @@ export default function TimeTracking() {
   const handleBreakScheduled = () => {
     // Close the break scheduler modal
     resetBreakScheduler()
+    console.log("✅ Breaks scheduled successfully!")
     
     // Refresh scheduled breaks to show the newly scheduled breaks
     refreshScheduledBreaks()
@@ -1123,7 +1113,7 @@ export default function TimeTracking() {
         {/* Full-Screen Break Modal */}
         <BreakModal
           isOpen={breakModalOpen}
-          breakData={freshBreakData || (activeBreak ? { ...activeBreak, isPaused: breakIsPaused } : null)}
+          breakData={activeBreak ? { ...activeBreak, isPaused: breakIsPaused } : null}
           onEnd={handleEndBreak}
           onEndDirect={handleEndBreakDirect}
           onPause={handlePauseBreak}
@@ -1357,6 +1347,20 @@ export default function TimeTracking() {
                   const now = new Date()
                   const isExpired = !isCompleted && !isOnBreak && now > scheduledEndTime
                   
+                  // Debug logging for break status
+                  console.log('🔍 BREAK DATA DEBUG:', {
+                    id: breakItem.id,
+                    type: breakItem.type,
+                    scheduledStart: breakItem.scheduledStart,
+                    scheduledEnd: breakItem.scheduledEnd,
+                    actualStart: breakItem.actualStart,
+                    actualEnd: breakItem.actualEnd,
+                    isOnBreak,
+                    isCompleted,
+                    isExpired,
+                    currentTime: now.toLocaleTimeString(),
+                    scheduledEndTime: scheduledEndTime.toLocaleTimeString()
+                  })
                   
                   // For completed breaks, show actual times; for scheduled breaks, show scheduled times
                   const startTime = isCompleted ? breakItem.actualStart : breakItem.scheduledStart

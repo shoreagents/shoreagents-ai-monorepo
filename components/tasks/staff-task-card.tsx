@@ -56,22 +56,21 @@ export default function StaffTaskCard({ task, onUpdate, isDragging }: StaffTaskC
   return (
     <>
       <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
         onClick={() => setShowModal(true)}
-        className={`group cursor-grab active:cursor-grabbing rounded-2xl bg-slate-900/50 backdrop-blur-xl p-4 border border-white/10 shadow-xl transition-all duration-300 hover:border-slate-400/50 relative overflow-hidden ${
-          isDragging || isSortableDragging ? "opacity-50 scale-95" : ""
-        }`}
-      >
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`group cursor-grab active:cursor-grabbing rounded-2xl bg-slate-900/50 backdrop-blur-xl p-4 border border-white/10 shadow-xl transition-all duration-300 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/20 hover:scale-[1.02] relative overflow-hidden ${
+        isDragging || isSortableDragging ? "opacity-50" : ""
+      }`}
+    >
       {/* Priority Bar */}
       <div className={`h-2 w-full rounded-full mb-3 ${priorityConfig.color} shadow-lg`} />
 
-
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="font-bold text-slate-100 line-clamp-2 flex-1">
+        <h4 className="font-bold text-slate-100 line-clamp-2 flex-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-purple-400 transition-all">
           {task.title}
         </h4>
         <span className={`text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ${priorityConfig.darkColor} shadow-md`}>
@@ -187,6 +186,8 @@ export default function StaffTaskCard({ task, onUpdate, isDragging }: StaffTaskC
         </div>
       )}
 
+      {/* Hover effect overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/10 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" />
     </div>
 
     {/* Modal - Use Portal to render at body level */}

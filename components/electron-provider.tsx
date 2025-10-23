@@ -70,20 +70,9 @@ export default function ElectronProvider({ children }: { children: React.ReactNo
     }
   }, [])
 
-  // Start sync service when consent is given (ONLY for staff users)
+  // Start sync service when consent is given (try to get session token from cookies)
   useEffect(() => {
     if (isElectron && consentGiven) {
-      // Check if we're on a staff portal (not client or admin)
-      const currentPath = window.location.pathname
-      const isStaffPortal = !currentPath.includes('/client') && !currentPath.includes('/admin')
-      
-      if (!isStaffPortal) {
-        console.log('[ElectronProvider] 🚫 Client/Admin portal detected - NOT starting sync service')
-        return
-      }
-      
-      console.log('[ElectronProvider] ✅ Staff portal detected - starting sync service')
-      
       // Try to extract session token from cookies
       const cookies = document.cookie.split(';')
       console.log('[ElectronProvider] All cookies:', cookies)
@@ -119,37 +108,6 @@ export default function ElectronProvider({ children }: { children: React.ReactNo
       }
     }
   }, [isElectron, consentGiven])
-
-  // Stop sync service when navigating to client/admin portals
-  useEffect(() => {
-    if (isElectron) {
-      const handleNavigation = () => {
-        const currentPath = window.location.pathname
-        const isStaffPortal = !currentPath.includes('/client') && !currentPath.includes('/admin')
-        
-        if (!isStaffPortal) {
-          console.log('[ElectronProvider] 🚫 Navigated to client/admin portal - stopping sync service')
-          window.electron?.sync.stop().then(() => {
-            console.log('[ElectronProvider] ✅ Sync service stopped')
-          }).catch((err) => {
-            console.error('[ElectronProvider] ❌ Error stopping sync service:', err)
-          })
-        } else {
-          console.log('[ElectronProvider] ✅ Navigated to staff portal - sync service should be running')
-        }
-      }
-
-      // Listen for navigation changes
-      window.addEventListener('popstate', handleNavigation)
-      
-      // Also check on mount
-      handleNavigation()
-
-      return () => {
-        window.removeEventListener('popstate', handleNavigation)
-      }
-    }
-  }, [isElectron])
 
   const handleConsent = (accepted: boolean) => {
     console.log('[ElectronProvider] 📝 handleConsent called:', accepted)

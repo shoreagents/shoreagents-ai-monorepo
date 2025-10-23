@@ -1,89 +1,201 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 
+// POST /api/posts/comments - Add a comment to a post
 export async function POST(request: NextRequest) {
   try {
-    const { postId, content } = await request.json()
-
-    if (!postId || !content) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // Get authenticated user
     const session = await auth()
+
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Determine user type and get database user ID
-    const [staffUser, clientUser, managementUser] = await Promise.all([
-      prisma.staffUser.findUnique({ 
-        where: { authUserId: session.user.id },
-        select: { id: true }
-      }),
-      prisma.clientUser.findUnique({ 
-        where: { authUserId: session.user.id },
-        select: { id: true }
-      }),
-      prisma.managementUser.findUnique({ 
-        where: { authUserId: session.user.id },
-        select: { id: true }
-      })
-    ])
+    // Check if it's a staff user, client user, or management user
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
 
-    const userId = staffUser?.id || clientUser?.id || managementUser?.id
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    const managementUser = await prisma.managementUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser && !clientUser && !managementUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Determine user type
-    const userType = staffUser ? 'staff' : clientUser ? 'client' : 'management'
+    const body = await request.json()
+    const { postId, content } = body
 
-    // Create the comment
+    if (!postId || !content?.trim()) {
+      return NextResponse.json(
+        { error: "Post ID and comment content are required" },
+        { status: 400 }
+      )
+    }
+
+    // Check if post exists
+    const post = await prisma.activityPost.findUnique({
+      where: { id: postId },
+    })
+
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 })
+    }
+
+    // Create comment
     const comment = await prisma.postComment.create({
       data: {
-        postId,
-        content,
-        ...(userType === 'staff' && { staffUserId: userId }),
-        ...(userType === 'client' && { clientUserId: userId }),
-        ...(userType === 'management' && { managementUserId: userId }),
+        postId: postId,
+        staffUserId: staffUser?.id || null,
+        clientUserId: clientUser?.id || null,
+        managementUserId: managementUser?.id || null,
+        content: content.trim(),
       },
       include: {
         staffUser: {
           select: {
             id: true,
             name: true,
-            avatar: true
-          }
+            avatar: true,
+            role: true,
+          },
         },
         clientUser: {
           select: {
             id: true,
             name: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
         managementUser: {
           select: {
             id: true,
             name: true,
-            avatar: true
-          }
-        }
-      }
+            avatar: true,
+            role: true,
+          },
+        },
+      },
     })
 
-    // Emit socket event for real-time updates
-    const io = (global as any).socketServer
+    // 🔥 Emit WebSocket event
+    const io = global.socketServer
     if (io) {
-      io.emit('commentAdded', { postId, content })
+      const user = comment.staffUser || comment.clientUser || comment.managementUser
+      io.emit('activity:commentAdded', {
+        postId,
+        comment: {
+          id: comment.id,
+          content: comment.content,
+          createdAt: comment.createdAt.toISOString(),
+          user: {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          }
+        }
+      })
+      console.log('🔥 [WebSocket] Comment added:', postId)
     }
 
-    return NextResponse.json({ success: true, comment })
+    return NextResponse.json({ success: true, comment }, { status: 201 })
   } catch (error) {
-    console.error('Error creating comment:', error)
-    return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
+    console.error("Error adding comment:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
+
+// DELETE /api/posts/comments - Delete a comment
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check if it's a staff user, client user, or management user
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    const clientUser = await prisma.clientUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    const managementUser = await prisma.managementUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    if (!staffUser && !clientUser && !managementUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Get comment ID from query params
+    const { searchParams } = new URL(request.url)
+    const commentId = searchParams.get('commentId') || searchParams.get('id')
+
+    if (!commentId) {
+      return NextResponse.json(
+        { error: "Comment ID is required" },
+        { status: 400 }
+      )
+    }
+
+    // Check if comment exists and belongs to user
+    const comment = await prisma.postComment.findUnique({
+      where: { id: commentId },
+    })
+
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+    }
+
+    // Check if user owns the comment (staff, client, or management)
+    const isOwner = (staffUser && comment.staffUserId === staffUser.id) ||
+                    (clientUser && comment.clientUserId === clientUser.id) ||
+                    (managementUser && comment.managementUserId === managementUser.id)
+
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: "You can only delete your own comments" },
+        { status: 403 }
+      )
+    }
+
+    // Store postId before deleting
+    const postId = comment.postId
+    
+    // Delete comment
+    await prisma.postComment.delete({
+      where: { id: commentId },
+    })
+
+    // 🔥 Emit WebSocket event
+    const io = global.socketServer
+    if (io) {
+      io.emit('activity:commentDeleted', {
+        postId,
+        commentId
+      })
+      console.log('🔥 [WebSocket] Comment deleted:', commentId)
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting comment:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+

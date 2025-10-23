@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        ...(status && { status: status as any }),
-        ...(category && { category: category as any }),
+        ...(status && { status }),
+        ...(category && { category }),
         ...(staffId && { staffUserId: staffId }),
         ...(creatorType && { createdByType: creatorType.toUpperCase() }),
       },
