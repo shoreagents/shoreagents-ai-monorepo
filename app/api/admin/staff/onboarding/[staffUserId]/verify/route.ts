@@ -40,7 +40,12 @@ export async function POST(
       "govId",
       "documents",
       "signature",
-      "emergencyContact"
+      "emergencyContact",
+      "resume",
+      "medical",
+      "education",
+      "dataPrivacy",
+      "bankDetails"
     ]
     
     const validActions = ["APPROVED", "REJECTED", "feedback"]
@@ -112,20 +117,30 @@ export async function POST(
       updated?.govIdStatus,
       updated?.documentsStatus,
       updated?.signatureStatus,
-      updated?.emergencyContactStatus
+      updated?.emergencyContactStatus,
+      updated?.resumeStatus,
+      updated?.medicalStatus,
+      updated?.educationStatus,
+      updated?.dataPrivacyStatus,
+      updated?.bankDetailsStatus
     ].filter(status => status === "APPROVED").length
     
     console.log("📊 COMPLETION UPDATED:", { 
       completionPercent: updated?.completionPercent,
       approvedCount: approvedCount,
-      allApproved: approvedCount === 5 ? "✅ GREEN FORM SHOULD APPEAR!" : `❌ Only ${approvedCount}/5 approved`,
+      allApproved: approvedCount === 10 ? "✅ GREEN FORM SHOULD APPEAR!" : `❌ Only ${approvedCount}/10 approved`,
       isComplete: updated?.isComplete,
       statuses: {
         personalInfo: updated?.personalInfoStatus,
         govId: updated?.govIdStatus,
         documents: updated?.documentsStatus,
         signature: updated?.signatureStatus,
-        emergencyContact: updated?.emergencyContactStatus
+        emergencyContact: updated?.emergencyContactStatus,
+        resume: updated?.resumeStatus,
+        medical: updated?.medicalStatus,
+        education: updated?.educationStatus,
+        dataPrivacy: updated?.dataPrivacyStatus,
+        bankDetails: updated?.bankDetailsStatus
       }
     })
 
@@ -156,14 +171,19 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.govIdStatus,
     onboarding.documentsStatus,
     onboarding.signatureStatus,
-    onboarding.emergencyContactStatus
+    onboarding.emergencyContactStatus,
+    onboarding.resumeStatus,
+    onboarding.medicalStatus,
+    onboarding.educationStatus,
+    onboarding.dataPrivacyStatus,
+    onboarding.bankDetailsStatus
   ]
 
-  // Admin progress: Only count APPROVED/REJECTED sections (20% each)
+  // Admin progress: Only count APPROVED/REJECTED sections (10% each for 10 sections)
   let totalProgress = 0
   sections.forEach(status => {
     if (status === "APPROVED" || status === "REJECTED") {
-      totalProgress += 20
+      totalProgress += 10
     }
   })
 

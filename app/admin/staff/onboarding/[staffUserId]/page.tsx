@@ -63,12 +63,24 @@ interface OnboardingData {
   emergencyContactNo: string
   emergencyRelationship: string
   
+  // New Documents
+  resumeUrl: string
+  medicalCertUrl: string
+  diplomaTorUrl: string
+  dataPrivacyConsentUrl: string
+  bankAccountDetails: string
+  
   // Status
   personalInfoStatus: string
   govIdStatus: string
   documentsStatus: string
   signatureStatus: string
   emergencyContactStatus: string
+  resumeStatus: string
+  medicalStatus: string
+  educationStatus: string
+  dataPrivacyStatus: string
+  bankDetailsStatus: string
   
   // Feedback
   personalInfoFeedback: string
@@ -76,6 +88,11 @@ interface OnboardingData {
   documentsFeedback: string
   signatureFeedback: string
   emergencyContactFeedback: string
+  resumeFeedback: string
+  medicalFeedback: string
+  educationFeedback: string
+  dataPrivacyFeedback: string
+  bankDetailsFeedback: string
   
   completionPercent: number
   isComplete: boolean
@@ -109,7 +126,12 @@ export default function AdminOnboardingDetailPage() {
     govId: { approve: false, reject: false },
     documents: { approve: false, reject: false },
     signature: { approve: false, reject: false },
-    emergencyContact: { approve: false, reject: false }
+    emergencyContact: { approve: false, reject: false },
+    resume: { approve: false, reject: false },
+    medical: { approve: false, reject: false },
+    education: { approve: false, reject: false },
+    dataPrivacy: { approve: false, reject: false },
+    bankDetails: { approve: false, reject: false }
   })
   
   const [staff, setStaff] = useState<any>(null)
@@ -160,13 +182,23 @@ export default function AdminOnboardingDetailPage() {
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
-          data.onboarding.emergencyContactStatus === "APPROVED",
+          data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.dataPrivacyStatus === "APPROVED" &&
+          data.onboarding.bankDetailsStatus === "APPROVED",
         shouldShowForm: 
           data.onboarding.personalInfoStatus === "APPROVED" &&
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
           data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.dataPrivacyStatus === "APPROVED" &&
+          data.onboarding.bankDetailsStatus === "APPROVED" &&
           !data.onboarding.isComplete
       })
       setStaff(data.staff)
@@ -333,6 +365,11 @@ export default function AdminOnboardingDetailPage() {
         documentsStatus: onboarding?.documentsStatus,
         signatureStatus: onboarding?.signatureStatus,
         emergencyContactStatus: onboarding?.emergencyContactStatus,
+        resumeStatus: onboarding?.resumeStatus,
+        medicalStatus: onboarding?.medicalStatus,
+        educationStatus: onboarding?.educationStatus,
+        dataPrivacyStatus: onboarding?.dataPrivacyStatus,
+        bankDetailsStatus: onboarding?.bankDetailsStatus,
         isComplete: onboarding?.isComplete
       }
     })
@@ -594,6 +631,11 @@ export default function AdminOnboardingDetailPage() {
          onboarding.documentsStatus === "APPROVED" &&
          onboarding.signatureStatus === "APPROVED" &&
          onboarding.emergencyContactStatus === "APPROVED" &&
+         onboarding.resumeStatus === "APPROVED" &&
+         onboarding.medicalStatus === "APPROVED" &&
+         onboarding.educationStatus === "APPROVED" &&
+         onboarding.dataPrivacyStatus === "APPROVED" &&
+         onboarding.bankDetailsStatus === "APPROVED" &&
          !onboarding.isComplete &&
          !profile && (
           <Card className="mb-6 bg-green-900/30 border-green-700">
@@ -1635,6 +1677,693 @@ export default function AdminOnboardingDetailPage() {
                       <XCircle className="h-4 w-4" />
                     )}
                     {getButtonLabels("emergencyContact").reject}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Document 6: Resume */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-purple-400" />
+                <CardTitle className="text-white">Resume</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.resumeStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Resume Document</p>
+                {onboarding.resumeUrl ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.resumeUrl, title: "Resume Document" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Resume
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {onboarding.resumeFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.resumeFeedback}
+                    </div>
+                    {!editingFeedback.resume && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, resume: onboarding.resumeFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, resume: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.resume && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.resume || ""}
+                        onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('resume')}
+                          disabled={savingFeedback.resume}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.resume ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, resume: false })
+                            setFeedback({ ...feedback, resume: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.resumeStatus !== "APPROVED" && (
+              <div className="space-y-3 mt-6">
+                {!onboarding.resumeFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.resume || ""}
+                      onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => handleVerify("resume", "APPROVED")}
+                    disabled={processingStates.resume?.approve || processingStates.resume?.reject}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {processingStates.resume?.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("resume").approve}
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify("resume", "REJECTED")}
+                    disabled={processingStates.resume?.approve || processingStates.resume?.reject}
+                    variant="destructive"
+                  >
+                    {processingStates.resume?.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("resume").reject}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Document 7: Medical Certificate */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 text-purple-400">❤️</div>
+                <CardTitle className="text-white">Medical Certificate</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.medicalStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Medical Certificate</p>
+                {onboarding.medicalCertUrl ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.medicalCertUrl, title: "Medical Certificate" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Certificate
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {onboarding.medicalFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.medicalFeedback}
+                    </div>
+                    {!editingFeedback.medical && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, medical: onboarding.medicalFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, medical: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.medical && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.medical || ""}
+                        onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('medical')}
+                          disabled={savingFeedback.medical}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.medical ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, medical: false })
+                            setFeedback({ ...feedback, medical: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.medicalStatus !== "APPROVED" && (
+              <div className="space-y-3 mt-6">
+                {!onboarding.medicalFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.medical || ""}
+                      onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => handleVerify("medical", "APPROVED")}
+                    disabled={processingStates.medical?.approve || processingStates.medical?.reject}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {processingStates.medical?.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("medical").approve}
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify("medical", "REJECTED")}
+                    disabled={processingStates.medical?.approve || processingStates.medical?.reject}
+                    variant="destructive"
+                  >
+                    {processingStates.medical?.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("medical").reject}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Document 8: Education */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 text-purple-400">🎓</div>
+                <CardTitle className="text-white">Education</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.educationStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Diploma/TOR</p>
+                {onboarding.diplomaTorUrl ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.diplomaTorUrl, title: "Diploma/TOR" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Diploma/TOR
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {onboarding.educationFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.educationFeedback}
+                    </div>
+                    {!editingFeedback.education && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, education: onboarding.educationFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, education: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.education && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.education || ""}
+                        onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('education')}
+                          disabled={savingFeedback.education}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.education ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, education: false })
+                            setFeedback({ ...feedback, education: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.educationStatus !== "APPROVED" && (
+              <div className="space-y-3 mt-6">
+                {!onboarding.educationFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.education || ""}
+                      onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => handleVerify("education", "APPROVED")}
+                    disabled={processingStates.education?.approve || processingStates.education?.reject}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {processingStates.education?.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("education").approve}
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify("education", "REJECTED")}
+                    disabled={processingStates.education?.approve || processingStates.education?.reject}
+                    variant="destructive"
+                  >
+                    {processingStates.education?.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("education").reject}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Document 9: Data Privacy */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 text-purple-400">🛡️</div>
+                <CardTitle className="text-white">Data Privacy</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.dataPrivacyStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400 mb-1">Data Privacy Consent</p>
+                {onboarding.dataPrivacyConsentUrl ? (
+                  <button 
+                    onClick={() => {
+                      setImageLoading(true)
+                      setViewFileModal({ url: onboarding.dataPrivacyConsentUrl, title: "Data Privacy Consent" })
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    View Consent Form
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm">Not uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {onboarding.dataPrivacyFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.dataPrivacyFeedback}
+                    </div>
+                    {!editingFeedback.dataPrivacy && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, dataPrivacy: onboarding.dataPrivacyFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, dataPrivacy: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.dataPrivacy && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.dataPrivacy || ""}
+                        onChange={(e) => setFeedback({ ...feedback, dataPrivacy: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('dataPrivacy')}
+                          disabled={savingFeedback.dataPrivacy}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.dataPrivacy ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, dataPrivacy: false })
+                            setFeedback({ ...feedback, dataPrivacy: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.dataPrivacyStatus !== "APPROVED" && (
+              <div className="space-y-3 mt-6">
+                {!onboarding.dataPrivacyFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.dataPrivacy || ""}
+                      onChange={(e) => setFeedback({ ...feedback, dataPrivacy: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => handleVerify("dataPrivacy", "APPROVED")}
+                    disabled={processingStates.dataPrivacy?.approve || processingStates.dataPrivacy?.reject}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {processingStates.dataPrivacy?.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("dataPrivacy").approve}
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify("dataPrivacy", "REJECTED")}
+                    disabled={processingStates.dataPrivacy?.approve || processingStates.dataPrivacy?.reject}
+                    variant="destructive"
+                  >
+                    {processingStates.dataPrivacy?.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("dataPrivacy").reject}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Document 10: Bank Details */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-purple-400" />
+                <CardTitle className="text-white">Bank Details</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.bankDetailsStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-slate-400">Bank Account Details</p>
+                <p className="text-white font-mono">{onboarding.bankAccountDetails || "Not provided"}</p>
+              </div>
+            </div>
+
+            {onboarding.bankDetailsFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.bankDetailsFeedback}
+                    </div>
+                    {!editingFeedback.bankDetails && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, bankDetails: onboarding.bankDetailsFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, bankDetails: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.bankDetails && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.bankDetails || ""}
+                        onChange={(e) => setFeedback({ ...feedback, bankDetails: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('bankDetails')}
+                          disabled={savingFeedback.bankDetails}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.bankDetails ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, bankDetails: false })
+                            setFeedback({ ...feedback, bankDetails: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-600 text-yellow-300 hover:bg-yellow-900"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {onboarding.bankDetailsStatus !== "APPROVED" && (
+              <div className="space-y-3 mt-6">
+                {!onboarding.bankDetailsFeedback && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">Feedback</label>
+                    <Textarea
+                      placeholder="Add feedback (optional)"
+                      value={feedback.bankDetails || ""}
+                      onChange={(e) => setFeedback({ ...feedback, bankDetails: e.target.value })}
+                      className="placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => handleVerify("bankDetails", "APPROVED")}
+                    disabled={processingStates.bankDetails?.approve || processingStates.bankDetails?.reject}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {processingStates.bankDetails?.approve ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("bankDetails").approve}
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify("bankDetails", "REJECTED")}
+                    disabled={processingStates.bankDetails?.approve || processingStates.bankDetails?.reject}
+                    variant="destructive"
+                  >
+                    {processingStates.bankDetails?.reject ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    {getButtonLabels("bankDetails").reject}
                   </Button>
                 </div>
               </div>

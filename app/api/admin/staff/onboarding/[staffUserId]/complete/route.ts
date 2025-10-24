@@ -97,7 +97,12 @@ export async function POST(
       onboarding.govIdStatus === "APPROVED" &&
       onboarding.documentsStatus === "APPROVED" &&
       onboarding.signatureStatus === "APPROVED" &&
-      onboarding.emergencyContactStatus === "APPROVED"
+      onboarding.emergencyContactStatus === "APPROVED" &&
+      onboarding.resumeStatus === "APPROVED" &&
+      onboarding.medicalStatus === "APPROVED" &&
+      onboarding.educationStatus === "APPROVED" &&
+      onboarding.dataPrivacyStatus === "APPROVED" &&
+      onboarding.bankDetailsStatus === "APPROVED"
 
     if (!allApproved) {
       return NextResponse.json({ 
