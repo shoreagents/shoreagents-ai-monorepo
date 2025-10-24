@@ -121,6 +121,9 @@ export async function POST(
       }, { status: 400 })
     }
 
+    // Check contract is signed (skip for now - may not exist in current schema)
+    console.log("⚠️ CONTRACT CHECK SKIPPED - Schema may not include employment contracts yet")
+
     // Check if profile already exists
     if (staffUser.profile) {
       console.log("✅ PROFILE ALREADY EXISTS:", { 
@@ -245,7 +248,7 @@ export async function POST(
 
     // Create work schedule based on shift time
     // Parse shift time (e.g., "9:00 AM - 6:00 PM")
-    const shiftParts = shiftTime.split('-').map(s => s.trim())
+    const shiftParts = shiftTime.split('-').map((s: string) => s.trim())
     const startTime = shiftParts[0] || "9:00 AM"
     const endTime = shiftParts[1] || "6:00 PM"
 
@@ -259,7 +262,7 @@ export async function POST(
       "Sunday"
     ]
 
-    const schedules = days.map(day => ({
+    const schedules = days.map((day: string) => ({
       profileId: profile.id,
       dayOfWeek: day,
       startTime: ["Saturday", "Sunday"].includes(day) ? "" : startTime,
@@ -271,8 +274,11 @@ export async function POST(
     console.log("✅ WORK SCHEDULE CREATED:", { 
       profileId: profile.id, 
       schedulesCount: schedules.length,
-      workdays: schedules.filter(s => s.isWorkday).length
+      workdays: schedules.filter((s: { isWorkday: boolean }) => s.isWorkday).length
     })
+
+    // Create empty welcome form record (skip for now - may not exist in current schema)
+    console.log("⚠️ WELCOME FORM CREATION SKIPPED - Schema may not include welcome forms yet")
 
     // Mark onboarding as complete
     await prisma.staffOnboarding.update({

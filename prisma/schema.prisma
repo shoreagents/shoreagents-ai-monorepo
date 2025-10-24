@@ -58,6 +58,7 @@ model StaffUser {
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
+  staff_welcome_forms    staff_welcome_forms?
   taskAssignments        TaskAssignment[]
   legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
   ticketResponses        TicketResponse[]
@@ -610,6 +611,27 @@ model StaffOnboarding {
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
+  bankAccountDetails         String?
+  bankDetailsFeedback        String?
+  bankDetailsStatus          OnboardingStatus @default(PENDING)
+  bankDetailsVerifiedAt      DateTime?
+  dataPrivacyConsentUrl      String?
+  dataPrivacyFeedback        String?
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
+  dataPrivacyVerifiedAt      DateTime?
+  diplomaTorUrl              String?
+  educationFeedback          String?
+  educationStatus            OnboardingStatus @default(PENDING)
+  educationVerifiedAt        DateTime?
+  employmentContractId       String?
+  medicalCertUrl             String?
+  medicalFeedback            String?
+  medicalStatus              OnboardingStatus @default(PENDING)
+  medicalVerifiedAt          DateTime?
+  resumeFeedback             String?
+  resumeStatus               OnboardingStatus @default(PENDING)
+  resumeUrl                  String?
+  resumeVerifiedAt           DateTime?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
