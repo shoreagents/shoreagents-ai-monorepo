@@ -566,67 +566,43 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
-  resumeUrl                  String?
-  diplomaTorUrl              String?
-  medicalCertUrl             String?
-  dataPrivacyConsentUrl      String?
-  bankAccountDetails         String?
-  // New GUNTING 8-step fields
-  resumeUrl                  String?
-  educationDocsUrl           String?
-  medicalCertUrl             String?
-  dataPolicyUrl              String?
-  bankDocsUrl                String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
-  resumeStatus               OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
-  educationStatus            OnboardingStatus @default(PENDING)
-  medicalStatus              OnboardingStatus @default(PENDING)
-  dataPrivacyStatus          OnboardingStatus @default(PENDING)
   documentsStatus            OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
-  // New GUNTING 8-step status fields
-  resumeStatus               OnboardingStatus @default(PENDING)
-  educationStatus            OnboardingStatus @default(PENDING)
-  medicalStatus              OnboardingStatus @default(PENDING)
-  dataPolicyStatus           OnboardingStatus @default(PENDING)
-  bankStatus                 OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
-  resumeFeedback             String?
   govIdFeedback              String?
-  educationFeedback          String?
-  medicalFeedback            String?
-  dataPrivacyFeedback        String?
   documentsFeedback          String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
-  // New GUNTING 8-step feedback fields
-  resumeFeedback             String?
-  educationFeedback          String?
-  medicalFeedback            String?
-  dataPolicyFeedback         String?
-  bankFeedback               String?
   personalInfoVerifiedAt     DateTime?
-  resumeVerifiedAt           DateTime?
   govIdVerifiedAt            DateTime?
-  educationVerifiedAt        DateTime?
-  medicalVerifiedAt          DateTime?
-  dataPrivacyVerifiedAt      DateTime?
   documentsVerifiedAt        DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
-  // New GUNTING 8-step verification timestamps
-  resumeVerifiedAt           DateTime?
-  educationVerifiedAt        DateTime?
-  medicalVerifiedAt          DateTime?
-  dataPolicyVerifiedAt       DateTime?
-  bankVerifiedAt             DateTime?
   verifiedBy                 String?
   isComplete                 Boolean          @default(false)
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
+  educationFeedback          String?
+  educationStatus            OnboardingStatus @default(PENDING)
+  educationVerifiedAt        DateTime?
+  medicalCertUrl             String?
+  medicalFeedback            String?
+  medicalStatus              OnboardingStatus @default(PENDING)
+  medicalVerifiedAt          DateTime?
+  resumeFeedback             String?
+  resumeStatus               OnboardingStatus @default(PENDING)
+  resumeUrl                  String?
+  resumeVerifiedAt           DateTime?
+  bankAccountDetails         String?
+  dataPrivacyConsentUrl      String?
+  dataPrivacyFeedback        String?
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
+  dataPrivacyVerifiedAt      DateTime?
+  diplomaTorUrl              String?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
@@ -753,44 +729,6 @@ model EmploymentContract {
   jobAcceptance      JobAcceptance @relation(fields: [jobAcceptanceId], references: [id], onDelete: Cascade)
   staffUser          StaffUser     @relation(fields: [staffUserId], references: [id])
 
-model interview_requests {
-  id                 String                 @id
-  clientUserId       String
-  bpocCandidateId    String
-  candidateFirstName String
-  preferredTimes     Json
-  clientNotes        String?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime
-  adminNotes         String?
-  meetingLink        String?
-  scheduledTime      DateTime?
-  status             InterviewRequestStatus @default(PENDING)
-  client_users       ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  job_acceptances    job_acceptances?
-}
-
-model job_acceptances {
-  id                   String                @id
-  interviewRequestId   String                @unique
-  bpocCandidateId      String
-  candidateEmail       String
-  candidatePhone       String?
-  position             String
-  companyId            String
-  acceptedByAdminId    String
-  acceptedAt           DateTime              @default(now())
-  signupEmailSent      Boolean               @default(false)
-  signupEmailSentAt    DateTime?
-  staffUserId          String?               @unique
-  contractSigned       Boolean               @default(false)
-  contractSignedAt     DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime
-  employment_contracts employment_contracts?
-  company              Company               @relation(fields: [companyId], references: [id])
-  interview_requests   interview_requests    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
-  staff_users          StaffUser?            @relation(fields: [staffUserId], references: [id])
   @@map("employment_contracts")
 }
 

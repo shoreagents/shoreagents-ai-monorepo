@@ -98,6 +98,7 @@ interface OnboardingData {
   // Status
   personalInfoStatus: string
   govIdStatus: string
+  documentsStatus: string
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
@@ -392,132 +393,6 @@ export default function OnboardingPage() {
       clearTimeout(timeoutId)
     } finally {
       console.log("✅ Setting saving to false")
-      setSaving(false)
-    }
-  }
-
-  // Add new handler functions for 8-step onboarding
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, resume: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('resume', file)
-
-      const response = await fetch('/api/onboarding/resume', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Resume uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload resume')
-    } finally {
-      setUploading({ ...uploading, resume: false })
-    }
-  }
-
-  const handleEducationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, education: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('education', file)
-
-      const response = await fetch('/api/onboarding/education', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Education document uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload education document')
-    } finally {
-      setUploading({ ...uploading, education: false })
-    }
-  }
-
-  const handleMedicalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, medical: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('medical', file)
-
-      const response = await fetch('/api/onboarding/medical', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Medical certificate uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload medical certificate')
-    } finally {
-      setUploading({ ...uploading, medical: false })
-    }
-  }
-
-  const handleSaveDataPrivacy = async () => {
-    setSaving(true)
-    setError("")
-
-    try {
-      const response = await fetch('/api/onboarding/data-privacy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dataPrivacyConsent: true,
-          bankName: 'BDO', // Default for now
-          accountName: 'Sample Account',
-          accountNumber: '1234567890'
-        })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to save')
-      }
-
-      setSuccess('Data privacy consent and bank details saved!')
-      setCurrentStep(currentStep + 1)
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to save data privacy consent')
-    } finally {
       setSaving(false)
     }
   }
