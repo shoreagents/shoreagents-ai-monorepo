@@ -42,23 +42,23 @@ async function checkApplications() {
       })
     }
 
-    // Count applications per job
+    // Count applications per job (uses job_id, not job_request_id)
     console.log('\n📊 Applications Per Job Request:')
     const perJob = await client.query(`
       SELECT 
-        job_request_id, 
+        job_id, 
         COUNT(*) as application_count
       FROM applications
-      GROUP BY job_request_id
+      GROUP BY job_id
       ORDER BY application_count DESC
       LIMIT 10
     `)
     
     perJob.rows.forEach(row => {
-      console.log(`   Job ID ${row.job_request_id}: ${row.application_count} applicants`)
+      console.log(`   Job ID ${row.job_id}: ${row.application_count} applicants`)
     })
 
-    // Test JOIN with job_requests
+    // Test JOIN with job_requests (note: applications.job_id = job_requests.id)
     console.log('\n🔗 Testing JOIN with job_requests:')
     const joined = await client.query(`
       SELECT 
@@ -66,7 +66,7 @@ async function checkApplications() {
         jr.job_title,
         COUNT(a.id) as applicant_count
       FROM job_requests jr
-      LEFT JOIN applications a ON jr.id = a.job_request_id
+      LEFT JOIN applications a ON jr.id = a.job_id
       GROUP BY jr.id, jr.job_title
       HAVING COUNT(a.id) > 0
       ORDER BY applicant_count DESC

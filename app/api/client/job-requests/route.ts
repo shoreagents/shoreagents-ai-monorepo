@@ -200,13 +200,21 @@ export async function GET(request: NextRequest) {
       // Use default company ID
     }
 
-    // Fetch job requests from BPOC database
+    // Fetch job requests from BPOC database with applicant counts
+    // NOTE: applications.job_id connects to job_requests.id
     const result = await bpocPool.query(
-      `SELECT * FROM job_requests 
-       WHERE company_id = $1 
-       ORDER BY created_at DESC`,
+      `SELECT 
+        jr.*,
+        COALESCE(COUNT(a.id), 0)::int as applicants
+       FROM job_requests jr
+       LEFT JOIN applications a ON jr.id = a.job_id
+       WHERE jr.company_id = $1 
+       GROUP BY jr.id
+       ORDER BY jr.created_at DESC`,
       [bpocCompanyId]
     )
+
+    console.log(`✅ Found ${result.rows.length} job requests with applicant counts`)
 
     return NextResponse.json(result.rows)
   } catch (error) {

@@ -37,13 +37,15 @@ import {
   Zap,
   Award,
   TrendingUp,
-  UserSearch
+  UserSearch,
+  Video
 } from "lucide-react"
 
 // Types
 interface JobRequest {
   id: number
   job_title: string
+  job_description: string
   work_type: string
   work_arrangement: string
   experience_level: string
@@ -51,6 +53,19 @@ interface JobRequest {
   created_at: string
   applicants: number
   views: number
+  salary_min?: number | null
+  salary_max?: number | null
+  currency?: string
+  salary_type?: string
+  department?: string
+  industry?: string
+  shift?: string
+  priority?: string
+  application_deadline?: string | null
+  requirements?: string[]
+  responsibilities?: string[]
+  benefits?: string[]
+  skills?: string[]
 }
 
 interface Candidate {
@@ -79,6 +94,8 @@ export default function RecruitmentPage() {
   const [jobRequests, setJobRequests] = useState<JobRequest[]>([])
   const [jobsLoading, setJobsLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null)
+  const [showJobModal, setShowJobModal] = useState(false)
   
   // Talent Pool State
   const [candidates, setCandidates] = useState<Candidate[]>([])
@@ -382,9 +399,22 @@ export default function RecruitmentPage() {
             addArrayItem={addArrayItem}
             removeArrayItem={removeArrayItem}
             updateArrayItem={updateArrayItem}
+            setSelectedJob={setSelectedJob}
+            setShowJobModal={setShowJobModal}
           />
         )}
       </main>
+
+      {/* Job Details Modal */}
+      {showJobModal && selectedJob && (
+        <JobDetailsModal
+          job={selectedJob}
+          onClose={() => {
+            setShowJobModal(false)
+            setSelectedJob(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -730,7 +760,9 @@ function JobRequestsTab({
   handleSubmit,
   addArrayItem,
   removeArrayItem,
-  updateArrayItem
+  updateArrayItem,
+  setSelectedJob,
+  setShowJobModal
 }: any) {
   if (showForm) {
     return (
@@ -1284,12 +1316,503 @@ function JobRequestsTab({
                       </span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedJob(job)
+                      setShowJobModal(true)
+                    }}
+                  >
                     View Details
                   </Button>
                 </div>
               </Card>
             ))}
+    </div>
+  )
+}
+
+// ============================================================================
+// JOB DETAILS MODAL
+// ============================================================================
+
+interface Applicant {
+  applicationId: string
+  userId: string
+  status: string
+  appliedAt: string
+  candidate: {
+    firstName: string
+    avatar: string | null
+    position: string
+    location: string
+    skills: string[]
+  }
+}
+
+function JobDetailsModal({ job, onClose }: { job: JobRequest; onClose: () => void }) {
+  const router = useRouter()
+  const [viewMode, setViewMode] = useState<'details' | 'applicants'>('details')
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [loadingApplicants, setLoadingApplicants] = useState(false)
+
+  async function fetchApplicants() {
+    try {
+      setLoadingApplicants(true)
+      const response = await fetch(`/api/client/job-requests/${job.id}/applicants`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setApplicants(data.applicants)
+      } else {
+        console.error('Failed to fetch applicants:', data.error)
+      }
+    } catch (error) {
+      console.error('Error fetching applicants:', error)
+    } finally {
+      setLoadingApplicants(false)
+    }
+  }
+
+  async function handleReject(applicationId: string) {
+    if (!confirm('Are you sure you want to reject this applicant?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `/api/client/job-requests/${job.id}/applicants/${applicationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'rejected' })
+        }
+      )
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update local state
+        setApplicants(prev => 
+          prev.map(app => 
+            app.applicationId === applicationId 
+              ? { ...app, status: 'rejected' }
+              : app
+          )
+        )
+      } else {
+        alert('Failed to reject applicant: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error rejecting applicant:', error)
+      alert('Failed to reject applicant. Please try again.')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {viewMode === 'applicants' && (
+                <button
+                  onClick={() => setViewMode('details')}
+                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 mr-3"
+                >
+                  ← Back
+                </button>
+              )}
+              {viewMode === 'details' ? job.job_title : `Applicants for ${job.job_title}`}
+            </h2>
+            {viewMode === 'details' && (
+              <div className="flex items-center gap-3 mt-2">
+                <Badge className={
+                  job.status === 'active' ? 'bg-green-100 text-green-800' :
+                  job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }>
+                  {job.status?.toUpperCase()}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  Posted {new Date(job.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {viewMode === 'details' ? (
+            // Job Details View
+            <>
+          {/* Overview Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center gap-2 text-blue-700 mb-1">
+                <Users className="w-4 h-4" />
+                <span className="text-sm font-medium">Applicants</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-900">{job.applicants}</p>
+            </div>
+            
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center gap-2 text-purple-700 mb-1">
+                <Briefcase className="w-4 h-4" />
+                <span className="text-sm font-medium">Type</span>
+              </div>
+              <p className="text-lg font-semibold text-purple-900">{job.work_type}</p>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 text-green-700 mb-1">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm font-medium">Arrangement</span>
+              </div>
+              <p className="text-lg font-semibold text-green-900">{job.work_arrangement}</p>
+            </div>
+            
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <div className="flex items-center gap-2 text-orange-700 mb-1">
+                <Target className="w-4 h-4" />
+                <span className="text-sm font-medium">Level</span>
+              </div>
+              <p className="text-lg font-semibold text-orange-900">{job.experience_level}</p>
+            </div>
+          </div>
+
+          {/* Job Description */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              Job Description
+            </h3>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{job.job_description}</p>
+          </div>
+
+          {/* Salary */}
+          {(job.salary_min || job.salary_max) && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                Compensation
+              </h3>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <p className="text-2xl font-bold text-green-900">
+                  {job.currency || 'PHP'} {job.salary_min?.toLocaleString() || 'N/A'} - {job.salary_max?.toLocaleString() || 'N/A'}
+                </p>
+                <p className="text-sm text-green-700 mt-1">
+                  {job.salary_type || 'monthly'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Requirements */}
+          {job.requirements && job.requirements.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-purple-600" />
+                Requirements
+              </h3>
+              <ul className="space-y-2">
+                {job.requirements.filter(r => r).map((req, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-purple-600 mt-1">â€¢</span>
+                    <span className="text-gray-700">{req}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Responsibilities */}
+          {job.responsibilities && job.responsibilities.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-indigo-600" />
+                Responsibilities
+              </h3>
+              <ul className="space-y-2">
+                {job.responsibilities.filter(r => r).map((resp, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-indigo-600 mt-1">â€¢</span>
+                    <span className="text-gray-700">{resp}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Skills */}
+          {job.skills && job.skills.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Star className="w-5 h-5 text-teal-600" />
+                Required Skills
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {job.skills.filter(s => s).map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg text-sm font-medium shadow-md"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Benefits */}
+          {job.benefits && job.benefits.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                Benefits
+              </h3>
+              <ul className="space-y-2">
+                {job.benefits.filter(b => b).map((benefit, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <span className="text-gray-700">{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Additional Details */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+            {job.department && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Department</p>
+                <p className="font-semibold text-gray-900">{job.department}</p>
+              </div>
+            )}
+            {job.industry && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Industry</p>
+                <p className="font-semibold text-gray-900">{job.industry}</p>
+              </div>
+            )}
+            {job.shift && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Shift</p>
+                <p className="font-semibold text-gray-900">{job.shift}</p>
+              </div>
+            )}
+            {job.priority && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Priority</p>
+                <Badge className={
+                  job.priority === 'high' ? 'bg-red-100 text-red-800' :
+                  job.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }>
+                  {job.priority.toUpperCase()}
+                </Badge>
+              </div>
+            )}
+            {job.application_deadline && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Application Deadline</p>
+                <p className="font-semibold text-gray-900">
+                  {new Date(job.application_deadline).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+            </>
+          ) : (
+            // Applicants List View
+            <ApplicantsList 
+              applicants={applicants}
+              loading={loadingApplicants}
+              onViewProfile={(userId) => router.push(`/client/talent-pool/${userId}`)}
+              onRequestInterview={(userId, firstName) => {
+                // For now, navigate to profile where they can request interview
+                router.push(`/client/talent-pool/${userId}`)
+              }}
+              onReject={handleReject}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Job ID: #{job.id}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            {viewMode === 'details' && (
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  setViewMode('applicants')
+                  fetchApplicants()
+                }}
+              >
+                View Applicants
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// APPLICANTS LIST COMPONENT
+// ============================================================================
+
+function ApplicantsList({ 
+  applicants, 
+  loading,
+  onViewProfile,
+  onRequestInterview,
+  onReject
+}: {
+  applicants: Applicant[]
+  loading: boolean
+  onViewProfile: (userId: string) => void
+  onRequestInterview: (userId: string, firstName: string) => void
+  onReject: (applicationId: string) => void
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (applicants.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No Applicants Yet</h3>
+        <p className="text-gray-600">
+          No one has applied to this job yet. Check back later!
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500">
+        {applicants.length} {applicants.length === 1 ? 'applicant' : 'applicants'}
+      </p>
+      
+      {applicants.map((applicant) => (
+        <Card key={applicant.applicationId} className="p-5">
+          <div className="flex items-start gap-4">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              {applicant.candidate.avatar ? (
+                <img
+                  src={applicant.candidate.avatar}
+                  alt={applicant.candidate.firstName}
+                  className="w-16 h-16 rounded-full border-2 border-gray-200"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {applicant.candidate.firstName[0]}
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              {/* Name & Position */}
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900">
+                    {applicant.candidate.firstName}
+                  </h4>
+                  <p className="text-sm text-gray-600">{applicant.candidate.position}</p>
+                  <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                    <MapPin className="w-4 h-4" />
+                    {applicant.candidate.location}
+                  </div>
+                </div>
+                
+                {/* Status Badge */}
+                <Badge className={
+                  applicant.status === 'passed' ? 'bg-green-100 text-green-800' :
+                  applicant.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                  applicant.status === 'interviewed' ? 'bg-blue-100 text-blue-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }>
+                  {applicant.status.toUpperCase()}
+                </Badge>
+              </div>
+
+              {/* Skills */}
+              {applicant.candidate.skills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {applicant.candidate.skills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Applied Date */}
+              <p className="text-sm text-gray-500 mb-3">
+                Applied: {new Date(applicant.appliedAt).toLocaleDateString()}
+              </p>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewProfile(applicant.userId)}
+                >
+                  View Profile
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => onRequestInterview(applicant.userId, applicant.candidate.firstName)}
+                  disabled={applicant.status === 'rejected'}
+                >
+                  <Video className="w-4 h-4 mr-1" />
+                  Request Interview
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => onReject(applicant.applicationId)}
+                  disabled={applicant.status === 'rejected'}
+                >
+                  Reject
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ))}
     </div>
   )
 }

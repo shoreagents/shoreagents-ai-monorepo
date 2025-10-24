@@ -36,13 +36,18 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [ADMIN] Fetching all job requests from BPOC database')
 
-    // Fetch ALL job requests from BPOC database
+    // Fetch ALL job requests from BPOC database with applicant counts
     const result = await bpocPool.query(
-      `SELECT * FROM job_requests 
-       ORDER BY created_at DESC`
+      `SELECT 
+        jr.*,
+        COALESCE(COUNT(a.id), 0)::int as applicants
+       FROM job_requests jr
+       LEFT JOIN applications a ON jr.id = a.job_id
+       GROUP BY jr.id
+       ORDER BY jr.created_at DESC`
     )
 
-    console.log(`✅ [ADMIN] Found ${result.rows.length} job requests`)
+    console.log(`✅ [ADMIN] Found ${result.rows.length} job requests with applicant counts`)
 
     return NextResponse.json({
       success: true,
