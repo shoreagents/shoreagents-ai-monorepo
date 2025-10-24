@@ -130,9 +130,14 @@ export async function GET(request: NextRequest) {
     
     const taggedUsersMap = new Map(taggedUsers.map(u => [u.id, u]))
 
-    // Transform data to match frontend expectations (user instead of staffUser/client_users/management_users)
+    // Transform data to match frontend expectations
     const transformedPosts = posts.map(post => {
       const postUser = post.staffUser || post.client_users || post.management_users
+      
+      if (!postUser) {
+        return null
+      }
+      
       return {
         id: post.id,
         content: post.content,
@@ -153,8 +158,8 @@ export async function GET(request: NextRequest) {
             id: r.id,
             type: r.type,
             user: {
-              id: reactUser.id,
-              name: reactUser.name
+              id: reactUser?.id || '',
+              name: reactUser?.name || 'Unknown'
             }
           }
         }),
@@ -165,14 +170,14 @@ export async function GET(request: NextRequest) {
             content: c.content,
             createdAt: c.createdAt.toISOString(),
             user: {
-              id: commentUser.id,
-              name: commentUser.name,
-              avatar: commentUser.avatar
+              id: commentUser?.id || '',
+              name: commentUser?.name || 'Unknown',
+              avatar: commentUser?.avatar || null
             }
           }
         })
       }
-    })
+    }).filter(Boolean)
 
     // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / validLimit)
@@ -221,23 +226,23 @@ export async function POST(request: NextRequest) {
       where: { authUserId: session.user.id }
     })
 
-    const client_users = await prisma.client_users.findUnique({
+    const clientUser = await prisma.clientUser.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    const management_users = await prisma.management_users.findUnique({
+    const managementUser = await prisma.managementUser.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    if (!staffUser && !client_users && !management_users) {
+    if (!staffUser && !clientUser && !managementUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
     const post = await prisma.activityPost.create({
       data: {
         staffUserId: staffUser?.id || null,
-        client_usersId: client_users?.id || null,
-        management_usersId: management_users?.id || null,
+        clientUserId: clientUser?.id || null,
+        managementUserId: managementUser?.id || null,
         content,
         type,
         achievement: achievement || null,
@@ -279,8 +284,8 @@ export async function POST(request: NextRequest) {
 
     // 🔔 Create notifications for tagged users
     if (taggedUserIds && taggedUserIds.length > 0) {
-      const postUser = staffUser || client_users || management_users
-      const postUserName = postUser.name
+      const postUser = staffUser || clientUser || managementUser
+      const postUserName = postUser?.name || 'Someone'
       
       // Create notification for each tagged user
       const notificationPromises = taggedUserIds.map((userId: string) =>
@@ -304,36 +309,38 @@ export async function POST(request: NextRequest) {
     // 🔥 Emit real-time event to all connected clients
     const io = global.socketServer
     if (io) {
-      const postUser = staffUser || client_users || management_users
-      io.emit('activity:newPost', {
-        id: post.id,
-        content: post.content,
-        type: post.type,
-        images: post.images,
-        audience: post.audience,
-        createdAt: post.createdAt.toISOString(),
-        user: {
-          id: postUser.id,
-          name: postUser.name,
-          avatar: postUser.avatar,
-          role: staffUser?.role || management_users?.role || 'Client'
-        },
-        reactions: [],
-        comments: []
-      })
-      console.log('🔥 [WebSocket] New post emitted:', post.id)
-      
-      // 🔔 Emit notification events to tagged users
-      if (taggedUserIds && taggedUserIds.length > 0) {
-        taggedUserIds.forEach((userId: string) => {
-          io.to(`user:${userId}`).emit('notification:new', {
-            userId,
-            postId: post.id,
-            title: `${postUser.name} tagged you in a post`,
-            message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
-          })
+      const postUser = staffUser || clientUser || managementUser
+      if (postUser) {
+        io.emit('activity:newPost', {
+          id: post.id,
+          content: post.content,
+          type: post.type,
+          images: post.images,
+          audience: post.audience,
+          createdAt: post.createdAt.toISOString(),
+          user: {
+            id: postUser.id,
+            name: postUser.name,
+            avatar: postUser.avatar,
+            role: staffUser?.role || managementUser?.role || 'Client'
+          },
+          reactions: [],
+          comments: []
         })
-        console.log(`🔔 [WebSocket] Notification emitted to ${taggedUserIds.length} tagged users`)
+        console.log('🔥 [WebSocket] New post emitted:', post.id)
+        
+        // 🔔 Emit notification events to tagged users
+        if (taggedUserIds && taggedUserIds.length > 0) {
+          taggedUserIds.forEach((userId: string) => {
+            io.to(`user:${userId}`).emit('notification:new', {
+              userId,
+              postId: post.id,
+              title: `${postUser.name} tagged you in a post`,
+              message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+            })
+          })
+          console.log(`🔔 [WebSocket] Notification emitted to ${taggedUserIds.length} tagged users`)
+        }
       }
     }
 
