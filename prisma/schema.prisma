@@ -63,6 +63,7 @@ model StaffUser {
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
+  welcomeForm            StaffWelcomeForm?
 
   @@map("staff_users")
 }
@@ -955,4 +956,33 @@ enum InterviewRequestStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
+}
+
+model StaffWelcomeForm {
+  id                String    @id @default(uuid())
+  staffUserId       String    @unique
+  name              String
+  client            String
+  startDate         String
+  favoriteFastFood  String
+  favoriteColor     String?
+  favoriteMusic     String?
+  favoriteMovie     String?
+  favoriteBook      String?
+  hobby             String?
+  dreamDestination  String?
+  favoriteSeason    String?
+  petName           String?
+  favoriteSport     String?
+  favoriteGame      String?
+  favoriteQuote     String?
+  funFact           String?
+  additionalInfo    String?
+  completed         Boolean   @default(false)
+  submittedAt       DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_welcome_forms")
 }
