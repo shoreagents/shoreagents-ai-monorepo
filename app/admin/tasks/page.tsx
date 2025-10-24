@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Eye, Filter, RefreshCw, Search, AlertCircle, Calendar, Users, Paperclip } from "lucide-react"
+import { Eye, Filter, RefreshCw, Search, AlertCircle, Calendar, Users, Paperclip, ChevronDown, ChevronUp, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { format } from "date-fns"
 
 interface Task {
   id: string
@@ -82,6 +84,9 @@ const sourceConfig = {
   MANAGEMENT: { label: "Management", color: "bg-indigo-600 text-white border border-indigo-500", icon: "📋" },
 }
 
+type SortField = 'createdAt' | 'title' | 'status' | 'priority' | 'source' | 'deadline'
+type SortDirection = 'asc' | 'desc'
+
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([])
@@ -89,12 +94,17 @@ export default function AdminTasksPage() {
   const [loading, setLoading] = useState(true)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [sourceFilter, setSourceFilter] = useState("all")
+  
+  // Sorting
+  const [sortField, setSortField] = useState<SortField>('createdAt')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   useEffect(() => {
     fetchTasks()
@@ -168,6 +178,80 @@ export default function AdminTasksPage() {
     setSelectedTask(task)
     setIsModalOpen(true)
   }
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
+  const toggleExpanded = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks)
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId)
+    } else {
+      newExpanded.add(taskId)
+    }
+    setExpandedTasks(newExpanded)
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'TODO':
+        return <AlertCircle className="w-4 h-4 text-slate-500" />
+      case 'IN_PROGRESS':
+        return <Clock className="w-4 h-4 text-blue-500" />
+      case 'STUCK':
+        return <XCircle className="w-4 h-4 text-red-500" />
+      case 'FOR_REVIEW':
+        return <AlertCircle className="w-4 h-4 text-purple-500" />
+      case 'COMPLETED':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />
+    }
+  }
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'URGENT':
+        return <AlertCircle className="w-4 h-4 text-red-500" />
+      case 'HIGH':
+        return <AlertCircle className="w-4 h-4 text-orange-500" />
+      case 'MEDIUM':
+        return <AlertCircle className="w-4 h-4 text-yellow-500" />
+      case 'LOW':
+        return <AlertCircle className="w-4 h-4 text-green-500" />
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />
+    }
+  }
+
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    let aValue: any = a[sortField]
+    let bValue: any = b[sortField]
+
+    // Handle date sorting
+    if (sortField === 'createdAt' || sortField === 'deadline') {
+      aValue = new Date(aValue || 0).getTime()
+      bValue = new Date(bValue || 0).getTime()
+    }
+
+    // Handle string sorting
+    if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase()
+      bValue = bValue.toLowerCase()
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1
+    } else {
+      return aValue < bValue ? 1 : -1
+    }
+  })
 
   if (loading) {
     return (
@@ -298,85 +382,276 @@ export default function AdminTasksPage() {
         </div>
       </Card>
 
-      {/* Task List */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTasks.map((task) => (
-          <Card
-            key={task.id}
-            className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleTaskClick(task)}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-semibold text-foreground line-clamp-2 flex-1">{task.title}</h3>
-              <Badge className={priorityConfig[task.priority as keyof typeof priorityConfig].color}>
-                {priorityConfig[task.priority as keyof typeof priorityConfig].label}
-              </Badge>
-            </div>
-
-            {/* Description */}
-            {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{task.description}</p>
-            )}
-
-            {/* Meta Info */}
-            <div className="space-y-2 mb-3">
-              <div className="flex items-center gap-2">
-                <Badge className={statusConfig[task.status as keyof typeof statusConfig].color}>
-                  {statusConfig[task.status as keyof typeof statusConfig].label}
-                </Badge>
-                <Badge className={sourceConfig[task.source as keyof typeof sourceConfig].color}>
-                  {sourceConfig[task.source as keyof typeof sourceConfig].icon}{" "}
-                  {sourceConfig[task.source as keyof typeof sourceConfig].label}
-                </Badge>
-              </div>
-
-              {task.company && (
-                <div className="text-xs text-muted-foreground">
-                  🏢 {task.company.companyName}
+      {/* Task Table */}
+      <Card className="overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-12"></TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('title')}
+              >
+                <div className="flex items-center gap-1">
+                  Title
+                  {sortField === 'title' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
                 </div>
-              )}
-
-              {task.deadline && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(task.deadline).toLocaleDateString()}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-1">
+                  Status
+                  {sortField === 'status' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
                 </div>
-              )}
-            </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('priority')}
+              >
+                <div className="flex items-center gap-1">
+                  Priority
+                  {sortField === 'priority' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('source')}
+              >
+                <div className="flex items-center gap-1">
+                  Source
+                  {sortField === 'source' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('deadline')}
+              >
+                <div className="flex items-center gap-1">
+                  Deadline
+                  {sortField === 'deadline' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('createdAt')}
+              >
+                <div className="flex items-center gap-1">
+                  Created
+                  {sortField === 'createdAt' && (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedTasks.map((task) => {
+              const isExpanded = expandedTasks.has(task.id)
+              const hasAttachments = task.attachments && task.attachments.length > 0
+              const assignedStaffCount = task.assignedStaff?.length || (task.staffUser ? 1 : 0)
 
-            {/* Assigned Staff */}
-            {(task.assignedStaff?.length || task.staffUser) && (
-              <div className="flex items-center gap-2 pt-3 border-t">
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  {task.assignedStaff?.length || 1} staff assigned
-                </span>
-              </div>
-            )}
+              return (
+                <>
+                  <TableRow 
+                    key={task.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleTaskClick(task)}
+                  >
+                    {/* Expand Button */}
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleExpanded(task.id)
+                        }}
+                        className="p-1 h-8 w-8"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TableCell>
 
-            {/* View Only Badge */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Badge variant="outline" className="text-xs">
-                <Eye className="h-3 w-3 mr-1" />
-                View Only
-              </Badge>
-            </div>
-          </Card>
-        ))}
+                    {/* Title */}
+                    <TableCell>
+                      <div className="font-medium text-foreground truncate max-w-[200px]">
+                        {task.title}
+                      </div>
+                    </TableCell>
 
-        {filteredTasks.length === 0 && (
-          <div className="col-span-full">
-            <Card className="p-12 text-center">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Tasks Found</h3>
-              <p className="text-sm text-muted-foreground">
-                Try adjusting your filters or search query
-              </p>
-            </Card>
+                    {/* Status */}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(task.status)}
+                        <Badge className={statusConfig[task.status as keyof typeof statusConfig].color}>
+                          {statusConfig[task.status as keyof typeof statusConfig].label}
+                        </Badge>
+                      </div>
+                    </TableCell>
+
+                    {/* Priority */}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getPriorityIcon(task.priority)}
+                        <Badge className={priorityConfig[task.priority as keyof typeof priorityConfig].color}>
+                          {priorityConfig[task.priority as keyof typeof priorityConfig].label}
+                        </Badge>
+                      </div>
+                    </TableCell>
+
+                    {/* Source */}
+                    <TableCell>
+                      <Badge className={sourceConfig[task.source as keyof typeof sourceConfig].color}>
+                        {sourceConfig[task.source as keyof typeof sourceConfig].icon}{" "}
+                        {sourceConfig[task.source as keyof typeof sourceConfig].label}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Company */}
+                    <TableCell>
+                      {task.company ? (
+                        <div className="text-sm text-muted-foreground truncate max-w-[150px]">
+                          🏢 {task.company.companyName}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+
+                    {/* Deadline */}
+                    <TableCell>
+                      {task.deadline ? (
+                        <div className="text-sm text-muted-foreground">
+                          {format(new Date(task.deadline), 'MMM dd, yyyy')}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+
+                    {/* Created */}
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {format(new Date(task.createdAt), 'MMM dd, yyyy')}
+                      </div>
+                    </TableCell>
+
+                    {/* View Icon */}
+                    <TableCell>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Expanded Details */}
+                  {isExpanded && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="bg-muted/20">
+                        <div className="p-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Description */}
+                            {task.description && (
+                              <div>
+                                <h4 className="text-sm font-medium text-foreground mb-2">Description</h4>
+                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                  {task.description}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Metadata */}
+                            <div>
+                              <h4 className="text-sm font-medium text-foreground mb-2">Details</h4>
+                              <div className="space-y-2">
+                                {hasAttachments && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
+                                      {task.attachments.length} attachment{task.attachments.length !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                )}
+                                {assignedStaffCount > 0 && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Users className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
+                                      {assignedStaffCount} staff assigned
+                                    </span>
+                                  </div>
+                                )}
+                                {task.clientUser && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-muted-foreground">
+                                      Created by {task.clientUser.name}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Attachments Preview */}
+                          {hasAttachments && (
+                            <div>
+                              <h4 className="text-sm font-medium text-foreground mb-2">Attachments</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {task.attachments.slice(0, 3).map((attachment, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md text-sm"
+                                  >
+                                    <Paperclip className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground truncate max-w-32">
+                                      {attachment.split('/').pop()}
+                                    </span>
+                                  </div>
+                                ))}
+                                {task.attachments.length > 3 && (
+                                  <div className="px-3 py-1 bg-muted rounded-md text-sm text-muted-foreground">
+                                    +{task.attachments.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )
+            })}
+          </TableBody>
+        </Table>
+
+        {/* Empty State */}
+        {sortedTasks.length === 0 && (
+          <div className="p-12 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Tasks Found</h3>
+            <p className="text-sm text-muted-foreground">
+              Try adjusting your filters or search query
+            </p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Task Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
