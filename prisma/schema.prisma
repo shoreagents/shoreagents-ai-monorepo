@@ -58,7 +58,6 @@ model StaffUser {
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
-  staff_welcome_forms    staff_welcome_forms?
   taskAssignments        TaskAssignment[]
   legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
   ticketResponses        TicketResponse[]
@@ -194,10 +193,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  isPaused       Boolean?    @default(false) @map("isPaused")
-  pauseUsed      Boolean?    @default(false) @map("pauseUsed")
-  pausedAt       DateTime?   @map("pausedAt") @db.Timestamp(6)
-  pausedDuration Int?        @default(0) @map("pausedDuration")
+  isPaused       Boolean?    @default(false)
+  pauseUsed      Boolean?    @default(false)
+  pausedAt       DateTime?   @db.Timestamp(6)
+  pausedDuration Int?        @default(0)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -567,6 +566,11 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
+  resumeUrl                  String?
+  diplomaTorUrl              String?
+  medicalCertUrl             String?
+  dataPrivacyConsentUrl      String?
+  bankAccountDetails         String?
   // New GUNTING 8-step fields
   resumeUrl                  String?
   educationDocsUrl           String?
@@ -574,7 +578,11 @@ model StaffOnboarding {
   dataPolicyUrl              String?
   bankDocsUrl                String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
+  resumeStatus               OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
+  educationStatus            OnboardingStatus @default(PENDING)
+  medicalStatus              OnboardingStatus @default(PENDING)
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
   documentsStatus            OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
@@ -585,7 +593,11 @@ model StaffOnboarding {
   dataPolicyStatus           OnboardingStatus @default(PENDING)
   bankStatus                 OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
+  resumeFeedback             String?
   govIdFeedback              String?
+  educationFeedback          String?
+  medicalFeedback            String?
+  dataPrivacyFeedback        String?
   documentsFeedback          String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
@@ -596,7 +608,11 @@ model StaffOnboarding {
   dataPolicyFeedback         String?
   bankFeedback               String?
   personalInfoVerifiedAt     DateTime?
+  resumeVerifiedAt           DateTime?
   govIdVerifiedAt            DateTime?
+  educationVerifiedAt        DateTime?
+  medicalVerifiedAt          DateTime?
+  dataPrivacyVerifiedAt      DateTime?
   documentsVerifiedAt        DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
@@ -611,27 +627,6 @@ model StaffOnboarding {
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
-  bankAccountDetails         String?
-  bankDetailsFeedback        String?
-  bankDetailsStatus          OnboardingStatus @default(PENDING)
-  bankDetailsVerifiedAt      DateTime?
-  dataPrivacyConsentUrl      String?
-  dataPrivacyFeedback        String?
-  dataPrivacyStatus          OnboardingStatus @default(PENDING)
-  dataPrivacyVerifiedAt      DateTime?
-  diplomaTorUrl              String?
-  educationFeedback          String?
-  educationStatus            OnboardingStatus @default(PENDING)
-  educationVerifiedAt        DateTime?
-  employmentContractId       String?
-  medicalCertUrl             String?
-  medicalFeedback            String?
-  medicalStatus              OnboardingStatus @default(PENDING)
-  medicalVerifiedAt          DateTime?
-  resumeFeedback             String?
-  resumeStatus               OnboardingStatus @default(PENDING)
-  resumeUrl                  String?
-  resumeVerifiedAt           DateTime?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
@@ -758,6 +753,44 @@ model EmploymentContract {
   jobAcceptance      JobAcceptance @relation(fields: [jobAcceptanceId], references: [id], onDelete: Cascade)
   staffUser          StaffUser     @relation(fields: [staffUserId], references: [id])
 
+model interview_requests {
+  id                 String                 @id
+  clientUserId       String
+  bpocCandidateId    String
+  candidateFirstName String
+  preferredTimes     Json
+  clientNotes        String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime
+  adminNotes         String?
+  meetingLink        String?
+  scheduledTime      DateTime?
+  status             InterviewRequestStatus @default(PENDING)
+  client_users       ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  job_acceptances    job_acceptances?
+}
+
+model job_acceptances {
+  id                   String                @id
+  interviewRequestId   String                @unique
+  bpocCandidateId      String
+  candidateEmail       String
+  candidatePhone       String?
+  position             String
+  companyId            String
+  acceptedByAdminId    String
+  acceptedAt           DateTime              @default(now())
+  signupEmailSent      Boolean               @default(false)
+  signupEmailSentAt    DateTime?
+  staffUserId          String?               @unique
+  contractSigned       Boolean               @default(false)
+  contractSignedAt     DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime
+  employment_contracts employment_contracts?
+  company              Company               @relation(fields: [companyId], references: [id])
+  interview_requests   interview_requests    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
+  staff_users          StaffUser?            @relation(fields: [staffUserId], references: [id])
   @@map("employment_contracts")
 }
 

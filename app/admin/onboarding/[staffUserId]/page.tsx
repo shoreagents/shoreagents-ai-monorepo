@@ -24,13 +24,7 @@ import {
   PenTool,
   Users,
   ArrowLeft,
-  Briefcase,
-  GraduationCap,
-  Stethoscope,
-  Shield,
-  X,
-  Save,
-  Eye
+  Briefcase
 } from "lucide-react"
 
 interface OnboardingData {
@@ -69,33 +63,17 @@ interface OnboardingData {
   emergencyContactNo: string
   emergencyRelationship: string
   
-  // NEW: Resume, Medical, Education, Data Privacy
-  resumeUrl?: string
-  resumeStatus: string
-  resumeFeedback?: string
-  
-  medicalCertUrl?: string
-  medicalStatus: string
-  medicalFeedback?: string
-  
-  diplomaTorUrl?: string
-  educationStatus: string
-  educationFeedback?: string
-  
-  dataPrivacyConsentUrl?: string
-  bankAccountDetails?: string
-  dataPrivacyStatus: string
-  dataPrivacyFeedback?: string
-  
   // Status
   personalInfoStatus: string
   govIdStatus: string
+  documentsStatus: string
   signatureStatus: string
   emergencyContactStatus: string
   
   // Feedback
   personalInfoFeedback: string
   govIdFeedback: string
+  documentsFeedback: string
   signatureFeedback: string
   emergencyContactFeedback: string
   
@@ -128,11 +106,8 @@ export default function AdminOnboardingDetailPage() {
     [key: string]: { approve: boolean; reject: boolean }
   }>({
     personalInfo: { approve: false, reject: false },
-    resume: { approve: false, reject: false },
     govId: { approve: false, reject: false },
-    education: { approve: false, reject: false },
-    medical: { approve: false, reject: false },
-    dataPrivacy: { approve: false, reject: false },
+    documents: { approve: false, reject: false },
     signature: { approve: false, reject: false },
     emergencyContact: { approve: false, reject: false }
   })
@@ -182,20 +157,14 @@ export default function AdminOnboardingDetailPage() {
         isComplete: data.onboarding.isComplete,
         allApproved: 
           data.onboarding.personalInfoStatus === "APPROVED" &&
-          data.onboarding.resumeStatus === "APPROVED" &&
           data.onboarding.govIdStatus === "APPROVED" &&
-          data.onboarding.educationStatus === "APPROVED" &&
-          data.onboarding.medicalStatus === "APPROVED" &&
-          data.onboarding.dataPrivacyStatus === "APPROVED" &&
+          data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
           data.onboarding.emergencyContactStatus === "APPROVED",
         shouldShowForm: 
           data.onboarding.personalInfoStatus === "APPROVED" &&
-          data.onboarding.resumeStatus === "APPROVED" &&
           data.onboarding.govIdStatus === "APPROVED" &&
-          data.onboarding.educationStatus === "APPROVED" &&
-          data.onboarding.medicalStatus === "APPROVED" &&
-          data.onboarding.dataPrivacyStatus === "APPROVED" &&
+          data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
           data.onboarding.emergencyContactStatus === "APPROVED" &&
           !data.onboarding.isComplete
@@ -936,99 +905,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Document 2: Resume */}
-        <Card className="mb-6 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Briefcase className="h-5 w-5 text-purple-400" />
-                <CardTitle className="text-white">Resume/CV</CardTitle>
-              </div>
-              {getStatusBadge(onboarding.resumeStatus)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              {onboarding.resumeUrl ? (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-green-400" />
-                  <span className="text-white flex-1">Resume uploaded</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewFileModal({ url: onboarding.resumeUrl!, title: "Resume" })}
-                    className="bg-slate-600 border-slate-500 text-white hover:bg-slate-500"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-slate-400" />
-                  <span className="text-slate-400">No resume uploaded</span>
-                </div>
-              )}
-            </div>
-            
-            {onboarding.resumeStatus === "SUBMITTED" && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApproveReject("resume", "APPROVED")}
-                    disabled={processingStates.resume.approve}
-                    className="bg-green-600 hover:bg-green-500 text-white"
-                  >
-                    {processingStates.resume.approve ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => handleApproveReject("resume", "REJECTED")}
-                    disabled={processingStates.resume.reject}
-                    variant="destructive"
-                  >
-                    {processingStates.resume.reject ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <X className="h-4 w-4 mr-2" />
-                    )}
-                    Reject
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Feedback (Optional)</Label>
-                  <Textarea
-                    value={feedback.resume || ""}
-                    onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
-                    placeholder="Add feedback for the staff member..."
-                    className="bg-slate-700 border-slate-600 text-white"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={() => handleSaveFeedback("resume")}
-                    disabled={savingFeedback.resume}
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-500 text-white"
-                  >
-                    {savingFeedback.resume ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Feedback
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Document 3: Government IDs */}
+        {/* Document 2: Government IDs */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1493,288 +1370,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Document 4: Education Documents */}
-        <Card className="mb-6 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <GraduationCap className="h-5 w-5 text-purple-400" />
-                <CardTitle className="text-white">Education Documents</CardTitle>
-              </div>
-              {getStatusBadge(onboarding.educationStatus)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              {onboarding.diplomaTorUrl ? (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-green-400" />
-                  <span className="text-white flex-1">Diploma/TOR uploaded</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewFileModal({ url: onboarding.diplomaTorUrl!, title: "Education Document" })}
-                    className="bg-slate-600 border-slate-500 text-white hover:bg-slate-500"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-slate-400" />
-                  <span className="text-slate-400">No education document uploaded</span>
-                </div>
-              )}
-            </div>
-            
-            {onboarding.educationStatus === "SUBMITTED" && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApproveReject("education", "APPROVED")}
-                    disabled={processingStates.education.approve}
-                    className="bg-green-600 hover:bg-green-500 text-white"
-                  >
-                    {processingStates.education.approve ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => handleApproveReject("education", "REJECTED")}
-                    disabled={processingStates.education.reject}
-                    variant="destructive"
-                  >
-                    {processingStates.education.reject ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <X className="h-4 w-4 mr-2" />
-                    )}
-                    Reject
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Feedback (Optional)</Label>
-                  <Textarea
-                    value={feedback.education || ""}
-                    onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
-                    placeholder="Add feedback for the staff member..."
-                    className="bg-slate-700 border-slate-600 text-white"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={() => handleSaveFeedback("education")}
-                    disabled={savingFeedback.education}
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-500 text-white"
-                  >
-                    {savingFeedback.education ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Feedback
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Document 5: Medical Certificate */}
-        <Card className="mb-6 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Stethoscope className="h-5 w-5 text-purple-400" />
-                <CardTitle className="text-white">Medical Certificate</CardTitle>
-              </div>
-              {getStatusBadge(onboarding.medicalStatus)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              {onboarding.medicalCertUrl ? (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-green-400" />
-                  <span className="text-white flex-1">Medical certificate uploaded</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewFileModal({ url: onboarding.medicalCertUrl!, title: "Medical Certificate" })}
-                    className="bg-slate-600 border-slate-500 text-white hover:bg-slate-500"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
-                  <FileText className="h-5 w-5 text-slate-400" />
-                  <span className="text-slate-400">No medical certificate uploaded</span>
-                </div>
-              )}
-            </div>
-            
-            {onboarding.medicalStatus === "SUBMITTED" && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApproveReject("medical", "APPROVED")}
-                    disabled={processingStates.medical.approve}
-                    className="bg-green-600 hover:bg-green-500 text-white"
-                  >
-                    {processingStates.medical.approve ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => handleApproveReject("medical", "REJECTED")}
-                    disabled={processingStates.medical.reject}
-                    variant="destructive"
-                  >
-                    {processingStates.medical.reject ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <X className="h-4 w-4 mr-2" />
-                    )}
-                    Reject
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Feedback (Optional)</Label>
-                  <Textarea
-                    value={feedback.medical || ""}
-                    onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
-                    placeholder="Add feedback for the staff member..."
-                    className="bg-slate-700 border-slate-600 text-white"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={() => handleSaveFeedback("medical")}
-                    disabled={savingFeedback.medical}
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-500 text-white"
-                  >
-                    {savingFeedback.medical ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Feedback
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Document 6: Data Privacy & Bank Details */}
-        <Card className="mb-6 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-purple-400" />
-                <CardTitle className="text-white">Data Privacy & Bank Details</CardTitle>
-              </div>
-              {getStatusBadge(onboarding.dataPrivacyStatus)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 mb-4">
-              <div>
-                <p className="text-sm text-slate-400">Data Privacy Consent</p>
-                {onboarding.dataPrivacyConsentUrl ? (
-                  <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-lg mt-2">
-                    <FileText className="h-5 w-5 text-green-400" />
-                    <span className="text-white flex-1">Consent document uploaded</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setViewFileModal({ url: onboarding.dataPrivacyConsentUrl!, title: "Data Privacy Consent" })}
-                      className="bg-slate-600 border-slate-500 text-white hover:bg-slate-500"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-slate-400 mt-2">No consent document uploaded</p>
-                )}
-              </div>
-              
-              <div>
-                <p className="text-sm text-slate-400">Bank Account Details</p>
-                <p className="text-white mt-2">{onboarding.bankAccountDetails || "Not provided"}</p>
-              </div>
-            </div>
-            
-            {onboarding.dataPrivacyStatus === "SUBMITTED" && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApproveReject("dataPrivacy", "APPROVED")}
-                    disabled={processingStates.dataPrivacy.approve}
-                    className="bg-green-600 hover:bg-green-500 text-white"
-                  >
-                    {processingStates.dataPrivacy.approve ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => handleApproveReject("dataPrivacy", "REJECTED")}
-                    disabled={processingStates.dataPrivacy.reject}
-                    variant="destructive"
-                  >
-                    {processingStates.dataPrivacy.reject ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <X className="h-4 w-4 mr-2" />
-                    )}
-                    Reject
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Feedback (Optional)</Label>
-                  <Textarea
-                    value={feedback.dataPrivacy || ""}
-                    onChange={(e) => setFeedback({ ...feedback, dataPrivacy: e.target.value })}
-                    placeholder="Add feedback for the staff member..."
-                    className="bg-slate-700 border-slate-600 text-white"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={() => handleSaveFeedback("dataPrivacy")}
-                    disabled={savingFeedback.dataPrivacy}
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-500 text-white"
-                  >
-                    {savingFeedback.dataPrivacy ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Feedback
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Document 7: Signature */}
+        {/* Document 4: Signature */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1911,7 +1507,7 @@ export default function AdminOnboardingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Document 8: Emergency Contact */}
+        {/* Document 5: Emergency Contact */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
