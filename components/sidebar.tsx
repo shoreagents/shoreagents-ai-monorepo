@@ -114,28 +114,28 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`glass fixed left-0 top-0 z-40 h-screen w-64 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 bg-gradient-to-b from-slate-900 via-purple-900/20 to-slate-900 border-r border-purple-200/20 backdrop-blur-sm ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <ScrollArea className="h-full">
           <div className="space-y-6 p-6">
             <div className="space-y-2">
-              <div className="gradient-purple-indigo flex h-12 w-12 items-center justify-center rounded-xl text-xl font-bold text-white shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-xl font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
                 SP
               </div>
-              <h1 className="text-2xl font-bold text-white">Staff Portal</h1>
+              <h1 className="bg-gradient-to-r from-white via-cyan-200 to-white bg-clip-text text-2xl font-bold text-transparent">Staff Portal</h1>
               <p className="text-sm text-white/60">Performance Dashboard</p>
             </div>
 
-            <div className="glass space-y-3 rounded-xl p-4">
+            <div className="space-y-3 rounded-xl p-4 bg-gradient-to-br from-purple-50/10 to-cyan-50/10 backdrop-blur-sm border border-purple-200/20">
               <div className="flex items-center gap-3">
                 {loadingProfile ? (
-                  <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   </div>
                 ) : profileData?.user?.avatar ? (
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-white/20">
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-cyan-400/30">
                     <Image
                       src={profileData.user.avatar}
                       alt={profileData.user.name || "User"}
@@ -144,7 +144,7 @@ export default function Sidebar() {
                     />
                   </div>
                 ) : (
-                  <div className="gradient-purple-indigo flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
                     {getUserInitials(session?.user?.name)}
                   </div>
                 )}
@@ -157,11 +157,11 @@ export default function Sidebar() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between border-t border-purple-200/20 pt-3">
                 <span className="text-xs text-white/60">
                   {session?.user?.role || "STAFF"}
                 </span>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+                <span className="rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 px-3 py-1 text-xs font-semibold text-white border border-cyan-400/30">
                   {status === "authenticated" ? "Active" : "Offline"}
                 </span>
               </div>
@@ -177,12 +177,19 @@ export default function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium transition-all ${
-                      isActive ? "bg-white/10 text-white shadow-sm" : "text-white/70 hover:bg-white/5 hover:text-white"
+                    className={`group relative flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium transition-all duration-300 ${
+                      isActive 
+                        ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-4 border-gradient-to-b from-cyan-400 to-purple-400" 
+                        : "text-white/70 hover:bg-slate-800/30 hover:text-white"
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.label}</span>
+                    {isActive && (
+                      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-cyan-400 via-blue-400 to-purple-400 rounded-r-full" />
+                    )}
+                    <Icon className={`h-5 w-5 transition-colors duration-300 ${
+                      isActive ? "text-cyan-400" : "text-white/70 group-hover:text-cyan-400"
+                    }`} />
+                    <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
                     {item.label === "The Feed" && (
                       <NotificationBadge className="ml-auto" />
                     )}
@@ -191,20 +198,20 @@ export default function Sidebar() {
               })}
             </nav>
 
-            <div className="glass space-y-3 rounded-xl p-4">
+            <div className="space-y-3 rounded-xl p-4 bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 backdrop-blur-sm border border-purple-200/20">
               <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Today's Activity</div>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Active Time</span>
-                  <span className="text-sm font-semibold text-white">6h 32m</span>
+                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">6h 32m</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Tasks Done</span>
-                  <span className="text-sm font-semibold text-white">8/12</span>
+                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">8/12</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Breaks Taken</span>
-                  <span className="text-sm font-semibold text-white">3</span>
+                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">3</span>
                 </div>
               </div>
             </div>
@@ -213,7 +220,7 @@ export default function Sidebar() {
             <Link
               href="/client"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-3 rounded-lg border border-white/20 bg-white/5 px-4 py-3 font-medium text-white/70 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+              className="flex w-full items-center gap-3 rounded-lg border border-purple-200/20 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 px-4 py-3 font-medium text-white/70 transition-all hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-cyan-500/20 hover:text-white active:scale-95"
             >
               <LayoutDashboard className="h-5 w-5" />
               <span>Client Portal →</span>
@@ -222,7 +229,7 @@ export default function Sidebar() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg bg-red-500/10 px-4 py-3 font-medium text-red-400 transition-all hover:bg-red-500/20 hover:text-red-300 active:scale-95"
+              className="group flex w-full items-center gap-3 rounded-lg bg-gradient-to-r from-red-500/10 to-pink-500/10 px-4 py-3 font-medium text-red-400 transition-all hover:bg-gradient-to-r hover:from-red-500/20 hover:to-pink-500/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 active:scale-95"
             >
               <LogOut className="h-5 w-5" />
               <span>Logout</span>

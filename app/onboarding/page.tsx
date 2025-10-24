@@ -98,7 +98,6 @@ interface OnboardingData {
   // Status
   personalInfoStatus: string
   govIdStatus: string
-  documentsStatus: string
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
@@ -106,7 +105,6 @@ interface OnboardingData {
   // Feedback
   personalInfoFeedback?: string
   govIdFeedback?: string
-  documentsFeedback?: string
   signatureFeedback?: string
   emergencyContactFeedback?: string
 }
@@ -394,6 +392,132 @@ export default function OnboardingPage() {
       clearTimeout(timeoutId)
     } finally {
       console.log("✅ Setting saving to false")
+      setSaving(false)
+    }
+  }
+
+  // Add new handler functions for 8-step onboarding
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, resume: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('resume', file)
+
+      const response = await fetch('/api/onboarding/resume', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Resume uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload resume')
+    } finally {
+      setUploading({ ...uploading, resume: false })
+    }
+  }
+
+  const handleEducationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, education: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('education', file)
+
+      const response = await fetch('/api/onboarding/education', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Education document uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload education document')
+    } finally {
+      setUploading({ ...uploading, education: false })
+    }
+  }
+
+  const handleMedicalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading({ ...uploading, medical: true })
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('medical', file)
+
+      const response = await fetch('/api/onboarding/medical', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      setSuccess('Medical certificate uploaded successfully!')
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload medical certificate')
+    } finally {
+      setUploading({ ...uploading, medical: false })
+    }
+  }
+
+  const handleSaveDataPrivacy = async () => {
+    setSaving(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/onboarding/data-privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataPrivacyConsent: true,
+          bankName: 'BDO', // Default for now
+          accountName: 'Sample Account',
+          accountNumber: '1234567890'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save')
+      }
+
+      setSuccess('Data privacy consent and bank details saved!')
+      setCurrentStep(currentStep + 1)
+      await fetchOnboardingData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save data privacy consent')
+    } finally {
       setSaving(false)
     }
   }
@@ -769,13 +893,13 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "APPROVED" && (
+              {currentStep === 6 && formData.dataPrivacyStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "REJECTED" && (
+              {currentStep === 6 && formData.dataPrivacyStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
@@ -817,7 +941,15 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 2 && formData.govIdFeedback && (
+            {currentStep === 2 && formData.resumeFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.resumeFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 3 && formData.govIdFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -825,11 +957,27 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 3 && formData.documentsFeedback && (
+            {currentStep === 4 && formData.educationFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
-                  <strong>Admin Feedback:</strong> {formData.documentsFeedback}
+                  <strong>Admin Feedback:</strong> {formData.educationFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 5 && formData.medicalFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.medicalFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 6 && formData.dataPrivacyFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.dataPrivacyFeedback}
                 </AlertDescription>
               </Alert>
             )}

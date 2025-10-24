@@ -149,6 +149,27 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  User: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  FileText: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  ),
+  BookOpen: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  ),
   Briefcase: () => (
     <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
@@ -159,20 +180,20 @@ const Icons = {
 
 const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
-  { icon: "Users", label: "Staff Management", href: "/admin/staff", badge: null },
-  { icon: "ClipboardCheck", label: "Staff Onboarding", href: "/admin/staff/onboarding", badge: null },
-  { icon: "Building2", label: "Client Organizations", href: "/admin/clients", badge: null },
-  { icon: "UserCog", label: "Client Users", href: "/admin/client-users", badge: null },
-  { icon: "Briefcase", label: "Recruitment", href: "/admin/recruitment", badge: null },
-  { icon: "Calendar", label: "Review Scheduling", href: "/admin/reviews", badge: null },
-  { icon: "CheckSquare", label: "Task Oversight", href: "/admin/tasks", badge: null },
-  { icon: "Ticket", label: "Support Tickets", href: "/admin/tickets", badge: null },
-  { icon: "FolderOpen", label: "Document Management", href: "/admin/documents", badge: null },
+  { icon: "User", label: "My Profile", href: "/admin/profile", badge: null },
+  { icon: "Building2", label: "Client", href: "/admin/clients", badge: null },
+  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/onboarding", badge: null },
+  { icon: "Users", label: "Staff", href: "/admin/staff", badge: null },
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
-  { icon: "Trophy", label: "Gamification", href: "/admin/gamification", badge: null },
-  { icon: "TrendingUp", label: "Performance Analytics", href: "/admin/analytics", badge: null },
+  { icon: "TrendingUp", label: "Analytics", href: "/admin/analytics", badge: null },
+  { icon: "Ticket", label: "Tickets", href: "/admin/tickets", badge: null },
+  { icon: "FileText", label: "Performance", href: "/admin/performance-reviews", badge: null },
+  { icon: "CheckSquare", label: "Tasks", href: "/admin/tasks", badge: null },
+  { icon: "BookOpen", label: "Knowledge Base", href: "/admin/knowledge-base", badge: null },
   { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
-  { icon: "Settings", label: "System Settings", href: "/admin/settings", badge: null },
+  { icon: "Trophy", label: "Leaderboard", href: "/admin/leaderboard", badge: null },
+  { icon: "Briefcase", label: "Recruitment", href: "/admin/recruitment", badge: null },
+  { icon: "Settings", label: "Settings", href: "/admin/settings", badge: null },
 ]
 
 type ManagementUser = {
@@ -219,15 +240,15 @@ export function AdminSidebar({
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-border bg-sidebar">
+      <aside className="flex w-64 flex-col border-r border-slate-800/50 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 backdrop-blur-sm">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600">
+        <div className="flex h-16 items-center gap-3 border-b border-slate-800/50 px-6">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-lg shadow-indigo-500/20">
             <span className="text-sm font-bold text-white">SA</span>
           </div>
           <div>
-            <div className="text-sm font-semibold text-foreground">Shore Agents</div>
-            <div className="text-xs text-muted-foreground">Admin Portal</div>
+            <div className="text-sm font-semibold text-white">Shore Agents</div>
+            <div className="text-xs text-slate-400">Admin Portal</div>
           </div>
         </div>
 
@@ -240,20 +261,25 @@ export function AdminSidebar({
               <Link
                 key={index}
                 href={item.href}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-gradient-to-r from-indigo-600/20 to-purple-600/20 text-white font-semibold shadow-lg"
+                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
                 }`}
               >
-                <IconComponent />
+                {isActive && (
+                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 to-purple-400 rounded-r-full" />
+                )}
+                <IconComponent className={`h-4 w-4 transition-colors duration-200 ${
+                  isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-indigo-400"
+                }`} />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge && (
                   <Badge
                     variant="secondary"
                     className={`${
-                      isActive ? "bg-white/20 text-white" : "bg-muted text-foreground"
-                    } h-5 min-w-5 px-1.5 text-xs font-semibold`}
+                      isActive ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/50" : "bg-slate-700 text-slate-300"
+                    } h-5 min-w-5 px-1.5 text-xs font-bold`}
                   >
                     {item.badge}
                   </Badge>
@@ -264,11 +290,11 @@ export function AdminSidebar({
         </nav>
 
         {/* Portal Switcher */}
-        <div className="border-t border-border p-3 space-y-1">
-          <div className="text-xs font-semibold text-muted-foreground px-3 py-2">Switch Portal</div>
+        <div className="border-t border-slate-800/50 p-3 space-y-1">
+          <div className="text-xs font-semibold text-slate-400 px-3 py-2">Switch Portal</div>
           <Link
             href="/"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"
           >
             <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -278,7 +304,7 @@ export function AdminSidebar({
           </Link>
           <Link
             href="/client"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"
           >
             <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
@@ -289,7 +315,7 @@ export function AdminSidebar({
           </Link>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-gradient-to-r hover:from-red-600/20 hover:to-rose-600/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-200"
           >
             <Icons.LogOut />
             <span>Logout</span>
@@ -322,7 +348,7 @@ export function AdminSidebar({
               <Button variant="ghost" className="gap-2">
                 <Avatar className="size-7">
                   <AvatarImage src={user.avatar || undefined} />
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs">
+                  <AvatarFallback className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

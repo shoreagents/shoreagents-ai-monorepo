@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
       tabsSwitched: m.tabsSwitched,
       productivityScore: m.productivityScore,
       screenshotCount: m.clipboardActions, // Use clipboardActions as screenshot count
-      applicationsUsed: (m as any).applicationsused || [], // Get from database
-      visitedUrls: (m as any).visitedurls || [], // Get from database
+      applicationsUsed: (m as any).applicationsUsed || [], // Get from database
+      visitedUrls: (m as any).visitedUrls || [], // Get from database
     }))
 
     const formattedToday = todayMetric
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
           tabsSwitched: todayMetric.tabsSwitched,
           productivityScore: todayMetric.productivityScore,
           screenshotCount: todayMetric.clipboardActions, // Use clipboardActions as screenshot count
-          applicationsUsed: (todayMetric as any).applicationsused || [], // Get from database
-          visitedUrls: (todayMetric as any).visitedurls || [], // Get from database
+          applicationsUsed: (todayMetric as any).applicationsUsed || [], // Get from database
+          visitedUrls: (todayMetric as any).visitedUrls || [], // Get from database
         }
       : null
 
@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,
           productivityScore: productivityScore ?? existingMetric.productivityScore,
-          ...(applicationsUsed !== undefined && { applicationsused: applicationsUsed }),
-          ...(visitedUrls !== undefined && { visitedurls: visitedUrls }),
+          ...(applicationsUsed !== undefined && { applicationsUsed: applicationsUsed }),
+          ...(visitedUrls !== undefined && { visitedUrls: visitedUrls }),
         } as any,
       })
     } else {
@@ -226,8 +226,8 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited || 0,
           tabsSwitched: tabsSwitched || 0,
           productivityScore: productivityScore || 0,
-          applicationsused: applicationsUsed || [],
-          visitedurls: visitedUrls || [],
+          applicationsUsed: applicationsUsed || [],
+          visitedUrls: visitedUrls || [],
         } as any,
       })
     }
