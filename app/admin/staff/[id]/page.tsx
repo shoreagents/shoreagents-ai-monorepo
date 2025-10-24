@@ -47,7 +47,30 @@ async function getStaffUser(id: string) {
             currentRole: true,
           },
         },
-      },
+        welcomeForm: {
+          select: {
+            id: true,
+            name: true,
+            client: true,
+            startDate: true,
+            favoriteFastFood: true,
+            favoriteColor: true,
+            favoriteMovie: true,
+            favoriteBook: true,
+            hobby: true,
+            dreamDestination: true,
+            favoriteSeason: true,
+            petName: true,
+            favoriteSport: true,
+            favoriteGame: true,
+            favoriteQuote: true,
+            funFact: true,
+            additionalInfo: true,
+            completed: true,
+            submittedAt: true,
+          },
+        },
+      } as any,
     })
 
     return staffUser
@@ -68,6 +91,9 @@ export default async function StaffDetailPage({
   if (!staffUser) {
     notFound()
   }
+
+  // Type assertion to help TypeScript understand the included relations
+  const staff = staffUser as any
 
   return (
     <div className="space-y-6">
@@ -93,25 +119,25 @@ export default async function StaffDetailPage({
           <Card className="p-6 border-border bg-card">
             <div className="flex items-start gap-6">
               <Avatar className="h-24 w-24 ring-2 ring-white/10">
-                <AvatarImage src={staffUser.avatar || undefined} alt={staffUser.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-2xl">
-                  {staffUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                <AvatarImage src={staff.avatar || undefined} alt={staff.name} />
+                <AvatarFallback className="bg-linear-to-br from-blue-500/20 to-purple-500/20 text-2xl">
+                  {staff.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-foreground">{staffUser.name}</h2>
-                <p className="text-muted-foreground">{staffUser.email}</p>
+                <h2 className="text-2xl font-semibold text-foreground">{staff.name}</h2>
+                <p className="text-muted-foreground">{staff.email}</p>
                 
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Badge variant="secondary" className="text-xs">
                     <UserIcon className="h-3 w-3 mr-1" /> Staff Member
                   </Badge>
-                  {staffUser.role && (
+                  {staff.role && (
                     <Badge variant="outline" className="text-xs">
-                      {staffUser.role}
+                      {staff.role}
                     </Badge>
                   )}
-                  {staffUser.onboarding?.isComplete && (
+                  {staff.onboarding?.isComplete && (
                     <Badge className="text-xs bg-emerald-500">
                       Onboarding Complete
                     </Badge>
@@ -122,30 +148,30 @@ export default async function StaffDetailPage({
 
             {/* Details Grid */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {staffUser.profile?.currentRole && (
+              {staff.profile?.currentRole && (
                 <div className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
                   <UserIcon className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-xs text-muted-foreground">Current Role</div>
-                    <div className="font-medium text-foreground">{staffUser.profile.currentRole}</div>
+                    <div className="font-medium text-foreground">{staff.profile.currentRole}</div>
                   </div>
                 </div>
               )}
-              {staffUser.profile?.phone && (
+              {staff.profile?.phone && (
                 <div className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-xs text-muted-foreground">Phone</div>
-                    <div className="font-medium text-foreground">{staffUser.profile.phone}</div>
+                    <div className="font-medium text-foreground">{staff.profile.phone}</div>
                   </div>
                 </div>
               )}
-              {staffUser.profile?.location && (
+              {staff.profile?.location && (
                 <div className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-xs text-muted-foreground">Location</div>
-                    <div className="font-medium text-foreground">{staffUser.profile.location}</div>
+                    <div className="font-medium text-foreground">{staff.profile.location}</div>
                   </div>
                 </div>
               )}
@@ -154,7 +180,7 @@ export default async function StaffDetailPage({
                 <div>
                   <div className="text-xs text-muted-foreground">Joined</div>
                   <div className="font-medium text-foreground">
-                    {new Date(staffUser.createdAt).toLocaleDateString('en-US', {
+                    {new Date(staff.createdAt).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric'
@@ -166,15 +192,15 @@ export default async function StaffDetailPage({
           </Card>
 
           {/* Company Assignment */}
-          {staffUser.company && (
+          {staff.company && (
             <Card className="p-6 border-border bg-card">
               <h3 className="text-lg font-semibold text-foreground mb-4">Company Assignment</h3>
               <div className="flex items-start gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-white/10">
-                  {staffUser.company.logo ? (
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-linear-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-white/10">
+                  {staff.company.logo ? (
                     <img 
-                      src={staffUser.company.logo} 
-                      alt={staffUser.company.companyName} 
+                      src={staff.company.logo} 
+                      alt={staff.company.companyName} 
                       className="h-full w-full rounded-lg object-cover" 
                     />
                   ) : (
@@ -183,32 +209,32 @@ export default async function StaffDetailPage({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h4 className="font-semibold text-foreground">{staffUser.company.companyName}</h4>
-                    <Badge variant={staffUser.company.isActive ? "default" : "secondary"} className="text-xs">
-                      {staffUser.company.isActive ? "Active" : "Inactive"}
+                    <h4 className="font-semibold text-foreground">{staff.company.companyName}</h4>
+                    <Badge variant={staff.company.isActive ? "default" : "secondary"} className="text-xs">
+                      {staff.company.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  {staffUser.company.tradingName && staffUser.company.tradingName !== staffUser.company.companyName && (
+                  {staff.company.tradingName && staff.company.tradingName !== staff.company.companyName && (
                     <p className="text-sm text-muted-foreground mb-2">
-                      Trading as: {staffUser.company.tradingName}
+                      Trading as: {staff.company.tradingName}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    {staffUser.company.industry && (
+                    {staff.company.industry && (
                       <div className="flex items-center gap-1">
                         <Briefcase className="h-3 w-3" />
-                        <span>{staffUser.company.industry}</span>
+                        <span>{staff.company.industry}</span>
                       </div>
                     )}
-                    {staffUser.company.location && (
+                    {staff.company.location && (
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        <span>{staffUser.company.location}</span>
+                        <span>{staff.company.location}</span>
                       </div>
                     )}
                   </div>
                   <div className="mt-3">
-                    <Link href={`/admin/clients/${staffUser.company.id}`}>
+                    <Link href={`/admin/clients/${staff.company.id}`}>
                       <Button variant="outline" size="sm">
                         View Company Details
                       </Button>
@@ -219,13 +245,138 @@ export default async function StaffDetailPage({
             </Card>
           )}
 
-          {!staffUser.company && (
+          {!staff.company && (
             <Card className="p-6 border-border bg-card text-center">
               <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 opacity-50" />
               <h3 className="text-lg font-medium text-foreground mb-2">No Company Assigned</h3>
               <p className="text-sm text-muted-foreground">
                 This staff member is not currently assigned to any client company
               </p>
+            </Card>
+          )}
+
+          {/* Welcome Form Responses */}
+          {staff.welcomeForm && (
+            <Card className="p-6 border-border bg-card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Welcome Form Responses</h3>
+                <Badge variant={staff.welcomeForm.completed ? "default" : "secondary"}>
+                  {staff.welcomeForm.completed ? "Completed" : "Incomplete"}
+                </Badge>
+              </div>
+              
+              {staff.welcomeForm.completed ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Name</div>
+                      <div className="text-sm font-medium text-foreground">{staff.welcomeForm.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Client</div>
+                      <div className="text-sm text-foreground">{staff.welcomeForm.client}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Start Date</div>
+                      <div className="text-sm text-foreground">{staff.welcomeForm.startDate}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Submitted At</div>
+                      <div className="text-sm text-foreground">
+                        {staff.welcomeForm.submittedAt ? new Date(staff.welcomeForm.submittedAt).toLocaleString() : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {staff.welcomeForm.favoriteFastFood && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Fast Food</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteFastFood}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteColor && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Color</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteColor}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteMovie && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Movie</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteMovie}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteBook && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Book</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteBook}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.hobby && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Hobby</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.hobby}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.dreamDestination && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Dream Destination</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.dreamDestination}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteSeason && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Season</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteSeason}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.petName && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Pet Name</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.petName}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteSport && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Sport</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteSport}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteGame && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Game</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteGame}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.favoriteQuote && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Favorite Quote</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.favoriteQuote}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.funFact && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Fun Fact</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.funFact}</div>
+                      </div>
+                    )}
+                    {staff.welcomeForm.additionalInfo && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Additional Info</div>
+                        <div className="text-sm text-foreground">{staff.welcomeForm.additionalInfo}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground mb-2">Welcome form not yet completed</div>
+                  <div className="text-sm text-muted-foreground">
+                    Staff member needs to fill out the welcome form after onboarding completion
+                  </div>
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -240,17 +391,17 @@ export default async function StaffDetailPage({
                 <div className="text-xs text-muted-foreground mb-1">User ID</div>
                 <div className="flex items-center gap-2 text-sm font-mono text-foreground">
                   <Hash className="h-3 w-3" />
-                  <span className="truncate">{staffUser.id.slice(0, 8)}...</span>
+                  <span className="truncate">{staff.id.slice(0, 8)}...</span>
                 </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Onboarding Status</div>
-                {staffUser.onboarding ? (
+                {staff.onboarding ? (
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-medium text-foreground">
-                      {staffUser.onboarding.completionPercent}% Complete
+                      {staff.onboarding.completionPercent}% Complete
                     </div>
-                    {staffUser.onboarding.isComplete && (
+                    {staff.onboarding.isComplete && (
                       <Badge className="text-xs bg-emerald-500">✓</Badge>
                     )}
                   </div>
@@ -261,13 +412,13 @@ export default async function StaffDetailPage({
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Account Created</div>
                 <div className="text-sm text-foreground">
-                  {new Date(staffUser.createdAt).toLocaleDateString()}
+                  {new Date(staff.createdAt).toLocaleDateString()}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Last Updated</div>
                 <div className="text-sm text-foreground">
-                  {new Date(staffUser.updatedAt).toLocaleDateString()}
+                  {new Date(staff.updatedAt).toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -277,14 +428,14 @@ export default async function StaffDetailPage({
           <Card className="p-6 border-border bg-card">
             <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              <Link href={`/admin/onboarding/${staffUser.id}`} className="block">
+              <Link href={`/admin/onboarding/${staff.id}`} className="block">
                 <Button variant="outline" className="w-full justify-start" size="sm">
                   <UserIcon className="h-4 w-4 mr-2" />
                   View Onboarding
                 </Button>
               </Link>
-              {staffUser.company && (
-                <Link href={`/admin/clients/${staffUser.company.id}`} className="block">
+              {staff.company && (
+                <Link href={`/admin/clients/${staff.company.id}`} className="block">
                   <Button variant="outline" className="w-full justify-start" size="sm">
                     <Building2 className="h-4 w-4 mr-2" />
                     View Company

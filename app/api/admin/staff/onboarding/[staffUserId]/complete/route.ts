@@ -90,7 +90,7 @@ export async function POST(
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 })
     }
 
-    // Check if all 8 sections are approved (GUNTING 8-step system)
+    // Check if all 9 sections are approved (GUNTING 9-step system)
     const { onboarding } = staffUser
     const allApproved = 
       onboarding.personalInfoStatus === "APPROVED" &&
@@ -101,12 +101,11 @@ export async function POST(
       onboarding.resumeStatus === "APPROVED" &&
       onboarding.educationStatus === "APPROVED" &&
       onboarding.medicalStatus === "APPROVED" &&
-      onboarding.dataPolicyStatus === "APPROVED" &&
-      onboarding.bankStatus === "APPROVED"
+      onboarding.dataPrivacyStatus === "APPROVED"
 
     if (!allApproved) {
       return NextResponse.json({ 
-        error: "All 8 onboarding sections must be approved before completing onboarding" 
+        error: "All 9 onboarding sections must be approved before completing onboarding" 
       }, { status: 400 })
     }
 
@@ -115,14 +114,11 @@ export async function POST(
       where: { staffUserId: staffUser.id }
     })
 
-    if (!employmentContract || !employmentContract.contractSigned) {
+    if (!employmentContract || !employmentContract.signed) {
       return NextResponse.json({ 
         error: "Employment contract must be signed before completing onboarding" 
       }, { status: 400 })
     }
-
-    // Check contract is signed (skip for now - may not exist in current schema)
-    console.log("⚠️ CONTRACT CHECK SKIPPED - Schema may not include employment contracts yet")
 
     // Check if profile already exists
     if (staffUser.profile) {
@@ -277,8 +273,27 @@ export async function POST(
       workdays: schedules.filter((s: { isWorkday: boolean }) => s.isWorkday).length
     })
 
-    // Create empty welcome form record (skip for now - may not exist in current schema)
-    console.log("⚠️ WELCOME FORM CREATION SKIPPED - Schema may not include welcome forms yet")
+    // Create empty welcome form record
+    try {
+      const welcomeForm = await prisma.staffWelcomeForm.create({
+        data: {
+          staffUserId: staffUser.id,
+          name: fullName,
+          client: company.companyName,
+          startDate: new Date(startDate).toLocaleDateString(),
+          favoriteFastFood: "", // Empty - to be filled by staff
+          completed: false
+        }
+      })
+      console.log("✅ WELCOME FORM RECORD CREATED:", { 
+        welcomeFormId: welcomeForm.id,
+        staffUserId: staffUser.id,
+        staffName: fullName
+      })
+    } catch (error) {
+      console.error("❌ WELCOME FORM CREATION FAILED:", error)
+      // Don't fail the entire onboarding process if welcome form creation fails
+    }
 
     // Mark onboarding as complete
     await prisma.staffOnboarding.update({
@@ -309,7 +324,8 @@ export async function POST(
       message: `Onboarding completed! ${fullName} assigned to ${company.companyName} as ${currentRole}.`,
       profileId: profile.id,
       companyName: company.companyName,
-      staffName: fullName
+      staffName: fullName,
+      redirectTo: "/welcome" // Redirect staff to welcome form
     })
 
   } catch (error) {
