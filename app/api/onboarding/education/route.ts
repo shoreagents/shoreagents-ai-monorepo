@@ -21,14 +21,14 @@ export async function POST(request: NextRequest) {
     // Find staff user
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      include: { staffOnboarding: true }
+      include: { onboarding: true }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
-    if (!staffUser.staffOnboarding) {
+    if (!staffUser.onboarding) {
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: uploadData, error: uploadError } = await supabaseAdmin
       .storage
       .from('staff')
-      .upload(`staff_education/${fileName}`, fileBuffer, {
+      .upload(`staff_onboarding/${fileName}`, fileBuffer, {
         contentType: educationFile.type,
         upsert: true
       })
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabaseAdmin
       .storage
       .from('staff')
-      .getPublicUrl(`staff_education/${fileName}`)
+      .getPublicUrl(`staff_onboarding/${fileName}`)
 
     const educationUrl = urlData.publicUrl
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       where: { staffUserId: staffUser.id },
       data: {
         diplomaTorUrl: educationUrl,
-        educationStatus: 'IN_REVIEW'
+        educationStatus: 'SUBMITTED'
       }
     })
 
