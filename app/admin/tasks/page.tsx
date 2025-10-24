@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Eye, Filter, RefreshCw, Search, AlertCircle, Calendar, Users, Paperclip, ChevronDown, ChevronUp, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -465,9 +465,8 @@ export default function AdminTasksPage() {
               const assignedStaffCount = task.assignedStaff?.length || (task.staffUser ? 1 : 0)
 
               return (
-                <>
+                <React.Fragment key={task.id}>
                   <TableRow 
-                    key={task.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleTaskClick(task)}
                   >
@@ -635,7 +634,7 @@ export default function AdminTasksPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               )
             })}
           </TableBody>
@@ -655,28 +654,28 @@ export default function AdminTasksPage() {
 
       {/* Task Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogContent className="!max-w-none max-w-6xl w-[85vw] max-h-[80vh] overflow-y-auto">
           {selectedTask && (
-            <div className="space-y-4">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <Eye className="h-5 w-5 text-muted-foreground" />
+            <div className="space-y-6">
+              <DialogHeader className="pb-4 border-b">
+                <DialogTitle className="flex items-center gap-3 text-xl">
+                  <Eye className="h-6 w-6 text-muted-foreground" />
                   Task Details (View Only)
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Title & Badges */}
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{selectedTask.title}</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className={statusConfig[selectedTask.status as keyof typeof statusConfig].color}>
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-foreground">{selectedTask.title}</h2>
+                  <div className="flex flex-wrap gap-3">
+                    <Badge className={`${statusConfig[selectedTask.status as keyof typeof statusConfig].color} px-3 py-1`}>
                       {statusConfig[selectedTask.status as keyof typeof statusConfig].label}
                     </Badge>
-                    <Badge className={priorityConfig[selectedTask.priority as keyof typeof priorityConfig].color}>
+                    <Badge className={`${priorityConfig[selectedTask.priority as keyof typeof priorityConfig].color} px-3 py-1`}>
                       {priorityConfig[selectedTask.priority as keyof typeof priorityConfig].label}
                     </Badge>
-                    <Badge className={sourceConfig[selectedTask.source as keyof typeof sourceConfig].color}>
+                    <Badge className={`${sourceConfig[selectedTask.source as keyof typeof sourceConfig].color} px-3 py-1`}>
                       {sourceConfig[selectedTask.source as keyof typeof sourceConfig].icon}{" "}
                       {sourceConfig[selectedTask.source as keyof typeof sourceConfig].label}
                     </Badge>
@@ -685,45 +684,45 @@ export default function AdminTasksPage() {
 
                 {/* Description */}
                 {selectedTask.description && (
-                  <Card className="p-4">
-                    <h4 className="text-sm font-semibold text-foreground mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedTask.description}</p>
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold text-foreground mb-3">Description</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{selectedTask.description}</p>
                   </Card>
                 )}
 
                 {/* Metadata */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedTask.company && (
-                    <Card className="p-4">
-                      <div className="text-xs text-muted-foreground mb-1">Company</div>
-                      <div className="text-sm font-semibold text-foreground">
+                    <Card className="p-6">
+                      <div className="text-sm text-muted-foreground mb-2">Company</div>
+                      <div className="text-lg font-semibold text-foreground flex items-center gap-2">
                         🏢 {selectedTask.company.companyName}
                       </div>
                     </Card>
                   )}
 
                   {selectedTask.deadline && (
-                    <Card className="p-4">
-                      <div className="text-xs text-muted-foreground mb-1">Deadline</div>
-                      <div className="text-sm font-semibold text-foreground flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {new Date(selectedTask.deadline).toLocaleDateString()}
+                    <Card className="p-6">
+                      <div className="text-sm text-muted-foreground mb-2">Deadline</div>
+                      <div className="text-lg font-semibold text-foreground flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        {format(new Date(selectedTask.deadline), 'MMM dd, yyyy')}
                       </div>
                     </Card>
                   )}
 
-                  <Card className="p-4">
-                    <div className="text-xs text-muted-foreground mb-1">Created</div>
-                    <div className="text-sm font-semibold text-foreground">
-                      {new Date(selectedTask.createdAt).toLocaleDateString()}
+                  <Card className="p-6">
+                    <div className="text-sm text-muted-foreground mb-2">Created</div>
+                    <div className="text-lg font-semibold text-foreground">
+                      {format(new Date(selectedTask.createdAt), 'MMM dd, yyyy')}
                     </div>
                   </Card>
 
                   {selectedTask.completedAt && (
-                    <Card className="p-4 bg-green-50">
-                      <div className="text-xs text-green-700 mb-1">Completed</div>
-                      <div className="text-sm font-semibold text-green-700">
-                        {new Date(selectedTask.completedAt).toLocaleDateString()}
+                    <Card className="p-6 bg-green-50 dark:bg-green-900/20">
+                      <div className="text-sm text-green-700 dark:text-green-400 mb-2">Completed</div>
+                      <div className="text-lg font-semibold text-green-700 dark:text-green-400">
+                        {format(new Date(selectedTask.completedAt), 'MMM dd, yyyy')}
                       </div>
                     </Card>
                   )}
@@ -731,18 +730,18 @@ export default function AdminTasksPage() {
 
                 {/* Client Creator */}
                 {selectedTask.clientUser && (
-                  <Card className="p-4 bg-blue-50">
-                    <div className="text-xs text-blue-700 mb-2">Created by Client</div>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                  <Card className="p-6 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="text-sm text-blue-700 dark:text-blue-400 mb-3 font-medium">Created by Client</div>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={selectedTask.clientUser.avatar || undefined} />
-                        <AvatarFallback className="bg-blue-500 text-white">
+                        <AvatarFallback className="bg-blue-500 text-white text-lg">
                           {selectedTask.clientUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="text-sm font-semibold text-blue-900">{selectedTask.clientUser.name}</div>
-                        <div className="text-xs text-blue-700">{selectedTask.clientUser.email}</div>
+                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{selectedTask.clientUser.name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-400">{selectedTask.clientUser.email}</div>
                       </div>
                     </div>
                   </Card>
@@ -750,44 +749,50 @@ export default function AdminTasksPage() {
 
                 {/* Assigned Staff */}
                 {(selectedTask.assignedStaff?.length || selectedTask.staffUser) && (
-                  <Card className="p-4">
-                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <Users className="h-4 w-4" />
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Users className="h-5 w-5" />
                       Assigned Staff ({selectedTask.assignedStaff?.length || 1})
                     </h4>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedTask.assignedStaff?.map((assignment) => (
-                        <div key={assignment.staffUser.id} className="flex items-center gap-2 p-2 rounded bg-muted">
-                          <Avatar className="h-8 w-8">
+                        <div key={assignment.staffUser.id} className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                          <Avatar className="h-10 w-10">
                             <AvatarImage src={assignment.staffUser.avatar || undefined} />
-                            <AvatarFallback className="bg-purple-500 text-white text-xs">
+                            <AvatarFallback className="bg-purple-500 text-white">
                               {assignment.staffUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold text-foreground truncate">
+                            <div className="text-sm font-semibold text-foreground truncate">
                               {assignment.staffUser.name}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
                               {assignment.staffUser.email}
                             </div>
+                            <div className="text-xs text-muted-foreground">
+                              {assignment.staffUser.role}
+                            </div>
                           </div>
                         </div>
                       ))}
                       {selectedTask.staffUser && !selectedTask.assignedStaff?.length && (
-                        <div className="flex items-center gap-2 p-2 rounded bg-muted">
-                          <Avatar className="h-8 w-8">
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                          <Avatar className="h-10 w-10">
                             <AvatarImage src={selectedTask.staffUser.avatar || undefined} />
-                            <AvatarFallback className="bg-purple-500 text-white text-xs">
+                            <AvatarFallback className="bg-purple-500 text-white">
                               {selectedTask.staffUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold text-foreground truncate">
+                            <div className="text-sm font-semibold text-foreground truncate">
                               {selectedTask.staffUser.name}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
                               {selectedTask.staffUser.email}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {selectedTask.staffUser.role}
                             </div>
                           </div>
                         </div>
@@ -798,15 +803,31 @@ export default function AdminTasksPage() {
 
                 {/* Attachments */}
                 {selectedTask.attachments && selectedTask.attachments.length > 0 && (
-                  <Card className="p-4">
-                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <Paperclip className="h-4 w-4" />
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Paperclip className="h-5 w-5" />
                       Attachments ({selectedTask.attachments.length})
                     </h4>
-                    <div className="space-y-2">
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
                       {selectedTask.attachments.map((attachment, index) => (
-                        <div key={index} className="text-xs text-muted-foreground p-2 rounded bg-muted truncate">
-                          📎 {attachment}
+                        <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                          <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {attachment.split('/').pop() || attachment}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {attachment}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(attachment, '_blank')}
+                            className="flex-shrink-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>

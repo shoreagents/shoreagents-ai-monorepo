@@ -118,7 +118,7 @@ export default function GamifiedDashboard() {
   const quickActions = [
     { href: "/tasks", icon: CheckSquare, label: "Manage Tasks" },
     { href: "/breaks", icon: Coffee, label: "Track Breaks" },
-    { href: "/reviews", icon: Star, label: "View Reviews" },
+    { href: "/performance-reviews", icon: Star, label: "View Reviews" },
     { href: "/tickets", icon: Headphones, label: "Support Tickets" },
   ]
 
@@ -338,7 +338,7 @@ export default function GamifiedDashboard() {
               <div className="space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/50 bg-amber-900/20 transition-all duration-500 hover:ring-amber-500 hover:shadow-amber-500/30">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Pending Reviews</h2>
-                  <Link href="/reviews" className="text-sm text-blue-400 hover:underline">View All →</Link>
+                  <Link href="/performance-reviews" className="text-sm text-blue-400 hover:underline">View All →</Link>
                 </div>
                 <div className="space-y-2">
                   {pendingReviews.slice(0, 2).map((review) => (

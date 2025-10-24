@@ -177,15 +177,12 @@ export default function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`group relative flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium transition-all duration-300 ${
-                      isActive 
-                        ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-4 border-gradient-to-b from-cyan-400 to-purple-400" 
-                        : "text-white/70 hover:bg-slate-800/30 hover:text-white"
-                    }`}
-                  >
-                    {isActive && (
-                      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-cyan-400 via-blue-400 to-purple-400 rounded-r-full" />
-                    )}
+                     className={`group relative flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium transition-all duration-300 ${
+                       isActive 
+                         ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-4 border-cyan-400"  
+                         : "text-white/70 hover:bg-slate-800/30 hover:text-white"
+                     }`}
+                   >
                     <Icon className={`h-5 w-5 transition-colors duration-300 ${
                       isActive ? "text-cyan-400" : "text-white/70 group-hover:text-cyan-400"
                     }`} />
