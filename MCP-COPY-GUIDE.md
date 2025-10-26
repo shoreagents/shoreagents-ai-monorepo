@@ -266,3 +266,5 @@ Once copied and configured, you'll have:
 
 **Happy coding with MCP!** 🚀
 
+
+
