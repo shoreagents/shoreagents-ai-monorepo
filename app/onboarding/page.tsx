@@ -102,11 +102,11 @@ interface OnboardingData {
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
+  isComplete: boolean
   
   // Feedback
   personalInfoFeedback?: string
   govIdFeedback?: string
-  documentsFeedback?: string
   signatureFeedback?: string
   emergencyContactFeedback?: string
 }
@@ -129,13 +129,7 @@ export default function OnboardingPage() {
   
   const [formData, setFormData] = useState<Partial<OnboardingData>>({})
   
-  // Signature drawing states
-  const [isDrawMode, setIsDrawMode] = useState(false)
-  const [isDrawing, setIsDrawing] = useState(false)
-  const [signatureImageLoading, setSignatureImageLoading] = useState(false)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  
-  // NEW: States for new onboarding steps
+  // NEW: Enhanced onboarding state
   const [nearbyClinics, setNearbyClinics] = useState<any[]>([])
   const [privacyData, setPrivacyData] = useState({
     dataPrivacyConsent: false,
@@ -143,10 +137,42 @@ export default function OnboardingPage() {
     accountName: '',
     accountNumber: ''
   })
+  
+  // Signature drawing states
+  const [isDrawMode, setIsDrawMode] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [signatureImageLoading, setSignatureImageLoading] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     fetchOnboardingData()
   }, [])
+
+  // Check if onboarding is complete and redirect to welcome form
+  useEffect(() => {
+    if (formData.isComplete && formData.completionPercent === 100) {
+      // Check if welcome form is already completed
+      const checkWelcomeForm = async () => {
+        try {
+          const response = await fetch('/api/welcome')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.alreadySubmitted) {
+              // Welcome form already submitted, stay on onboarding page
+              return
+            } else {
+              // Redirect to welcome form
+              router.push('/welcome')
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check welcome form status:', error)
+        }
+      }
+      
+      checkWelcomeForm()
+    }
+  }, [formData.isComplete, formData.completionPercent, router])
 
   // Initialize canvas with white background when draw mode is activated
   useEffect(() => {
@@ -169,6 +195,27 @@ export default function OnboardingPage() {
     setSuccess("")
   }, [currentStep])
 
+  // Fetch nearby clinics on mount
+  useEffect(() => {
+    async function fetchNearbyClinics() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const response = await fetch(`/api/clinics/nearby?lat=${latitude}&lng=${longitude}`)
+            const data = await response.json()
+            if (data.success) {
+              setNearbyClinics(data.clinics)
+            }
+          } catch (error) {
+            console.error('Error fetching clinics:', error)
+          }
+        })
+      }
+    }
+    fetchNearbyClinics()
+  }, [])
+
   // Reset image loading when modal opens/closes
   useEffect(() => {
     if (viewFileModal) {
@@ -182,6 +229,23 @@ export default function OnboardingPage() {
       setSignatureImageLoading(true)
     }
   }, [formData.signatureUrl])
+
+  // Populate privacy data when formData is loaded and user is on step 6
+  useEffect(() => {
+    if (currentStep === 6 && formData.bankAccountDetails) {
+      try {
+        const bankDetails = JSON.parse(formData.bankAccountDetails)
+        setPrivacyData({
+          dataPrivacyConsent: true, // Assume consent is given if data exists
+          bankName: bankDetails.bankName || '',
+          accountName: bankDetails.accountName || '',
+          accountNumber: bankDetails.accountNumber || ''
+        })
+      } catch (error) {
+        console.error('Error parsing bank account details:', error)
+      }
+    }
+  }, [currentStep, formData.bankAccountDetails])
 
   const fetchOnboardingData = async () => {
     try {
@@ -199,21 +263,37 @@ export default function OnboardingPage() {
         setFormData(onboardingData)
         
         // Determine which step the user should be on based on their progress
-        const { personalInfoStatus, govIdStatus, documentsStatus, signatureStatus, emergencyContactStatus } = data.onboarding
+        const { 
+          personalInfoStatus, 
+          resumeStatus, 
+          govIdStatus, 
+          educationStatus, 
+          medicalStatus, 
+          dataPrivacyStatus, 
+          signatureStatus, 
+          emergencyContactStatus 
+        } = data.onboarding
         
-        if (personalInfoStatus !== "APPROVED" && personalInfoStatus !== "SUBMITTED") {
+        
+        if (personalInfoStatus !== "APPROVED") {
           setCurrentStep(1)
-        } else if (govIdStatus !== "APPROVED" && govIdStatus !== "SUBMITTED") {
+        } else if (resumeStatus !== "APPROVED") {
           setCurrentStep(2)
-        } else if (documentsStatus !== "APPROVED" && documentsStatus !== "SUBMITTED") {
+        } else if (govIdStatus !== "APPROVED") {
           setCurrentStep(3)
-        } else if (signatureStatus !== "APPROVED" && signatureStatus !== "SUBMITTED") {
+        } else if (educationStatus !== "APPROVED") {
           setCurrentStep(4)
-        } else if (emergencyContactStatus !== "APPROVED" && emergencyContactStatus !== "SUBMITTED") {
+        } else if (medicalStatus !== "APPROVED") {
           setCurrentStep(5)
+        } else if (dataPrivacyStatus !== "APPROVED") {
+          setCurrentStep(6)
+        } else if (signatureStatus !== "APPROVED") {
+          setCurrentStep(7)
+        } else if (emergencyContactStatus !== "APPROVED") {
+          setCurrentStep(8)
         } else {
           // All steps completed, stay on last step
-          setCurrentStep(5)
+          setCurrentStep(8)
         }
       }
     } catch (err) {
@@ -258,151 +338,6 @@ export default function OnboardingPage() {
       setSaving(false)
     }
   }
-
-  // NEW: Resume upload handler
-  async function handleResumeUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, resume: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('resume', file)
-
-      const response = await fetch('/api/onboarding/resume', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Resume uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload resume')
-    } finally {
-      setUploading({ ...uploading, resume: false })
-    }
-  }
-
-  // NEW: Education upload handler
-  async function handleEducationUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, education: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('education', file)
-
-      const response = await fetch('/api/onboarding/education', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Education document uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload education document')
-    } finally {
-      setUploading({ ...uploading, education: false })
-    }
-  }
-
-  // NEW: Medical upload handler
-  async function handleMedicalUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading({ ...uploading, medical: true })
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append('medical', file)
-
-      const response = await fetch('/api/onboarding/medical', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed')
-      }
-
-      setSuccess('Medical certificate uploaded successfully!')
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload medical certificate')
-    } finally {
-      setUploading({ ...uploading, medical: false })
-    }
-  }
-
-  // NEW: Data privacy and bank details handler
-  async function handleSaveDataPrivacy() {
-    setSaving(true)
-    setError("")
-
-    try {
-      const response = await fetch('/api/onboarding/data-privacy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(privacyData)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to save')
-      }
-
-      setSuccess('Data privacy consent and bank details saved!')
-      setTimeout(() => setCurrentStep(currentStep + 1), 1000)
-      await fetchOnboardingData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to save data privacy consent')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // NEW: Fetch nearby clinics on mount
-  useEffect(() => {
-    async function fetchNearbyClinics() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-          const { latitude, longitude } = position.coords
-          try {
-            const response = await fetch(`/api/clinics/nearby?lat=${latitude}&lng=${longitude}`)
-            const data = await response.json()
-            if (data.success) {
-              setNearbyClinics(data.clinics)
-            }
-          } catch (error) {
-            console.error('Error fetching clinics:', error)
-          }
-        })
-      }
-    }
-    fetchNearbyClinics()
-  }, [])
 
   const handleGovIdsSubmit = async () => {
     setSaving(true)
@@ -628,6 +563,146 @@ export default function OnboardingPage() {
     })
   }
 
+  // NEW: Enhanced onboarding handler functions
+  const handleResumeUpload = async (file: File) => {
+    setUploading(prev => ({ ...prev, resume: true }))
+    try {
+      const formData = new FormData()
+      formData.append('resume', file)
+      
+      const response = await fetch('/api/onboarding/resume', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // Refresh onboarding data to get latest from database
+        await fetchOnboardingData()
+        setSuccess('Resume uploaded successfully!')
+        // Automatically move to next step after successful upload
+        setTimeout(() => {
+          setCurrentStep(3) // Move to Government IDs step
+        }, 1000)
+      } else {
+        setError(data.error || 'Failed to upload resume')
+      }
+    } catch (error) {
+      setError('Failed to upload resume')
+    } finally {
+      setUploading(prev => ({ ...prev, resume: false }))
+    }
+  }
+
+  const handleEducationUpload = async (file: File) => {
+    setUploading(prev => ({ ...prev, education: true }))
+    try {
+      const formData = new FormData()
+      formData.append('education', file)
+      
+      const response = await fetch('/api/onboarding/education', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // Update formData directly without calling fetchOnboardingData to avoid step redirection
+        setFormData(prev => ({
+          ...prev,
+          diplomaTorUrl: data.diplomaTorUrl,
+          educationStatus: 'SUBMITTED'
+        }))
+        setSuccess('Education document uploaded successfully!')
+        // Move to next step after successful upload
+        setTimeout(() => {
+          setCurrentStep(5) // Move to Medical Certificate step
+        }, 1000)
+      } else {
+        setError(data.error || 'Failed to upload education document')
+      }
+    } catch (error) {
+      setError('Failed to upload education document')
+    } finally {
+      setUploading(prev => ({ ...prev, education: false }))
+    }
+  }
+
+  const handleMedicalUpload = async (file: File) => {
+    setUploading(prev => ({ ...prev, medical: true }))
+    try {
+      const formData = new FormData()
+      formData.append('medical', file)
+      
+      const response = await fetch('/api/onboarding/medical', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // Update formData directly without calling fetchOnboardingData to avoid step redirection
+        setFormData(prev => ({
+          ...prev,
+          medicalCertUrl: data.medicalCertUrl,
+          medicalStatus: 'SUBMITTED'
+        }))
+        setSuccess('Medical certificate uploaded successfully!')
+        // Move to next step after successful upload
+        setTimeout(() => {
+          setCurrentStep(6) // Move to Data Privacy step
+        }, 1000)
+      } else {
+        setError(data.error || 'Failed to upload medical certificate')
+      }
+    } catch (error) {
+      setError('Failed to upload medical certificate')
+    } finally {
+      setUploading(prev => ({ ...prev, medical: false }))
+    }
+  }
+
+  const handleSaveDataPrivacy = async () => {
+    setSaving(true)
+    try {
+      const response = await fetch('/api/onboarding/data-privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataPrivacyConsent: privacyData.dataPrivacyConsent,
+          bankName: privacyData.bankName,
+          accountName: privacyData.accountName,
+          accountNumber: privacyData.accountNumber
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // Update formData directly without calling fetchOnboardingData to avoid step redirection
+        setFormData(prev => ({
+          ...prev,
+          bankAccountDetails: JSON.stringify({
+            bankName: privacyData.bankName,
+            accountName: privacyData.accountName,
+            accountNumber: privacyData.accountNumber
+          }),
+          dataPrivacyStatus: 'SUBMITTED'
+        }))
+        setSuccess('Data privacy and bank details saved successfully!')
+        // Move to next step after successful save
+        setTimeout(() => {
+          setCurrentStep(7) // Move to Signature step
+        }, 1000)
+      } else {
+        setError(data.error || 'Failed to save data privacy details')
+      }
+    } catch (error) {
+      setError('Failed to save data privacy details')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     if (status === "APPROVED") return <CheckCircle2 className="h-4 w-4 text-green-500" />
     if (status === "REJECTED") return <AlertCircle className="h-4 w-4 text-red-500" />
@@ -637,29 +712,37 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="loader"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="max-w-4xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
         {/* Header */}
         <div className="text-center mb-8 mt-12">
           <h1 className="text-4xl font-bold text-white mb-2">
             Welcome to ShoreAgents! <span className="inline-block animate-wave origin-[70%_70%]">👋</span>
           </h1>
-          <p className="text-slate-300">
+          <p className="text-slate-300 mb-4">
             Complete your onboarding to get started
           </p>
+          <Button
+            onClick={() => router.push("/onboarding/status")}
+            variant="outline"
+            className="border-blue-600 text-blue-300 hover:bg-blue-900/20 hover:border-blue-500"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            View Onboarding Status
+          </Button>
         </div>
 
         {/* Progress */}
         <Card className="mb-6 bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
           <CardContent className="py-6">
-            <div className="flex justify-between mb-4">
+            <div className="flex items-center mb-4">
               {STEPS.map((step, index) => {
                 const Icon = step.icon
                 const status = formData[step.field as keyof OnboardingData] as string
@@ -670,41 +753,47 @@ export default function OnboardingPage() {
                 const isClickable = true // Allow navigation to any step
                 
                 return (
-                  <div key={step.id} className="flex flex-col items-center flex-1">
-                    <button
-                      onClick={() => {
-                        if (isClickable) {
-                          setCurrentStep(step.id)
-                          setError("")
-                          setSuccess("")
-                        }
-                      }}
-                      disabled={!isClickable}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-200 ${
-                        isApproved
-                          ? "bg-green-600 text-white hover:bg-green-500"
-                          : isCompleted
-                          ? "bg-purple-600 text-white hover:bg-purple-500"
-                          : isRejected
-                          ? "bg-red-600 text-white hover:bg-red-500"
-                          : isActive
-                          ? "bg-purple-600 text-white hover:bg-purple-500"
-                          : "bg-slate-700 text-slate-400 hover:bg-slate-600"
-                      } hover:scale-110 cursor-pointer`}
-                    >
-                      {isApproved ? (
-                        <CheckCircle2 className="h-6 w-6" />
-                      ) : isCompleted ? (
-                        <Icon className="h-5 w-5" />
-                      ) : isRejected ? (
-                        <AlertCircle className="h-6 w-6" />
-                      ) : (
-                        <Icon className="h-5 w-5" />
-                      )}
-                    </button>
-                    <span className="text-xs text-center text-slate-300">
-                      {step.name}
-                    </span>
+                  <div key={step.id} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1 min-h-[80px] justify-start">
+                      <button
+                        onClick={() => {
+                          if (isClickable) {
+                            setCurrentStep(step.id)
+                            setError("")
+                            setSuccess("")
+                          }
+                        }}
+                        disabled={!isClickable}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+                          isApproved
+                            ? "bg-green-600 text-white hover:bg-green-500"
+                            : isCompleted
+                            ? "bg-purple-600 text-white hover:bg-purple-500"
+                            : isRejected
+                            ? "bg-red-600 text-white hover:bg-red-500"
+                            : isActive
+                            ? "bg-purple-600 text-white hover:bg-purple-500"
+                            : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                        } hover:scale-110 cursor-pointer`}
+                      >
+                        {isApproved ? (
+                          <CheckCircle2 className="h-6 w-6" />
+                        ) : isCompleted ? (
+                          <Icon className="h-5 w-5" />
+                        ) : isRejected ? (
+                          <AlertCircle className="h-6 w-6" />
+                        ) : (
+                          <Icon className="h-5 w-5" />
+                        )}
+                      </button>
+                        <span className="text-xs text-center text-slate-300">
+                          {step.name}
+                        </span>
+                    </div>
+                    {/* Connecting line between steps */}
+                    {index < STEPS.length - 1 && (
+                      <div className="flex-1 h-0.5 bg-slate-600 mx-2 -mt-6"></div>
+                    )}
                   </div>
                 )
               })}
@@ -728,10 +817,13 @@ export default function OnboardingPage() {
                 </CardTitle>
                 <CardDescription className="text-slate-400">
                   {currentStep === 1 && "Tell us about yourself"}
-                  {currentStep === 2 && "Enter your government ID numbers and upload supporting documents"}
-                  {currentStep === 3 && "Upload your additional documents below."}
-                  {currentStep === 4 && "Upload your signature image (white background recommended). You can also skip and add it later."}
-                  {currentStep === 5 && "Who should we contact in case of emergency?"}
+                  {currentStep === 2 && "Upload your resume in PDF format"}
+                  {currentStep === 3 && "Enter your government ID numbers and upload supporting documents"}
+                  {currentStep === 4 && "Upload your education documents (diploma, TOR, etc.)"}
+                  {currentStep === 5 && "Upload your medical certificate from a partner clinic"}
+                  {currentStep === 6 && "Data privacy consent and bank account details"}
+                  {currentStep === 7 && "Upload your signature image (white background recommended). You can also skip and add it later."}
+                  {currentStep === 8 && "Who should we contact in case of emergency?"}
                 </CardDescription>
               </div>
               {/* Status Badge */}
@@ -747,83 +839,135 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 2 && formData.govIdStatus === "APPROVED" && (
+              {currentStep === 1 && formData.personalInfoStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 2 && formData.resumeStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 2 && formData.govIdStatus === "REJECTED" && (
+              {currentStep === 2 && formData.resumeStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "APPROVED" && (
+              {currentStep === 2 && formData.resumeStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 3 && formData.govIdStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 3 && formData.documentsStatus === "REJECTED" && (
+              {currentStep === 3 && formData.govIdStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 4 && formData.signatureStatus === "APPROVED" && (
+              {currentStep === 3 && formData.govIdStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 4 && formData.educationStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 4 && formData.signatureStatus === "REJECTED" && (
+              {currentStep === 4 && formData.educationStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 5 && formData.emergencyContactStatus === "APPROVED" && (
+              {currentStep === 4 && formData.educationStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 5 && formData.medicalStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 5 && formData.emergencyContactStatus === "REJECTED" && (
+              {currentStep === 5 && formData.medicalStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 5 && formData.medicalStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 6 && formData.dataPrivacyStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 6 && formData.dataPrivacyStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 6 && formData.dataPrivacyStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 7 && formData.signatureStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 7 && formData.signatureStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 7 && formData.signatureStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
+                </div>
+              )}
+              {currentStep === 8 && formData.emergencyContactStatus === "APPROVED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-200 text-sm font-medium">Approved</span>
+                </div>
+              )}
+              {currentStep === 8 && formData.emergencyContactStatus === "REJECTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-200 text-sm font-medium">Rejected</span>
+                </div>
+              )}
+              {currentStep === 8 && formData.emergencyContactStatus === "SUBMITTED" && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
+                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {/* Feedback Display - Full Width */}
-            {currentStep === 1 && formData.personalInfoFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
-                <AlertCircle className="h-4 w-4 text-yellow-400" />
-                <AlertDescription className="text-yellow-200">
-                  <strong>Admin Feedback:</strong> {formData.personalInfoFeedback}
-                </AlertDescription>
-              </Alert>
-            )}
-            {currentStep === 2 && formData.govIdFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
-                <AlertCircle className="h-4 w-4 text-yellow-400" />
-                <AlertDescription className="text-yellow-200">
-                  <strong>Admin Feedback:</strong> {formData.govIdFeedback}
-                </AlertDescription>
-              </Alert>
-            )}
-            {currentStep === 3 && formData.documentsFeedback && (
-              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
-                <AlertCircle className="h-4 w-4 text-yellow-400" />
-                <AlertDescription className="text-yellow-200">
-                  <strong>Admin Feedback:</strong> {formData.documentsFeedback}
-                </AlertDescription>
-              </Alert>
-            )}
-            {currentStep === 4 && formData.signatureFeedback && (
+            {/* Feedback Display - Removed duplicate global feedback alerts */}
+            {currentStep === 7 && formData.signatureFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -831,7 +975,7 @@ export default function OnboardingPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {currentStep === 5 && formData.emergencyContactFeedback && (
+            {currentStep === 8 && formData.emergencyContactFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-200">
@@ -968,80 +1112,150 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                {formData.personalInfoStatus !== "APPROVED" && (
+                <div className="flex gap-4 mt-8">
+                  {formData.personalInfoStatus !== "APPROVED" ? (
                   <Button
                     onClick={handlePersonalInfoSubmit}
                     disabled={saving}
-                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 mt-8"
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
                   >
                     {saving ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Saving...
                       </span>
-                    ) : "Save"}
+                      ) : "Save & Next"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setCurrentStep(2)}
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    >
+                      Next
                   </Button>
                 )}
+                </div>
               </div>
             )}
 
-            {/* NEW STEP 2: Resume Upload */}
+            {/* Step 2: Resume Upload */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
-                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <Label htmlFor="resume-upload" className="cursor-pointer">
-                    <span className="text-lg font-semibold text-white">Click to upload resume</span>
-                    <p className="text-sm text-slate-400 mt-2">PDF, DOC, or DOCX (Max 5MB)</p>
-                  </Label>
-                  <Input
-                    id="resume-upload"
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => handleResumeUpload(e)}
-                    className="hidden"
-                    disabled={uploading.resume || formData.resumeStatus === "APPROVED"}
-                  />
-                  {uploading.resume && (
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
-                      <span className="text-purple-300">Uploading...</span>
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-white mb-2">Upload Your Resume</h3>
+                  <p className="text-slate-300 text-sm mb-6">
+                    Please upload your most recent resume in PDF format
+                  </p>
+                </div>
+
+                {formData.resumeStatus === "APPROVED" && (
+                  <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-green-200">Resume approved by admin</span>
+                    </div>
+                  </div>
+                )}
+
+                {formData.resumeStatus === "REJECTED" && (
+                  <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-red-200">
+                        Resume rejected{formData.resumeFeedback ? ` - ${formData.resumeFeedback}` : ' - please upload a new one'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {formData.resumeUrl && formData.resumeStatus === "APPROVED" ? (
+                    <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <span className="text-green-200">Resume uploaded successfully</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.resumeUrl!, title: "Resume" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Resume
+                        </button>
+                      </div>
+                    </div>
+                  ) : formData.resumeUrl && formData.resumeStatus === "REJECTED" ? (
+                    <div className="p-4 bg-slate-800/50 border border-slate-600 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-slate-400" />
+                        <span className="text-slate-300">Resume uploaded (pending review)</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.resumeUrl!, title: "Resume" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Resume
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Show upload option when status is not APPROVED */}
+                  {formData.resumeStatus !== "APPROVED" && (
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
+                      <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-300 mb-4">
+                        {formData.resumeUrl ? "Replace your resume (PDF format)" : "Upload your resume (PDF format)"}
+                      </p>
+                      <input
+                        type="file"
+                        id="resume-upload"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleResumeUpload(file)
+                        }}
+                        className="hidden"
+                        disabled={uploading.resume}
+                      />
+                      <label
+                        htmlFor="resume-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {uploading.resume ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            {formData.resumeUrl ? "Replace File" : "Choose File"}
+                          </>
+                        )}
+                      </label>
                     </div>
                   )}
                 </div>
 
-                {formData.resumeUrl && (
-                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-400" />
-                      <span className="text-green-100">Resume uploaded</span>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => window.open(formData.resumeUrl, '_blank')}
-                      className="border-green-600 text-green-400 hover:bg-green-900/50"
-                    >
-                      View
-                    </Button>
-                  </div>
-                )}
-
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
+                <div className="flex gap-4 mt-8">
+                  <Button
                     onClick={() => setCurrentStep(1)}
-                    className="border-slate-600 text-slate-300"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={saving}
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </Button>
-                  <Button 
-                    onClick={() => setCurrentStep(3)} 
-                    disabled={!formData.resumeUrl}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  <Button
+                    onClick={() => setCurrentStep(3)}
+                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    disabled={saving}
                   >
-                    Continue
+                    Next
                   </Button>
                 </div>
               </div>
@@ -1325,38 +1539,13 @@ export default function OnboardingPage() {
                     )}
                   </div>
                 </div>
-
-                <div className="flex gap-4 mt-8">
-                  <Button
-                    onClick={() => setCurrentStep(1)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={saving}
-                  >
-                    Back
-                  </Button>
-                  {formData.govIdStatus !== "APPROVED" && (
-                    <Button
-                      onClick={handleGovIdsSubmit}
-                      disabled={saving}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
-                    >
-                      {saving ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Saving...
-                        </span>
-                      ) : "Save"}
-                    </Button>
-                  )}
-                </div>
               </div>
             )}
 
             {/* Step 3: Documents */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <div className="space-y-2">
+                <div className="space-y-2 mt-6">
                   <Label className="text-slate-300">Valid ID (National ID, Driver's License, etc.)</Label>
                     {formData.validIdUrl ? (
                       <div className="mt-2 space-y-2">
@@ -1757,300 +1946,465 @@ export default function OnboardingPage() {
                     onClick={() => setCurrentStep(2)}
                     variant="outline"
                     className="flex-1"
-                    disabled={saving || Object.values(uploading).some(v => v)}
+                    disabled={saving}
                   >
                     Back
                   </Button>
                   <Button
-                    onClick={async () => {
-                      // Mark as submitted
-                      setSaving(true)
-                      try {
-                        const response = await fetch("/api/onboarding/documents/submit", {
-                          method: "POST"
-                        })
-                        if (response.ok) {
-                          await fetchOnboardingData()
-                        }
-                      } catch (err) {
-                        console.error("Failed to submit documents:", err)
-                      } finally {
-                        setSaving(false)
-                      }
-                      setCurrentStep(4)
-                    }}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
-                    disabled={saving || Object.values(uploading).some(v => v)}
+                    onClick={() => setCurrentStep(4)}
+                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    disabled={saving}
                   >
-                    {saving ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : (
-                      formData.documentsStatus === "APPROVED" ? "Next" : "Save"
-                    )}
+                    Next
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* NEW STEP 4: Education Documents */}
+            {/* Step 4: Education Documents */}
             {currentStep === 4 && (
               <div className="space-y-6">
-                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
-                  <GraduationCap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <Label htmlFor="education-upload" className="cursor-pointer">
-                    <span className="text-lg font-semibold text-white">Upload Diploma or Transcript of Records (TOR)</span>
-                    <p className="text-sm text-slate-400 mt-2">PDF, JPG, or PNG (Max 5MB)</p>
-                  </Label>
-                  <Input
-                    id="education-upload"
-                    type="file"
-                    accept=".pdf,.jpg,.png,.jpeg"
-                    onChange={(e) => handleEducationUpload(e)}
-                    className="hidden"
-                    disabled={uploading.education || formData.educationStatus === "APPROVED"}
-                  />
-                  {uploading.education && (
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
-                      <span className="text-purple-300">Uploading...</span>
-                    </div>
-                  )}
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-white mb-2">Upload Education Documents</h3>
+                  <p className="text-slate-300 text-sm mb-6">
+                    Please upload your diploma, transcript of records, or other education certificates
+                  </p>
                 </div>
 
-                {formData.diplomaTorUrl && (
-                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-400" />
-                      <span className="text-green-100">Education document uploaded</span>
+                {formData.educationStatus === "APPROVED" && (
+                  <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-green-200">Education documents approved by admin</span>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => window.open(formData.diplomaTorUrl, '_blank')}
-                      className="border-green-600 text-green-400 hover:bg-green-900/50"
-                    >
-                      View
-                    </Button>
                   </div>
                 )}
 
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStep(3)}
-                    className="border-slate-600 text-slate-300"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button 
-                    onClick={() => setCurrentStep(5)} 
-                    disabled={!formData.diplomaTorUrl}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </div>
-            )}
 
-            {/* NEW STEP 5: Medical Certificate */}
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Stethoscope className="h-8 w-8 text-purple-400" />
-                    <h3 className="text-xl font-semibold text-white">Medical Certificate (Fit to Work)</h3>
+                {formData.educationStatus === "REJECTED" && (
+                  <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-red-200">
+                        Education documents rejected{formData.educationFeedback ? ` - ${formData.educationFeedback}` : ' - please upload new ones'}
+                      </span>
+                    </div>
                   </div>
+                )}
 
-                  {nearbyClinics.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-medium text-slate-200">Partner Clinics Near You</h4>
-                      <div className="grid gap-3">
-                        {nearbyClinics.slice(0, 3).map((clinic: any) => (
-                          <div key={clinic.id} className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
-                            <h5 className="font-semibold text-white">{clinic.name}</h5>
-                            <p className="text-sm text-slate-300 mt-1">{clinic.address}</p>
-                            <p className="text-xs text-slate-400 mt-1">Distance: {clinic.distance.toFixed(1)}km away</p>
-                          </div>
-                        ))}
+                <div className="space-y-4">
+                  {formData.diplomaTorUrl && formData.educationStatus === "APPROVED" && (
+                    <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <span className="text-green-200">Education document uploaded successfully</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.diplomaTorUrl!, title: "Education Document" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Document
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-blue-200">Visit Any Licensed Clinic</h4>
-                    <p className="text-sm text-blue-100">Request a "Fit to Work" certificate with:</p>
-                    <ul className="text-sm text-blue-100 list-disc list-inside space-y-1 ml-2">
-                      <li>Complete physical exam</li>
-                      <li>Chest X-ray</li>
-                      <li>Drug test</li>
-                      <li>Blood test (CBC, Blood type)</li>
-                    </ul>
-                  </div>
-                </div>
+                  {formData.diplomaTorUrl && formData.educationStatus === "SUBMITTED" && (
+                    <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                        <span className="text-blue-200">Education document uploaded - pending admin review</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.diplomaTorUrl!, title: "Education Document" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Document
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
-                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <Label htmlFor="medical-upload" className="cursor-pointer">
-                    <span className="text-lg font-semibold text-white">Upload Medical Certificate</span>
-                    <p className="text-sm text-slate-400 mt-2">PDF, JPG, or PNG (Max 5MB)</p>
-                  </Label>
-                  <Input
-                    id="medical-upload"
-                    type="file"
-                    accept=".pdf,.jpg,.png,.jpeg"
-                    onChange={(e) => handleMedicalUpload(e)}
-                    className="hidden"
-                    disabled={uploading.medical || formData.medicalStatus === "APPROVED"}
-                  />
-                  {uploading.medical && (
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
-                      <span className="text-purple-300">Uploading...</span>
+                  {/* Show upload option when status is not APPROVED */}
+                  {formData.educationStatus !== "APPROVED" && (
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
+                      <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-300 mb-4">
+                        {formData.diplomaTorUrl ? "Replace your education documents (PDF format)" : "Upload your education documents (PDF format)"}
+                      </p>
+                      <input
+                        type="file"
+                        id="education-upload"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleEducationUpload(file)
+                        }}
+                        className="hidden"
+                        disabled={uploading.education}
+                      />
+                      <label
+                        htmlFor="education-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {uploading.education ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            {formData.diplomaTorUrl ? "Replace File" : "Choose File"}
+                          </>
+                        )}
+                      </label>
                     </div>
                   )}
                 </div>
 
-                {formData.medicalCertUrl && (
-                  <div className="p-4 bg-green-900/30 border border-green-600 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-400" />
-                      <span className="text-green-100">Medical certificate uploaded</span>
+                <div className="flex gap-4 mt-8">
+                  <Button
+                    onClick={() => setCurrentStep(3)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={saving}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentStep(5)}
+                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    disabled={saving}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Medical Certificate */}
+            {currentStep === 5 && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-white mb-2">Medical Certificate</h3>
+                  <p className="text-slate-300 text-sm mb-6">
+                    Upload your medical certificate from one of our partner clinics
+                  </p>
+                </div>
+
+                {formData.medicalStatus === "APPROVED" && (
+                  <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-green-200">Medical certificate approved by admin</span>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => window.open(formData.medicalCertUrl, '_blank')}
-                      className="border-green-600 text-green-400 hover:bg-green-900/50"
-                    >
-                      View
-                    </Button>
                   </div>
                 )}
 
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStep(4)}
-                    className="border-slate-600 text-slate-300"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button 
-                    onClick={() => setCurrentStep(6)} 
-                    disabled={!formData.medicalCertUrl}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </div>
-            )}
 
-            {/* NEW STEP 6: Data Privacy & Bank Details */}
-            {currentStep === 6 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Shield className="h-8 w-8 text-purple-400" />
-                  <h3 className="text-xl font-semibold text-white">Data Privacy Consent & Bank Details</h3>
-                </div>
+                {formData.medicalStatus === "REJECTED" && (
+                  <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-red-200">
+                        Medical certificate rejected{formData.medicalFeedback ? ` - ${formData.medicalFeedback}` : ' - please get a new one'}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-                <div className="p-6 bg-slate-700/50 border border-slate-600 rounded-lg space-y-4">
-                  <h4 className="font-semibold text-white">Data Privacy Consent (Annex C)</h4>
-                  <div className="max-h-64 overflow-y-auto p-4 bg-slate-800/50 border border-slate-600 rounded text-sm text-slate-300 space-y-2">
-                    <p>I hereby consent to the collection, use, and disclosure of my personal information by ShoreAgents for the purpose of employment processing, payroll management, and compliance with legal requirements.</p>
-                    <p>I understand that my information will be kept confidential and will only be shared with authorized personnel and government agencies as required by law.</p>
+                {/* Nearby Clinics */}
+                {nearbyClinics.length > 0 && (
+                  <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg">
+                    <h4 className="text-blue-200 font-medium mb-3">Nearby Partner Clinics:</h4>
+                    <div className="space-y-2">
+                      {nearbyClinics.slice(0, 3).map((clinic, index) => (
+                        <div key={index} className="text-sm text-blue-100">
+                          <strong>{clinic.name}</strong> - {clinic.address} ({clinic.distance}km away)
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      id="privacy-consent"
-                      checked={privacyData.dataPrivacyConsent}
-                      onChange={(e) => setPrivacyData({ ...privacyData, dataPrivacyConsent: e.target.checked })}
-                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-700"
-                    />
-                    <Label htmlFor="privacy-consent" className="text-slate-300 cursor-pointer">
-                      I have read and agree to the Data Privacy Consent
-                    </Label>
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-white">Bank Account Details</h4>
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Bank Name *</Label>
-                      <Select
-                        value={privacyData.bankName}
-                        onValueChange={(value) => setPrivacyData({ ...privacyData, bankName: value })}
+                  {formData.medicalCertUrl && formData.medicalStatus === "APPROVED" && (
+                    <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <span className="text-green-200">Medical certificate uploaded successfully</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.medicalCertUrl!, title: "Medical Certificate" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Certificate
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.medicalCertUrl && formData.medicalStatus === "SUBMITTED" && (
+                    <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                        <span className="text-blue-200">Medical certificate uploaded - pending admin review</span>
+                        <button 
+                          onClick={() => {
+                            setImageLoading(true)
+                            setViewFileModal({ url: formData.medicalCertUrl!, title: "Medical Certificate" })
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
+                        >
+                          View Certificate
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show upload option when status is not APPROVED */}
+                  {formData.medicalStatus !== "APPROVED" && (
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
+                      <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-300 mb-4">
+                        {formData.medicalCertUrl ? "Replace your medical certificate (PDF or image format)" : "Upload your medical certificate (PDF or image format)"}
+                      </p>
+                      <input
+                        type="file"
+                        id="medical-upload"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleMedicalUpload(file)
+                        }}
+                        className="hidden"
+                        disabled={uploading.medical}
+                      />
+                      <label
+                        htmlFor="medical-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors disabled:opacity-50"
                       >
-                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                          <SelectValue placeholder="Select your bank" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="BDO">BDO (Banco de Oro)</SelectItem>
-                          <SelectItem value="BPI">BPI (Bank of the Philippine Islands)</SelectItem>
-                          <SelectItem value="Metrobank">Metrobank</SelectItem>
-                          <SelectItem value="PNB">PNB (Philippine National Bank)</SelectItem>
-                          <SelectItem value="UnionBank">UnionBank</SelectItem>
-                          <SelectItem value="Security Bank">Security Bank</SelectItem>
-                          <SelectItem value="Landbank">Landbank</SelectItem>
-                          <SelectItem value="RCBC">RCBC (Rizal Commercial Banking Corporation)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {uploading.medical ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            {formData.medicalCertUrl ? "Replace File" : "Choose File"}
+                          </>
+                        )}
+                      </label>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Account Name *</Label>
-                      <Input
-                        placeholder="As shown on your bank account"
-                        value={privacyData.accountName}
-                        onChange={(e) => setPrivacyData({ ...privacyData, accountName: e.target.value })}
-                        className="bg-slate-700 border-slate-600 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Account Number *</Label>
-                      <Input
-                        placeholder="Your bank account number"
-                        value={privacyData.accountNumber}
-                        onChange={(e) => setPrivacyData({ ...privacyData, accountNumber: e.target.value })}
-                        className="bg-slate-700 border-slate-600 text-white"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStep(5)}
-                    className="border-slate-600 text-slate-300"
+                <div className="flex gap-4 mt-8">
+                  <Button
+                    onClick={() => setCurrentStep(4)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={saving}
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleSaveDataPrivacy}
-                    disabled={!privacyData.dataPrivacyConsent || !privacyData.bankName || !privacyData.accountName || !privacyData.accountNumber || saving}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                  <Button
+                    onClick={() => setCurrentStep(6)}
+                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    disabled={saving}
                   >
-                    {saving ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : "Save & Continue"}
+                    Next
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 7: Signature (was Step 4) */}
+            {/* Step 6: Data Privacy & Bank Details */}
+            {currentStep === 6 && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-white mb-2">Data Privacy & Bank Details</h3>
+                  <p className="text-slate-300 text-sm mb-6">
+                    {formData.dataPrivacyStatus === "SUBMITTED" 
+                      ? "Update your consent and bank account information for payroll" 
+                      : "Please provide your consent and bank account information for payroll"
+                    }
+                  </p>
+                </div>
+
+                {formData.dataPrivacyStatus === "APPROVED" && (
+                  <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-green-200">Data privacy and bank details approved by admin</span>
+                    </div>
+                  </div>
+                )}
+
+
+                {formData.dataPrivacyStatus === "REJECTED" && (
+                  <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-red-200">Data privacy details rejected - please update them</span>
+                    </div>
+                  </div>
+                )}
+
+                {formData.dataPrivacyFeedback && (
+                  <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div>
+                        <p className="text-yellow-200 font-medium">Admin Feedback:</p>
+                        <p className="text-yellow-100 text-sm mt-1">{formData.dataPrivacyFeedback}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show submitted data when status is SUBMITTED */}
+                {formData.dataPrivacyStatus === "SUBMITTED" && formData.bankAccountDetails && (
+                  <div className="p-4 bg-slate-800 rounded-lg">
+                    <h4 className="text-white font-medium mb-3">Submitted Bank Account Details</h4>
+                    <div className="space-y-2 text-sm">
+                      {(() => {
+                        try {
+                          const bankDetails = JSON.parse(formData.bankAccountDetails)
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <span className="text-slate-400">Bank Name:</span>
+                                <p className="text-white">{bankDetails.bankName}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">Account Holder:</span>
+                                <p className="text-white">{bankDetails.accountName}</p>
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="text-slate-400">Account Number:</span>
+                                <p className="text-white font-mono">{bankDetails.accountNumber}</p>
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="text-slate-400">Submitted:</span>
+                                <p className="text-white">{new Date(bankDetails.consentedAt).toLocaleString()}</p>
+                              </div>
+                            </div>
+                          )
+                        } catch (error) {
+                          return <p className="text-slate-300">Bank details submitted (unable to parse details)</p>
+                        }
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show form when status is not APPROVED (allows editing when SUBMITTED) */}
+                {formData.dataPrivacyStatus !== "APPROVED" && (
+                <div className="space-y-6">
+                  {/* Data Privacy Consent */}
+                  <div className="p-4 bg-slate-800 rounded-lg">
+                    <h4 className="text-white font-medium mb-3">Data Privacy Consent</h4>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={privacyData.dataPrivacyConsent}
+                          onChange={(e) => setPrivacyData(prev => ({ ...prev, dataPrivacyConsent: e.target.checked }))}
+                          className="mt-1"
+                        />
+                        <span className="text-slate-300 text-sm">
+                          I consent to the collection, processing, and storage of my personal data for employment purposes, 
+                          including but not limited to payroll processing, benefits administration, and compliance with 
+                          labor laws and regulations.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Bank Account Details */}
+                  <div className="p-4 bg-slate-800 rounded-lg">
+                    <h4 className="text-white font-medium mb-3">Bank Account Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bankName" className="text-slate-300 text-sm">Bank Name</Label>
+                        <Input
+                          id="bankName"
+                          value={privacyData.bankName}
+                          onChange={(e) => setPrivacyData(prev => ({ ...prev, bankName: e.target.value }))}
+                          placeholder="e.g., BDO, BPI, Metrobank"
+                          className="bg-slate-700 border-slate-600 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accountName" className="text-slate-300 text-sm">Account Holder Name</Label>
+                        <Input
+                          id="accountName"
+                          value={privacyData.accountName}
+                          onChange={(e) => setPrivacyData(prev => ({ ...prev, accountName: e.target.value }))}
+                          placeholder="Your full name as it appears on the account"
+                          className="bg-slate-700 border-slate-600 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="accountNumber" className="text-slate-300 text-sm">Account Number</Label>
+                        <Input
+                          id="accountNumber"
+                          value={privacyData.accountNumber}
+                          onChange={(e) => setPrivacyData(prev => ({ ...prev, accountNumber: e.target.value }))}
+                          placeholder="Enter your bank account number"
+                          className="bg-slate-700 border-slate-600 text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSaveDataPrivacy}
+                      disabled={saving || !privacyData.dataPrivacyConsent || !privacyData.bankName || !privacyData.accountName || !privacyData.accountNumber}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          {formData.dataPrivacyStatus === "SUBMITTED" ? "Updating..." : "Saving..."}
+                        </>
+                      ) : (formData.dataPrivacyStatus === "SUBMITTED" ? "Update Details" : "Save Details")}
+                    </Button>
+                  </div>
+                </div>
+                )}
+
+                <div className="flex gap-4 mt-8">
+                  <Button
+                    onClick={() => setCurrentStep(5)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={saving}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentStep(7)}
+                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    disabled={saving}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Signature */}
             {currentStep === 7 && (
               <div className="space-y-6">
                 {!isDrawMode && (
@@ -2195,7 +2549,7 @@ export default function OnboardingPage() {
                       type="button"
                       onClick={async () => await saveDrawnSignature()}
                       disabled={uploading.signature}
-                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600"
+                      className="w-full bg-linear-to-r from-purple-600 to-indigo-600"
                     >
                       {uploading.signature ? (
                         <span className="flex items-center gap-2">
@@ -2215,7 +2569,7 @@ export default function OnboardingPage() {
                 {!isDrawMode && (
                   <div className="flex gap-4 mt-8">
                     <Button
-                      onClick={() => setCurrentStep(3)}
+                      onClick={() => setCurrentStep(6)}
                       variant="outline"
                       className="flex-1"
                       disabled={saving || uploading.signature}
@@ -2241,9 +2595,9 @@ export default function OnboardingPage() {
                           }
                         }
                         setSaving(false)
-                        setCurrentStep(5)
+                        setCurrentStep(8)
                       }}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
                       disabled={saving || uploading.signature}
                     >
                       {saving ? (
@@ -2252,7 +2606,7 @@ export default function OnboardingPage() {
                           Saving...
                         </span>
                       ) : (
-                        formData.signatureStatus === "APPROVED" ? "Next" : "Save"
+                        "Next"
                       )}
                     </Button>
                   </div>
@@ -2260,7 +2614,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 8: Emergency Contact (was Step 5) */}
+            {/* Step 8: Emergency Contact */}
             {currentStep === 8 && (
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -2319,27 +2673,13 @@ export default function OnboardingPage() {
 
                 <div className="flex gap-4 mt-8">
                   <Button
-                    onClick={() => setCurrentStep(4)}
+                    onClick={() => setCurrentStep(7)}
                     variant="outline"
                     className="flex-1"
                     disabled={saving}
                   >
                     Back
                   </Button>
-                {formData.emergencyContactStatus !== "APPROVED" && (
-                  <Button
-                    onClick={handleEmergencyContactSubmit}
-                    disabled={saving}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
-                  >
-                    {saving ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : "Save & Finish"}
-                  </Button>
-                )}
                 </div>
               </div>
             )}
@@ -2352,7 +2692,7 @@ export default function OnboardingPage() {
         setViewFileModal(null)
         setImageLoading(true)
       }}>
-        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? 'w-[100vw] h-[100vh] max-w-none max-h-none !w-screen !h-screen rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
+        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? ' max-w-none max-h-none w-screen! h-screen! rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
           <div className="p-6">
             <DialogHeader>
               <DialogTitle className="text-white">{viewFileModal?.title}</DialogTitle>
@@ -2391,7 +2731,7 @@ export default function OnboardingPage() {
 
       {/* Completion Modal */}
       <Dialog open={showCompletionModal} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md bg-gradient-to-br from-green-900/90 to-emerald-900/90 border-green-500/50" showCloseButton={false}>
+        <DialogContent className="max-w-md bg-linear-to-br from-green-900/90 to-emerald-900/90 border-green-500/50" showCloseButton={false}>
           <div className="text-center py-6 px-2">
             <div className="mb-6 flex flex-col items-center">
               <div className="w-24 h-24 flex items-center justify-center mb-4">
@@ -2420,7 +2760,7 @@ export default function OnboardingPage() {
       </Dialog>
 
       {/* Return to Dashboard */}
-      <div className="max-w-4xl mx-auto w-full text-center mt-8">
+      <div className="max-w-6xl mx-auto w-full text-center mt-8">
         <Button
           onClick={() => router.push("/")}
           variant="ghost"

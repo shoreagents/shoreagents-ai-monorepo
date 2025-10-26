@@ -58,10 +58,10 @@ export default function StaffReviewsPage() {
     }
   }
 
-  const getAcknowledgmentDueDate = (submittedDate: string) => {
-    const submitted = new Date(submittedDate)
-    const dueDate = new Date(submitted)
-    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
+  const getAcknowledgmentDueDate = (reviewedDate: string) => {
+    const reviewed = new Date(reviewedDate)
+    const dueDate = new Date(reviewed)
+    dueDate.setDate(reviewed.getDate() + 7) // Add 7 days
     return dueDate
   }
 
@@ -233,25 +233,25 @@ export default function StaffReviewsPage() {
                           <div className="w-full rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-400 ring-1 ring-emerald-500/20 text-center">
                             Acknowledged on {formatReviewDate(review.acknowledgedDate)}
                           </div>
-                        ) : review.submittedDate ? (
-                          <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-sm text-slate-400 mb-1">Acknowledgment Due Date</div>
-                              <div className={`font-medium ${
-                                getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
-                                getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due tomorrow" ||
-                                getDueDateText(getAcknowledgmentDueDate(review.submittedDate)).includes("overdue")
-                                  ? "text-red-400" 
-                                  : "text-white"
-                              }`}>
-                                {getDueDateText(getAcknowledgmentDueDate(review.submittedDate))}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-slate-400 mb-1">Client Reviewed Date</div>
-                              <div className="text-white font-medium">{new Date(review.submittedDate).toLocaleDateString()}</div>
-                            </div>
-                          </div>
+           ) : review.reviewedDate ? (
+             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                 <div className="text-sm text-slate-400 mb-1">Acknowledgment Due Date</div>
+                 <div className={`font-medium ${
+                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due today" || 
+                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due tomorrow" ||
+                   getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)).includes("overdue")
+                     ? "text-red-400" 
+                     : "text-white"
+                 }`}>
+                   {getDueDateText(getAcknowledgmentDueDate(review.reviewedDate))}
+                 </div>
+               </div>
+               <div>
+                 <div className="text-sm text-slate-400 mb-1">Client Reviewed Date</div>
+                 <div className="text-white font-medium">{new Date(review.submittedDate).toLocaleDateString()}</div>
+               </div>
+             </div>
                         ) : null}
                       </div>
                       <div className="flex items-center justify-between gap-2">
@@ -265,7 +265,7 @@ export default function StaffReviewsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/reviews/${review.id}`)}
+                          onClick={() => router.push(`/performance-reviews/${review.id}`)}
                           className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                         >
                           <ArrowRight className="h-4 w-4 mr-1" />

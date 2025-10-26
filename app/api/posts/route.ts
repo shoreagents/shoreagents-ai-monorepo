@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -75,13 +75,13 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -98,14 +98,14 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
                 avatar: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -130,9 +130,14 @@ export async function GET(request: NextRequest) {
     
     const taggedUsersMap = new Map(taggedUsers.map(u => [u.id, u]))
 
-    // Transform data to match frontend expectations (user instead of staffUser/clientUser/managementUser)
+    // Transform data to match frontend expectations
     const transformedPosts = posts.map(post => {
-      const postUser = post.staffUser || post.clientUser || post.managementUser
+      const postUser = post.staffUser || post.client_users || post.management_users
+      
+      if (!postUser) {
+        return null
+      }
+      
       return {
         id: post.id,
         content: post.content,
@@ -145,34 +150,34 @@ export async function GET(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: post.staffUser?.role || post.managementUser?.role || 'Client'
+          role: post.staffUser?.role || post.management_users?.role || 'Client'
         },
         reactions: post.reactions.map(r => {
-          const reactUser = r.staffUser || r.clientUser || r.managementUser
+          const reactUser = r.staffUser || r.client_users || r.management_users
           return {
             id: r.id,
             type: r.type,
             user: {
-              id: reactUser.id,
-              name: reactUser.name
+              id: reactUser?.id || '',
+              name: reactUser?.name || 'Unknown'
             }
           }
         }),
         comments: post.comments.map(c => {
-          const commentUser = c.staffUser || c.clientUser || c.managementUser
+          const commentUser = c.staffUser || c.client_users || c.management_users
           return {
             id: c.id,
             content: c.content,
             createdAt: c.createdAt.toISOString(),
             user: {
-              id: commentUser.id,
-              name: commentUser.name,
-              avatar: commentUser.avatar
+              id: commentUser?.id || '',
+              name: commentUser?.name || 'Unknown',
+              avatar: commentUser?.avatar || null
             }
           }
         })
       }
-    })
+    }).filter(Boolean)
 
     // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / validLimit)
@@ -255,7 +260,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -263,7 +268,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -280,7 +285,7 @@ export async function POST(request: NextRequest) {
     // 🔔 Create notifications for tagged users
     if (taggedUserIds && taggedUserIds.length > 0) {
       const postUser = staffUser || clientUser || managementUser
-      const postUserName = postUser.name
+      const postUserName = postUser?.name || 'Someone'
       
       // Create notification for each tagged user
       const notificationPromises = taggedUserIds.map((userId: string) =>
@@ -305,35 +310,37 @@ export async function POST(request: NextRequest) {
     const io = global.socketServer
     if (io) {
       const postUser = staffUser || clientUser || managementUser
-      io.emit('activity:newPost', {
-        id: post.id,
-        content: post.content,
-        type: post.type,
-        images: post.images,
-        audience: post.audience,
-        createdAt: post.createdAt.toISOString(),
-        user: {
-          id: postUser.id,
-          name: postUser.name,
-          avatar: postUser.avatar,
-          role: staffUser?.role || managementUser?.role || 'Client'
-        },
-        reactions: [],
-        comments: []
-      })
-      console.log('🔥 [WebSocket] New post emitted:', post.id)
-      
-      // 🔔 Emit notification events to tagged users
-      if (taggedUserIds && taggedUserIds.length > 0) {
-        taggedUserIds.forEach((userId: string) => {
-          io.to(`user:${userId}`).emit('notification:new', {
-            userId,
-            postId: post.id,
-            title: `${postUser.name} tagged you in a post`,
-            message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
-          })
+      if (postUser) {
+        io.emit('activity:newPost', {
+          id: post.id,
+          content: post.content,
+          type: post.type,
+          images: post.images,
+          audience: post.audience,
+          createdAt: post.createdAt.toISOString(),
+          user: {
+            id: postUser.id,
+            name: postUser.name,
+            avatar: postUser.avatar,
+            role: staffUser?.role || managementUser?.role || 'Client'
+          },
+          reactions: [],
+          comments: []
         })
-        console.log(`🔔 [WebSocket] Notification emitted to ${taggedUserIds.length} tagged users`)
+        console.log('🔥 [WebSocket] New post emitted:', post.id)
+        
+        // 🔔 Emit notification events to tagged users
+        if (taggedUserIds && taggedUserIds.length > 0) {
+          taggedUserIds.forEach((userId: string) => {
+            io.to(`user:${userId}`).emit('notification:new', {
+              userId,
+              postId: post.id,
+              title: `${postUser.name} tagged you in a post`,
+              message: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+            })
+          })
+          console.log(`🔔 [WebSocket] Notification emitted to ${taggedUserIds.length} tagged users`)
+        }
       }
     }
 

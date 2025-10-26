@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -14,10 +14,32 @@ import {
   DragOverEvent,
   DragEndEvent,
   useDroppable,
+  CollisionDetection,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import StaffTaskCard from "./staff-task-card"
 import { getStatusConfig, getAllStatuses } from "@/lib/task-utils"
+import { triggerTaskCelebration } from "@/lib/confetti"
+
+// Custom collision detection that prioritizes column boundaries
+const customCollisionDetection: CollisionDetection = (args) => {
+  // Get all collisions using closest center first
+  const collisions = closestCenter(args)
+  
+  // If we have collisions, prioritize column collisions
+  if (collisions && collisions.length > 0) {
+    const columnCollision = collisions.find(
+      (collision) => collision.data?.current?.type === 'column'
+    )
+    
+    if (columnCollision) {
+      return [columnCollision]
+    }
+  }
+  
+  // Fall back to all collisions
+  return collisions
+}
 
 interface Task {
   id: string
@@ -50,13 +72,19 @@ interface StaffTaskKanbanProps {
 }
 
 function DroppableColumn({ id, children, isOver }: { id: string; children: React.ReactNode; isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ 
+  const { setNodeRef, isOver: isDroppableOver } = useDroppable({ 
     id: `column-${id}`, // Prefix to avoid collision with task IDs
-    data: { status: id } // Store the actual status value
+    data: { type: 'column', status: id } // Store the actual status value with type
   })
+  
+  const isActive = isOver || isDroppableOver
+  
   return (
-    <div ref={setNodeRef} className="flex-1">
-      {children}
+    <div className="flex-1">
+      {React.cloneElement(children as React.ReactElement<any>, { 
+        ref: setNodeRef,
+        className: (children as React.ReactElement<any>).props.className
+      })}
     </div>
   )
 }
@@ -92,12 +120,32 @@ export default function StaffTaskKanban({
   const activeTask = tasks.find((task) => task.id === activeId)
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+    const taskId = event.active.id as string
+    const task = tasks.find((t) => t.id === taskId)
+    console.log("🚀 [Drag Start]:", {
+      taskId,
+      taskTitle: task?.title,
+      currentStatus: task?.status,
+      allStatuses: getAllStatuses()
+    })
+    setActiveId(taskId)
   }
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event
-    setOverId(over ? (over.id as string) : null)
+    const overId = over ? (over.id as string) : null
+    
+    if (overId && overId.startsWith('column-') && over) {
+      const status = overId.replace('column-', '')
+      console.log("🎯 [Drag Over Column]:", {
+        overId,
+        status,
+        isForReview: status === 'FOR_REVIEW',
+        overData: over.data?.current
+      })
+    }
+    
+    setOverId(overId)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -112,16 +160,22 @@ export default function StaffTaskKanban({
     
     // Check if we dropped over a column or a task
     let newStatus: string
-    if (over.data?.current?.status) {
+    if (over.data?.current?.type === 'column' && over.data?.current?.status) {
       // Dropped over a column - use the status from column data
       newStatus = over.data.current.status as string
     } else if ((over.id as string).startsWith('column-')) {
       // Dropped over a column by ID
       newStatus = (over.id as string).replace('column-', '')
-    } else {
-      // Dropped over a task - find which column that task is in
+    } 
+    // Check if we dropped on a task - find which column that task is in
+    else {
       const targetTask = tasks.find((t) => t.id === over.id)
-      newStatus = targetTask?.status || ''
+      if (targetTask) {
+        newStatus = targetTask.status
+      } else {
+        // Fallback: try to get status from over data
+        newStatus = over.data?.current?.status || ''
+      }
     }
 
     const task = tasks.find((t) => t.id === taskId)
@@ -133,10 +187,17 @@ export default function StaffTaskKanban({
       overData: over.data?.current,
       taskCurrentStatus: task?.status,
       statusType: typeof newStatus,
-      droppedOver: (over.id as string).startsWith('column-') ? 'COLUMN' : 'TASK'
+      droppedOver: (over.id as string).startsWith('column-') ? 'COLUMN' : 'TASK',
+      isValidStatus: newStatus && ['TODO', 'IN_PROGRESS', 'STUCK', 'FOR_REVIEW', 'COMPLETED'].includes(newStatus)
     })
 
-    if (task && task.status !== newStatus && newStatus) {
+    if (task && task.status !== newStatus && newStatus && ['TODO', 'IN_PROGRESS', 'STUCK', 'FOR_REVIEW', 'COMPLETED'].includes(newStatus)) {
+      // Trigger celebration animation ONLY for COMPLETED (confetti)
+      if (newStatus === 'COMPLETED') {
+        triggerTaskCelebration(newStatus, task.title)
+      }
+      
+      // Then call the status change handler
       onStatusChange(taskId, newStatus)
     }
 
@@ -152,7 +213,7 @@ export default function StaffTaskKanban({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={customCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -165,12 +226,10 @@ export default function StaffTaskKanban({
           const isOver = overId === `column-${status}`
 
           return (
-            <DroppableColumn key={status} id={status} isOver={isOver}>
+            <div key={status} className="flex-1">
               <div className="flex flex-col min-h-[500px]">
                 {/* Column Header */}
-                <div className={`mb-3 rounded-xl p-4 ${config.darkColor} backdrop-blur-xl border-2 border-transparent transition-all duration-300 ${
-                  isOver ? "ring-4 ring-indigo-400 scale-[1.02] shadow-2xl shadow-indigo-500/50 animate-pulse" : ""
-                }`}>
+                <div className={`mb-3 rounded-xl p-4 ${config.darkColor} backdrop-blur-xl border-2 border-transparent transition-all duration-300`}>
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-sm flex items-center gap-2">
                       <span className="text-lg">{config.emoji}</span>
@@ -187,29 +246,30 @@ export default function StaffTaskKanban({
                   items={statusTasks.map((t) => t.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div
-                    className={`flex-1 rounded-xl p-3 transition-all duration-300 ${
-                      isOver
-                        ? "bg-indigo-500/20 border-2 border-indigo-500 border-dashed backdrop-blur-xl shadow-lg shadow-indigo-500/30"
-                        : "bg-slate-900/30 border-2 border-slate-800/50 border-dashed backdrop-blur-sm"
-                    }`}
-                  >
-                    {statusTasks.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
-                        <p className="text-3xl mb-2">📭</p>
-                        <p className="text-sm">No tasks yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {statusTasks.map((task) => (
-                          <StaffTaskCard key={task.id} task={task} onUpdate={onTaskUpdate} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <DroppableColumn id={status} isOver={isOver}>
+                    <div
+                      className={`flex-1 rounded-xl p-3 transition-all duration-300 min-h-[200px] ${
+                        isOver
+                          ? "bg-indigo-500/20 border-2 border-indigo-500 border-dashed backdrop-blur-xl shadow-lg shadow-indigo-500/30"
+                          : "bg-slate-900/30 border-2 border-slate-800/50 border-dashed backdrop-blur-sm"
+                      }`}
+                    >
+                      {statusTasks.length === 0 ? (
+                        <div className="text-center py-8 text-slate-500">
+                          <p className="text-sm">No Tasks Yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {statusTasks.map((task) => (
+                            <StaffTaskCard key={task.id} task={task} onUpdate={onTaskUpdate} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </DroppableColumn>
                 </SortableContext>
               </div>
-            </DroppableColumn>
+            </div>
           )
         })}
       </div>
@@ -222,7 +282,7 @@ export default function StaffTaskKanban({
         }}
       >
         {activeTask ? (
-          <div className="rotate-2 scale-105 cursor-grabbing shadow-2xl shadow-indigo-500/50">
+          <div className="cursor-grabbing opacity-90">
             <StaffTaskCard task={activeTask} onUpdate={onTaskUpdate} isDragging />
           </div>
         ) : null}

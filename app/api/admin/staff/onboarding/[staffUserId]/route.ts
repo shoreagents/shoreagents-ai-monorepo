@@ -45,15 +45,22 @@ export async function GET(
         staffUser.onboarding.govIdStatus,
         staffUser.onboarding.documentsStatus,
         staffUser.onboarding.signatureStatus,
-        staffUser.onboarding.emergencyContactStatus
+        staffUser.onboarding.emergencyContactStatus,
+        staffUser.onboarding.resumeStatus,
+        staffUser.onboarding.educationStatus,
+        staffUser.onboarding.medicalStatus,
+        staffUser.onboarding.dataPrivacyStatus
       ]
 
-      // Admin progress: Only count APPROVED/REJECTED sections (20% each)
+      // Admin progress: Only count APPROVED/REJECTED sections (11.11% each for 9 sections)
       sections.forEach(status => {
         if (status === "APPROVED" || status === "REJECTED") {
-          adminProgress += 20
+          adminProgress += 11.11
         }
       })
+      
+      // Round to nearest whole number
+      adminProgress = Math.round(adminProgress)
     }
 
     return NextResponse.json({ 

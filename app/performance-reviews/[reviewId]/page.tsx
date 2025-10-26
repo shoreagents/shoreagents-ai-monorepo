@@ -132,10 +132,10 @@ export default function StaffReviewDetailPage({
     }
   }
 
-  const getAcknowledgmentDueDate = (submittedDate: string) => {
-    const submitted = new Date(submittedDate)
-    const dueDate = new Date(submitted)
-    dueDate.setDate(submitted.getDate() + 7) // Add 7 days
+  const getAcknowledgmentDueDate = (reviewedDate: string) => {
+    const reviewed = new Date(reviewedDate)
+    const dueDate = new Date(reviewed)
+    dueDate.setDate(reviewed.getDate() + 7) // Add 7 days
     return dueDate
   }
 
@@ -244,7 +244,7 @@ export default function StaffReviewDetailPage({
       <div className="p-6">
         <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-12 text-center">
           <p className="text-muted-foreground">Review not found</p>
-          <Button className="mt-4" onClick={() => router.push("/reviews")}>
+          <Button className="mt-4" onClick={() => router.push("/performance-reviews")}>
             Back to Reviews
           </Button>
         </Card>
@@ -266,7 +266,7 @@ export default function StaffReviewDetailPage({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/reviews")}
+          onClick={() => router.push("/performance-reviews")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -409,27 +409,27 @@ export default function StaffReviewDetailPage({
             <h3 className="mb-4 text-lg font-semibold text-foreground">Review Information</h3>
             
             <div className="space-y-2">
-              {review.submittedDate && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">
-                    {review.acknowledgedDate ? "Acknowledgment Date:" : "Acknowledgment Due Date:"}
-                  </span>
-                  <div className={`font-medium ${
-                    review.acknowledgedDate 
-                      ? "text-green-400" 
-                      : getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due today" || 
-                        getDueDateText(getAcknowledgmentDueDate(review.submittedDate)) === "Due tomorrow" ||
-                        getDueDateText(getAcknowledgmentDueDate(review.submittedDate)).includes("overdue")
-                        ? "text-red-400" 
-                        : "text-foreground"
-                  }`}>
-                    {review.acknowledgedDate 
-                      ? formatReviewDate(review.acknowledgedDate)
-                      : getDueDateText(getAcknowledgmentDueDate(review.submittedDate))
-                    }
-                  </div>
-                </div>
-              )}
+       {review.reviewedDate && (
+         <div className="text-sm">
+           <span className="text-muted-foreground">
+             {review.acknowledgedDate ? "Acknowledgment Date:" : "Acknowledgment Due Date:"}
+           </span>
+           <div className={`font-medium ${
+             review.acknowledgedDate 
+               ? "text-green-400" 
+               : getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due today" || 
+                 getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)) === "Due tomorrow" ||
+                 getDueDateText(getAcknowledgmentDueDate(review.reviewedDate)).includes("overdue")
+                 ? "text-red-400" 
+                 : "text-foreground"
+           }`}>
+             {review.acknowledgedDate 
+               ? formatReviewDate(review.acknowledgedDate)
+               : getDueDateText(getAcknowledgmentDueDate(review.reviewedDate))
+             }
+           </div>
+         </div>
+       )}
               <div className="text-sm">
                 <span className="text-muted-foreground">Period:</span>
                 <div className="font-medium text-foreground">{review.evaluationPeriod}</div>
@@ -486,7 +486,7 @@ export default function StaffReviewDetailPage({
             <Button
               onClick={() => {
                 setShowSuccessModal(false)
-                router.push("/reviews")
+                router.push("/performance-reviews")
               }}
             >
               Back to Reviews

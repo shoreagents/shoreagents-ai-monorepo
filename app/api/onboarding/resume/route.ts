@@ -21,14 +21,14 @@ export async function POST(request: NextRequest) {
     // Find staff user
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      include: { staffOnboarding: true }
+      include: { onboarding: true }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
-    if (!staffUser.staffOnboarding) {
+    if (!staffUser.onboarding) {
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: uploadData, error: uploadError } = await supabaseAdmin
       .storage
       .from('staff')
-      .upload(`staff_resume/${fileName}`, fileBuffer, {
+      .upload(`staff_onboarding/${fileName}`, fileBuffer, {
         contentType: resumeFile.type,
         upsert: true
       })
@@ -67,18 +67,21 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabaseAdmin
       .storage
       .from('staff')
-      .getPublicUrl(`staff_resume/${fileName}`)
+      .getPublicUrl(`staff_onboarding/${fileName}`)
 
     const resumeUrl = urlData.publicUrl
 
     // Update onboarding record
-    await prisma.staffOnboarding.update({
+    const updatedOnboarding = await prisma.staffOnboarding.update({
       where: { staffUserId: staffUser.id },
       data: {
         resumeUrl: resumeUrl,
-        resumeStatus: 'IN_REVIEW'
+        resumeStatus: 'SUBMITTED'
       }
     })
+
+    // Update completion percentage
+    await updateCompletionPercent(updatedOnboarding.id)
 
     console.log(`✅ [ONBOARDING] Resume uploaded for staff: ${staffUser.name}`)
 
@@ -94,5 +97,41 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Helper function to calculate completion percentage
+async function updateCompletionPercent(onboardingId: string) {
+  const onboarding = await prisma.staffOnboarding.findUnique({
+    where: { id: onboardingId }
+  })
+
+  if (!onboarding) return
+
+  const sections = [
+    onboarding.personalInfoStatus,
+    onboarding.resumeStatus,
+    onboarding.govIdStatus,
+    onboarding.educationStatus,
+    onboarding.medicalStatus,
+    onboarding.dataPrivacyStatus,
+    onboarding.signatureStatus,
+    onboarding.emergencyContactStatus
+  ]
+
+  // Each section = 12.5% when APPROVED (8 sections total)
+  // 100% = All sections approved by admin
+  let totalProgress = 0
+  sections.forEach(status => {
+    if (status === "APPROVED") {
+      totalProgress += Math.round(100 / sections.length)
+    }
+  })
+
+  const completionPercent = Math.min(totalProgress, 100)
+
+  await prisma.staffOnboarding.update({
+    where: { id: onboardingId },
+    data: { completionPercent }
+  })
 }
 

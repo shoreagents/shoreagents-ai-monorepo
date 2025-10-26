@@ -13,6 +13,7 @@ import {
   Gift,
   Bus,
   Paperclip,
+  Clock,
 } from "lucide-react"
 import { Ticket } from "@/types/ticket"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -42,6 +43,14 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   URGENT: { label: "Urgent", color: "bg-red-500/20 text-red-400 animate-pulse" },
 }
 
+// Status colors - PROMINENT TOP BORDER!
+const statusColors = {
+  OPEN: "bg-blue-500",
+  IN_PROGRESS: "bg-orange-500", 
+  RESOLVED: "bg-green-500",
+  CLOSED: "bg-gray-500",
+}
+
 export default function TicketCard({ ticket, isDragging, onClick }: TicketCardProps) {
   const {
     attributes,
@@ -62,6 +71,21 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
     if (!isSortableDragging && onClick) {
       onClick()
     }
+  }
+
+  // Format date for timestamps
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
   }
 
   const CategoryIcon = categoryConfig[ticket.category]?.icon || HelpCircle
@@ -103,10 +127,15 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
       {...attributes}
       {...listeners}
       onClick={handleClick}
-      className={`group cursor-grab active:cursor-grabbing rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/10 transition-all duration-200 hover:bg-slate-800 hover:ring-indigo-400/50 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 ${
+      className={`group cursor-grab active:cursor-grabbing rounded-lg bg-slate-800/50 ring-1 ring-white/10 transition-all duration-200 hover:bg-slate-800 hover:ring-indigo-400/50 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 w-full max-w-full min-w-0 overflow-visible ${
         isDragging || isSortableDragging ? "opacity-0 cursor-grabbing" : ""
       }`}
+      style={{ overflow: 'visible' }}
     >
+      {/* Status indicator bar - PROMINENT TOP BORDER! */}
+      <div className={`h-4 w-full ${statusColors[ticket.status]} shadow-lg rounded-t-lg`} />
+      
+      <div className="p-4">
       {/* Ticket ID & Creator Type Badge */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -121,7 +150,7 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
       </div>
 
       {/* Title */}
-      <h4 className="mb-2 line-clamp-2 text-sm font-semibold text-white group-hover:text-indigo-400">
+      <h4 className="mb-2 line-clamp-2 text-sm font-semibold text-white group-hover:text-indigo-400 break-words">
         {ticket.title}
       </h4>
 
@@ -133,12 +162,12 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
 
       {/* Image Thumbnail Preview */}
       {ticket.attachments && ticket.attachments.length > 0 && (
-        <div className="mb-3">
-          <div className="relative h-28 rounded-lg overflow-hidden bg-slate-700/50 ring-1 ring-white/10">
+        <div className="mb-3 w-full">
+          <div className="relative h-28 w-full rounded-lg overflow-hidden bg-slate-700/50 ring-1 ring-white/10">
             <img
               src={ticket.attachments[0]}
               alt="Attachment preview"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
             />
             {ticket.attachments.length > 1 && (
               <div className="absolute top-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -165,6 +194,11 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
               {ticket.responses.length}
             </span>
           )}
+          {/* Timestamp */}
+          <span className="flex items-center gap-1 text-slate-400">
+            <Clock className="h-3 w-3" />
+            {formatDate(ticket.createdAt)}
+          </span>
         </div>
 
         {/* User Avatars */}
@@ -178,8 +212,8 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                For: {displayUser.name}
+              <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
+                Created by: {displayUser.name}
               </div>
             </div>
           )}
@@ -193,14 +227,14 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
                   {assignedInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                Assigned: {assignedTo.name}
+              <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
+                Assigned to: {assignedTo.name}
               </div>
             </div>
           )}
         </div>
       </div>
+      </div>
     </div>
   )
 }
-

@@ -40,7 +40,11 @@ export async function POST(
       "govId",
       "documents",
       "signature",
-      "emergencyContact"
+      "emergencyContact",
+      "resume",
+      "education",
+      "medical",
+      "dataPolicy"
     ]
     
     const validActions = ["APPROVED", "REJECTED", "feedback"]
@@ -71,16 +75,21 @@ export async function POST(
     // Handle different action types
     if (action === "feedback") {
       // Only update feedback, don't change status
-      updateData[`${section}Feedback`] = feedback || null
+      const feedbackField = section === "dataPolicy" ? "dataPrivacyFeedback" : `${section}Feedback`
+      updateData[feedbackField] = feedback || null
     } else {
       // Update status and feedback for approve/reject actions
-      updateData[`${section}Status`] = action
-      updateData[`${section}Feedback`] = feedback || null
+      const statusField = section === "dataPolicy" ? "dataPrivacyStatus" : `${section}Status`
+      const feedbackField = section === "dataPolicy" ? "dataPrivacyFeedback" : `${section}Feedback`
+      const verifiedAtField = section === "dataPolicy" ? "dataPrivacyVerifiedAt" : `${section}VerifiedAt`
+      
+      updateData[statusField] = action
+      updateData[feedbackField] = feedback || null
       updateData.verifiedBy = managementUser.id
 
       // Add verification timestamp if approved
       if (action === "APPROVED") {
-        updateData[`${section}VerifiedAt`] = new Date()
+        updateData[verifiedAtField] = new Date()
       }
     }
 
@@ -112,20 +121,28 @@ export async function POST(
       updated?.govIdStatus,
       updated?.documentsStatus,
       updated?.signatureStatus,
-      updated?.emergencyContactStatus
+      updated?.emergencyContactStatus,
+      updated?.resumeStatus,
+      updated?.educationStatus,
+      updated?.medicalStatus,
+      updated?.dataPrivacyStatus
     ].filter(status => status === "APPROVED").length
     
     console.log("📊 COMPLETION UPDATED:", { 
       completionPercent: updated?.completionPercent,
       approvedCount: approvedCount,
-      allApproved: approvedCount === 5 ? "✅ GREEN FORM SHOULD APPEAR!" : `❌ Only ${approvedCount}/5 approved`,
+      allApproved: approvedCount === 9 ? "✅ GREEN FORM SHOULD APPEAR!" : `❌ Only ${approvedCount}/9 approved`,
       isComplete: updated?.isComplete,
       statuses: {
         personalInfo: updated?.personalInfoStatus,
         govId: updated?.govIdStatus,
         documents: updated?.documentsStatus,
         signature: updated?.signatureStatus,
-        emergencyContact: updated?.emergencyContactStatus
+        emergencyContact: updated?.emergencyContactStatus,
+        resume: updated?.resumeStatus,
+        education: updated?.educationStatus,
+        medical: updated?.medicalStatus,
+        dataPrivacy: updated?.dataPrivacyStatus
       }
     })
 
@@ -156,16 +173,23 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.govIdStatus,
     onboarding.documentsStatus,
     onboarding.signatureStatus,
-    onboarding.emergencyContactStatus
+    onboarding.emergencyContactStatus,
+    onboarding.resumeStatus,
+    onboarding.educationStatus,
+    onboarding.medicalStatus,
+    onboarding.dataPrivacyStatus
   ]
 
-  // Admin progress: Only count APPROVED/REJECTED sections (20% each)
+  // Admin progress: Only count APPROVED/REJECTED sections (11.11% each for 9 sections)
   let totalProgress = 0
   sections.forEach(status => {
     if (status === "APPROVED" || status === "REJECTED") {
-      totalProgress += 20
+      totalProgress += 11.11
     }
   })
+  
+  // Round to nearest whole number
+  totalProgress = Math.round(totalProgress)
 
   const completionPercent = Math.min(totalProgress, 100)
   // DON'T set isComplete here - that should only happen when admin clicks "Complete Onboarding"!

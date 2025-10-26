@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     // Find staff user
     const staffUser = await prisma.staffUser.findUnique({
       where: { authUserId: session.user.id },
-      include: { staffOnboarding: true }
+      include: { onboarding: true }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
-    if (!staffUser.staffOnboarding) {
+    if (!staffUser.onboarding) {
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
 
@@ -58,8 +58,7 @@ export async function POST(request: NextRequest) {
       data: {
         dataPrivacyConsentUrl: `consent-${staffUser.id}-${Date.now()}`, // Placeholder - could generate PDF
         bankAccountDetails: bankAccountDetails,
-        dataPrivacyStatus: 'IN_REVIEW',
-        bankDetailsStatus: 'IN_REVIEW'
+        dataPrivacyStatus: 'SUBMITTED'
       }
     })
 

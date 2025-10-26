@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if email already exists in management_users
+    // Check if email already exists in managementUser
     const existingUser = await prisma.managementUser.findUnique({
       where: { email }
     })
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 2. Create in management_users table (linked to Supabase auth user)
+    // 2. Create in managementUser table (linked to Supabase auth user)
     const managementUser = await prisma.managementUser.create({
       data: {
         authUserId: authData.user.id, // Links to Supabase auth.users.id

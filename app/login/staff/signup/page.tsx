@@ -1,13 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, Briefcase } from "lucide-react"
 import Link from "next/link"
 
 export default function StaffSignUpPage() {
@@ -18,39 +16,7 @@ export default function StaffSignUpPage() {
   const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [jobAcceptanceData, setJobAcceptanceData] = useState<any>(null)
-  const [loadingJobData, setLoadingJobData] = useState(false)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const jobAcceptanceId = searchParams.get('jobAcceptanceId')
-
-  // Fetch job acceptance data if ID provided
-  useEffect(() => {
-    async function fetchJobAcceptanceData() {
-      if (!jobAcceptanceId) return
-
-      setLoadingJobData(true)
-      try {
-        const response = await fetch(`/api/auth/job-acceptance/${jobAcceptanceId}`)
-        const data = await response.json()
-
-        if (data.success && data.jobAcceptance) {
-          setJobAcceptanceData(data.jobAcceptance)
-          // Pre-fill form with candidate data
-          setEmail(data.jobAcceptance.candidateEmail)
-          if (data.jobAcceptance.candidatePhone) {
-            setPhone(data.jobAcceptance.candidatePhone)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching job acceptance:', error)
-      } finally {
-        setLoadingJobData(false)
-      }
-    }
-
-    fetchJobAcceptanceData()
-  }, [jobAcceptanceId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,7 +49,6 @@ export default function StaffSignUpPage() {
           email,
           password,
           phone,
-          jobAcceptanceId: jobAcceptanceId || undefined, // Include if present
         }),
       })
 
@@ -93,13 +58,8 @@ export default function StaffSignUpPage() {
         throw new Error(data.error || "Sign up failed")
       }
 
-      // If job acceptance, redirect to contract signing
-      if (data.redirectTo) {
-        router.push(data.redirectTo)
-      } else {
-        // Normal signup - redirect to login
-        router.push("/login/staff?registered=true")
-      }
+      // Success - redirect to login
+      router.push("/login/staff?registered=true")
     } catch (err: any) {
       setError(err.message || "Sign up failed")
       setLoading(false)
@@ -116,32 +76,6 @@ export default function StaffSignUpPage() {
           <h1 className="text-3xl font-bold text-white mb-2">Staff Portal</h1>
           <p className="text-slate-400">Join as BPO Worker</p>
         </div>
-
-        {/* Job Acceptance Banner */}
-        {jobAcceptanceData && (
-          <Alert className="mb-6 bg-green-900/30 border-green-600">
-            <CheckCircle className="h-5 w-5 text-green-400" />
-            <AlertDescription className="text-green-100">
-              <div className="font-semibold mb-1">🎉 Congratulations! You've been hired!</div>
-              <div className="text-sm space-y-1">
-                <p><strong>Position:</strong> {jobAcceptanceData.position}</p>
-                <p><strong>Company:</strong> {jobAcceptanceData.company?.companyName || 'Loading...'}</p>
-                <p className="text-green-200 mt-2">
-                  Complete your signup to begin the onboarding process and sign your employment contract.
-                </p>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {loadingJobData && (
-          <Alert className="mb-6 bg-blue-900/30 border-blue-600">
-            <Briefcase className="h-5 w-5 text-blue-400 animate-pulse" />
-            <AlertDescription className="text-blue-100">
-              Loading your job acceptance details...
-            </AlertDescription>
-          </Alert>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

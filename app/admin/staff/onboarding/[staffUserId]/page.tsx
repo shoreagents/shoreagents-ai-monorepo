@@ -24,7 +24,11 @@ import {
   PenTool,
   Users,
   ArrowLeft,
-  Briefcase
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Shield,
+  Building
 } from "lucide-react"
 
 interface OnboardingData {
@@ -58,6 +62,13 @@ interface OnboardingData {
   philhealthDocUrl: string
   pagibigDocUrl: string
   
+  // New GUNTING 8-step fields
+  resumeUrl: string
+  diplomaTorUrl: string
+  medicalCertUrl: string
+  dataPrivacyConsentUrl: string
+  bankAccountDetails: string
+  
   // Emergency Contact
   emergencyContactName: string
   emergencyContactNo: string
@@ -70,6 +81,12 @@ interface OnboardingData {
   signatureStatus: string
   emergencyContactStatus: string
   
+  // New GUNTING 8-step status
+  resumeStatus: string
+  educationStatus: string
+  medicalStatus: string
+  dataPrivacyStatus: string
+  
   // Feedback
   personalInfoFeedback: string
   govIdFeedback: string
@@ -77,8 +94,15 @@ interface OnboardingData {
   signatureFeedback: string
   emergencyContactFeedback: string
   
+  // New GUNTING 8-step feedback
+  resumeFeedback: string
+  educationFeedback: string
+  medicalFeedback: string
+  dataPrivacyFeedback: string
+  
   completionPercent: number
   isComplete: boolean
+  contractSigned: boolean
 }
 
 export default function AdminOnboardingDetailPage() {
@@ -109,7 +133,12 @@ export default function AdminOnboardingDetailPage() {
     govId: { approve: false, reject: false },
     documents: { approve: false, reject: false },
     signature: { approve: false, reject: false },
-    emergencyContact: { approve: false, reject: false }
+    emergencyContact: { approve: false, reject: false },
+    resume: { approve: false, reject: false },
+    education: { approve: false, reject: false },
+    medical: { approve: false, reject: false },
+    dataPolicy: { approve: false, reject: false },
+    bank: { approve: false, reject: false }
   })
   
   const [staff, setStaff] = useState<any>(null)
@@ -160,13 +189,21 @@ export default function AdminOnboardingDetailPage() {
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
-          data.onboarding.emergencyContactStatus === "APPROVED",
+          data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.dataPrivacyStatus === "APPROVED",
         shouldShowForm: 
           data.onboarding.personalInfoStatus === "APPROVED" &&
           data.onboarding.govIdStatus === "APPROVED" &&
           data.onboarding.documentsStatus === "APPROVED" &&
           data.onboarding.signatureStatus === "APPROVED" &&
           data.onboarding.emergencyContactStatus === "APPROVED" &&
+          data.onboarding.resumeStatus === "APPROVED" &&
+          data.onboarding.educationStatus === "APPROVED" &&
+          data.onboarding.medicalStatus === "APPROVED" &&
+          data.onboarding.dataPrivacyStatus === "APPROVED" &&
           !data.onboarding.isComplete
       })
       setStaff(data.staff)
@@ -191,6 +228,15 @@ export default function AdminOnboardingDetailPage() {
   }
 
   const handleVerify = async (section: string, action: "APPROVED" | "REJECTED") => {
+    // For rejections, check if feedback is provided
+    if (action === "REJECTED") {
+      const currentFeedback = feedback[section] || ""
+      if (!currentFeedback.trim()) {
+        setError("Please provide feedback when rejecting a submission. This helps the staff understand what needs to be improved.")
+        return
+      }
+    }
+
     // Set loading state for specific section and action
     const actionKey = action === "APPROVED" ? "approve" : "reject"
     setProcessingStates(prev => ({ 
@@ -399,7 +445,8 @@ export default function AdminOnboardingDetailPage() {
              `Role: ${currentRole}`,
              `Salary: ₱${salary}/month`,
              "Profile & Personal Records Created",
-             "Work Schedule Set Up"
+             "Work Schedule Set Up",
+             "Welcome Form Created - Staff will be redirected to complete it"
            ]
          })
        }
@@ -529,7 +576,7 @@ export default function AdminOnboardingDetailPage() {
 
          {/* Onboarding Already Complete */}
          {(onboarding.isComplete || profile) && (
-           <Card className="mb-6 bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600">
+           <Card className="mb-6 bg-linear-to-br from-green-900/40 to-green-800/20 border-green-600">
              <CardHeader>
                <div className="flex items-start gap-3">
                  <div className="p-2 bg-green-500/20 rounded-lg">
@@ -594,6 +641,10 @@ export default function AdminOnboardingDetailPage() {
          onboarding.documentsStatus === "APPROVED" &&
          onboarding.signatureStatus === "APPROVED" &&
          onboarding.emergencyContactStatus === "APPROVED" &&
+         onboarding.resumeStatus === "APPROVED" &&
+         onboarding.educationStatus === "APPROVED" &&
+         onboarding.medicalStatus === "APPROVED" &&
+         onboarding.dataPrivacyStatus === "APPROVED" &&
          !onboarding.isComplete &&
          !profile && (
           <Card className="mb-6 bg-green-900/30 border-green-700">
@@ -605,6 +656,35 @@ export default function AdminOnboardingDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                
+                {/* Employment Contract Section */}
+                <div className="space-y-2">
+                  <Label className="text-white text-lg font-semibold">
+                    Employment Contract
+                  </Label>
+                  <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-300 text-sm">
+                          Contract must be signed before completing onboarding
+                        </p>
+                        <p className="text-slate-400 text-xs mt-1">
+                          Staff member needs to sign their employment contract
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          // TODO: Implement contract viewing/management
+                          alert("Contract management feature coming soon!")
+                        }}
+                        variant="outline"
+                        className="border-blue-600 text-blue-300 hover:bg-blue-900/20"
+                      >
+                        View Contract
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Company Assignment */}
@@ -658,7 +738,7 @@ export default function AdminOnboardingDetailPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white [color-scheme:dark]"
+                      className="bg-slate-800 border-slate-700 text-white scheme-dark"
                     />
                   </div>
 
@@ -748,6 +828,30 @@ export default function AdminOnboardingDetailPage() {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Contract Section */}
+        {onboarding.contractSigned && (
+          <Card className="mb-6 border-green-200 bg-green-900/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-green-300">
+                  <FileText className="h-5 w-5" />
+                  Employment Contract
+                </CardTitle>
+                <Badge variant="default" className="bg-green-600 text-white">Signed</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-200 mb-4">Employment contract has been signed and is ready for review.</p>
+              <Button 
+                onClick={() => router.push(`/admin/contracts/${staffUserId}`)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                View Contract
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -1641,6 +1745,630 @@ export default function AdminOnboardingDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Card 6: Resume Upload */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-blue-400" />
+                <CardTitle className="text-white">Resume Upload</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.resumeStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Resume File</p>
+              {onboarding.resumeUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.resumeUrl, title: "Resume" })}
+                  variant="outline"
+                  className="border-blue-600 text-blue-300 hover:bg-blue-900"
+                >
+                  View Resume
+                </Button>
+              ) : (
+                <p className="text-slate-500">No resume uploaded</p>
+              )}
+            </div>
+
+            {onboarding.resumeFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.resumeFeedback}
+                    </div>
+                    {!editingFeedback.resume && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, resume: onboarding.resumeFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, resume: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.resume && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.resume || ""}
+                        onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('resume')}
+                          disabled={savingFeedback.resume}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.resume ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, resume: false })
+                            setFeedback({ ...feedback, resume: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!onboarding.resumeFeedback && onboarding.resumeStatus !== "APPROVED" && (
+              <div className="mt-6">
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Feedback <span className="text-red-400">*</span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Feedback is required when rejecting submissions to help staff understand what needs to be improved.
+                </p>
+                <Textarea
+                  placeholder="Add feedback for this section..."
+                  value={feedback.resume || ""}
+                  onChange={(e) => setFeedback({ ...feedback, resume: e.target.value })}
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {onboarding.resumeStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("resume", "APPROVED")}
+                  disabled={processingStates.resume.approve || processingStates.resume.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.resume.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("resume").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("resume", "REJECTED")}
+                  disabled={processingStates.resume.approve || processingStates.resume.reject}
+                  variant="destructive"
+                >
+                  {processingStates.resume.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("resume").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 7: Education Documents */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GraduationCap className="h-5 w-5 text-green-400" />
+                <CardTitle className="text-white">Education Documents</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.educationStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Education Documents</p>
+              {onboarding.diplomaTorUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.diplomaTorUrl, title: "Education Documents" })}
+                  variant="outline"
+                  className="border-green-600 text-green-300 hover:bg-green-900"
+                >
+                  View Documents
+                </Button>
+              ) : (
+                <p className="text-slate-500">No education documents uploaded</p>
+              )}
+            </div>
+
+            {onboarding.educationFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.educationFeedback}
+                    </div>
+                    {!editingFeedback.education && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, education: onboarding.educationFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, education: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.education && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.education || ""}
+                        onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('education')}
+                          disabled={savingFeedback.education}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.education ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, education: false })
+                            setFeedback({ ...feedback, education: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!onboarding.educationFeedback && onboarding.educationStatus !== "APPROVED" && (
+              <div className="mt-6">
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Feedback <span className="text-red-400">*</span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Feedback is required when rejecting submissions to help staff understand what needs to be improved.
+                </p>
+                <Textarea
+                  placeholder="Add feedback for this section..."
+                  value={feedback.education || ""}
+                  onChange={(e) => setFeedback({ ...feedback, education: e.target.value })}
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {onboarding.educationStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("education", "APPROVED")}
+                  disabled={processingStates.education.approve || processingStates.education.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.education.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("education").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("education", "REJECTED")}
+                  disabled={processingStates.education.approve || processingStates.education.reject}
+                  variant="destructive"
+                >
+                  {processingStates.education.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("education").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 8: Medical Certificate */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Heart className="h-5 w-5 text-red-400" />
+                <CardTitle className="text-white">Medical Certificate</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.medicalStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Medical Certificate</p>
+              {onboarding.medicalCertUrl ? (
+                <Button
+                  onClick={() => setViewFileModal({ url: onboarding.medicalCertUrl, title: "Medical Certificate" })}
+                  variant="outline"
+                  className="border-red-600 text-red-300 hover:bg-red-900"
+                >
+                  View Certificate
+                </Button>
+              ) : (
+                <p className="text-slate-500">No medical certificate uploaded</p>
+              )}
+            </div>
+
+            {onboarding.medicalFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.medicalFeedback}
+                    </div>
+                    {!editingFeedback.medical && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, medical: onboarding.medicalFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, medical: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.medical && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.medical || ""}
+                        onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('medical')}
+                          disabled={savingFeedback.medical}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.medical ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, medical: false })
+                            setFeedback({ ...feedback, medical: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!onboarding.medicalFeedback && onboarding.medicalStatus !== "APPROVED" && (
+              <div className="mt-6">
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Feedback <span className="text-red-400">*</span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Feedback is required when rejecting submissions to help staff understand what needs to be improved.
+                </p>
+                <Textarea
+                  placeholder="Add feedback for this section..."
+                  value={feedback.medical || ""}
+                  onChange={(e) => setFeedback({ ...feedback, medical: e.target.value })}
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {onboarding.medicalStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("medical", "APPROVED")}
+                  disabled={processingStates.medical.approve || processingStates.medical.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.medical.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("medical").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("medical", "REJECTED")}
+                  disabled={processingStates.medical.approve || processingStates.medical.reject}
+                  variant="destructive"
+                >
+                  {processingStates.medical.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("medical").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 9: Data Privacy & Consent */}
+        <Card className="mb-6 bg-slate-800 border-slate-700">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-indigo-400" />
+                <CardTitle className="text-white">Data Privacy & Bank Details</CardTitle>
+              </div>
+              {getStatusBadge(onboarding.dataPrivacyStatus)}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <p className="text-sm text-slate-400 mb-2">Data Privacy Consent</p>
+              {onboarding.dataPrivacyConsentUrl ? (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="w-3 h-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-green-300 font-medium">Consent Given</p>
+                      <p className="text-slate-400 text-sm">
+                        Staff has agreed to data privacy terms and conditions
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                      <XCircle className="w-3 h-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-red-300 font-medium">No Consent Given</p>
+                      <p className="text-slate-400 text-sm">
+                        Staff has not agreed to data privacy terms
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bank Account Details Section */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Bank Account Information
+              </h4>
+              {onboarding.bankAccountDetails ? (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  {(() => {
+                    try {
+                      const bankDetails = JSON.parse(onboarding.bankAccountDetails)
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-slate-400 text-sm">Bank Name:</span>
+                            <p className="text-white font-medium">{bankDetails.bankName}</p>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-sm">Account Holder:</span>
+                            <p className="text-white font-medium">{bankDetails.accountName}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="text-slate-400 text-sm">Account Number:</span>
+                            <p className="text-white font-medium">{bankDetails.accountNumber}</p>
+                          </div>
+                          {bankDetails.consentedAt && (
+                            <div className="md:col-span-2">
+                              <span className="text-slate-400 text-sm">Consent Date:</span>
+                              <p className="text-white font-medium">
+                                {new Date(bankDetails.consentedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    } catch (error) {
+                      return <p className="text-slate-500">Invalid bank account data</p>
+                    }
+                  })()}
+                </div>
+              ) : (
+                <p className="text-slate-500">No bank account details provided</p>
+              )}
+            </div>
+
+            {onboarding.dataPrivacyFeedback && (
+              <Alert className="mt-6 mb-4 bg-yellow-900/50 border-yellow-700">
+                <AlertDescription className="text-yellow-200">
+                  <div className="flex items-center justify-between mb-3 w-full">
+                    <div className="flex-1">
+                      <strong>Feedback:</strong> {onboarding.dataPrivacyFeedback}
+                    </div>
+                    {!editingFeedback.dataPrivacy && (
+                      <Button
+                        onClick={() => {
+                          setFeedback({ ...feedback, dataPrivacy: onboarding.dataPrivacyFeedback || "" })
+                          setEditingFeedback({ ...editingFeedback, dataPrivacy: true })
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-600 text-yellow-300 hover:bg-yellow-900 whitespace-nowrap ml-auto"
+                      >
+                        Edit Feedback
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingFeedback.dataPrivacy && (
+                    <div className="space-y-3 w-full">
+                      <Textarea
+                        placeholder="Edit feedback..."
+                        value={feedback.dataPrivacy || ""}
+                        onChange={(e) => setFeedback({ ...feedback, dataPrivacy: e.target.value })}
+                        className="w-full placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-slate-700 border-slate-600 text-white"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => saveFeedback('dataPrivacy')}
+                          disabled={savingFeedback.dataPrivacy}
+                          size="sm"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          {savingFeedback.dataPrivacy ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Feedback'
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingFeedback({ ...editingFeedback, dataPrivacy: false })
+                            setFeedback({ ...feedback, dataPrivacy: "" })
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!onboarding.dataPrivacyFeedback && onboarding.dataPrivacyStatus !== "APPROVED" && (
+              <div className="mt-6">
+                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                  Feedback <span className="text-red-400">*</span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Feedback is required when rejecting submissions to help staff understand what needs to be improved.
+                </p>
+                <Textarea
+                  placeholder="Add feedback for this section..."
+                  value={feedback.dataPrivacy || ""}
+                  onChange={(e) => setFeedback({ ...feedback, dataPrivacy: e.target.value })}
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {onboarding.dataPrivacyStatus !== "APPROVED" && (
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => handleVerify("dataPolicy", "APPROVED")}
+                  disabled={processingStates.dataPolicy.approve || processingStates.dataPolicy.reject}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingStates.dataPolicy.approve ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("dataPolicy").approve}
+                </Button>
+                <Button
+                  onClick={() => handleVerify("dataPolicy", "REJECTED")}
+                  disabled={processingStates.dataPolicy.approve || processingStates.dataPolicy.reject}
+                  variant="destructive"
+                >
+                  {processingStates.dataPolicy.reject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                  {getButtonLabels("dataPolicy").reject}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
 
       {/* File View Modal */}
@@ -1648,7 +2376,7 @@ export default function AdminOnboardingDetailPage() {
         setViewFileModal(null)
         setImageLoading(true)
       }}>
-        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? 'w-[100vw] h-[100vh] max-w-none max-h-none !w-screen !h-screen rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
+        <DialogContent className={`${viewFileModal?.url?.endsWith('.pdf') ? 'w-screen h-screen max-w-none max-h-none rounded-none' : 'max-w-5xl'} bg-slate-800 border-slate-700 p-0`} style={viewFileModal?.url?.endsWith('.pdf') ? { width: '100vw', height: '100vh', maxWidth: 'none', maxHeight: 'none', borderRadius: '0' } : {}}>
           <div className="p-6">
             <DialogHeader>
               <DialogTitle className="text-white">{viewFileModal?.title}</DialogTitle>
@@ -1734,7 +2462,7 @@ export default function AdminOnboardingDetailPage() {
 
       {/* Success Modal */}
       <Dialog open={successModal.show} onOpenChange={(open) => setSuccessModal(prev => ({ ...prev, show: open }))}>
-        <DialogContent className="max-w-lg bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600">
+        <DialogContent className="max-w-lg bg-linear-to-br from-green-900/40 to-green-800/20 border-green-600">
           <DialogHeader className="pb-2">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-green-500/20 rounded-lg">
@@ -1756,7 +2484,7 @@ export default function AdminOnboardingDetailPage() {
               <ul className="space-y-2">
                 {successModal.details.map((detail, index) => (
                   <li key={index} className="flex items-center gap-2 text-slate-300">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-400 shrink-0" />
                     <span>{detail}</span>
                   </li>
                 ))}

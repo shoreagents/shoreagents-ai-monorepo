@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
           urlsVisited: urlsVisited ?? existingMetric.urlsVisited,
           tabsSwitched: tabsSwitched ?? existingMetric.tabsSwitched,
           productivityScore: productivityScore ?? existingMetric.productivityScore,
-          ...(applicationsUsed !== undefined && { applicationsUsed }),
-          ...(visitedUrls !== undefined && { visitedUrls }),
+          ...(applicationsUsed !== undefined && { applicationsUsed: applicationsUsed }),
+          ...(visitedUrls !== undefined && { visitedUrls: visitedUrls }),
         } as any,
       })
     } else {

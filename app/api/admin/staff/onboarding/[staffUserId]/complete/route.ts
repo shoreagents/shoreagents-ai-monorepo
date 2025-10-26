@@ -90,18 +90,33 @@ export async function POST(
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 })
     }
 
-    // Check if all sections are approved
+    // Check if all 9 sections are approved (GUNTING 9-step system)
     const { onboarding } = staffUser
     const allApproved = 
       onboarding.personalInfoStatus === "APPROVED" &&
       onboarding.govIdStatus === "APPROVED" &&
       onboarding.documentsStatus === "APPROVED" &&
       onboarding.signatureStatus === "APPROVED" &&
-      onboarding.emergencyContactStatus === "APPROVED"
+      onboarding.emergencyContactStatus === "APPROVED" &&
+      onboarding.resumeStatus === "APPROVED" &&
+      onboarding.educationStatus === "APPROVED" &&
+      onboarding.medicalStatus === "APPROVED" &&
+      onboarding.dataPrivacyStatus === "APPROVED"
 
     if (!allApproved) {
       return NextResponse.json({ 
-        error: "All sections must be approved before completing onboarding" 
+        error: "All 9 onboarding sections must be approved before completing onboarding" 
+      }, { status: 400 })
+    }
+
+    // Check if contract is signed
+    const employmentContract = await prisma.employmentContract.findFirst({
+      where: { staffUserId: staffUser.id }
+    })
+
+    if (!employmentContract || !employmentContract.signed) {
+      return NextResponse.json({ 
+        error: "Employment contract must be signed before completing onboarding" 
       }, { status: 400 })
     }
 
@@ -229,7 +244,7 @@ export async function POST(
 
     // Create work schedule based on shift time
     // Parse shift time (e.g., "9:00 AM - 6:00 PM")
-    const shiftParts = shiftTime.split('-').map(s => s.trim())
+    const shiftParts = shiftTime.split('-').map((s: string) => s.trim())
     const startTime = shiftParts[0] || "9:00 AM"
     const endTime = shiftParts[1] || "6:00 PM"
 
@@ -243,7 +258,7 @@ export async function POST(
       "Sunday"
     ]
 
-    const schedules = days.map(day => ({
+    const schedules = days.map((day: string) => ({
       profileId: profile.id,
       dayOfWeek: day,
       startTime: ["Saturday", "Sunday"].includes(day) ? "" : startTime,
@@ -255,8 +270,30 @@ export async function POST(
     console.log("✅ WORK SCHEDULE CREATED:", { 
       profileId: profile.id, 
       schedulesCount: schedules.length,
-      workdays: schedules.filter(s => s.isWorkday).length
+      workdays: schedules.filter((s: { isWorkday: boolean }) => s.isWorkday).length
     })
+
+    // Create empty welcome form record
+    try {
+      const welcomeForm = await prisma.staffWelcomeForm.create({
+        data: {
+          staffUserId: staffUser.id,
+          name: fullName,
+          client: company.companyName,
+          startDate: new Date(startDate).toLocaleDateString(),
+          favoriteFastFood: "", // Empty - to be filled by staff
+          completed: false
+        }
+      })
+      console.log("✅ WELCOME FORM RECORD CREATED:", { 
+        welcomeFormId: welcomeForm.id,
+        staffUserId: staffUser.id,
+        staffName: fullName
+      })
+    } catch (error) {
+      console.error("❌ WELCOME FORM CREATION FAILED:", error)
+      // Don't fail the entire onboarding process if welcome form creation fails
+    }
 
     // Mark onboarding as complete
     await prisma.staffOnboarding.update({
@@ -287,7 +324,8 @@ export async function POST(
       message: `Onboarding completed! ${fullName} assigned to ${company.companyName} as ${currentRole}.`,
       profileId: profile.id,
       companyName: company.companyName,
-      staffName: fullName
+      staffName: fullName,
+      redirectTo: "/welcome" // Redirect staff to welcome form
     })
 
   } catch (error) {

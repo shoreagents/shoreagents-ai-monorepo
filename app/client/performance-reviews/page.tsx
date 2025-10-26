@@ -259,7 +259,7 @@ export default function ClientReviewsPage() {
                       {/* Action Button */}
                       <Button 
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-                        onClick={() => router.push(`/client/reviews/submit/${review.id}`)}
+                        onClick={() => router.push(`/client/performance-reviews/submit/${review.id}`)}
                       >
                         Complete Review
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -388,7 +388,7 @@ export default function ClientReviewsPage() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => router.push(`/client/reviews/view/${review.id}`)}
+                            onClick={() => router.push(`/client/performance-reviews/view/${review.id}`)}
                             className="border-purple-300 bg-white text-purple-700 hover:bg-purple-100 hover:border-purple-500 hover:text-purple-800 h-6 px-2 text-xs"
                           >
                             <Eye className="mr-1 h-3 w-3" />

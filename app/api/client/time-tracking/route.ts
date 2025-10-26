@@ -5,15 +5,11 @@ import { prisma } from "@/lib/prisma"
 // GET /api/client/time-tracking - Fetch time entries for client's assigned staff
 export async function GET(req: NextRequest) {
   try {
-    console.log("🔥 TIME TRACKING API CALLED")
     const session = await auth()
     
     if (!session?.user?.email) {
-      console.log("❌ No session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-    
-    console.log("✅ Session:", session.user.email)
 
     // Get query parameters for filtering
     const { searchParams } = new URL(req.url)
@@ -22,21 +18,16 @@ export async function GET(req: NextRequest) {
     const staffId = searchParams.get('staffId')
 
     // Try to get client via ClientUser table
-    console.log("🔍 Finding client user...")
     const clientUser = await prisma.clientUser.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
 
     if (!clientUser) {
-      console.log("❌ Client user not found")
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
-    
-    console.log("✅ Client found:", clientUser.email, "Company:", clientUser.company?.companyName)
 
     // Get all staff assigned to this company
-    console.log("🔍 Finding staff for company:", clientUser.company.id)
     const staffUsers = await prisma.staffUser.findMany({
       where: { 
         companyId: clientUser.company.id
@@ -57,8 +48,6 @@ export async function GET(req: NextRequest) {
         }
       }
     })
-    
-    console.log("✅ Found staff:", staffUsers.length)
     const staffIds = staffUsers.map(s => s.id)
 
     if (staffIds.length === 0) {
@@ -80,8 +69,10 @@ export async function GET(req: NextRequest) {
 
     // Filter by date range if specified
     if (startDate) {
+      const startDateTime = new Date(startDate)
+      startDateTime.setHours(0, 0, 0, 0)
       whereClause.clockIn = {
-        gte: new Date(startDate)
+        gte: startDateTime
       }
     }
 
@@ -149,16 +140,16 @@ export async function GET(req: NextRequest) {
 
     // Format response with ALL staff and their time entries (or empty if none)
     const staffTimeEntries = Array.from(staffTimeMap.values()).map(({ staff, timeEntries }) => {
-      const totalHours = timeEntries.reduce((sum, entry) => {
+      const totalHours = timeEntries.reduce((sum: number, entry: any) => {
         return sum + (entry.totalHours ? Number(entry.totalHours) : 0)
       }, 0)
 
       // Check if currently clocked in
-      const activeEntry = timeEntries.find(e => !e.clockOut)
+      const activeEntry = timeEntries.find((e: any) => !e.clockOut)
       const isClockedIn = !!activeEntry
 
       // Check if on break
-      const activeBreak = activeEntry?.breaks.find(b => b.actualStart && !b.actualEnd)
+      const activeBreak = activeEntry?.breaks.find((b: any) => b.actualStart && !b.actualEnd)
       const isOnBreak = !!activeBreak
 
       return {
@@ -176,7 +167,7 @@ export async function GET(req: NextRequest) {
         currentEntry: activeEntry ? {
           id: activeEntry.id,
           clockIn: activeEntry.clockIn,
-          breaks: activeEntry.breaks.map(b => ({
+          breaks: activeEntry.breaks.map((b: any) => ({
             id: b.id,
             type: b.type,
             scheduledStart: b.scheduledStart,
@@ -188,7 +179,7 @@ export async function GET(req: NextRequest) {
             lateBy: b.lateBy
           }))
         } : null,
-        timeEntries: timeEntries.map(e => ({
+        timeEntries: timeEntries.map((e: any) => ({
           id: e.id,
           clockIn: e.clockIn,
           clockOut: e.clockOut,
@@ -196,7 +187,7 @@ export async function GET(req: NextRequest) {
           wasLate: e.wasLate,
           lateBy: e.lateBy,
           clockOutReason: e.clockOutReason,
-          breaks: e.breaks.map(b => ({
+          breaks: e.breaks.map((b: any) => ({
             id: b.id,
             type: b.type,
             scheduledStart: b.scheduledStart,
@@ -213,13 +204,23 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // Sort staff entries: active staff first, then by total hours (descending)
+    const sortedStaffTimeEntries = staffTimeEntries.sort((a, b) => {
+      // First priority: active staff (clocked in) go to the top
+      if (a.isClockedIn && !b.isClockedIn) return -1
+      if (!a.isClockedIn && b.isClockedIn) return 1
+      
+      // Second priority: sort by total hours (descending)
+      return b.totalHours - a.totalHours
+    })
+
     // Calculate summary statistics
     const activeStaff = staffTimeEntries.filter(s => s.isClockedIn).length
     const totalHours = staffTimeEntries.reduce((sum, s) => sum + s.totalHours, 0)
     const totalEntries = timeEntries.length
 
     return NextResponse.json({
-      staffTimeEntries,
+      staffTimeEntries: sortedStaffTimeEntries,
       summary: {
         totalHours: Math.round(totalHours * 100) / 100,
         activeStaff,
@@ -228,11 +229,9 @@ export async function GET(req: NextRequest) {
       }
     })
   } catch (error: any) {
-    console.error("❌❌❌ ERROR in client time tracking:", error)
-    console.error("Error message:", error?.message)
-    console.error("Error stack:", error?.stack)
+    console.error("Error in client time tracking:", error)
     return NextResponse.json(
-      { error: "Failed to fetch time entries", details: error?.message },
+      { error: "Failed to fetch time entries" },
       { status: 500 }
     )
   }

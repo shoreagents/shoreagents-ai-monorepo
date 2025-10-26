@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Paperclip, X, ArrowRight } from "lucide-react"
+import { Plus, Paperclip, X, ArrowRight, Search } from "lucide-react"
 import { Ticket, TicketStatus, TicketCategory, TicketPriority } from "@/types/ticket"
 import TicketDetailModal from "@/components/tickets/ticket-detail-modal"
+import ViewToggle from "@/components/tickets/view-toggle"
+import TicketList from "@/components/tickets/ticket-list"
 import { useToast } from "@/components/ui/use-toast"
 import { getCategoriesForUserType, getCategoryLabel, getCategoryIcon } from "@/lib/ticket-categories"
 import ClientTicketCard from "@/components/tickets/client-ticket-card"
@@ -11,10 +13,15 @@ import { mapCategoryToDepartment, getDepartmentLabel, getDepartmentEmoji } from 
 import { TicketListSkeleton, TicketKanbanSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function TicketsPage() {
+  const [view, setView] = useState<"kanban" | "list">("kanban")
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterCategory, setFilterCategory] = useState<string>("all")
   const { toast } = useToast()
   
   const staffCategories = getCategoriesForUserType('staff')
@@ -22,6 +29,10 @@ export default function TicketsPage() {
   useEffect(() => {
     fetchTickets()
   }, [])
+
+  useEffect(() => {
+    filterTickets()
+  }, [tickets, searchTerm, filterStatus, filterCategory])
 
   const fetchTickets = async () => {
     try {
@@ -40,6 +51,32 @@ export default function TicketsPage() {
     }
   }
 
+  const filterTickets = () => {
+    let filtered = tickets
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (ticket) =>
+          ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ticket.ticketId.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filter by status
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((ticket) => ticket.status === filterStatus)
+    }
+
+    // Filter by category
+    if (filterCategory !== "all") {
+      filtered = filtered.filter((ticket) => ticket.category === filterCategory)
+    }
+
+    setFilteredTickets(filtered)
+  }
+
   const handleTicketClick = (ticket: Ticket) => {
     setSelectedTicket(ticket)
   }
@@ -56,7 +93,7 @@ export default function TicketsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-700">
+        <div className="w-full space-y-6 animate-in fade-in duration-700">
           {/* Header skeleton */}
           <div className="flex items-center justify-between">
             <div>
@@ -84,10 +121,10 @@ export default function TicketsPage() {
   }
 
   const stats = {
-    total: tickets.length,
-    open: tickets.filter((t) => t.status === "OPEN").length,
-    inProgress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
-    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+    total: filteredTickets.length,
+    open: filteredTickets.filter((t) => t.status === "OPEN").length,
+    inProgress: filteredTickets.filter((t) => t.status === "IN_PROGRESS").length,
+    resolved: filteredTickets.filter((t) => t.status === "RESOLVED").length,
   }
 
   const columns: { status: TicketStatus; label: string; color: string; ring: string }[] = [
@@ -99,7 +136,7 @@ export default function TicketsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-700">
+      <div className="w-full space-y-6 animate-in fade-in duration-700">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -108,13 +145,16 @@ export default function TicketsPage() {
             </h1>
             <p className="mt-2 text-slate-400">Submit and track your support requests</p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-4 font-bold text-white transition-all hover:from-indigo-700 hover:to-purple-700 hover:scale-105 shadow-2xl shadow-indigo-500/50 animate-pulse"
-          >
-            <Plus className="h-6 w-6" />
-            New Ticket
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-all hover:bg-indigo-700"
+            >
+              <Plus className="h-5 w-5" />
+              New Ticket
+            </button>
+            <ViewToggle view={view} onViewChange={setView} />
+          </div>
         </div>
 
         {/* Stats Cards - Glassmorphism Style */}
@@ -145,10 +185,53 @@ export default function TicketsPage() {
           </div>
         </div>
 
-        {/* Fun Kanban Board with Emojis */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search tickets..."
+              className="w-full rounded-lg bg-slate-800/50 py-3 pl-10 pr-4 text-white placeholder-slate-500 outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+            />
+          </div>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-lg bg-slate-800/50 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+          >
+            <option value="all">All Status</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="rounded-lg bg-slate-800/50 px-4 py-3 text-white outline-none ring-1 ring-white/10 transition-all focus:ring-indigo-400/50"
+          >
+            <option value="all">All Category</option>
+            <option value="HR">HR Request</option>
+            <option value="EQUIPMENT">Equipment</option>
+            <option value="CLINIC">Clinic/Nurse</option>
+            <option value="MEETING_ROOM">Meeting Room</option>
+            <option value="MANAGEMENT">Management</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        {/* Tickets View */}
+        <div className={view === "kanban" ? "flex-1 min-h-0 overflow-hidden w-full" : "flex-1"}>
+          {view === "kanban" ? (
+            /* Fun Kanban Board with Emojis */
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {columns.map((column, idx) => {
-            const columnTickets = tickets.filter((ticket) => ticket.status === column.status)
+            const columnTickets = filteredTickets.filter((ticket) => ticket.status === column.status)
             const emojis = ['🆕', '⚡', '✅', '📦']
             const gradients = [
               'from-blue-500/20 to-cyan-500/20',
@@ -170,30 +253,45 @@ export default function TicketsPage() {
                   </div>
                 </div>
 
-                {/* Tickets Column with Glassmorphism */}
-                <div className={`min-h-[400px] space-y-3 rounded-2xl bg-slate-900/30 backdrop-blur-xl p-4 ring-1 ring-white/5 transition-all duration-300`}>
-                  {columnTickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      onClick={() => handleTicketClick(ticket)}
-                      className="cursor-pointer transform transition-all duration-200 hover:scale-105"
-                    >
-                      <ClientTicketCard ticket={ticket} />
-                    </div>
-                  ))}
-
-                  {columnTickets.length === 0 && (
-                    <div className="flex h-32 items-center justify-center rounded-xl bg-slate-800/30 backdrop-blur-sm">
-                      <div className="text-center">
-                        <div className="text-3xl mb-2">📭</div>
-                        <div className="text-sm text-slate-500 font-medium">No tickets here</div>
+                {/* Tickets Column with Individual Scrollbar */}
+                <div className="flex flex-col h-[800px] rounded-2xl bg-slate-900/30 backdrop-blur-xl ring-1 ring-white/5 transition-all duration-300 min-w-0 w-full max-w-full overflow-visible">
+                  {/* Scrollable content area */}
+                  <div className="flex-1 overflow-y-auto overflow-x-visible admin-tickets-scrollbar p-4 space-y-3 w-full max-w-full">
+                    {columnTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        onClick={() => handleTicketClick(ticket)}
+                        className="cursor-pointer transform transition-all duration-200 hover:scale-105"
+                      >
+                        <ClientTicketCard ticket={ticket} />
                       </div>
-                    </div>
-                  )}
+                    ))}
+
+                    {columnTickets.length === 0 && (
+                      <div className="flex h-48 items-center justify-center rounded-xl bg-slate-800/30 backdrop-blur-sm">
+                        <div className="text-center">
+                          <div className="mb-2">
+                            <svg className="h-12 w-12 mx-auto text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-slate-400">No tickets</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )
           })}
+            </div>
+          ) : (
+            <TicketList
+              tickets={filteredTickets}
+              onTicketClick={handleTicketClick}
+              onStatusChange={async () => {}} // Staff can't change status, so empty function
+            />
+          )}
         </div>
       </div>
 
@@ -247,11 +345,11 @@ function CreateTicketModal({
     if (e.target.files) {
       const files = Array.from(e.target.files)
       
-      // Limit to 3 files
-      if (attachments.length + files.length > 3) {
+      // Limit to 5 files
+      if (attachments.length + files.length > 5) {
         toast({
           title: "Too many files",
-          description: "You can only upload up to 3 images",
+          description: "You can only upload up to 5 images",
           variant: "destructive",
         })
         return
@@ -279,7 +377,7 @@ function CreateTicketModal({
         return
       }
 
-      setAttachments([...attachments, ...files])
+      setAttachments([...attachments, ...files].slice(0, 5))
     }
   }
 
@@ -363,42 +461,53 @@ function CreateTicketModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-2xl rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-900 p-8 shadow-2xl ring-2 ring-indigo-500/30 max-h-[90vh] overflow-y-auto backdrop-blur-2xl animate-in slide-in-from-bottom duration-500">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-              Create New Ticket 🎫
-            </h2>
-            <p className="text-sm text-slate-400 mt-1">Fill in the details to submit your support request</p>
+      <div className="w-full max-w-4xl rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-900 shadow-2xl ring-2 ring-indigo-500/30 max-h-[90vh] overflow-y-auto backdrop-blur-2xl animate-in slide-in-from-bottom duration-500 create-ticket-modal-scrollbar">
+        {/* Enhanced Header */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-pink-600/20 p-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg">
+                <span className="text-2xl">🎫</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Create New Ticket</h2>
+                <p className="text-sm text-slate-300">Submit your support request with all the details</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-800/50 hover:text-white hover:scale-110"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-800 hover:text-white hover:scale-110"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
+
+        <div className="p-6">
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-300">
-              Title <span className="text-pink-400">*</span>
+              Title <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full rounded-xl bg-slate-800/50 backdrop-blur-xl px-5 py-4 text-white ring-1 ring-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80 transition-all duration-300"
-              placeholder="Brief description of your issue"
-              required
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full rounded-xl bg-slate-800/50 backdrop-blur-xl px-5 py-4 text-white ring-1 ring-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800/80 transition-all duration-300"
+                placeholder="Brief description of your issue"
+                required
+              />
+            </div>
           </div>
 
           {/* Category */}
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-300">
-              Category <span className="text-pink-400">*</span>
+              Category <span className="text-red-400">*</span>
             </label>
             <select
               value={formData.category}
@@ -450,7 +559,7 @@ function CreateTicketModal({
           {/* Description */}
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-300">
-              Description <span className="text-pink-400">*</span>
+              Description <span className="text-red-400">*</span>
             </label>
             <textarea
               value={formData.description}
@@ -464,58 +573,82 @@ function CreateTicketModal({
 
           {/* File Upload */}
           <div>
-            <label className="mb-2 block text-sm font-bold text-slate-300">
-              📎 Attachments (Optional)
-              <span className="ml-2 text-xs text-slate-500 font-normal">Max 3 images, 5MB each</span>
+            <label className="mb-3 block text-sm font-bold text-slate-300 flex items-center gap-2">
+              <Paperclip className="h-4 w-4" />
+              Attachments (Optional)
             </label>
-            <div className="flex items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 backdrop-blur-xl px-6 py-4 text-sm font-bold text-indigo-300 ring-1 ring-indigo-500/30 transition-all hover:from-indigo-600/30 hover:to-purple-600/30 hover:scale-105">
-                <Paperclip className="h-5 w-5" />
-                Choose Files
+            
+            <label className="group cursor-pointer block">
+              <div className="relative rounded-xl border-2 border-dashed border-indigo-400/50 bg-slate-800/30 p-8 text-center transition-all hover:border-indigo-400/70 hover:bg-slate-800/40">
                 <input
                   type="file"
                   multiple
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden"
-                  disabled={attachments.length >= 3}
+                  disabled={attachments.length >= 5}
                 />
-              </label>
-              <span className="text-sm text-slate-400 font-medium">
-                {attachments.length} / 3 files selected
-              </span>
-            </div>
-
-            {/* Attachment Previews */}
-            {attachments.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {attachments.map((file, index) => (
-                  <div key={index} className="relative group rounded-xl bg-slate-800/50 backdrop-blur-xl p-3 ring-1 ring-white/10 transition-all hover:ring-indigo-500/50">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Preview ${index + 1}`}
-                      className="h-20 w-full rounded-lg object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(index)}
-                      className="absolute -right-2 -top-2 rounded-full bg-gradient-to-r from-red-500 to-pink-500 p-1.5 text-white shadow-lg hover:from-red-600 hover:to-pink-600 hover:scale-110 transition-all"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                    <div className="mt-2 truncate text-xs text-slate-400 font-medium">{file.name}</div>
-                  </div>
-                ))}
+                
+                {attachments.length === 0 ? (
+                  <>
+                    {/* Upload Icon */}
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 transition-all group-hover:bg-indigo-500/30 group-hover:scale-110">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    
+                    {/* Upload Text */}
+                    <div className="space-y-1">
+                      <p className="text-lg font-bold text-white">Click to upload images</p>
+                      <p className="text-sm text-slate-400">PNG, JPG up to 5MB (max 5 files)</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Image Previews Inside Upload Area */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="relative group/image rounded-lg overflow-hidden bg-slate-700/50">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            className="h-16 w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              removeAttachment(index)
+                            }}
+                            className="absolute -right-1 -top-1 rounded-full bg-red-500 p-1 text-white shadow-lg hover:bg-red-600 transition-all opacity-0 group-hover/image:opacity-100"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Upload More Text */}
+                    <div className="space-y-1">
+                      {attachments.length < 5 && (
+                        <p className="text-sm font-medium text-indigo-300">Click to add more images</p>
+                      )}
+                      <p className="text-xs text-slate-400">{attachments.length}/5 files selected</p>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </label>
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-4 pt-6">
+          <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-800/50">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl bg-slate-800/50 backdrop-blur-xl px-6 py-4 font-bold text-white ring-1 ring-white/10 transition-all hover:bg-slate-700/50 hover:scale-105"
+              className="flex-1 rounded-xl bg-slate-800/50 backdrop-blur-xl px-6 py-4 font-bold text-white ring-1 ring-white/10 transition-all hover:bg-slate-700/50 hover:scale-105 disabled:opacity-50"
               disabled={loading}
             >
               Cancel
@@ -529,6 +662,7 @@ function CreateTicketModal({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   )
