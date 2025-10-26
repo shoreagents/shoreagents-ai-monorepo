@@ -77,7 +77,7 @@ export default function ViewReviewPage({
         <Card className="max-w-md p-6 text-center bg-white border-gray-200 shadow-sm">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
           <p className="text-gray-600 mb-4">{error || "Review not found"}</p>
-          <Button onClick={() => router.push("/client/reviews")}>
+          <Button onClick={() => router.push("/client/performance-reviews")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Reviews
           </Button>
@@ -119,7 +119,7 @@ export default function ViewReviewPage({
         <div className="flex items-center">
           <Button 
             variant="ghost" 
-            onClick={() => router.push("/client/reviews")}
+            onClick={() => router.push("/client/performance-reviews")}
             className="p-2 hover:bg-purple-50 text-gray-600 hover:text-purple-600"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />

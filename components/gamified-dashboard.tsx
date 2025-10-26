@@ -34,6 +34,7 @@ export default function GamifiedDashboard() {
   const [currentDate, setCurrentDate] = useState("")
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
   const [userName, setUserName] = useState("there")
+  const [welcomeFormStatus, setWelcomeFormStatus] = useState<{ needsCompletion: boolean } | null>(null)
 
   useEffect(() => {
     // Update time
@@ -52,6 +53,26 @@ export default function GamifiedDashboard() {
 
     return () => clearInterval(interval)
   }, [])
+
+  // Check welcome form status
+  const checkWelcomeFormStatus = async () => {
+    try {
+      const response = await fetch('/api/welcome')
+      if (response.ok) {
+        const data = await response.json()
+        setWelcomeFormStatus({ needsCompletion: !data.alreadySubmitted })
+      }
+    } catch (error) {
+      console.error('Failed to check welcome form status:', error)
+    }
+  }
+
+  // Check if onboarding is complete and redirect to welcome form
+  useEffect(() => {
+    if (onboardingStatus?.isComplete && onboardingStatus.completionPercent === 100) {
+      checkWelcomeFormStatus()
+    }
+  }, [onboardingStatus])
 
   const fetchUserName = async () => {
     try {
@@ -118,7 +139,7 @@ export default function GamifiedDashboard() {
   const quickActions = [
     { href: "/tasks", icon: CheckSquare, label: "Manage Tasks" },
     { href: "/breaks", icon: Coffee, label: "Track Breaks" },
-    { href: "/reviews", icon: Star, label: "View Reviews" },
+    { href: "/performance-reviews", icon: Star, label: "View Reviews" },
     { href: "/tickets", icon: Headphones, label: "Support Tickets" },
   ]
 
@@ -136,17 +157,37 @@ export default function GamifiedDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <div className="h-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-8">
+          {/* Header skeleton */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="h-10 w-72 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-6 w-96 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
-            <div className="space-y-6">
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-20 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              ))}
+            </div>
+          </div>
+          
+          {/* Quick actions skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            ))}
+          </div>
+
+          {/* Main content grid skeleton */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            </div>
+            <div className="space-y-8">
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
           </div>
         </div>
@@ -155,8 +196,8 @@ export default function GamifiedDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full space-y-8 animate-in fade-in duration-700">
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -173,17 +214,45 @@ export default function GamifiedDashboard() {
           </div>
         </div>
 
+        {/* Welcome Form Banner */}
+        {onboardingStatus?.isComplete && welcomeFormStatus?.needsCompletion && (
+          <Link href="/welcome" className="block mb-6">
+            <div className="cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] border-purple-500/50 bg-linear-to-r from-purple-900/30 to-pink-900/30 hover:border-purple-500 hover:shadow-purple-500/30">
+              <div className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="shrink-0 rounded-full p-2.5 bg-purple-500">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold text-white mb-0.5">
+                      🎉 Welcome to the Team!
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-tight">
+                      Your onboarding is complete! Let's get to know you better with a quick welcome form.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap transition-colors bg-purple-500 text-white hover:bg-purple-400">
+                    Complete Welcome Form →
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
         {/* Onboarding Banner */}
         {onboardingStatus && !onboardingStatus.isComplete && (
           <Link href={onboardingStatus.completionPercent === 100 ? "/onboarding/status" : "/onboarding"} className="block mb-6">
             <div className={`cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] ${
               onboardingStatus.completionPercent === 100
-                ? "border-blue-500/50 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500 hover:shadow-blue-500/30"
-                : "border-yellow-500/50 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500 hover:shadow-yellow-500/30"
+                ? "border-blue-500/50 bg-linear-to-r from-blue-900/30 to-indigo-900/30 hover:border-blue-500 hover:shadow-blue-500/30"
+                : "border-yellow-500/50 bg-linear-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500 hover:shadow-yellow-500/30"
             }`}>
               <div className="flex items-center justify-between gap-6">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`flex-shrink-0 rounded-full p-2.5 ${
+                  <div className={`shrink-0 rounded-full p-2.5 ${
                     onboardingStatus.completionPercent === 100 ? "bg-blue-500" : "bg-yellow-500"
                   }`}>
                     {onboardingStatus.completionPercent === 100 ? (
@@ -205,7 +274,7 @@ export default function GamifiedDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white leading-none">
                       {onboardingStatus.completionPercent}%
@@ -228,8 +297,8 @@ export default function GamifiedDashboard() {
                   <div
                     className={`h-full transition-all duration-500 ${
                       onboardingStatus.completionPercent === 100
-                        ? "bg-gradient-to-r from-blue-500 to-indigo-500"
-                        : "bg-gradient-to-r from-yellow-500 to-orange-500"
+                        ? "bg-linear-to-r from-blue-500 to-indigo-500"
+                        : "bg-linear-to-r from-yellow-500 to-orange-500"
                     }`}
                     style={{ width: `${onboardingStatus.completionPercent}%` }}
                   />
@@ -322,7 +391,7 @@ export default function GamifiedDashboard() {
                   <Link href="/leaderboard" className="text-sm text-blue-400 hover:underline">Full Board →</Link>
                 </div>
                 <div className="text-center">
-                  <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ring-blue-400/50">
+                  <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ring-blue-400/50">
                     #{data.leaderboard.rank}
                   </div>
                   <div className="mt-4">
@@ -338,7 +407,7 @@ export default function GamifiedDashboard() {
               <div className="space-y-4 rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/50 bg-amber-900/20 transition-all duration-500 hover:ring-amber-500 hover:shadow-amber-500/30">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Pending Reviews</h2>
-                  <Link href="/reviews" className="text-sm text-blue-400 hover:underline">View All →</Link>
+                  <Link href="/performance-reviews" className="text-sm text-blue-400 hover:underline">View All →</Link>
                 </div>
                 <div className="space-y-2">
                   {pendingReviews.slice(0, 2).map((review) => (

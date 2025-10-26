@@ -63,6 +63,7 @@ model StaffUser {
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
+  welcomeForm            StaffWelcomeForm?
 
   @@map("staff_users")
 }
@@ -193,10 +194,10 @@ model Break {
   isLate         Boolean     @default(false)
   lateBy         Int?
   timeEntryId    String?
-  isPaused       Boolean?    @default(false) @map("isPaused")
-  pauseUsed      Boolean?    @default(false) @map("pauseUsed")
-  pausedAt       DateTime?   @map("pausedAt") @db.Timestamp(6)
-  pausedDuration Int?        @default(0) @map("pausedDuration")
+  isPaused       Boolean?    @default(false)
+  pauseUsed      Boolean?    @default(false)
+  pausedAt       DateTime?   @db.Timestamp(6)
+  pausedDuration Int?        @default(0)
   staffUser      StaffUser   @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   time_entries   TimeEntry?  @relation(fields: [timeEntryId], references: [id])
 
@@ -566,50 +567,43 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
-  // New GUNTING 8-step fields
-  resumeUrl                  String?
-  educationDocsUrl           String?
-  medicalCertUrl             String?
-  dataPolicyUrl              String?
-  bankDocsUrl                String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
   documentsStatus            OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
-  // New GUNTING 8-step status fields
-  resumeStatus               OnboardingStatus @default(PENDING)
-  educationStatus            OnboardingStatus @default(PENDING)
-  medicalStatus              OnboardingStatus @default(PENDING)
-  dataPolicyStatus           OnboardingStatus @default(PENDING)
-  bankStatus                 OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
   govIdFeedback              String?
   documentsFeedback          String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
-  // New GUNTING 8-step feedback fields
-  resumeFeedback             String?
-  educationFeedback          String?
-  medicalFeedback            String?
-  dataPolicyFeedback         String?
-  bankFeedback               String?
   personalInfoVerifiedAt     DateTime?
   govIdVerifiedAt            DateTime?
   documentsVerifiedAt        DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
-  // New GUNTING 8-step verification timestamps
-  resumeVerifiedAt           DateTime?
-  educationVerifiedAt        DateTime?
-  medicalVerifiedAt          DateTime?
-  dataPolicyVerifiedAt       DateTime?
-  bankVerifiedAt             DateTime?
   verifiedBy                 String?
   isComplete                 Boolean          @default(false)
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
+  educationFeedback          String?
+  educationStatus            OnboardingStatus @default(PENDING)
+  educationVerifiedAt        DateTime?
+  medicalCertUrl             String?
+  medicalFeedback            String?
+  medicalStatus              OnboardingStatus @default(PENDING)
+  medicalVerifiedAt          DateTime?
+  resumeFeedback             String?
+  resumeStatus               OnboardingStatus @default(PENDING)
+  resumeUrl                  String?
+  resumeVerifiedAt           DateTime?
+  bankAccountDetails         String?
+  dataPrivacyConsentUrl      String?
+  dataPrivacyFeedback        String?
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
+  dataPrivacyVerifiedAt      DateTime?
+  diplomaTorUrl              String?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
@@ -962,4 +956,33 @@ enum InterviewRequestStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
+}
+
+model StaffWelcomeForm {
+  id                String    @id @default(uuid())
+  staffUserId       String    @unique
+  name              String
+  client            String
+  startDate         String
+  favoriteFastFood  String
+  favoriteColor     String?
+  favoriteMusic     String?
+  favoriteMovie     String?
+  favoriteBook      String?
+  hobby             String?
+  dreamDestination  String?
+  favoriteSeason    String?
+  petName           String?
+  favoriteSport     String?
+  favoriteGame      String?
+  favoriteQuote     String?
+  funFact           String?
+  additionalInfo    String?
+  completed         Boolean   @default(false)
+  submittedAt       DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_welcome_forms")
 }

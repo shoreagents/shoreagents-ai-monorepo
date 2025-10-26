@@ -18,7 +18,11 @@ import {
   PenTool,
   Users,
   ArrowLeft,
-  Info
+  Info,
+  Briefcase,
+  GraduationCap,
+  Stethoscope,
+  Shield
 } from "lucide-react"
 
 interface OnboardingStatus {
@@ -27,10 +31,30 @@ interface OnboardingStatus {
   personalInfoFeedback: string | null
   personalInfoVerifiedAt: string | null
   
+  // Resume
+  resumeStatus: string
+  resumeFeedback: string | null
+  resumeVerifiedAt: string | null
+  
   // Gov IDs
   govIdStatus: string
   govIdFeedback: string | null
   govIdVerifiedAt: string | null
+  
+  // Education
+  educationStatus: string
+  educationFeedback: string | null
+  educationVerifiedAt: string | null
+  
+  // Medical
+  medicalStatus: string
+  medicalFeedback: string | null
+  medicalVerifiedAt: string | null
+  
+  // Data Privacy
+  dataPrivacyStatus: string
+  dataPrivacyFeedback: string | null
+  dataPrivacyVerifiedAt: string | null
   
   // Documents
   documentsStatus: string
@@ -60,6 +84,32 @@ export default function OnboardingStatusPage() {
   useEffect(() => {
     fetchStatus()
   }, [])
+
+  // Check if onboarding is complete and redirect to welcome form
+  useEffect(() => {
+    if (status?.isComplete && status.completionPercent === 100) {
+      // Check if welcome form is already completed
+      const checkWelcomeForm = async () => {
+        try {
+          const response = await fetch('/api/welcome')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.alreadySubmitted) {
+              // Welcome form already submitted, stay on status page
+              return
+            } else {
+              // Redirect to welcome form
+              router.push('/welcome')
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check welcome form status:', error)
+        }
+      }
+      
+      checkWelcomeForm()
+    }
+  }, [status, router])
 
   const fetchStatus = async () => {
     try {
@@ -147,16 +197,48 @@ export default function OnboardingStatusPage() {
       verifiedAt: status.personalInfoVerifiedAt
     },
     { 
+      key: "resume", 
+      title: "Resume", 
+      icon: Briefcase, 
+      status: status.resumeStatus,
+      feedback: status.resumeFeedback,
+      verifiedAt: status.resumeVerifiedAt
+    },
+    { 
       key: "govId", 
-      title: "Government Documents", 
+      title: "Government IDs & Documents", 
       icon: CreditCard, 
       status: status.govIdStatus,
       feedback: status.govIdFeedback,
       verifiedAt: status.govIdVerifiedAt
     },
     { 
+      key: "education", 
+      title: "Education Documents", 
+      icon: GraduationCap, 
+      status: status.educationStatus,
+      feedback: status.educationFeedback,
+      verifiedAt: status.educationVerifiedAt
+    },
+    { 
+      key: "medical", 
+      title: "Medical Certificate", 
+      icon: Stethoscope, 
+      status: status.medicalStatus,
+      feedback: status.medicalFeedback,
+      verifiedAt: status.medicalVerifiedAt
+    },
+    { 
+      key: "dataPrivacy", 
+      title: "Data Privacy & Bank", 
+      icon: Shield, 
+      status: status.dataPrivacyStatus,
+      feedback: status.dataPrivacyFeedback,
+      verifiedAt: status.dataPrivacyVerifiedAt
+    },
+    { 
       key: "documents", 
-      title: "Required Documents", 
+      title: "Additional Documents", 
       icon: FileText, 
       status: status.documentsStatus,
       feedback: status.documentsFeedback,
@@ -187,7 +269,7 @@ export default function OnboardingStatusPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Header */}
         <div className="mb-6">
           <Button
@@ -268,7 +350,7 @@ export default function OnboardingStatusPage() {
           <CardHeader>
             <CardTitle className="text-white">Overall Progress</CardTitle>
             <CardDescription>
-              {approvedCount} of {sections.length} documents approved
+              {approvedCount} of {sections.length} sections approved
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -339,10 +421,58 @@ export default function OnboardingStatusPage() {
                 className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
               >
                 <div className="flex items-center gap-2 w-full">
+                  <Briefcase className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Resume</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View your uploaded resume</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
                   <CreditCard className="h-4 w-4 text-blue-400" />
                   <span className="text-sm font-medium text-white">Government IDs</span>
                 </div>
                 <span className="text-xs text-slate-400 text-left">View SSS, TIN, PhilHealth, Pag-IBIG documents</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <GraduationCap className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Education Documents</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View diploma, TOR, and education certificates</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Stethoscope className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Medical Certificate</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View your medical certificate</span>
+              </Button>
+
+              <Button
+                onClick={() => router.push("/onboarding")}
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2 border-slate-600 hover:border-blue-500 hover:bg-blue-900/20"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Shield className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-white">Data Privacy & Bank</span>
+                </div>
+                <span className="text-xs text-slate-400 text-left">View data privacy consent and bank details</span>
               </Button>
 
               <Button

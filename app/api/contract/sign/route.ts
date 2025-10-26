@@ -14,13 +14,13 @@ export async function POST(request: NextRequest) {
   try {
     // Verify staff is authenticated
     const session = await auth()
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Find staff user with contract
     const staffUser = await prisma.staffUser.findUnique({
-      where: { email: session.user.email },
+      where: { authUserId: session.user.id },
       include: {
         employmentContract: true,
         jobAcceptance: true

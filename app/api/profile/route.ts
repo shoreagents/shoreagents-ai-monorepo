@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
         onboarding: {
           select: {
             isComplete: true,
-            completionPercent: true
+            completionPercent: true,
+            resumeUrl: true,
+            medicalCertUrl: true,
+            diplomaTorUrl: true,
+            dataPrivacyConsentUrl: true,
+            bankAccountDetails: true,
+            signatureUrl: true
           }
         }
       }
@@ -74,7 +80,13 @@ export async function GET(req: NextRequest) {
       workSchedules: staffUser.profile?.workSchedule || [],
       onboarding: staffUser.onboarding ? {
         isComplete: staffUser.onboarding.isComplete,
-        completionPercent: staffUser.onboarding.completionPercent
+        completionPercent: staffUser.onboarding.completionPercent,
+        resumeUrl: staffUser.onboarding.resumeUrl,
+        medicalCertUrl: staffUser.onboarding.medicalCertUrl,
+        diplomaTorUrl: staffUser.onboarding.diplomaTorUrl,
+        dataPrivacyConsentUrl: staffUser.onboarding.dataPrivacyConsentUrl,
+        bankAccountDetails: staffUser.onboarding.bankAccountDetails,
+        signatureUrl: staffUser.onboarding.signatureUrl
       } : null
     })
 

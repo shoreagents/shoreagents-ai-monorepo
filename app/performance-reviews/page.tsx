@@ -265,7 +265,7 @@ export default function StaffReviewsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/reviews/${review.id}`)}
+                          onClick={() => router.push(`/performance-reviews/${review.id}`)}
                           className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                         >
                           <ArrowRight className="h-4 w-4 mr-1" />

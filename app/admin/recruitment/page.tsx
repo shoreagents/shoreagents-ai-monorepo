@@ -23,8 +23,13 @@ import {
   TrendingUp,
   Star,
   Award,
-  Zap
+  Zap,
+  CheckCircle,
+  Mail
 } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 
 // Types
 interface Candidate {
@@ -94,6 +99,18 @@ export default function AdminRecruitmentPage() {
   const [interviewSearch, setInterviewSearch] = useState('')
   const [selectedInterview, setSelectedInterview] = useState<InterviewRequest | null>(null)
   
+  // Hire Modal State
+  const [hireModalOpen, setHireModalOpen] = useState(false)
+  const [interviewToHire, setInterviewToHire] = useState<InterviewRequest | null>(null)
+  const [companies, setCompanies] = useState<Array<{id: string, companyName: string}>>([])
+  const [hireFormData, setHireFormData] = useState({
+    position: '',
+    companyId: '',
+    candidateEmail: '',
+    candidatePhone: ''
+  })
+  const [hiring, setHiring] = useState(false)
+  
   // Stats
   const [stats, setStats] = useState({
     totalCandidates: 0,
@@ -101,6 +118,8 @@ export default function AdminRecruitmentPage() {
     pendingInterviews: 0,
     totalApplications: 0
   })
+  
+  const { toast } = useToast()
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -165,6 +184,110 @@ export default function AdminRecruitmentPage() {
       console.error('Error fetching interviews:', error)
     } finally {
       setInterviewsLoading(false)
+    }
+  }
+
+  async function fetchCompanies() {
+    try {
+      const response = await fetch('/api/admin/companies')
+      const data = await response.json()
+      if (data.success) {
+        setCompanies(data.companies)
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error)
+    }
+  }
+
+  // Load companies on mount
+  useEffect(() => {
+    fetchCompanies()
+  }, [])
+
+  function openHireModal(interview: InterviewRequest) {
+    setInterviewToHire(interview)
+    setHireFormData({
+      position: '',
+      companyId: '',
+      candidateEmail: '',
+      candidatePhone: ''
+    })
+    setHireModalOpen(true)
+  }
+
+  async function handleHireCandidate() {
+    if (!interviewToHire) return
+
+    // Validation
+    if (!hireFormData.position) {
+      toast({
+        title: "Error",
+        description: "Position is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!hireFormData.companyId) {
+      toast({
+        title: "Error",
+        description: "Company is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!hireFormData.candidateEmail) {
+      toast({
+        title: "Error",
+        description: "Candidate email is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setHiring(true)
+
+      const response = await fetch('/api/admin/recruitment/interviews/hire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewRequestId: interviewToHire.id,
+          position: hireFormData.position,
+          companyId: hireFormData.companyId,
+          candidateEmail: hireFormData.candidateEmail,
+          candidatePhone: hireFormData.candidatePhone,
+          bpocCandidateId: interviewToHire.bpoc_candidate_id
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Candidate Hired Successfully!",
+          description: `Signup link has been generated for ${interviewToHire.candidate_first_name}`,
+        })
+
+        // Refresh interviews list
+        await fetchInterviews()
+
+        // Close modal
+        setHireModalOpen(false)
+        setInterviewToHire(null)
+      } else {
+        throw new Error(data.error || 'Failed to hire candidate')
+      }
+    } catch (error) {
+      console.error('Error hiring candidate:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to hire candidate",
+        variant: "destructive"
+      })
+    } finally {
+      setHiring(false)
     }
   }
 
@@ -466,7 +589,60 @@ export default function AdminRecruitmentPage() {
 
         {/* Interviews Tab */}
         {activeTab === 'interviews' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {interviews.filter(i => i.status === 'pending').length}
+                    </p>
+                  </div>
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                </div>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Scheduled</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {interviews.filter(i => i.status === 'scheduled').length}
+                    </p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-blue-600" />
+                </div>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-800">Completed</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {interviews.filter(i => i.status === 'completed').length}
+                    </p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">Hired</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {interviews.filter(i => i.status === 'hired').length}
+                    </p>
+                  </div>
+                  <UserCheck className="h-8 w-8 text-purple-600" />
+                </div>
+              </Card>
+            </div>
+
+            {/* Search */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -479,59 +655,190 @@ export default function AdminRecruitmentPage() {
               </div>
             </div>
 
+            {/* Interview Cards */}
             {interviewsLoading ? (
               <div className="text-center py-12 text-muted-foreground">Loading interviews...</div>
             ) : filteredInterviews.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">No interview requests found</div>
+              <Card className="p-12 text-center border-2 border-dashed">
+                <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Interview Requests</h3>
+                <p className="text-muted-foreground">
+                  Interview requests from clients will appear here
+                </p>
+              </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {filteredInterviews.map((interview) => (
-                  <div
-                    key={interview.id}
-                    className="flex items-start gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedInterview(interview)}
-                  >
-                    <div className="p-3 bg-muted rounded-lg">
-                      <Calendar className="h-6 w-6 text-foreground" />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground">{interview.candidate_first_name}</h3>
-                        <Badge className={
-                          interview.status === 'pending' 
-                            ? 'bg-blue-600 text-white border border-blue-500'
-                            : interview.status === 'scheduled'
-                            ? 'bg-green-600 text-white border border-green-500'
-                            : 'bg-muted text-foreground border border-border'
-                        }>
-                          {interview.status}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground">Preferred Times:</p>
-                        <ul className="list-disc list-inside mt-1">
-                          {interview.preferred_times.map((time, idx) => (
-                            <li key={idx}>{new Date(time).toLocaleString()}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {interview.client_notes && (
-                        <div className="mt-2 text-sm">
-                          <p className="font-medium text-foreground">Notes:</p>
-                          <p className="text-muted-foreground">{interview.client_notes}</p>
+                  <Card key={interview.id} className="p-6 hover:shadow-lg transition-all border-l-4 border-l-blue-500">
+                    <div className="flex items-start justify-between gap-4">
+                      
+                      {/* Left: Candidate Info */}
+                      <div className="flex-1 space-y-4">
+                        
+                        {/* Header */}
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                            <UserCheck className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <h3 className="text-xl font-semibold">{interview.candidate_first_name}</h3>
+                              <Badge className={
+                                interview.status === 'pending' 
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
+                                  : interview.status === 'scheduled'
+                                  ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
+                                  : interview.status === 'hired'
+                                  ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
+                                  : interview.status === 'completed'
+                                  ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
+                                  : 'bg-gray-100 text-gray-800 border-gray-300'
+                              }>
+                                {interview.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Requested: {new Date(interview.created_at).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Requested: {new Date(interview.created_at).toLocaleString()}
-                      </div>
-                    </div>
 
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                  </div>
+                        {/* Status Message Box */}
+                        <div className={`rounded-lg p-4 border-l-4 ${
+                          interview.status === 'pending'
+                            ? 'bg-yellow-50 border-l-yellow-500'
+                            : interview.status === 'scheduled'
+                            ? 'bg-blue-50 border-l-blue-500'
+                            : interview.status === 'hired'
+                            ? 'bg-purple-50 border-l-purple-500'
+                            : 'bg-green-50 border-l-green-500'
+                        }`}>
+                          {interview.status === 'pending' && (
+                            <div className="flex items-start gap-3">
+                              <Clock className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-yellow-900">Action Required</p>
+                                <p className="text-sm text-yellow-800 mt-1">
+                                  Coordinate with the candidate to schedule this interview. Click "Schedule" to set a time.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {interview.status === 'scheduled' && (
+                            <div className="flex items-start gap-3">
+                              <Calendar className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-blue-900">Interview Scheduled</p>
+                                <p className="text-sm text-blue-800 mt-1">
+                                  Interview has been scheduled. Waiting for completion.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {interview.status === 'hired' && (
+                            <div className="flex items-start gap-3">
+                              <UserCheck className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-purple-900">Candidate Hired! 🎉</p>
+                                <p className="text-sm text-purple-800 mt-1">
+                                  This candidate has been hired and contract generation is ready.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {interview.status === 'completed' && (
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-green-900">Interview Complete</p>
+                                <p className="text-sm text-green-800 mt-1">
+                                  Interview completed. Client will make hiring decision.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Preferred Times */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Client's Preferred Times:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {interview.preferred_times.map((time, idx) => (
+                              <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                {new Date(time).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Client Notes */}
+                        {interview.client_notes && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Client Notes:</span>
+                            </div>
+                            <p className="text-sm bg-muted/50 p-3 rounded border">
+                              {interview.client_notes}
+                            </p>
+                          </div>
+                        )}
+
+                      </div>
+
+                      {/* Right: Action Buttons */}
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSelectedInterview(interview)}
+                          className="w-full"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Full
+                        </Button>
+                        {interview.status === 'pending' && (
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Schedule
+                          </Button>
+                        )}
+                        {interview.status !== 'hired' && interview.status === 'completed' && (
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="w-full bg-green-600 hover:bg-green-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openHireModal(interview)
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Hire
+                          </Button>
+                        )}
+                      </div>
+
+                    </div>
+                  </Card>
                 ))}
               </div>
             )}
@@ -727,6 +1034,125 @@ export default function AdminRecruitmentPage() {
               <div>
                 <label className="text-sm text-muted-foreground">Request Date</label>
                 <p className="text-foreground">{new Date(selectedInterview.created_at).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Hire Candidate Modal */}
+      <Dialog open={hireModalOpen} onOpenChange={setHireModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Hire Candidate
+            </DialogTitle>
+          </DialogHeader>
+          {interviewToHire && (
+            <div className="space-y-6">
+              <div className="p-4 bg-muted rounded-lg">
+                <h3 className="font-semibold text-foreground mb-2">Candidate Information</h3>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-medium">{interviewToHire.candidate_first_name}</span></p>
+                  <p><span className="text-muted-foreground">BPOC ID:</span> <span className="text-foreground font-mono text-xs">{interviewToHire.bpoc_candidate_id}</span></p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position / Job Title *</Label>
+                  <Input
+                    id="position"
+                    placeholder="e.g., Customer Service Representative"
+                    value={hireFormData.position}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, position: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company">Assign to Company *</Label>
+                  <Select
+                    value={hireFormData.companyId}
+                    onValueChange={(value) => setHireFormData(prev => ({ ...prev, companyId: value }))}
+                  >
+                    <SelectTrigger id="company">
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="candidateEmail">Candidate Email *</Label>
+                  <Input
+                    id="candidateEmail"
+                    type="email"
+                    placeholder="candidate@example.com"
+                    value={hireFormData.candidateEmail}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, candidateEmail: e.target.value }))}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Signup link will be sent to this email</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="candidatePhone">Candidate Phone (Optional)</Label>
+                  <Input
+                    id="candidatePhone"
+                    type="tel"
+                    placeholder="+63 XXX XXX XXXX"
+                    value={hireFormData.candidatePhone}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, candidatePhone: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex gap-2">
+                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Next Steps</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      After hiring, a signup link will be generated and sent to the candidate's email. 
+                      They will be able to create their account, sign the employment contract, and complete onboarding.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleHireCandidate}
+                  disabled={hiring}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {hiring ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Hiring...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Confirm Hire & Send Email
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setHireModalOpen(false)}
+                  disabled={hiring}
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
           )}

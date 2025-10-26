@@ -244,7 +244,7 @@ export default function StaffReviewDetailPage({
       <div className="p-6">
         <Card className="rounded-xl bg-slate-800/50 ring-1 ring-white/10 p-12 text-center">
           <p className="text-muted-foreground">Review not found</p>
-          <Button className="mt-4" onClick={() => router.push("/reviews")}>
+          <Button className="mt-4" onClick={() => router.push("/performance-reviews")}>
             Back to Reviews
           </Button>
         </Card>
@@ -266,7 +266,7 @@ export default function StaffReviewDetailPage({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push("/reviews")}
+          onClick={() => router.push("/performance-reviews")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -486,7 +486,7 @@ export default function StaffReviewDetailPage({
             <Button
               onClick={() => {
                 setShowSuccessModal(false)
-                router.push("/reviews")
+                router.push("/performance-reviews")
               }}
             >
               Back to Reviews
