@@ -158,16 +158,36 @@ export default function GamifiedDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <div className="h-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+        <div className="mx-auto max-w-full space-y-8">
+          {/* Header skeleton */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="h-10 w-72 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-6 w-96 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
-            <div className="space-y-6">
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-20 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              ))}
+            </div>
+          </div>
+          
+          {/* Quick actions skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            ))}
+          </div>
+
+          {/* Main content grid skeleton */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            </div>
+            <div className="space-y-8">
+              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
           </div>
         </div>
@@ -177,7 +197,7 @@ export default function GamifiedDashboard() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
+      <div className="mx-auto max-w-full space-y-8 animate-in fade-in duration-700">
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">

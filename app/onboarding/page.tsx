@@ -720,7 +720,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
+      <div className="max-w-full mx-auto w-full space-y-6 animate-in fade-in duration-700">
         {/* Header */}
         <div className="text-center mb-8 mt-12">
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -800,7 +800,7 @@ export default function OnboardingPage() {
             </div>
             <div className="relative">
               <Progress value={formData.completionPercent || 0} className="h-6" />
-              <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+              <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white ">
                 {formData.completionPercent || 0}% Complete
               </p>
             </div>
@@ -2760,7 +2760,7 @@ export default function OnboardingPage() {
       </Dialog>
 
       {/* Return to Dashboard */}
-      <div className="max-w-6xl mx-auto w-full text-center mt-8">
+      <div className="max-w-full mx-auto w-full text-center mt-8">
         <Button
           onClick={() => router.push("/")}
           variant="ghost"

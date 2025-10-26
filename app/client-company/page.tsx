@@ -81,10 +81,30 @@ export default function ClientCompanyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-8">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-8">
+          {/* Header skeleton */}
           <div className="h-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-          <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+          {/* Company card skeleton */}
+          <div className="rounded-3xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-8 animate-pulse">
+            <div className="flex items-start gap-6 mb-6">
+              <div className="h-24 w-24 rounded-2xl bg-slate-800/50" />
+              <div className="space-y-3 flex-1">
+                <div className="h-8 w-64 bg-slate-800/50 rounded" />
+                <div className="h-6 w-48 bg-slate-800/50 rounded" />
+                <div className="flex gap-3">
+                  <div className="h-8 w-32 bg-slate-800/50 rounded-full" />
+                  <div className="h-8 w-32 bg-slate-800/50 rounded-full" />
+                </div>
+              </div>
+            </div>
+            <div className="h-24 bg-slate-800/50 rounded-lg" />
+            <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="h-20 bg-slate-800/50 rounded" />
+              <div className="h-20 bg-slate-800/50 rounded" />
+              <div className="h-20 bg-slate-800/50 rounded" />
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -92,9 +112,9 @@ export default function ClientCompanyPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-red-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-red-500/20 text-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-red-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-red-500/20 text-center">
             <Building2 className="mx-auto h-16 w-16 text-red-400 mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">No Client Company Assigned</h2>
             <p className="text-slate-400">{error || "You are not currently assigned to a client company."}</p>
@@ -107,8 +127,8 @@ export default function ClientCompanyPage() {
   const { company } = data
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full space-y-12 animate-in fade-in duration-700">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -119,7 +139,7 @@ export default function ClientCompanyPage() {
 
         {/* Company Profile Card */}
         <Link href={`/company-profile/${company.id}`}>
-          <div className="group cursor-pointer rounded-3xl bg-gradient-to-br from-slate-900/80 via-indigo-900/30 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-indigo-500/20 hover:scale-[1.01]">
+          <div className="group cursor-pointer rounded-3xl bg-linear-to-br from-slate-900/80 via-indigo-900/30 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-300 hover:ring-white/30 hover:shadow-xl hover:shadow-indigo-500/10 hover:brightness-105">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-6">
                 {/* Company Logo */}
@@ -128,7 +148,7 @@ export default function ClientCompanyPage() {
                     <img src={company.logo} alt={company.companyName} className="h-full w-full object-cover" />
                   </div>
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-3xl font-bold text-white ring-2 ring-white/10">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-600 to-purple-600 text-3xl font-bold text-white ring-2 ring-white/10">
                     {company.companyName.charAt(0)}
                   </div>
                 )}
@@ -173,7 +193,7 @@ export default function ClientCompanyPage() {
             <div className="mt-6 grid gap-4 md:grid-cols-3 border-t border-white/5 pt-6">
               {company.billingEmail && (
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 p-2">
+                  <div className="rounded-lg bg-linear-to-br from-blue-500 to-cyan-500 p-2">
                     <Mail className="h-4 w-4 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -184,7 +204,7 @@ export default function ClientCompanyPage() {
               )}
               {company.phone && (
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 p-2">
+                  <div className="rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 p-2">
                     <Phone className="h-4 w-4 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -195,7 +215,7 @@ export default function ClientCompanyPage() {
               )}
               {company.website && (
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2">
+                  <div className="rounded-lg bg-linear-to-br from-purple-500 to-pink-500 p-2">
                     <Globe className="h-4 w-4 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -204,11 +224,13 @@ export default function ClientCompanyPage() {
                       onClick={(e) => {
                         e.stopPropagation()
                         e.preventDefault()
-                        window.open(company.website, '_blank', 'noopener,noreferrer')
+                        if (company.website) {
+                          window.open(company.website, '_blank', 'noopener,noreferrer')
+                        }
                       }}
                       className="text-sm font-semibold text-indigo-400 hover:underline truncate block cursor-pointer"
                     >
-                      {company.website.replace(/^https?:\/\//, "")}
+                      {company.website ? company.website.replace(/^https?:\/\//, "") : ''}
                     </span>
                   </div>
                 </div>
@@ -218,7 +240,7 @@ export default function ClientCompanyPage() {
             {/* Account Manager */}
             {company.accountManager && (
               <div className="mt-6 flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 border-t border-white/5 pt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-lg font-bold text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500 to-red-500 text-lg font-bold text-white">
                   {company.accountManager.avatar ? (
                     <img src={company.accountManager.avatar} alt={company.accountManager.name} className="h-full w-full rounded-full object-cover" />
                   ) : (
@@ -236,10 +258,10 @@ export default function ClientCompanyPage() {
         </Link>
 
         {/* Client Users Section */}
-        <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10">
+        <div className="group mt-8 rounded-3xl bg-linear-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-300 hover:ring-white/30 hover:shadow-xl hover:shadow-purple-500/10 hover:brightness-105">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
+              <div className="rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-2.5">
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -256,7 +278,7 @@ export default function ClientCompanyPage() {
                 <button
                   key={user.id}
                   onClick={() => handleUserClick(user)}
-                  className="group flex flex-col gap-4 rounded-xl bg-slate-800/50 p-5 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02] text-left"
+                  className="group flex flex-col gap-4 rounded-xl bg-slate-800/50 p-5 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/80 hover:ring-purple-500/50 text-left"
                 >
                   <div className="flex items-center gap-3">
                     {user.avatar ? (
@@ -264,7 +286,7 @@ export default function ClientCompanyPage() {
                         <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
                       </div>
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-xl font-bold text-white ring-2 ring-white/10">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-purple-500 text-xl font-bold text-white ring-2 ring-white/10">
                         {user.name.charAt(0)}
                       </div>
                     )}
@@ -275,7 +297,7 @@ export default function ClientCompanyPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{user.email}</span>
                     </div>
                   </div>
