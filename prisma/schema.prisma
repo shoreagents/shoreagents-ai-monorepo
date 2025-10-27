@@ -569,19 +569,33 @@ model StaffOnboarding {
   tinDocUrl                  String?
   philhealthDocUrl           String?
   pagibigDocUrl              String?
+  resumeUrl                  String?
+  diplomaTorUrl              String?
+  medicalCertUrl             String?
+  dataPrivacyConsentUrl      String?
+  bankAccountDetails         String?
   personalInfoStatus         OnboardingStatus @default(PENDING)
+  resumeStatus               OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
-  documentsStatus            OnboardingStatus @default(PENDING)
+  educationStatus            OnboardingStatus @default(PENDING)
+  medicalStatus              OnboardingStatus @default(PENDING)
+  dataPrivacyStatus          OnboardingStatus @default(PENDING)
   signatureStatus            OnboardingStatus @default(PENDING)
   emergencyContactStatus     OnboardingStatus @default(PENDING)
   personalInfoFeedback       String?
+  resumeFeedback             String?
   govIdFeedback              String?
-  documentsFeedback          String?
+  educationFeedback          String?
+  medicalFeedback            String?
+  dataPrivacyFeedback        String?
   signatureFeedback          String?
   emergencyContactFeedback   String?
   personalInfoVerifiedAt     DateTime?
+  resumeVerifiedAt           DateTime?
   govIdVerifiedAt            DateTime?
-  documentsVerifiedAt        DateTime?
+  educationVerifiedAt        DateTime?
+  medicalVerifiedAt          DateTime?
+  dataPrivacyVerifiedAt      DateTime?
   signatureVerifiedAt        DateTime?
   emergencyContactVerifiedAt DateTime?
   verifiedBy                 String?

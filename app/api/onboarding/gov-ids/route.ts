@@ -126,15 +126,16 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.educationStatus,
     onboarding.medicalStatus,
     onboarding.dataPrivacyStatus,
+    onboarding.documentsStatus,
     onboarding.signatureStatus,
     onboarding.emergencyContactStatus
   ]
 
-  // Each section = 12.5% when APPROVED (8 sections total)
-  // 100% = All sections approved by admin
+  // NEW: Each section = ~11.11% when SUBMITTED or APPROVED (9 sections total)
+  // 100% = All sections filled out by staff
   let totalProgress = 0
   sections.forEach(status => {
-    if (status === "APPROVED") {
+    if (status === "SUBMITTED" || status === "APPROVED") {
       totalProgress += Math.round(100 / sections.length)
     }
   })

@@ -102,11 +102,11 @@ interface OnboardingData {
   signatureStatus: string
   emergencyContactStatus: string
   completionPercent: number
-  isComplete: boolean
   
   // Feedback
   personalInfoFeedback?: string
   govIdFeedback?: string
+  documentsFeedback?: string
   signatureFeedback?: string
   emergencyContactFeedback?: string
 }
@@ -147,32 +147,6 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetchOnboardingData()
   }, [])
-
-  // Check if onboarding is complete and redirect to welcome form
-  useEffect(() => {
-    if (formData.isComplete && formData.completionPercent === 100) {
-      // Check if welcome form is already completed
-      const checkWelcomeForm = async () => {
-        try {
-          const response = await fetch('/api/welcome')
-          if (response.ok) {
-            const data = await response.json()
-            if (data.alreadySubmitted) {
-              // Welcome form already submitted, stay on onboarding page
-              return
-            } else {
-              // Redirect to welcome form
-              router.push('/welcome')
-            }
-          }
-        } catch (error) {
-          console.error('Failed to check welcome form status:', error)
-        }
-      }
-      
-      checkWelcomeForm()
-    }
-  }, [formData.isComplete, formData.completionPercent, router])
 
   // Initialize canvas with white background when draw mode is activated
   useEffect(() => {
@@ -230,23 +204,6 @@ export default function OnboardingPage() {
     }
   }, [formData.signatureUrl])
 
-  // Populate privacy data when formData is loaded and user is on step 6
-  useEffect(() => {
-    if (currentStep === 6 && formData.bankAccountDetails) {
-      try {
-        const bankDetails = JSON.parse(formData.bankAccountDetails)
-        setPrivacyData({
-          dataPrivacyConsent: true, // Assume consent is given if data exists
-          bankName: bankDetails.bankName || '',
-          accountName: bankDetails.accountName || '',
-          accountNumber: bankDetails.accountNumber || ''
-        })
-      } catch (error) {
-        console.error('Error parsing bank account details:', error)
-      }
-    }
-  }, [currentStep, formData.bankAccountDetails])
-
   const fetchOnboardingData = async () => {
     try {
       const response = await fetch("/api/onboarding")
@@ -274,22 +231,21 @@ export default function OnboardingPage() {
           emergencyContactStatus 
         } = data.onboarding
         
-        
-        if (personalInfoStatus !== "APPROVED") {
+        if (personalInfoStatus !== "APPROVED" && personalInfoStatus !== "SUBMITTED") {
           setCurrentStep(1)
-        } else if (resumeStatus !== "APPROVED") {
+        } else if (resumeStatus !== "APPROVED" && resumeStatus !== "SUBMITTED") {
           setCurrentStep(2)
-        } else if (govIdStatus !== "APPROVED") {
+        } else if (govIdStatus !== "APPROVED" && govIdStatus !== "SUBMITTED") {
           setCurrentStep(3)
-        } else if (educationStatus !== "APPROVED") {
+        } else if (educationStatus !== "APPROVED" && educationStatus !== "SUBMITTED") {
           setCurrentStep(4)
-        } else if (medicalStatus !== "APPROVED") {
+        } else if (medicalStatus !== "APPROVED" && medicalStatus !== "SUBMITTED") {
           setCurrentStep(5)
-        } else if (dataPrivacyStatus !== "APPROVED") {
+        } else if (dataPrivacyStatus !== "APPROVED" && dataPrivacyStatus !== "SUBMITTED") {
           setCurrentStep(6)
-        } else if (signatureStatus !== "APPROVED") {
+        } else if (signatureStatus !== "APPROVED" && signatureStatus !== "SUBMITTED") {
           setCurrentStep(7)
-        } else if (emergencyContactStatus !== "APPROVED") {
+        } else if (emergencyContactStatus !== "APPROVED" && emergencyContactStatus !== "SUBMITTED") {
           setCurrentStep(8)
         } else {
           // All steps completed, stay on last step
@@ -580,10 +536,6 @@ export default function OnboardingPage() {
         // Refresh onboarding data to get latest from database
         await fetchOnboardingData()
         setSuccess('Resume uploaded successfully!')
-        // Automatically move to next step after successful upload
-        setTimeout(() => {
-          setCurrentStep(3) // Move to Government IDs step
-        }, 1000)
       } else {
         setError(data.error || 'Failed to upload resume')
       }
@@ -607,17 +559,9 @@ export default function OnboardingPage() {
       
       const data = await response.json()
       if (data.success) {
-        // Update formData directly without calling fetchOnboardingData to avoid step redirection
-        setFormData(prev => ({
-          ...prev,
-          diplomaTorUrl: data.diplomaTorUrl,
-          educationStatus: 'SUBMITTED'
-        }))
+        // Refresh onboarding data to get latest from database
+        await fetchOnboardingData()
         setSuccess('Education document uploaded successfully!')
-        // Move to next step after successful upload
-        setTimeout(() => {
-          setCurrentStep(5) // Move to Medical Certificate step
-        }, 1000)
       } else {
         setError(data.error || 'Failed to upload education document')
       }
@@ -641,17 +585,13 @@ export default function OnboardingPage() {
       
       const data = await response.json()
       if (data.success) {
-        // Update formData directly without calling fetchOnboardingData to avoid step redirection
-        setFormData(prev => ({
-          ...prev,
-          medicalCertUrl: data.medicalCertUrl,
-          medicalStatus: 'SUBMITTED'
-        }))
+        // Refresh onboarding data to get latest from database
+        await fetchOnboardingData()
         setSuccess('Medical certificate uploaded successfully!')
-        // Move to next step after successful upload
+        // Clear success message after 3 seconds
         setTimeout(() => {
-          setCurrentStep(6) // Move to Data Privacy step
-        }, 1000)
+          setSuccess('')
+        }, 3000)
       } else {
         setError(data.error || 'Failed to upload medical certificate')
       }
@@ -678,21 +618,13 @@ export default function OnboardingPage() {
       
       const data = await response.json()
       if (data.success) {
-        // Update formData directly without calling fetchOnboardingData to avoid step redirection
-        setFormData(prev => ({
-          ...prev,
-          bankAccountDetails: JSON.stringify({
-            bankName: privacyData.bankName,
-            accountName: privacyData.accountName,
-            accountNumber: privacyData.accountNumber
-          }),
-          dataPrivacyStatus: 'SUBMITTED'
-        }))
+        // Refresh onboarding data to get latest from database
+        await fetchOnboardingData()
         setSuccess('Data privacy and bank details saved successfully!')
-        // Move to next step after successful save
+        // Clear success message after 3 seconds
         setTimeout(() => {
-          setCurrentStep(7) // Move to Signature step
-        }, 1000)
+          setSuccess('')
+        }, 3000)
       } else {
         setError(data.error || 'Failed to save data privacy details')
       }
@@ -720,29 +652,21 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="max-w-full mx-auto w-full space-y-6 animate-in fade-in duration-700">
+      <div className="max-w-4xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
         {/* Header */}
         <div className="text-center mb-8 mt-12">
           <h1 className="text-4xl font-bold text-white mb-2">
             Welcome to ShoreAgents! <span className="inline-block animate-wave origin-[70%_70%]">👋</span>
           </h1>
-          <p className="text-slate-300 mb-4">
+          <p className="text-slate-300">
             Complete your onboarding to get started
           </p>
-          <Button
-            onClick={() => router.push("/onboarding/status")}
-            variant="outline"
-            className="border-blue-600 text-blue-300 hover:bg-blue-900/20 hover:border-blue-500"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            View Onboarding Status
-          </Button>
         </div>
 
         {/* Progress */}
         <Card className="mb-6 bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
           <CardContent className="py-6">
-            <div className="flex items-center mb-4">
+            <div className="flex justify-between mb-4">
               {STEPS.map((step, index) => {
                 const Icon = step.icon
                 const status = formData[step.field as keyof OnboardingData] as string
@@ -753,54 +677,48 @@ export default function OnboardingPage() {
                 const isClickable = true // Allow navigation to any step
                 
                 return (
-                  <div key={step.id} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center flex-1 min-h-[80px] justify-start">
-                      <button
-                        onClick={() => {
-                          if (isClickable) {
-                            setCurrentStep(step.id)
-                            setError("")
-                            setSuccess("")
-                          }
-                        }}
-                        disabled={!isClickable}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
-                          isApproved
-                            ? "bg-green-600 text-white hover:bg-green-500"
-                            : isCompleted
-                            ? "bg-purple-600 text-white hover:bg-purple-500"
-                            : isRejected
-                            ? "bg-red-600 text-white hover:bg-red-500"
-                            : isActive
-                            ? "bg-purple-600 text-white hover:bg-purple-500"
-                            : "bg-slate-700 text-slate-400 hover:bg-slate-600"
-                        } hover:scale-110 cursor-pointer`}
-                      >
-                        {isApproved ? (
-                          <CheckCircle2 className="h-6 w-6" />
-                        ) : isCompleted ? (
-                          <Icon className="h-5 w-5" />
-                        ) : isRejected ? (
-                          <AlertCircle className="h-6 w-6" />
-                        ) : (
-                          <Icon className="h-5 w-5" />
-                        )}
-                      </button>
-                        <span className="text-xs text-center text-slate-300">
-                          {step.name}
-                        </span>
-                    </div>
-                    {/* Connecting line between steps */}
-                    {index < STEPS.length - 1 && (
-                      <div className="flex-1 h-0.5 bg-slate-600 mx-2 -mt-6"></div>
-                    )}
+                  <div key={step.id} className="flex flex-col items-center flex-1">
+                    <button
+                      onClick={() => {
+                        if (isClickable) {
+                          setCurrentStep(step.id)
+                          setError("")
+                          setSuccess("")
+                        }
+                      }}
+                      disabled={!isClickable}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-200 ${
+                        isApproved
+                          ? "bg-green-600 text-white hover:bg-green-500"
+                          : isCompleted
+                          ? "bg-purple-600 text-white hover:bg-purple-500"
+                          : isRejected
+                          ? "bg-red-600 text-white hover:bg-red-500"
+                          : isActive
+                          ? "bg-purple-600 text-white hover:bg-purple-500"
+                          : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                      } hover:scale-110 cursor-pointer`}
+                    >
+                      {isApproved ? (
+                        <CheckCircle2 className="h-6 w-6" />
+                      ) : isCompleted ? (
+                        <Icon className="h-5 w-5" />
+                      ) : isRejected ? (
+                        <AlertCircle className="h-6 w-6" />
+                      ) : (
+                        <Icon className="h-5 w-5" />
+                      )}
+                    </button>
+                    <span className="text-xs text-center text-slate-300">
+                      {step.name}
+                    </span>
                   </div>
                 )
               })}
             </div>
             <div className="relative">
               <Progress value={formData.completionPercent || 0} className="h-6" />
-              <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white ">
+              <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
                 {formData.completionPercent || 0}% Complete
               </p>
             </div>
@@ -839,11 +757,6 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 1 && formData.personalInfoStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
               {currentStep === 2 && formData.resumeStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -856,74 +769,13 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 2 && formData.resumeStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
-              {currentStep === 3 && formData.govIdStatus === "APPROVED" && (
+              {currentStep === 3 && formData.documentsStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-200 text-sm font-medium">Approved</span>
                 </div>
               )}
-              {currentStep === 3 && formData.govIdStatus === "REJECTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  <span className="text-red-200 text-sm font-medium">Rejected</span>
-                </div>
-              )}
-              {currentStep === 3 && formData.govIdStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
-              {currentStep === 4 && formData.educationStatus === "APPROVED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-green-200 text-sm font-medium">Approved</span>
-                </div>
-              )}
-              {currentStep === 4 && formData.educationStatus === "REJECTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  <span className="text-red-200 text-sm font-medium">Rejected</span>
-                </div>
-              )}
-              {currentStep === 4 && formData.educationStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
-              {currentStep === 5 && formData.medicalStatus === "APPROVED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-green-200 text-sm font-medium">Approved</span>
-                </div>
-              )}
-              {currentStep === 5 && formData.medicalStatus === "REJECTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  <span className="text-red-200 text-sm font-medium">Rejected</span>
-                </div>
-              )}
-              {currentStep === 5 && formData.medicalStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
-              {currentStep === 6 && formData.dataPrivacyStatus === "APPROVED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-green-200 text-sm font-medium">Approved</span>
-                </div>
-              )}
-              {currentStep === 6 && formData.dataPrivacyStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
-              {currentStep === 6 && formData.dataPrivacyStatus === "REJECTED" && (
+              {currentStep === 3 && formData.documentsStatus === "REJECTED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/50 border border-red-700">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
@@ -941,11 +793,6 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 7 && formData.signatureStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
               {currentStep === 8 && formData.emergencyContactStatus === "APPROVED" && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/50 border border-green-700">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -958,15 +805,34 @@ export default function OnboardingPage() {
                   <span className="text-red-200 text-sm font-medium">Rejected</span>
                 </div>
               )}
-              {currentStep === 8 && formData.emergencyContactStatus === "SUBMITTED" && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/50 border border-blue-700">
-                  <span className="text-blue-200 text-sm font-medium">SUBMITTED</span>
-                </div>
-              )}
             </div>
           </CardHeader>
           <CardContent>
-            {/* Feedback Display - Removed duplicate global feedback alerts */}
+            {/* Feedback Display - Full Width */}
+            {currentStep === 1 && formData.personalInfoFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.personalInfoFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 2 && formData.govIdFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.govIdFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
+            {currentStep === 3 && formData.documentsFeedback && (
+              <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
+                <AlertCircle className="h-4 w-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200">
+                  <strong>Admin Feedback:</strong> {formData.documentsFeedback}
+                </AlertDescription>
+              </Alert>
+            )}
             {currentStep === 7 && formData.signatureFeedback && (
               <Alert className="mb-4 bg-yellow-900/50 border-yellow-700 w-full">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
@@ -1161,15 +1027,25 @@ export default function OnboardingPage() {
                   <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-5 w-5 text-red-500" />
-                      <span className="text-red-200">
-                        Resume rejected{formData.resumeFeedback ? ` - ${formData.resumeFeedback}` : ' - please upload a new one'}
-                      </span>
+                      <span className="text-red-200">Resume rejected - please upload a new one</span>
+                    </div>
+                  </div>
+                )}
+
+                {formData.resumeFeedback && (
+                  <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div>
+                        <p className="text-yellow-200 font-medium">Admin Feedback:</p>
+                        <p className="text-yellow-100 text-sm mt-1">{formData.resumeFeedback}</p>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-4">
-                  {formData.resumeUrl && formData.resumeStatus === "APPROVED" ? (
+                  {formData.resumeUrl ? (
                     <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -1185,31 +1061,10 @@ export default function OnboardingPage() {
                         </button>
                       </div>
                     </div>
-                  ) : formData.resumeUrl && formData.resumeStatus === "REJECTED" ? (
-                    <div className="p-4 bg-slate-800/50 border border-slate-600 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-slate-400" />
-                        <span className="text-slate-300">Resume uploaded (pending review)</span>
-                        <button 
-                          onClick={() => {
-                            setImageLoading(true)
-                            setViewFileModal({ url: formData.resumeUrl!, title: "Resume" })
-                          }}
-                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
-                        >
-                          View Resume
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {/* Show upload option when status is not APPROVED */}
-                  {formData.resumeStatus !== "APPROVED" && (
+                  ) : (
                     <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-300 mb-4">
-                        {formData.resumeUrl ? "Replace your resume (PDF format)" : "Upload your resume (PDF format)"}
-                      </p>
+                      <p className="text-slate-300 mb-4">Upload your resume (PDF format)</p>
                       <input
                         type="file"
                         id="resume-upload"
@@ -1233,7 +1088,7 @@ export default function OnboardingPage() {
                         ) : (
                           <>
                             <Upload className="h-4 w-4" />
-                            {formData.resumeUrl ? "Replace File" : "Choose File"}
+                            Choose File
                           </>
                         )}
                       </label>
@@ -1980,20 +1835,29 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-
                 {formData.educationStatus === "REJECTED" && (
                   <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-5 w-5 text-red-500" />
-                      <span className="text-red-200">
-                        Education documents rejected{formData.educationFeedback ? ` - ${formData.educationFeedback}` : ' - please upload new ones'}
-                      </span>
+                      <span className="text-red-200">Education documents rejected - please upload new ones</span>
+                    </div>
+                  </div>
+                )}
+
+                {formData.educationFeedback && (
+                  <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div>
+                        <p className="text-yellow-200 font-medium">Admin Feedback:</p>
+                        <p className="text-yellow-100 text-sm mt-1">{formData.educationFeedback}</p>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-4">
-                  {formData.diplomaTorUrl && formData.educationStatus === "APPROVED" && (
+                  {formData.diplomaTorUrl ? (
                     <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -2009,33 +1873,10 @@ export default function OnboardingPage() {
                         </button>
                       </div>
                     </div>
-                  )}
-
-                  {formData.diplomaTorUrl && formData.educationStatus === "SUBMITTED" && (
-                    <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
-                        <span className="text-blue-200">Education document uploaded - pending admin review</span>
-                        <button 
-                          onClick={() => {
-                            setImageLoading(true)
-                            setViewFileModal({ url: formData.diplomaTorUrl!, title: "Education Document" })
-                          }}
-                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
-                        >
-                          View Document
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Show upload option when status is not APPROVED */}
-                  {formData.educationStatus !== "APPROVED" && (
+                  ) : (
                     <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-300 mb-4">
-                        {formData.diplomaTorUrl ? "Replace your education documents (PDF format)" : "Upload your education documents (PDF format)"}
-                      </p>
+                      <p className="text-slate-300 mb-4">Upload your education documents (PDF format)</p>
                       <input
                         type="file"
                         id="education-upload"
@@ -2053,13 +1894,13 @@ export default function OnboardingPage() {
                       >
                         {uploading.education ? (
                           <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                             Uploading...
                           </>
                         ) : (
                           <>
                             <Upload className="h-4 w-4" />
-                            {formData.diplomaTorUrl ? "Replace File" : "Choose File"}
+                            Choose File
                           </>
                         )}
                       </label>
@@ -2106,14 +1947,23 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-
                 {formData.medicalStatus === "REJECTED" && (
                   <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-5 w-5 text-red-500" />
-                      <span className="text-red-200">
-                        Medical certificate rejected{formData.medicalFeedback ? ` - ${formData.medicalFeedback}` : ' - please get a new one'}
-                      </span>
+                      <span className="text-red-200">Medical certificate rejected - please get a new one</span>
+                    </div>
+                  </div>
+                )}
+
+                {formData.medicalFeedback && (
+                  <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div>
+                        <p className="text-yellow-200 font-medium">Admin Feedback:</p>
+                        <p className="text-yellow-100 text-sm mt-1">{formData.medicalFeedback}</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2133,7 +1983,7 @@ export default function OnboardingPage() {
                 )}
 
                 <div className="space-y-4">
-                  {formData.medicalCertUrl && formData.medicalStatus === "APPROVED" && (
+                  {formData.medicalCertUrl ? (
                     <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -2149,33 +1999,10 @@ export default function OnboardingPage() {
                         </button>
                       </div>
                     </div>
-                  )}
-
-                  {formData.medicalCertUrl && formData.medicalStatus === "SUBMITTED" && (
-                    <div className="p-4 bg-blue-900/30 border border-blue-700 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
-                        <span className="text-blue-200">Medical certificate uploaded - pending admin review</span>
-                        <button 
-                          onClick={() => {
-                            setImageLoading(true)
-                            setViewFileModal({ url: formData.medicalCertUrl!, title: "Medical Certificate" })
-                          }}
-                          className="text-blue-400 hover:text-blue-300 text-sm ml-auto"
-                        >
-                          View Certificate
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Show upload option when status is not APPROVED */}
-                  {formData.medicalStatus !== "APPROVED" && (
+                  ) : (
                     <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-300 mb-4">
-                        {formData.medicalCertUrl ? "Replace your medical certificate (PDF or image format)" : "Upload your medical certificate (PDF or image format)"}
-                      </p>
+                      <p className="text-slate-300 mb-4">Upload your medical certificate (PDF or image format)</p>
                       <input
                         type="file"
                         id="medical-upload"
@@ -2199,7 +2026,7 @@ export default function OnboardingPage() {
                         ) : (
                           <>
                             <Upload className="h-4 w-4" />
-                            {formData.medicalCertUrl ? "Replace File" : "Choose File"}
+                            Choose File
                           </>
                         )}
                       </label>
@@ -2233,10 +2060,7 @@ export default function OnboardingPage() {
                 <div className="text-center">
                   <h3 className="text-xl font-semibold text-white mb-2">Data Privacy & Bank Details</h3>
                   <p className="text-slate-300 text-sm mb-6">
-                    {formData.dataPrivacyStatus === "SUBMITTED" 
-                      ? "Update your consent and bank account information for payroll" 
-                      : "Please provide your consent and bank account information for payroll"
-                    }
+                    Please provide your consent and bank account information for payroll
                   </p>
                 </div>
 
@@ -2248,7 +2072,6 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 )}
-
 
                 {formData.dataPrivacyStatus === "REJECTED" && (
                   <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg">
@@ -2271,44 +2094,6 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* Show submitted data when status is SUBMITTED */}
-                {formData.dataPrivacyStatus === "SUBMITTED" && formData.bankAccountDetails && (
-                  <div className="p-4 bg-slate-800 rounded-lg">
-                    <h4 className="text-white font-medium mb-3">Submitted Bank Account Details</h4>
-                    <div className="space-y-2 text-sm">
-                      {(() => {
-                        try {
-                          const bankDetails = JSON.parse(formData.bankAccountDetails)
-                          return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <span className="text-slate-400">Bank Name:</span>
-                                <p className="text-white">{bankDetails.bankName}</p>
-                              </div>
-                              <div>
-                                <span className="text-slate-400">Account Holder:</span>
-                                <p className="text-white">{bankDetails.accountName}</p>
-                              </div>
-                              <div className="md:col-span-2">
-                                <span className="text-slate-400">Account Number:</span>
-                                <p className="text-white font-mono">{bankDetails.accountNumber}</p>
-                              </div>
-                              <div className="md:col-span-2">
-                                <span className="text-slate-400">Submitted:</span>
-                                <p className="text-white">{new Date(bankDetails.consentedAt).toLocaleString()}</p>
-                              </div>
-                            </div>
-                          )
-                        } catch (error) {
-                          return <p className="text-slate-300">Bank details submitted (unable to parse details)</p>
-                        }
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* Show form when status is not APPROVED (allows editing when SUBMITTED) */}
-                {formData.dataPrivacyStatus !== "APPROVED" && (
                 <div className="space-y-6">
                   {/* Data Privacy Consent */}
                   <div className="p-4 bg-slate-800 rounded-lg">
@@ -2376,13 +2161,12 @@ export default function OnboardingPage() {
                       {saving ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          {formData.dataPrivacyStatus === "SUBMITTED" ? "Updating..." : "Saving..."}
+                          Saving...
                         </>
-                      ) : (formData.dataPrivacyStatus === "SUBMITTED" ? "Update Details" : "Save Details")}
+                      ) : "Save Details"}
                     </Button>
                   </div>
                 </div>
-                )}
 
                 <div className="flex gap-4 mt-8">
                   <Button
@@ -2760,7 +2544,7 @@ export default function OnboardingPage() {
       </Dialog>
 
       {/* Return to Dashboard */}
-      <div className="max-w-full mx-auto w-full text-center mt-8">
+      <div className="max-w-4xl mx-auto w-full text-center mt-8">
         <Button
           onClick={() => router.push("/")}
           variant="ghost"
