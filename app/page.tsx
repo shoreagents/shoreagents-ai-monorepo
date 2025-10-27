@@ -13,7 +13,8 @@ export default async function Home() {
 
   // Verify user exists in StaffUser table
   const staffUser = await prisma.staffUser.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    include: { offboarding: true }
   })
 
   if (!staffUser) {
@@ -41,5 +42,5 @@ export default async function Home() {
     redirect("/login/staff")
   }
 
-  return <GamifiedDashboard />
+  return <GamifiedDashboard offboardingData={staffUser?.offboarding} />
 }

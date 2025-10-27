@@ -21,7 +21,7 @@ interface OnboardingStatus {
   isComplete: boolean
 }
 
-export default function GamifiedDashboard() {
+export default function GamifiedDashboard({ offboardingData }: { offboardingData?: any }) {
   const [data, setData] = useState<DashboardData>({
     tasks: [],
     reviews: [],
@@ -302,6 +302,34 @@ export default function GamifiedDashboard() {
                     }`}
                     style={{ width: `${onboardingStatus.completionPercent}%` }}
                   />
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Offboarding Banner */}
+        {offboardingData && !offboardingData.exitInterviewCompleted && (
+          <Link href="/offboarding" className="block mb-6">
+            <div className="cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] border-yellow-500/50 bg-linear-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500 hover:shadow-yellow-500/30">
+              <div className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="shrink-0 rounded-full p-2.5 bg-yellow-500">
+                    <AlertCircle className="h-5 w-5 text-yellow-900" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold text-white mb-0.5">
+                      Offboarding Initiated
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-tight">
+                      Your last working day is {new Date(offboardingData.lastWorkingDate).toLocaleDateString()}. Please complete your exit form.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap transition-colors bg-yellow-500 text-yellow-900 hover:bg-yellow-400">
+                    Complete Exit Form →
+                  </div>
                 </div>
               </div>
             </div>

@@ -24,6 +24,7 @@ import {
   Building2,
   ClipboardCheck,
   Settings,
+  UserMinus,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { NotificationBadge } from "@/components/notification-badge"
@@ -42,6 +43,7 @@ const navItems = [
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
   { href: "/activity", icon: FileText, label: "The Feed" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+  { href: "/offboarding", icon: UserMinus, label: "Offboarding" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ]
 
