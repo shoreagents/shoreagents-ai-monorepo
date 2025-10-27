@@ -13,10 +13,12 @@ import {
   Phone,
   MapPin,
   Clock,
-  Hash
+  Hash,
+  UserMinus
 } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import OffboardButton from "./offboard-button"
 
 async function getStaffUser(id: string) {
   try {
@@ -40,6 +42,7 @@ async function getStaffUser(id: string) {
             completionPercent: true,
           },
         },
+        offboarding: true,
         profile: {
           select: {
             phone: true,
@@ -104,11 +107,21 @@ export default async function StaffDetailPage({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-3xl font-semibold text-foreground">Staff Profile</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View and manage staff member details
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-foreground">Staff Profile</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              View and manage staff member details
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            {!staff.offboarding && (
+              <OffboardButton staffUserId={staff.id} />
+            )}
+            {staff.offboarding && (
+              <Badge variant="warning" className="ml-4">Offboarding in Progress</Badge>
+            )}
+          </div>
         </div>
       </div>
 

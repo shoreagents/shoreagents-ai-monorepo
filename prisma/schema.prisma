@@ -64,6 +64,8 @@ model StaffUser {
   tickets                Ticket[]
   timeEntries            TimeEntry[]
   welcomeForm            StaffWelcomeForm?
+  active                 Boolean              @default(true)
+  offboarding            StaffOffboarding?
 
   @@map("staff_users")
 }
@@ -985,4 +987,48 @@ model StaffWelcomeForm {
   staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_welcome_forms")
+}
+
+model StaffOffboarding {
+  id                     String              @id @default(uuid())
+  staffUserId            String              @unique
+  initiatedBy            String
+  reason                 OffboardingReason
+  reasonDetails          String?
+  lastWorkingDate        DateTime
+  offboardingNotes       String?
+  status                 OffboardingStatus   @default(INITIATED)
+  exitInterviewCompleted Boolean             @default(false)
+  exitInterviewData      String?
+  equipmentReturned      Boolean             @default(false)
+  accessRevoked          Boolean             @default(false)
+  finalPaymentProcessed  Boolean             @default(false)
+  clearanceIssued        Boolean             @default(false)
+  clearanceDate          DateTime?
+  clearanceSignatureUrl  String?
+  createdAt              DateTime            @default(now())
+  completedAt            DateTime?
+  updatedAt              DateTime            @updatedAt
+  staffUser              StaffUser           @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  
+  @@index([status])
+  @@index([lastWorkingDate])
+  @@map("staff_offboarding")
+}
+
+enum OffboardingReason {
+  RESIGNATION
+  TERMINATION
+  END_OF_CONTRACT
+  MUTUAL_AGREEMENT
+  RETIREMENT
+  OTHER
+}
+
+enum OffboardingStatus {
+  INITIATED
+  PENDING_EXIT
+  PROCESSING
+  COMPLETED
+  CANCELLED
 }
