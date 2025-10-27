@@ -577,6 +577,7 @@ model StaffOnboarding {
   personalInfoStatus         OnboardingStatus @default(PENDING)
   resumeStatus               OnboardingStatus @default(PENDING)
   govIdStatus                OnboardingStatus @default(PENDING)
+  documentsStatus            OnboardingStatus @default(PENDING)
   educationStatus            OnboardingStatus @default(PENDING)
   medicalStatus              OnboardingStatus @default(PENDING)
   dataPrivacyStatus          OnboardingStatus @default(PENDING)
@@ -585,6 +586,7 @@ model StaffOnboarding {
   personalInfoFeedback       String?
   resumeFeedback             String?
   govIdFeedback              String?
+  documentsFeedback          String?
   educationFeedback          String?
   medicalFeedback            String?
   dataPrivacyFeedback        String?
@@ -593,6 +595,7 @@ model StaffOnboarding {
   personalInfoVerifiedAt     DateTime?
   resumeVerifiedAt           DateTime?
   govIdVerifiedAt            DateTime?
+  documentsVerifiedAt        DateTime?
   educationVerifiedAt        DateTime?
   medicalVerifiedAt          DateTime?
   dataPrivacyVerifiedAt      DateTime?
@@ -603,23 +606,6 @@ model StaffOnboarding {
   completionPercent          Int              @default(0)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
-  educationFeedback          String?
-  educationStatus            OnboardingStatus @default(PENDING)
-  educationVerifiedAt        DateTime?
-  medicalCertUrl             String?
-  medicalFeedback            String?
-  medicalStatus              OnboardingStatus @default(PENDING)
-  medicalVerifiedAt          DateTime?
-  resumeFeedback             String?
-  resumeStatus               OnboardingStatus @default(PENDING)
-  resumeUrl                  String?
-  resumeVerifiedAt           DateTime?
-  bankAccountDetails         String?
-  dataPrivacyConsentUrl      String?
-  dataPrivacyFeedback        String?
-  dataPrivacyStatus          OnboardingStatus @default(PENDING)
-  dataPrivacyVerifiedAt      DateTime?
-  diplomaTorUrl              String?
   staffUser                  StaffUser        @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_onboarding")
