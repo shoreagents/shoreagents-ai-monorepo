@@ -1,12 +1,26 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { CheckCircle2, Building2, Briefcase } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+
+interface JobAcceptanceData {
+  id: string
+  position: string
+  candidateEmail: string
+  candidatePhone: string | null
+  company: {
+    id: string
+    companyName: string
+  }
+}
 
 export default function StaffSignUpPage() {
   const [name, setName] = useState("")
@@ -16,7 +30,40 @@ export default function StaffSignUpPage() {
   const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [jobAcceptanceId, setJobAcceptanceId] = useState<string | null>(null)
+  const [jobAcceptance, setJobAcceptance] = useState<JobAcceptanceData | null>(null)
+  const [loadingJobAcceptance, setLoadingJobAcceptance] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Check for jobAcceptanceId on mount
+  useEffect(() => {
+    const jai = searchParams.get("jobAcceptanceId")
+    if (jai) {
+      setJobAcceptanceId(jai)
+      fetchJobAcceptance(jai)
+    }
+  }, [searchParams])
+
+  async function fetchJobAcceptance(id: string) {
+    setLoadingJobAcceptance(true)
+    try {
+      const response = await fetch(`/api/auth/job-acceptance/${id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setJobAcceptance(data.jobAcceptance)
+        setEmail(data.jobAcceptance.candidateEmail)
+        setPhone(data.jobAcceptance.candidatePhone || "")
+      } else {
+        setError(data.error || "Failed to fetch job acceptance details")
+      }
+    } catch (err) {
+      setError("Failed to fetch job acceptance details")
+    } finally {
+      setLoadingJobAcceptance(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,6 +96,7 @@ export default function StaffSignUpPage() {
           email,
           password,
           phone,
+          jobAcceptanceId, // Include jobAcceptanceId if present
         }),
       })
 
@@ -58,8 +106,27 @@ export default function StaffSignUpPage() {
         throw new Error(data.error || "Sign up failed")
       }
 
-      // Success - redirect to login
-      router.push("/login/staff?registered=true")
+      // Success - redirect based on jobAcceptanceId
+      if (jobAcceptanceId) {
+        // User came from job acceptance - sign them in and go to contract
+        // Sign in using next-auth
+        const signInResult = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        })
+        
+        if (signInResult?.ok) {
+          // Redirect to contract page after successful signin
+          window.location.href = "/contract"
+        } else {
+          // If signin fails, redirect to login
+          router.push("/login/staff")
+        }
+      } else {
+        // Regular signup - go to login
+        router.push("/login/staff?registered=true")
+      }
     } catch (err: any) {
       setError(err.message || "Sign up failed")
       setLoading(false)
@@ -76,6 +143,39 @@ export default function StaffSignUpPage() {
           <h1 className="text-3xl font-bold text-white mb-2">Staff Portal</h1>
           <p className="text-slate-400">Join as BPO Worker</p>
         </div>
+
+        {/* Congratulations Banner */}
+        {jobAcceptance && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg border border-green-500">
+            <div className="flex items-start gap-4">
+              <CheckCircle2 className="h-8 w-8 text-white mt-1 flex-shrink-0" />
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white mb-2">
+                  🎉 Congratulations! You've Been Hired!
+                </h2>
+                <div className="space-y-2 text-white/90">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="font-medium">Position:</span>
+                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                      {jobAcceptance.position}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    <span className="font-medium">Company:</span>
+                    <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                      {jobAcceptance.company.companyName}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-sm text-white/80 mt-3">
+                  Complete your signup to get started with your new role!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -102,7 +202,14 @@ export default function StaffSignUpPage() {
                 placeholder="john@example.com"
                 className="mt-2 bg-slate-900/50 border-slate-600 text-white"
                 required
+                readOnly={!!jobAcceptance} // Read-only if from job acceptance
               />
+              {jobAcceptance && (
+                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Pre-filled from job acceptance
+                </p>
+              )}
             </div>
 
             {/* Password */}
