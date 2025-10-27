@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     console.log(`🏢 Company: ${clientUser.company.companyName} (ID: ${clientUser.company.id})`)
 
     // Get all staff users for this client's company
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: {
         companyId: clientUser.company.id
       },
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         
         if (shouldCreate) {
           // Check if this review type already exists
-          const exists = await prisma.review.findFirst({
+          const exists = await prisma.reviews.findFirst({
             where: {
               staffUserId: staff.id,
               type: type,
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       const dueDate = getReviewDueDate(startDate, reviewType)
       const evaluationPeriod = `Day 1 to Day ${daysSinceStart}`
 
-      const review = await prisma.review.create({
+      const review = await prisma.reviews.create({
         data: {
           staffUserId: staff.id,
           type: reviewType,

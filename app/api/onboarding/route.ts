@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import crypto from "crypto"
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,10 +12,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get staff user with onboarding
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
-        onboarding: true
+        staff_onboarding: true
       }
     })
 
@@ -23,21 +24,23 @@ export async function GET(req: NextRequest) {
     }
 
     // If no onboarding exists, create one with pre-filled data from signup
-    if (!staffUser.onboarding) {
-      const onboarding = await prisma.staffOnboarding.create({
+    if (!staffUser.staff_onboarding) {
+      const onboarding = await prisma.staff_onboarding.create({
         data: {
+          id: crypto.randomUUID(),
           staffUserId: staffUser.id,
           email: staffUser.email,
           // Parse name if possible
           firstName: staffUser.name.split(' ')[0] || staffUser.name,
           lastName: staffUser.name.split(' ').slice(1).join(' ') || '',
+          updatedAt: new Date()
         }
       })
       
       return NextResponse.json({ onboarding })
     }
 
-    return NextResponse.json({ onboarding: staffUser.onboarding })
+    return NextResponse.json({ onboarding: staffUser.staff_onboarding })
 
   } catch (error) {
     console.error("Onboarding fetch error:", error)

@@ -139,12 +139,12 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
           </div>
 
           {/* Assigned Manager (for Staff tickets) or Account Manager (for Client tickets) */}
-          {ticket.managementUser && (
+          {ticket.management_users && (
             <div className="relative group/assigned">
               <Avatar className="h-8 w-8 border-2 border-indigo-500/50 shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-500/20">
-                <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
+                <AvatarImage src={ticket.management_users.avatar} alt={ticket.management_users.name} />
                 <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-bold">
-                  {ticket.managementUser.name
+                  {ticket.management_users.name
                     .split(" ")
                     .map((n) => n[0])
                     .join("")
@@ -153,11 +153,11 @@ export default function ClientTicketCard({ ticket, onClick }: ClientTicketCardPr
                 </AvatarFallback>
               </Avatar>
                <div className="absolute -top-12 -right-2 px-3 py-1.5 bg-black/95 text-white text-xs rounded shadow-lg opacity-0 group-hover/assigned:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[9999] min-w-max">
-                 Assigned to: {ticket.managementUser.name}
+                 Assigned to: {ticket.management_users.name}
                </div>
             </div>
           )}
-          {!ticket.managementUser && ticket.accountManager && (
+          {!ticket.management_users && ticket.accountManager && (
             <div className="relative group/assigned">
               <Avatar className="h-8 w-8 border-2 border-purple-500/50 shadow-lg shadow-purple-500/50 ring-2 ring-purple-500/20">
                 <AvatarImage src={ticket.accountManager.avatar} alt={ticket.accountManager.name} />

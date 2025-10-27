@@ -30,7 +30,7 @@ interface Review {
   dueDate: string
   submittedDate?: string
   evaluationPeriod: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -214,16 +214,16 @@ export default function ClientReviewsPage() {
                       {/* Staff Info */}
                       <div className="flex items-center gap-4">
                         <Avatar className="h-14 w-14 border-2 border-purple-200 ring-2 ring-purple-50">
-                          <AvatarImage src={review.staffUser.avatar} />
+                          <AvatarImage src={review.staff_users.avatar} />
                           <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white font-semibold">
-                            {review.staffUser.name.split(" ").map(n => n[0]).join("")}
+                            {review.staff_users.name.split(" ").map(n => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0 relative">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-gray-900 truncate">{review.staffUser.name}</h3>
-                              <p className="text-sm text-gray-600 truncate">{review.staffUser.email}</p>
+                              <h3 className="font-bold text-gray-900 truncate">{review.staff_users.name}</h3>
+                              <p className="text-sm text-gray-600 truncate">{review.staff_users.email}</p>
                             </div>
                             <Badge className={`${typeBadge.bgColor} ${typeBadge.color} text-xs font-semibold px-2 py-1 ml-2 flex-shrink-0`}>
                               {typeBadge.icon} {typeBadge.label}
@@ -367,13 +367,13 @@ export default function ClientReviewsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 border-2 border-green-200">
-                            <AvatarImage src={review.staffUser.avatar} />
+                            <AvatarImage src={review.staff_users.avatar} />
                             <AvatarFallback className="bg-gradient-to-br from-green-600 to-emerald-600 text-white">
-                              {review.staffUser.name.split(" ").map(n => n[0]).join("")}
+                              {review.staff_users.name.split(" ").map(n => n[0]).join("")}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{review.staffUser.name}</h3>
+                            <h3 className="font-semibold text-gray-900">{review.staff_users.name}</h3>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className={`${typeBadge.bgColor} ${typeBadge.color}`}>
                                 {typeBadge.icon} {typeBadge.label}

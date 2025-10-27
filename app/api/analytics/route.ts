@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    const metrics = await prisma.performanceMetric.findMany({
+    const metrics = await prisma.performance_metrics.findMany({
       where: {
         staffUserId: staffUser.id,
         date: {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todayMetric = await prisma.performanceMetric.findFirst({
+    const todayMetric = await prisma.performance_metrics.findFirst({
       where: {
         staffUserId: staffUser.id,
         date: {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate total screenshot count (sum of all clipboardActions)
-    const allMetrics = await prisma.performanceMetric.findMany({
+    const allMetrics = await prisma.performance_metrics.findMany({
       where: {
         staffUserId: staffUser.id
       },
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const existingMetric = await prisma.performanceMetric.findFirst({
+    const existingMetric = await prisma.performance_metrics.findFirst({
       where: {
         staffUserId: staffUser.id,
         date: {
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     if (existingMetric) {
       // Update existing metric
-      metric = await prisma.performanceMetric.update({
+      metric = await prisma.performance_metrics.update({
         where: { id: existingMetric.id },
         data: {
           mouseMovements: mouseMovements ?? existingMetric.mouseMovements,
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new metric
-      metric = await prisma.performanceMetric.create({
+      metric = await prisma.performance_metrics.create({
         data: {
           staffUserId: staffUser.id,
           mouseMovements: mouseMovements || 0,

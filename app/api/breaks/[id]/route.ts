@@ -16,7 +16,7 @@ async function endBreak(
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -31,7 +31,7 @@ async function endBreak(
     }
 
     // Find the break
-    const existingBreak = await prisma.break.findUnique({
+    const existingBreak = await prisma.breaks.findUnique({
       where: { id: breakId },
     })
 
@@ -60,7 +60,7 @@ async function endBreak(
     const duration = Math.floor(actualBreakDurationMs / 60000) // minutes
 
     // Update the break with end time and duration
-    const updatedBreak = await prisma.break.update({
+    const updatedBreak = await prisma.breaks.update({
       where: { id: breakId },
       data: {
         actualEnd: endTime,
@@ -103,7 +103,7 @@ export async function GET(
     const { id: breakId } = await params
 
     // Find the break
-    const breakRecord = await prisma.break.findUnique({
+    const breakRecord = await prisma.breaks.findUnique({
       where: { id: breakId }
     })
 

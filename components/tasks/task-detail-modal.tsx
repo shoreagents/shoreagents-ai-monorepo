@@ -22,7 +22,7 @@ interface Task {
   clientUser?: { id: string; name: string; email: string; avatar: string | null } | null
   staffUser?: { id: string; name: string; email: string; avatar: string | null; role: string } | null
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string
@@ -102,9 +102,9 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
   // Get all assigned staff
   const allAssignedStaff = []
   if (task.assignedStaff) {
-    allAssignedStaff.push(...task.assignedStaff.map(a => a.staffUser))
-  } else if (task.staffUser) {
-    allAssignedStaff.push(task.staffUser)
+    allAssignedStaff.push(...task.assignedStaff.map(a => a.staff_users))
+  } else if (task.staff_users) {
+    allAssignedStaff.push(task.staff_users)
   }
 
   // Fetch responses and subtasks on mount
@@ -718,7 +718,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Created By - Client */}
-            {task.clientUser && (
+            {task.client_users && (
               <>
                 <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
                   isDarkTheme 
@@ -728,9 +728,9 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                   <Avatar className={`h-10 w-10 ${
                     isDarkTheme ? "ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/50" : "border-2 border-blue-400"
                   }`}>
-                    <AvatarImage src={task.clientUser.avatar || undefined} alt={task.clientUser.name} />
+                    <AvatarImage src={task.client_users.avatar || undefined} alt={task.client_users.name} />
                     <AvatarFallback className={isDarkTheme ? "bg-blue-600 text-white" : "bg-blue-200 text-blue-700"}>
-                      {task.clientUser.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                      {task.client_users.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -738,7 +738,7 @@ export default function TaskDetailModal({ task, onClose, isDarkTheme = false, on
                       👔 Created by Client
                     </p>
                     <p className={`text-sm font-bold ${isDarkTheme ? "text-blue-200" : "text-blue-900"}`}>
-                      {task.clientUser.name}
+                      {task.client_users.name}
                     </p>
                   </div>
                 </div>

@@ -42,13 +42,24 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Fetching candidates with filters:', filters)
 
-    // Fetch candidates from BPOC database
-    const candidates = await getCandidates(filters)
+    // Fetch candidates from BPOC database with graceful error handling
+    let candidates = []
+    try {
+      candidates = await getCandidates(filters)
+      console.log(`✅ Found ${candidates.length} candidates`)
+    } catch (dbError) {
+      console.warn('⚠️ BPOC database unavailable, returning empty candidates list:', dbError instanceof Error ? dbError.message : 'Unknown error')
+      // Return empty list instead of error - allows UI to still function
+      return NextResponse.json({
+        success: true,
+        candidates: [],
+        count: 0,
+        warning: 'BPOC database temporarily unavailable. Please try again later.'
+      })
+    }
 
     // Anonymize all candidates (remove personal details)
     const anonymizedCandidates = candidates.map(anonymizeCandidateForList)
-
-    console.log(`✅ Found ${anonymizedCandidates.length} candidates`)
 
     return NextResponse.json({
       success: true,

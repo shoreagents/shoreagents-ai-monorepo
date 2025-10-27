@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Check if user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -21,7 +21,7 @@ export async function GET() {
     }
 
     // Get all management users with full info
-    const management = await prisma.managementUser.findMany({
+    const management = await prisma.management_users.findMany({
       select: {
         id: true,
         name: true,

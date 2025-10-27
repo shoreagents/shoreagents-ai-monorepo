@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     if (staffUserId) {
       // If staffUserId is provided directly (from Electron app), use it
-      staffUser = await prisma.staffUser.findUnique({
+      staffUser = await prisma.staff_users.findUnique({
         where: { id: staffUserId }
       })
     } else {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }
 
-      staffUser = await prisma.staffUser.findUnique({
+      staffUser = await prisma.staff_users.findUnique({
         where: { authUserId: session.user.id }
       })
     }
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Screenshots API] Looking for metric between ${today.toISOString()} and ${tomorrow.toISOString()}`)
 
     // Find or create today's performance metric
-    const existingMetric = await prisma.performanceMetric.findFirst({
+    const existingMetric = await prisma.performance_metrics.findFirst({
       where: {
         staffUserId: staffUser.id,
         date: {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       `
       
       // Get the updated metric for the response
-      const updated = await prisma.performanceMetric.findUnique({
+      const updated = await prisma.performance_metrics.findUnique({
         where: { id: existingMetric.id }
       })
       console.log(`[Screenshots API] Incremented clipboardActions for metric ${existingMetric.id}: ${existingMetric.clipboardActions} → ${updated?.clipboardActions || 0}`)
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Create new metric with clipboardActions = 1
-      const newMetric = await prisma.performanceMetric.create({
+      const newMetric = await prisma.performance_metrics.create({
         data: {
           staffUserId: staffUser.id,
           date: today,
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total screenshot count (sum of all clipboardActions)
-    const metrics = await prisma.performanceMetric.findMany({
+    const metrics = await prisma.performance_metrics.findMany({
       where: {
         staffUserId: staffUser.id
       },

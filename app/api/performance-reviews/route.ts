@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Get reviews - only UNDER_REVIEW and COMPLETED
     // Staff cannot see PENDING or SUBMITTED reviews
-    const reviews = await prisma.review.findMany({
+    const reviews = await prisma.reviews.findMany({
       where: {
         staffUserId: staffUser.id,
         status: {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch reviewer names from ClientUser table
     const reviewerEmails = [...new Set(reviews.map(r => r.reviewer))]
-    const clientUsers = await prisma.clientUser.findMany({
+    const clientUsers = await prisma.client_users.findMany({
       where: {
         email: { in: reviewerEmails }
       },
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch admin reviewer names from ManagementUser table
     const adminReviewerEmails = [...new Set(reviews.map(r => r.reviewedBy).filter(Boolean))]
-    const managementUsers = await prisma.managementUser.findMany({
+    const managementUsers = await prisma.management_users.findMany({
       where: {
         email: { in: adminReviewerEmails }
       },

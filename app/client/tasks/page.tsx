@@ -30,7 +30,7 @@ interface Task {
     avatar: string | null
   } | null
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string

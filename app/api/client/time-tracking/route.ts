@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const staffId = searchParams.get('staffId')
 
     // Try to get client via ClientUser table
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all staff assigned to this company
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: { 
         companyId: clientUser.company.id
       },
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         profile: {
           select: {
             currentRole: true,
-            workSchedule: true,
+            work_schedules: true,
             startDate: true,
             employmentStatus: true
           }
@@ -88,10 +88,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch time entries with breaks
-    const timeEntries = await prisma.timeEntry.findMany({
+    const timeEntries = await prisma.time_entries.findMany({
       where: whereClause,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

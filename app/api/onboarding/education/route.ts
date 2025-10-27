@@ -19,16 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Find staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
-    if (!staffUser.onboarding) {
+    if (!staffUser.staff_onboarding) {
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
 
@@ -72,13 +72,41 @@ export async function POST(request: NextRequest) {
     const educationUrl = urlData.publicUrl
 
     // Update onboarding record
-    await prisma.staffOnboarding.update({
+    await prisma.staff_onboarding.update({
       where: { staffUserId: staffUser.id },
       data: {
         diplomaTorUrl: educationUrl,
         educationStatus: 'SUBMITTED'
       }
     })
+
+    // Calculate completion percentage
+    const onboardingId = staffUser.staff_onboarding.id
+    const updatedOnboarding = await prisma.staff_onboarding.findUnique({
+      where: { id: onboardingId }
+    })
+
+    if (updatedOnboarding) {
+      const totalSteps = 8
+      let completedSteps = 0
+
+      if (updatedOnboarding.personalInfoStatus === 'SUBMITTED' || updatedOnboarding.personalInfoStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.resumeStatus === 'SUBMITTED' || updatedOnboarding.resumeStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.govIdStatus === 'SUBMITTED' || updatedOnboarding.govIdStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.educationStatus === 'SUBMITTED' || updatedOnboarding.educationStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.medicalStatus === 'SUBMITTED' || updatedOnboarding.medicalStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.dataPrivacyStatus === 'SUBMITTED' || updatedOnboarding.dataPrivacyStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.signatureStatus === 'SUBMITTED' || updatedOnboarding.signatureStatus === 'APPROVED') completedSteps++
+      if (updatedOnboarding.emergencyContactStatus === 'SUBMITTED' || updatedOnboarding.emergencyContactStatus === 'APPROVED') completedSteps++
+
+      const totalProgress = Math.floor((completedSteps / totalSteps) * 100)
+      const completionPercent = Math.min(totalProgress, 100)
+
+      await prisma.staff_onboarding.update({
+        where: { id: onboardingId },
+        data: { completionPercent }
+      })
+    }
 
     console.log(`✅ [ONBOARDING] Education document uploaded for staff: ${staffUser.name}`)
 

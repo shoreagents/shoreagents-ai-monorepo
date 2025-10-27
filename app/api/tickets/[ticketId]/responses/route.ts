@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Check if ticket exists
-    const ticket = await prisma.ticket.findUnique({
+    const ticket = await prisma.tickets.findUnique({
       where: { id: ticketId },
     })
 
@@ -34,15 +34,15 @@ export async function POST(
     }
 
     // Determine if user is staff, management, or client
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -63,7 +63,7 @@ export async function POST(
       attachments: attachments || []
     })
     
-    const response = await prisma.ticketResponse.create({
+    const response = await prisma.ticket_responses.create({
       data: {
         ticketId,
         message,
@@ -74,7 +74,7 @@ export async function POST(
         attachments: attachments || [],
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -83,7 +83,7 @@ export async function POST(
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -92,7 +92,7 @@ export async function POST(
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,

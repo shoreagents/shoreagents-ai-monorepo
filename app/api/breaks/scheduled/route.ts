@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find today's active time entry
-    const activeTimeEntry = await prisma.timeEntry.findFirst({
+    const activeTimeEntry = await prisma.time_entries.findFirst({
       where: {
         staffUserId: staffUser.id,
         clockOut: null,
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch ALL breaks for this time entry (both scheduled and manual)
-    const breaks = await prisma.break.findMany({
+    const breaks = await prisma.breaks.findMany({
       where: {
         timeEntryId: activeTimeEntry.id,
       },

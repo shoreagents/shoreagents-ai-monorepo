@@ -94,8 +94,8 @@ export default function TicketCard({ ticket, isDragging, onClick }: TicketCardPr
 
   // Determine which user to show
   // Priority: Show CLIENT if exists (ticket FOR them), otherwise creator
-  const displayUser = ticket.clientUser || ticket.staffUser || ticket.managementUser
-  const assignedTo = ticket.managementUser // Who manages this ticket
+  const displayUser = ticket.client_users || ticket.staff_users || ticket.management_users
+  const assignedTo = ticket.management_users // Who manages this ticket
   
   const initials = displayUser?.name
     ?.split(" ")

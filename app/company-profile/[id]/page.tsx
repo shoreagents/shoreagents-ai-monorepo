@@ -37,7 +37,7 @@ async function getCompanyDetails(companyId: string) {
         staffUsers: {
           include: {
             profile: true,
-            gamificationProfile: true,
+            gamification_profiles: true,
           },
         },
         accountManager: {

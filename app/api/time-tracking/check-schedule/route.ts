@@ -14,17 +14,17 @@ export async function GET(request: NextRequest) {
     const today = now.toLocaleDateString('en-US', { weekday: 'long' })
     
     // Get today's work schedule
-    const workSchedule = await prisma.workSchedule.findFirst({
+    const workSchedule = await prisma.work_schedules.findFirst({
       where: {
-        profile: { staffUserId: staffUser.id },
+        staff_profiles: { staffUserId: staffUser.id },
         dayOfWeek: today
       },
-      include: { profile: true }
+      include: { staff_profiles: true }
     })
     
     if (!workSchedule || !workSchedule.endTime) {
       return NextResponse.json({ 
-        workSchedule: null,
+        work_schedules: null,
         message: "No schedule found for today" 
       })
     }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
         console.error("Invalid time format:", workSchedule.endTime)
         return NextResponse.json({ 
-          workSchedule: null,
+          work_schedules: null,
           message: "Invalid schedule time format" 
         })
       }
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       scheduledEndTime.setHours(hours, minutes, 0, 0)
       
       return NextResponse.json({
-        workSchedule: {
+        work_schedules: {
           dayOfWeek: workSchedule.dayOfWeek,
           startTime: workSchedule.startTime,
           endTime: scheduledEndTime.toISOString(),
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     } catch (parseError) {
       console.error("Error parsing end time:", parseError)
       return NextResponse.json({ 
-        workSchedule: null,
+        work_schedules: null,
         message: "Error parsing schedule time" 
       })
     }

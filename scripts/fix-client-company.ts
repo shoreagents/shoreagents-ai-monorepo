@@ -7,7 +7,7 @@ async function fixClientCompany() {
     const correctCompanyId = '44d8847b-41b3-4d25-ab06-e658a5575694'
     
     // Update Sarah Johnson's client user to use the correct company
-    const updated = await prisma.clientUser.update({
+    const updated = await prisma.client_users.update({
       where: { email: 'client@shoreagents.com' },
       data: { companyId: correctCompanyId },
       include: { company: true }
@@ -21,7 +21,7 @@ async function fixClientCompany() {
     })
     
     // Verify staff members in this company
-    const staff = await prisma.staffUser.findMany({
+    const staff = await prisma.staff_users.findMany({
       where: { companyId: correctCompanyId },
       select: { id: true, name: true, email: true }
     })

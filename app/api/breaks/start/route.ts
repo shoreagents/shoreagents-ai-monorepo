@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const { breakId, type, awayReason } = body
     
     // Check if user already has an active break
-    const activeBreak = await prisma.break.findFirst({
+    const activeBreak = await prisma.breaks.findFirst({
       where: {
         staffUserId: staffUser.id,
         actualStart: { not: null },
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Find active time entry
-    const activeTimeEntry = await prisma.timeEntry.findFirst({
+    const activeTimeEntry = await prisma.time_entries.findFirst({
       where: {
         staffUserId: staffUser.id,
         clockOut: null
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     
     // SCENARIO 1: Manual break start (no breakId, just type)
     if (type && !breakId) {
-      breakRecord = await prisma.break.create({
+      breakRecord = await prisma.breaks.create({
         data: {
           staffUserId: staffUser.id,
           timeEntryId: activeTimeEntry.id,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     
     // SCENARIO 2: Scheduled break start (has breakId)
     if (breakId) {
-      const existingBreak = await prisma.break.findUnique({
+      const existingBreak = await prisma.breaks.findUnique({
         where: { id: breakId }
       })
       
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Break already started" }, { status: 400 })
       }
       
-      breakRecord = await prisma.break.update({
+      breakRecord = await prisma.breaks.update({
         where: { id: breakId },
         data: { actualStart: now }
       })

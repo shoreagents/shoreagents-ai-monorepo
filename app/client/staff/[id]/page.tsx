@@ -58,7 +58,7 @@ interface StaffDetail {
     vacationUsed: number
     sickUsed: number
     hmo: boolean
-    workSchedule: Array<{
+    work_schedules: Array<{
       dayOfWeek: string
       startTime: string
       endTime: string
@@ -310,14 +310,14 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Work Schedule */}
-        {staff.profile?.workSchedule && (
+        {staff.profile?.work_schedules && (
           <Card className="p-6 bg-white mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Clock className="h-5 w-5 text-blue-600" />
               Work Schedule
             </h3>
             <div className="grid grid-cols-7 gap-3">
-              {staff.profile.workSchedule.map((schedule) => (
+              {staff.profile.work_schedules.map((schedule) => (
                 <div
                   key={schedule.dayOfWeek}
                   className={`p-3 rounded-lg text-center ${

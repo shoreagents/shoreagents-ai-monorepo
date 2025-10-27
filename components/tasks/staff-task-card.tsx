@@ -22,7 +22,7 @@ interface Task {
   attachments: string[]
   clientUser?: { id: string; name: string; email: string; avatar: string | null } | null
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string
@@ -85,12 +85,12 @@ export default function StaffTaskCard({ task, onUpdate, isDragging }: StaffTaskC
       )}
 
       {/* Source Badge (if from client) */}
-      {task.source === "CLIENT" && task.clientUser && (
+      {task.source === "CLIENT" && task.client_users && (
         <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-blue-500/20 ring-1 ring-blue-500/30 border border-blue-500/30">
           <Avatar className="h-6 w-6 ring-2 ring-blue-500/50">
-            <AvatarImage src={task.clientUser.avatar || undefined} alt={task.clientUser.name} />
+            <AvatarImage src={task.client_users.avatar || undefined} alt={task.client_users.name} />
             <AvatarFallback className="bg-blue-600 text-white text-xs font-bold">
-              {task.clientUser.name
+              {task.client_users.name
                 .split(" ")
                 .map((n) => n[0])
                 .join("")
@@ -100,7 +100,7 @@ export default function StaffTaskCard({ task, onUpdate, isDragging }: StaffTaskC
           </Avatar>
           <div className="flex-1">
             <p className="text-xs font-bold text-blue-300">{sourceConfig.emoji} {sourceConfig.label}</p>
-            <p className="text-xs text-blue-400">{task.clientUser.name}</p>
+            <p className="text-xs text-blue-400">{task.client_users.name}</p>
           </div>
         </div>
       )}
@@ -159,15 +159,15 @@ export default function StaffTaskCard({ task, onUpdate, isDragging }: StaffTaskC
           <div className="flex -space-x-2">
             {task.assignedStaff.slice(0, 3).map((assignment) => (
               <Avatar
-                key={assignment.staffUser.id}
+                key={assignment.staff_users.id}
                 className="h-7 w-7 border-2 border-slate-900 ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-500/50"
               >
                 <AvatarImage
-                  src={assignment.staffUser.avatar || undefined}
-                  alt={assignment.staffUser.name}
+                  src={assignment.staff_users.avatar || undefined}
+                  alt={assignment.staff_users.name}
                 />
                 <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs font-bold">
-                  {assignment.staffUser.name
+                  {assignment.staff_users.name
                     .split(" ")
                     .map((n) => n[0])
                     .join("")

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the staff user's company
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       select: { companyId: true }
     })
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all clients from the same company
-    const clients = await prisma.clientUser.findMany({
+    const clients = await prisma.client_users.findMany({
       where: { companyId: staffUser.companyId },
       select: {
         id: true,

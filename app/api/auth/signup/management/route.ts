@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { supabaseAdmin } from "@/lib/supabase"
+import { randomUUID } from "crypto"
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists in managementUser
-    const existingUser = await prisma.managementUser.findUnique({
+    const existingUser = await prisma.management_users.findUnique({
       where: { email }
     })
 
@@ -50,14 +51,16 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create in managementUser table (linked to Supabase auth user)
-    const managementUser = await prisma.managementUser.create({
+    const managementUser = await prisma.management_users.create({
       data: {
+        id: randomUUID(), // Generate unique ID
         authUserId: authData.user.id, // Links to Supabase auth.users.id
         email,
         name,
         role: role || "MANAGER",
         phone: phone || null,
         department,
+        updatedAt: new Date(),
       }
     })
 
@@ -73,10 +76,18 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Management signup error:", error)
+    console.error("Error details:", {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    })
     return NextResponse.json(
-      { error: "Failed to create account" },
+      { 
+        error: "Failed to create account",
+        details: error?.message || "Unknown error"
+      },
       { status: 500 }
     )
   }

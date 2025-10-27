@@ -19,16 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Find staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
     if (!staffUser) {
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
-    if (!staffUser.onboarding) {
+    if (!staffUser.staff_onboarding) {
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const resumeUrl = urlData.publicUrl
 
     // Update onboarding record
-    const updatedOnboarding = await prisma.staffOnboarding.update({
+    const updatedOnboarding = await prisma.staff_onboarding.update({
       where: { staffUserId: staffUser.id },
       data: {
         resumeUrl: resumeUrl,
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
 // Helper function to calculate completion percentage
 async function updateCompletionPercent(onboardingId: string) {
-  const onboarding = await prisma.staffOnboarding.findUnique({
+  const onboarding = await prisma.staff_onboarding.findUnique({
     where: { id: onboardingId }
   })
 
@@ -129,7 +129,7 @@ async function updateCompletionPercent(onboardingId: string) {
 
   const completionPercent = Math.min(totalProgress, 100)
 
-  await prisma.staffOnboarding.update({
+  await prisma.staff_onboarding.update({
     where: { id: onboardingId },
     data: { completionPercent }
   })

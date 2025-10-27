@@ -20,7 +20,7 @@ async function createClientUser() {
     console.log('✅ Auth user created:', authUser.id)
 
     // Then create the client user record
-    const clientUser = await prisma.clientUser.create({
+    const clientUser = await prisma.client_users.create({
       data: {
         authUserId: authUser.id,
         name: 'Sarah Johnson',

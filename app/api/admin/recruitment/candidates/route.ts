@@ -27,9 +27,20 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [ADMIN] Fetching all candidates from BPOC database')
 
     // Fetch all candidates from BPOC database - NO FILTERS for admin
-    const candidates = await getCandidates({})
-
-    console.log(`✅ [ADMIN] Found ${candidates.length} candidates`)
+    let candidates = []
+    try {
+      candidates = await getCandidates({})
+      console.log(`✅ [ADMIN] Found ${candidates.length} candidates`)
+    } catch (dbError) {
+      console.warn('⚠️ [ADMIN] BPOC database unavailable, returning empty candidates list:', dbError instanceof Error ? dbError.message : 'Unknown error')
+      // Return empty list instead of error - allows UI to still function
+      return NextResponse.json({
+        success: true,
+        candidates: [],
+        count: 0,
+        warning: 'BPOC database temporarily unavailable'
+      })
+    }
 
     return NextResponse.json({
       success: true,

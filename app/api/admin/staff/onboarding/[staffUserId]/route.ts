@@ -14,7 +14,7 @@ export async function GET(
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -25,7 +25,7 @@ export async function GET(
     const { staffUserId } = await context.params
 
     // Get staff user with full onboarding details
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId },
       include: {
         onboarding: true,
@@ -72,11 +72,11 @@ export async function GET(
         createdAt: staffUser.createdAt
       },
       onboarding: staffUser.onboarding ? {
-        ...staffUser.onboarding,
+        ...staff_users.onboarding,
         completionPercent: adminProgress // Override with admin-specific progress
       } : null,
       profile: staffUser.profile ? {
-        ...staffUser.profile,
+        ...staff_users.profile,
         daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))
       } : null
     })

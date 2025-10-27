@@ -39,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // 2. Check which table this user belongs to
         // Try Management User first
-        const managementUser = await prisma.managementUser.findUnique({
+        const managementUser = await prisma.management_users.findUnique({
           where: { authUserId }
         })
 
@@ -53,7 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Try Staff User
-        const staffUser = await prisma.staffUser.findUnique({
+        const staffUser = await prisma.staff_users.findUnique({
           where: { authUserId }
         })
 
@@ -67,7 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Try Client User
-        const clientUser = await prisma.clientUser.findUnique({
+        const clientUser = await prisma.client_users.findUnique({
           where: { authUserId }
         })
 

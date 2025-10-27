@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 

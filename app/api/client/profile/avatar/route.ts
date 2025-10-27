@@ -15,7 +15,7 @@ export async function PUT(req: NextRequest) {
     const { avatar } = body
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email }
     })
 
@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update avatar
-    await prisma.clientUser.update({
+    await prisma.client_users.update({
       where: { id: clientUser.id },
       data: { avatar }
     })

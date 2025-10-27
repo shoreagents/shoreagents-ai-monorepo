@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id }
     })
 

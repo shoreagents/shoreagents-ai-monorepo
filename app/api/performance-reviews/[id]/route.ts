@@ -17,7 +17,7 @@ export async function GET(
     const { id } = resolvedParams
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -26,7 +26,7 @@ export async function GET(
     }
 
     // Fetch the review with all related data - ensure it belongs to the staff user
-    const review = await prisma.review.findFirst({
+    const review = await prisma.reviews.findFirst({
       where: {
         id: id,
         staffUserId: staffUser.id,
@@ -35,7 +35,7 @@ export async function GET(
         }
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -51,7 +51,7 @@ export async function GET(
 
     // Fetch reviewer names from ClientUser table
     const reviewerEmails = [review.reviewer]
-    const clientUsers = await prisma.clientUser.findMany({
+    const clientUsers = await prisma.client_users.findMany({
       where: {
         email: { in: reviewerEmails }
       },
@@ -63,7 +63,7 @@ export async function GET(
 
     // Fetch admin reviewer names from ManagementUser table
     const adminReviewerEmails = review.reviewedBy ? [review.reviewedBy] : []
-    const managementUsers = await prisma.managementUser.findMany({
+    const managementUsers = await prisma.management_users.findMany({
       where: {
         email: { in: adminReviewerEmails }
       },

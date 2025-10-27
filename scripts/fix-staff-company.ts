@@ -6,7 +6,7 @@ async function main() {
   console.log('🔧 Fixing staff company assignments...\n')
   
   // 1. Find the CLIENT user (stephen@stepten.io)
-  const clientUser = await prisma.clientUser.findUnique({
+  const clientUser = await prisma.client_users.findUnique({
     where: { email: 'stephen@stepten.io' },
     include: { company: true }
   })
@@ -14,7 +14,7 @@ async function main() {
   if (!clientUser) {
     console.log('❌ Client user stephen@stepten.io NOT FOUND!')
     console.log('Available client users:')
-    const allClients = await prisma.clientUser.findMany()
+    const allClients = await prisma.client_users.findMany()
     allClients.forEach(c => console.log(`  - ${c.email}`))
     return
   }
@@ -24,7 +24,7 @@ async function main() {
   console.log(`✅ Company ID: ${clientUser.companyId}\n`)
   
   // 2. Update all test staff to THIS company
-  const result = await prisma.staffUser.updateMany({
+  const result = await prisma.staff_users.updateMany({
     where: {
       email: {
         endsWith: '@test.com'
@@ -38,7 +38,7 @@ async function main() {
   console.log(`✅ Updated ${result.count} staff users to ${clientUser.company?.companyName}\n`)
   
   // 3. Verify
-  const testStaff = await prisma.staffUser.findMany({
+  const testStaff = await prisma.staff_users.findMany({
     where: {
       email: { endsWith: '@test.com' }
     },

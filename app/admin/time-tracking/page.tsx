@@ -34,7 +34,7 @@ interface TimeEntry {
   lateBy: number | null
   notes: string | null
   createdAt: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -97,9 +97,9 @@ export default function AdminTimeTrackingPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       return (
-        entry.staffUser.name.toLowerCase().includes(query) ||
-        entry.staffUser.email.toLowerCase().includes(query) ||
-        entry.staffUser.company?.companyName.toLowerCase().includes(query)
+        entry.staff_users.name.toLowerCase().includes(query) ||
+        entry.staff_users.email.toLowerCase().includes(query) ||
+        entry.staff_users.company?.companyName.toLowerCase().includes(query)
       )
     }
 
@@ -201,19 +201,19 @@ export default function AdminTimeTrackingPage() {
                 {/* Staff Info */}
                 <div className="flex items-start gap-4 mb-4">
                   <Avatar className="h-12 w-12 ring-2 ring-white/10">
-                    <AvatarImage src={entry.staffUser.avatar || undefined} alt={entry.staffUser.name} />
+                    <AvatarImage src={entry.staff_users.avatar || undefined} alt={entry.staff_users.name} />
                     <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20">
-                      {entry.staffUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      {entry.staff_users.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{entry.staffUser.name}</h3>
-                    <p className="text-xs text-muted-foreground truncate">{entry.staffUser.email}</p>
-                    {entry.staffUser.company && (
+                    <h3 className="font-semibold text-foreground truncate">{entry.staff_users.name}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{entry.staff_users.email}</p>
+                    {entry.staff_users.company && (
                       <div className="flex items-center gap-1 mt-1">
                         <Building2 className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground truncate">
-                          {entry.staffUser.company.companyName}
+                          {entry.staff_users.company.companyName}
                         </span>
                       </div>
                     )}

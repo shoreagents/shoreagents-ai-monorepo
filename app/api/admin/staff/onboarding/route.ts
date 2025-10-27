@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all staff with onboarding status
-    const staffList = await prisma.staffUser.findMany({
+    const staffList = await prisma.staff_users.findMany({
       where: whereClause,
       include: {
         onboarding: {

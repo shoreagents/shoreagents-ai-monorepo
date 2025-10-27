@@ -22,7 +22,7 @@ export async function GET(
     const document = await prisma.document.findUnique({
       where: { id: documentId },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -59,7 +59,7 @@ export async function DELETE(
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })

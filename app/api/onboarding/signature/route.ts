@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@supabase/supabase-js"
+import crypto from "crypto"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,24 +22,26 @@ export async function POST(req: NextRequest) {
     
     if (contentType.includes("application/json")) {
       // Skip for now - just mark as submitted
-      const staffUser = await prisma.staffUser.findUnique({
+      const staffUser = await prisma.staff_users.findUnique({
         where: { authUserId: session.user.id },
-        include: { onboarding: true }
+        include: { staff_onboarding: true }
       })
 
       if (!staffUser) {
         return NextResponse.json({ error: "Staff user not found" }, { status: 404 })
       }
 
-      const onboarding = await prisma.staffOnboarding.upsert({
+      const onboarding = await prisma.staff_onboarding.upsert({
         where: { staffUserId: staffUser.id },
         update: {
           signatureStatus: "SUBMITTED",
           updatedAt: new Date()
         },
         create: {
+          id: crypto.randomUUID(),
           staffUserId: staffUser.id,
-          signatureStatus: "SUBMITTED"
+          signatureStatus: "SUBMITTED",
+          updatedAt: new Date()
         }
       })
 
@@ -58,9 +61,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
     if (!staffUser) {
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if signature section is locked
-    if (staffUser.onboarding?.signatureStatus === "APPROVED") {
+    if (staffUser.staff_onboarding?.signatureStatus === "APPROVED") {
       return NextResponse.json({ 
         error: "Signature section has been approved and is locked" 
       }, { status: 403 })
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(filePath)
 
     // Update onboarding record
-    const onboarding = await prisma.staffOnboarding.upsert({
+    const onboarding = await prisma.staff_onboarding.upsert({
       where: { staffUserId: staffUser.id },
       update: {
         signatureUrl: publicUrl,
@@ -126,9 +129,11 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date()
       },
       create: {
+        id: crypto.randomUUID(),
         staffUserId: staffUser.id,
         signatureUrl: publicUrl,
-        signatureStatus: "SUBMITTED"
+        signatureStatus: "SUBMITTED",
+        updatedAt: new Date()
       }
     })
 
@@ -152,7 +157,7 @@ export async function POST(req: NextRequest) {
 
 // Helper function to calculate completion percentage
 async function updateCompletionPercent(onboardingId: string) {
-  const onboarding = await prisma.staffOnboarding.findUnique({
+  const onboarding = await prisma.staff_onboarding.findUnique({
     where: { id: onboardingId }
   })
 
@@ -183,7 +188,7 @@ async function updateCompletionPercent(onboardingId: string) {
   // DON'T set isComplete here - only admin can complete via complete route!
   // 100% just means staff has submitted everything, not that it's verified
 
-  await prisma.staffOnboarding.update({
+  await prisma.staff_onboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent

@@ -12,7 +12,9 @@ const pool = new Pool({
   connectionString: process.env.BPOC_DATABASE_URL,
   max: 10, // Maximum number of clients
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Timeout after 10 seconds if can't connect
+  connectionTimeoutMillis: 30000, // Timeout after 30 seconds if can't connect
+  statement_timeout: 30000, // Query timeout 30 seconds
+  query_timeout: 30000, // Query timeout 30 seconds
 })
 
 // Log connection status

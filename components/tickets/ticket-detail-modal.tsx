@@ -350,7 +350,7 @@ export default function TicketDetailModal({
 
         {/* Assigned To - Account Manager */}
         {/* Relationship Display - FULL CHAIN */}
-        {(ticket.accountManager || ticket.clientUser || ticket.managementUser || ticket.staffUser) && (
+        {(ticket.accountManager || ticket.client_users || ticket.management_users || ticket.staff_users) && (
           <div className={`mb-6 rounded-xl p-5 ${
             isDark 
               ? "bg-gradient-to-r from-purple-900/30 to-indigo-900/30 ring-1 ring-purple-500/30 backdrop-blur-xl" 
@@ -358,12 +358,12 @@ export default function TicketDetailModal({
           }`}>
             <div className="flex items-center justify-between gap-4">
               {/* STAFF MEMBER - Who created it (for Staff tickets) */}
-              {ticket.staffUser && (
+              {ticket.staff_users && (
                 <div className="flex items-center gap-3 flex-1">
                   <Avatar className="h-14 w-14 ring-2 ring-emerald-500/50 shadow-lg shadow-emerald-500/20">
-                    <AvatarImage src={ticket.staffUser.avatar} alt={ticket.staffUser.name} />
+                    <AvatarImage src={ticket.staff_users.avatar} alt={ticket.staff_users.name} />
                     <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-bold text-sm">
-                      {ticket.staffUser.name
+                      {ticket.staff_users.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
@@ -376,7 +376,7 @@ export default function TicketDetailModal({
                       Created by
                     </p>
                     <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {ticket.staffUser.name}
+                      {ticket.staff_users.name}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -387,7 +387,7 @@ export default function TicketDetailModal({
                         Staff Member
                       </span>
                       <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
-                        {ticket.staffUser.email}
+                        {ticket.staff_users.email}
                       </span>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function TicketDetailModal({
               )}
 
               {/* Account Manager / Assigned To (for Client tickets) */}
-              {!ticket.staffUser && ticket.accountManager && (
+              {!ticket.staff_users && ticket.accountManager && (
                 <div className="flex items-center gap-3 flex-1">
                   <Avatar className="h-14 w-14 ring-2 ring-purple-500/50 shadow-lg">
                     <AvatarImage src={ticket.accountManager.avatar} alt={ticket.accountManager.name} />
@@ -432,39 +432,39 @@ export default function TicketDetailModal({
               )}
 
               {/* Arrow */}
-              {(ticket.staffUser || ticket.clientUser) && (ticket.accountManager || ticket.managementUser) && (
+              {(ticket.staff_users || ticket.client_users) && (ticket.accountManager || ticket.management_users) && (
                 <div className={`text-3xl font-bold ${isDark ? "text-indigo-400" : "text-gray-300"}`}>
                   →
                 </div>
               )}
 
               {/* MANAGEMENT + DEPARTMENT - Who will handle it (for Staff tickets) */}
-              {ticket.staffUser && ticket.managementUser && (
+              {ticket.staff_users && ticket.management_users && (
                 <div className="flex items-center gap-3 flex-1 justify-end">
                   <div className="text-right">
                     <p className={`text-xs font-semibold ${isDark ? "text-indigo-300" : "text-indigo-600"} uppercase tracking-wide`}>
                       Assigned to
                     </p>
                     <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {ticket.managementUser.name}
+                      {ticket.management_users.name}
                     </p>
                     <div className="flex items-center gap-2 mt-1 justify-end">
                       <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
-                        {ticket.managementUser.email}
+                        {ticket.management_users.email}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         isDark 
                           ? "bg-indigo-500/30 text-indigo-300" 
                           : "bg-indigo-200 text-indigo-700"
                       }`}>
-                        {getDepartmentEmoji(ticket.managementUser.department as any)} {getDepartmentLabel(ticket.managementUser.department as any)}
+                        {getDepartmentEmoji(ticket.management_users.department as any)} {getDepartmentLabel(ticket.management_users.department as any)}
                       </span>
                     </div>
                   </div>
                   <Avatar className="h-14 w-14 ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-500/20">
-                    <AvatarImage src={ticket.managementUser.avatar} alt={ticket.managementUser.name} />
+                    <AvatarImage src={ticket.management_users.avatar} alt={ticket.management_users.name} />
                     <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
-                      {ticket.managementUser.name
+                      {ticket.management_users.name
                         .split(" ")
                         .map((n: string) => n[0])
                         .join("")
@@ -476,18 +476,18 @@ export default function TicketDetailModal({
               )}
 
               {/* Client / For (for Client tickets) */}
-              {ticket.clientUser && (
+              {ticket.client_users && (
                 <div className="flex items-center gap-3 flex-1 justify-end">
                   <div className="text-right">
                     <p className={`text-xs font-semibold ${isDark ? "text-indigo-300" : "text-indigo-600"} uppercase tracking-wide`}>
                       Ticket FOR
                     </p>
                     <p className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {ticket.clientUser.name}
+                      {ticket.client_users.name}
                     </p>
                     <div className="flex items-center gap-2 mt-1 justify-end">
                       <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-600"}`}>
-                        {ticket.clientUser.email}
+                        {ticket.client_users.email}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         isDark 
@@ -499,9 +499,9 @@ export default function TicketDetailModal({
                     </div>
                   </div>
                   <Avatar className="h-14 w-14 ring-2 ring-indigo-500/50 shadow-lg">
-                    <AvatarImage src={ticket.clientUser.avatar} alt={ticket.clientUser.name} />
+                    <AvatarImage src={ticket.client_users.avatar} alt={ticket.client_users.name} />
                     <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-bold text-sm">
-                      {ticket.clientUser.name
+                      {ticket.client_users.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
@@ -554,11 +554,11 @@ export default function TicketDetailModal({
                 <span className="flex items-center gap-2">
                   🕐 Created {new Date(ticket.createdAt).toLocaleString()}
                 </span>
-                {(ticket.staffUser || ticket.clientUser) && (
+                {(ticket.staff_users || ticket.client_users) && (
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400">Created by:</span>
                     <span className="font-bold text-white">
-                      {ticket.staffUser?.name || ticket.clientUser?.name}
+                      {ticket.staff_users?.name || ticket.client_users?.name}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm ${
                       ticket.createdByType === "CLIENT"
@@ -617,7 +617,7 @@ export default function TicketDetailModal({
             </h3>
             <div className="space-y-3">
               {ticket.responses.map((response) => {
-                const user = response.staffUser || response.managementUser || response.clientUser
+                const user = response.staff_users || response.management_users || response.client_users
                 const initials = user?.name
                   .split(" ")
                   .map((n) => n[0])

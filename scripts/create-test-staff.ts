@@ -142,7 +142,7 @@ async function main() {
   for (const staff of testStaff) {
     try {
       // Check if already exists
-      const existing = await prisma.staffUser.findUnique({
+      const existing = await prisma.staff_users.findUnique({
         where: { email: staff.email }
       })
 
@@ -156,7 +156,7 @@ async function main() {
       startDate.setDate(startDate.getDate() - staff.daysAgo)
 
       // Create staff user with profile in a transaction
-      const staffUser = await prisma.staffUser.create({
+      const staffUser = await prisma.staff_users.create({
         data: {
           email: staff.email,
           name: staff.name,
@@ -188,7 +188,7 @@ async function main() {
   console.log(`\n🎉 Successfully created ${created} test staff users!`)
   
   // Verify
-  const allTestStaff = await prisma.staffUser.findMany({
+  const allTestStaff = await prisma.staff_users.findMany({
     where: {
       email: {
         endsWith: '@test.com'

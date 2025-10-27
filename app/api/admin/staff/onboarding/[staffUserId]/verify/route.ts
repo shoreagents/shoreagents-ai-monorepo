@@ -14,7 +14,7 @@ export async function POST(
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -58,12 +58,12 @@ export async function POST(
     }
 
     // Get staff onboarding
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
-    if (!staffUser || !staffUser.onboarding) {
+    if (!staffUser || !staffUser.staff_onboarding) {
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 })
     }
 
@@ -96,8 +96,8 @@ export async function POST(
     console.log("💾 UPDATING DATABASE:", updateData)
 
     // Update onboarding
-    const onboarding = await prisma.staffOnboarding.update({
-      where: { id: staffUser.onboarding.id },
+    const onboarding = await prisma.staff_onboarding.update({
+      where: { id: staffUser.staff_onboarding.id },
       data: updateData
     })
 
@@ -113,7 +113,7 @@ export async function POST(
       await updateCompletionPercent(onboarding.id)
     }
     
-    const updated = await prisma.staffOnboarding.findUnique({ 
+    const updated = await prisma.staff_onboarding.findUnique({ 
       where: { id: onboarding.id } 
     })
     const approvedCount = [
@@ -162,7 +162,7 @@ export async function POST(
 
 // Helper function to calculate completion percentage
 async function updateCompletionPercent(onboardingId: string) {
-  const onboarding = await prisma.staffOnboarding.findUnique({
+  const onboarding = await prisma.staff_onboarding.findUnique({
     where: { id: onboardingId }
   })
 
@@ -196,7 +196,7 @@ async function updateCompletionPercent(onboardingId: string) {
   // const approvedCount = sections.filter(status => status === "APPROVED").length
   // const isComplete = approvedCount === 5
 
-  await prisma.staffOnboarding.update({
+  await prisma.staff_onboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent

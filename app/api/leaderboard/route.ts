@@ -15,13 +15,13 @@ export async function GET(request: NextRequest) {
     const timePeriod = searchParams.get("period") || "all_time" // this_week, this_month, all_time
 
     // Get all staff users with their gamification profiles
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: {
         role: "STAFF", // Only show staff members in leaderboard
       },
       include: {
-        gamificationProfile: true,
-        reviewsReceived: {
+        gamification_profiles: true,
+        reviews: {
           select: {
             overallScore: true,
           },
@@ -33,23 +33,23 @@ export async function GET(request: NextRequest) {
     const rankings = staffUsers
       .map((user) => {
         const avgReviewScore =
-          user.reviewsReceived.length > 0
-            ? user.reviewsReceived.reduce(
+          user.reviews.length > 0
+            ? user.reviews.reduce(
                 (sum, review) => sum + Number(review.overallScore || 0),
                 0
-              ) / user.reviewsReceived.length
+              ) / user.reviews.length
             : 0
 
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          points: user.gamificationProfile?.points || 0,
-          level: user.gamificationProfile?.level || 1,
-          tasksCompleted: user.gamificationProfile?.tasksCompleted || 0,
-          performanceScore: user.gamificationProfile?.performanceScore || 0,
+          points: user.gamification_profiles?.points || 0,
+          level: user.gamification_profiles?.level || 1,
+          tasksCompleted: user.gamification_profiles?.tasksCompleted || 0,
+          performanceScore: user.gamification_profiles?.performanceScore || 0,
           reviewRating: Number(avgReviewScore.toFixed(1)),
-          streakDays: user.gamificationProfile?.streak || 0,
+          streakDays: user.gamification_profiles?.streak || 0,
           badges: [],
           rankChange: 0,
         }

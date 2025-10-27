@@ -15,7 +15,7 @@ export async function POST(
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -34,7 +34,7 @@ export async function POST(
     }
 
     // Check if post exists
-    const post = await prisma.activityPost.findUnique({
+    const post = await prisma.activity_posts.findUnique({
       where: { id: params.id },
     })
 
@@ -43,7 +43,7 @@ export async function POST(
     }
 
     // Check if user already reacted
-    const existingReaction = await prisma.postReaction.findFirst({
+    const existingReaction = await prisma.post_reactions.findFirst({
       where: {
         postId: params.id,
         staffUserId: staffUser.id,
@@ -53,13 +53,13 @@ export async function POST(
     if (existingReaction) {
       // If same reaction, remove it (toggle)
       if (existingReaction.type === type) {
-        await prisma.postReaction.delete({
+        await prisma.post_reactions.delete({
           where: { id: existingReaction.id },
         })
         return NextResponse.json({ success: true, action: "removed" })
       } else {
         // Update to new reaction type
-        const reaction = await prisma.postReaction.update({
+        const reaction = await prisma.post_reactions.update({
           where: { id: existingReaction.id },
           data: { type },
         })
@@ -68,7 +68,7 @@ export async function POST(
     }
 
     // Create new reaction
-    const reaction = await prisma.postReaction.create({
+    const reaction = await prisma.post_reactions.create({
       data: {
         postId: params.id,
         staffUserId: staffUser.id,

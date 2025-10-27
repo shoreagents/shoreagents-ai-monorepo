@@ -20,7 +20,7 @@ interface ContractData {
   position: string
   assignedClient: string
   startDate: string
-  workSchedule: string
+  work_schedules: string
   basicSalary: number
   deMinimis: number
   totalMonthlyGross: number
@@ -33,7 +33,11 @@ interface ContractData {
   }
 }
 
-export default function ContractSigningPage() {
+interface ContractSigningPageProps {
+  onContractSigned?: () => void
+}
+
+export default function ContractSigningPage({ onContractSigned }: ContractSigningPageProps = {}) {
   const { data: session } = useSession()
   const router = useRouter()
   const [contract, setContract] = useState<ContractData | null>(null)
@@ -170,8 +174,12 @@ export default function ContractSigningPage() {
         throw new Error(data.error || 'Failed to submit signature')
       }
 
-      // Success - redirect to onboarding
-      router.push('/onboarding')
+      // Success - call callback if provided or redirect to onboarding
+      if (onContractSigned) {
+        onContractSigned()
+      } else {
+        router.push('/onboarding')
+      }
     } catch (err: any) {
       console.error('Error submitting signature:', err)
       setError(err.message || 'Failed to submit signature')

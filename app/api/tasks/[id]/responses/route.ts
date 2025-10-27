@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params
 
     // Check if task exists
-    const task = await prisma.task.findUnique({
+    const task = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -26,7 +26,7 @@ export async function GET(
     }
 
     // Get all responses for this task
-    const responses = await prisma.taskResponse.findMany({
+    const responses = await prisma.task_responses.findMany({
       where: { taskId: id },
       orderBy: { createdAt: 'asc' },
     })
@@ -37,7 +37,7 @@ export async function GET(
         let user = null
 
         if (response.createdByType === "STAFF") {
-          user = await prisma.staffUser.findUnique({
+          user = await prisma.staff_users.findUnique({
             where: { id: response.createdById },
             select: {
               id: true,
@@ -48,7 +48,7 @@ export async function GET(
             },
           })
         } else if (response.createdByType === "CLIENT") {
-          user = await prisma.clientUser.findUnique({
+          user = await prisma.client_users.findUnique({
             where: { id: response.createdById },
             select: {
               id: true,
@@ -58,7 +58,7 @@ export async function GET(
             },
           })
         } else if (response.createdByType === "ADMIN") {
-          user = await prisma.managementUser.findUnique({
+          user = await prisma.management_users.findUnique({
             where: { id: response.createdById },
             select: {
               id: true,
@@ -109,7 +109,7 @@ export async function POST(
     }
 
     // Check if task exists
-    const task = await prisma.task.findUnique({
+    const task = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -118,15 +118,15 @@ export async function POST(
     }
 
     // Determine if user is staff, client, or admin
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -171,7 +171,7 @@ export async function POST(
     }
 
     // Create response (content can be empty if there are attachments)
-    const response = await prisma.taskResponse.create({
+    const response = await prisma.task_responses.create({
       data: {
         taskId: id,
         content: content || "", // Allow empty content if attachments exist

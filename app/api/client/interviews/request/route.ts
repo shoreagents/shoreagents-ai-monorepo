@@ -7,10 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCandidateById } from '@/lib/bpoc-db'
-
-const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +38,7 @@ export async function POST(request: NextRequest) {
     console.log(`📅 Interview request from client ${session.user.id} for candidate ${bpoc_candidate_id}`)
 
     // Get the client user record (session.user.id is authUserId, we need clientUser.id)
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id }
     })
 

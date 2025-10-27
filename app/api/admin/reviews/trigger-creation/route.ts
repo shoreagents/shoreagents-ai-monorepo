@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     console.log("🔄 Starting review auto-creation check...")
 
     // Get all active staff users with their profiles (which contain startDate)
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: {
         profile: {
           startDate: { not: null }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       const daysSinceStart = getDaysSinceStart(startDate)
       
       // Get existing reviews for this staff
-      const existingReviews = await prisma.review.findMany({
+      const existingReviews = await prisma.reviews.findMany({
         where: { staffUserId: staff.id },
         select: { type: true, status: true }
       })
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
         if (shouldCreate) {
           // Get client user for this company
-          const clientUser = await prisma.clientUser.findFirst({
+          const clientUser = await prisma.client_users.findFirst({
             where: { companyId: staff.companyId },
             orderBy: { createdAt: "asc" } // Get first/primary client user
           })
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           const evaluationPeriod = `${startDate.toISOString().split('T')[0]} to ${new Date().toISOString().split('T')[0]}`
 
           // Create review
-          const review = await prisma.review.create({
+          const review = await prisma.reviews.create({
             data: {
               staffUserId: staff.id,
               type: reviewType,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       if (daysSinceStart >= 173) { // 7 days before 180 days
         const recurringExists = existingReviews.some(r => r.type === "RECURRING")
         if (!recurringExists) {
-          const clientUser = await prisma.clientUser.findFirst({
+          const clientUser = await prisma.client_users.findFirst({
             where: { companyId: staff.companyId },
             orderBy: { createdAt: "asc" }
           })
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
             const dueDate = getReviewDueDate(startDate, "RECURRING")
             const evaluationPeriod = `Past 6 months`
 
-            const review = await prisma.review.create({
+            const review = await prisma.reviews.create({
               data: {
                 staffUserId: staff.id,
                 type: "RECURRING",

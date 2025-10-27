@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@supabase/supabase-js"
+import crypto from "crypto"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,9 +46,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
     if (!staffUser) {
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if documents section is locked
-    if (staffUser.onboarding?.documentsStatus === "APPROVED") {
+    if (staffUser.staff_onboarding?.documentsStatus === "APPROVED") {
       return NextResponse.json({ 
         error: "Documents section has been approved and is locked" 
       }, { status: 403 })
@@ -117,10 +118,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Mark documents section as submitted if this is the last required doc
-    await prisma.staffOnboarding.upsert({
+    await prisma.staff_onboarding.upsert({
       where: { staffUserId: staffUser.id },
       update: updateData,
       create: {
+        id: crypto.randomUUID(),
         staffUserId: staffUser.id,
         ...updateData
       }

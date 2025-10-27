@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get StaffUser record using authUserId (include company info)
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     // 1. Staff's own uploads (any source)
     // 2. CLIENT documents - if sharedWithAll AND company name matches, OR staff ID in sharedWith array
     // 3. ADMIN documents - if sharedWithAll (global) OR staff ID in sharedWith array
-    const documents = await prisma.document.findMany({
+    const documents = await prisma.documents.findMany({
       where: {
         OR: [
           // Staff's own uploads - show regardless of sharing settings
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         ]
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true, companyId: true }
     })
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create the document
-    const document = await prisma.document.create({
+    const document = await prisma.documents.create({
       data: {
         staffUserId: staffUser.id,
         title,
@@ -297,7 +297,7 @@ export async function POST(req: NextRequest) {
         sharedWith
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

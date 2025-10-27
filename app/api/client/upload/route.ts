@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email }
     })
 
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       ? { avatar: publicUrl }
       : { coverPhoto: publicUrl }
 
-    await prisma.clientUser.update({
+    await prisma.client_users.update({
       where: { id: clientUser.id },
       data: updateData
     })

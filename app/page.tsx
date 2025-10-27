@@ -12,13 +12,13 @@ export default async function Home() {
   }
 
   // Verify user exists in StaffUser table
-  const staffUser = await prisma.staffUser.findUnique({
+  const staffUser = await prisma.staff_users.findUnique({
     where: { email: session.user.email }
   })
 
   if (!staffUser) {
     // Check if they're a management user
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { email: session.user.email }
     })
 
@@ -28,7 +28,7 @@ export default async function Home() {
     }
 
     // Check if they're a client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email }
     })
 

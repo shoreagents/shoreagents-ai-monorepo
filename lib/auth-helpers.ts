@@ -11,7 +11,7 @@ export async function getStaffUser() {
     return null
   }
 
-  const staffUser = await prisma.staffUser.findUnique({
+  const staffUser = await prisma.staff_users.findUnique({
     where: { authUserId: session.user.id },
     include: { profile: true, company: true }
   })
@@ -29,7 +29,7 @@ export async function getAdminUser() {
     return null
   }
 
-  const adminUser = await prisma.managementUser.findUnique({
+  const adminUser = await prisma.management_users.findUnique({
     where: { email: session.user.email }
   })
 
@@ -46,7 +46,7 @@ export async function getClientUser() {
     return null
   }
 
-  const clientUser = await prisma.clientUser.findUnique({
+  const clientUser = await prisma.client_users.findUnique({
     where: { email: session.user.email },
     include: { company: true }
   })

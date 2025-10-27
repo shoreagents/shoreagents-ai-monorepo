@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by client/company
     if (clientId) {
-      const staffUsers = await prisma.staffUser.findMany({
+      const staffUsers = await prisma.staff_users.findMany({
         where: { companyId: clientId },
         select: { id: true }
       })
@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const metrics = await prisma.performanceMetric.findMany({
+    const metrics = await prisma.performance_metrics.findMany({
       where,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

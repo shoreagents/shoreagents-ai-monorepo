@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(filePath)
 
     // Update database with cover photo URL
-    await prisma.staffUser.update({
+    await prisma.staff_users.update({
       where: { id: staffUser.id },
       data: { coverPhoto: publicUrl }
     })

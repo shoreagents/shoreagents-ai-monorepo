@@ -13,7 +13,7 @@ export default async function AdminProfilePage() {
   }
 
   // Fetch full management user profile
-  const user = await prisma.managementUser.findUnique({
+  const user = await prisma.management_users.findUnique({
     where: { authUserId: session.user.id },
     select: {
       id: true,

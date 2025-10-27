@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const staffId = searchParams.get("staffId")
     const creatorType = searchParams.get("creatorType") // "staff", "client", or "management"
 
-    const tickets = await prisma.ticket.findMany({
+    const tickets = await prisma.tickets.findMany({
       where: {
         ...(status && { status: status as any }),
         ...(category && { category: category as any }),
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         ...(creatorType && { createdByType: creatorType.toUpperCase() }),
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -142,10 +142,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique ticket ID
-    const ticketCount = await prisma.ticket.count()
+    const ticketCount = await prisma.tickets.count()
     const ticketId = `TKT-${String(ticketCount + 1).padStart(4, "0")}`
 
-    const ticket = await prisma.ticket.create({
+    const ticket = await prisma.tickets.create({
       data: {
         staffUserId: staffUserId || null,
         clientUserId: clientUserId || null,
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         managementUserId: targetManagementUserId || managementUser.id,
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         },
         responses: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,

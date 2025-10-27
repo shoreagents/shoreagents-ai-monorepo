@@ -18,7 +18,7 @@ export async function GET(
     console.log("✅ [CLIENT/STAFF/DETAIL] Session found:", session.user.email)
 
     // Get ClientUser to verify they have access
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -35,7 +35,7 @@ export async function GET(
 
     // Get staff member details with all relations (ONLY from staff_users and staff_profiles)
     console.log("🔍 [CLIENT/STAFF/DETAIL] Querying database for staff:", userId)
-    const user = await prisma.staffUser.findUnique({
+    const user = await prisma.staff_users.findUnique({
       where: { 
         id: userId,
         companyId: clientUser.company.id // Ensure staff belongs to client's company
@@ -43,7 +43,7 @@ export async function GET(
       include: {
         profile: {
           include: {
-            workSchedule: true,
+            work_schedules: true,
           },
         },
         company: {
@@ -79,7 +79,7 @@ export async function GET(
         tickets: {
           orderBy: { createdAt: 'desc' },
         },
-        gamificationProfile: {
+        gamification_profiles: {
           include: {
             badges: true,
           },
@@ -120,7 +120,7 @@ export async function GET(
     const isClockedIn = currentEntry && !currentEntry.clockOut
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-    const todaySchedule = user.profile?.workSchedule?.find(s => s.dayOfWeek === today)
+    const todaySchedule = user.profile?.work_schedules?.find(s => s.dayOfWeek === today)
     
     console.log("✅ [CLIENT/STAFF/DETAIL] Stats calculated:", {
       avgProductivity,
@@ -211,7 +211,7 @@ export async function GET(
         vacationUsed: user.profile.vacationUsed,
         sickUsed: user.profile.sickUsed,
         hmo: user.profile.hmo,
-        workSchedule: user.profile.workSchedule,
+        work_schedules: user.profile.work_schedules,
       } : null,
 
       // Current status
@@ -229,10 +229,10 @@ export async function GET(
         avgProductivity,
         reviewScore,
         totalHoursThisMonth: Math.round(totalHoursThisMonth),
-        level: user.gamificationProfile?.level || 1,
-        points: user.gamificationProfile?.points || 0,
-        rank: user.gamificationProfile?.rank || null,
-        badges: user.gamificationProfile?.badges || [],
+        level: user.gamification_profiles?.level || 1,
+        points: user.gamification_profiles?.points || 0,
+        rank: user.gamification_profiles?.rank || null,
+        badges: user.gamification_profiles?.badges || [],
       },
 
       // Tasks

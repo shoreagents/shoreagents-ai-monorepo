@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Get staff user ID from auth
-      const staffUser = await prisma.staffUser.findUnique({
+      const staffUser = await prisma.staff_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true }
       })
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Get client user ID from auth
-      const clientUser = await prisma.clientUser.findUnique({
+      const clientUser = await prisma.client_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true }
       })
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       if (io) {
         if (initiatedBy === "client") {
           // Notify staff about incoming call from client
-          const staff = await prisma.staffUser.findUnique({
+          const staff = await prisma.staff_users.findUnique({
             where: { id: finalStaffId },
             select: { authUserId: true, avatar: true }
           })
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Notify client about incoming call from staff
-          const client = await prisma.clientUser.findUnique({
+          const client = await prisma.client_users.findUnique({
             where: { id: finalClientId },
             select: { authUserId: true, avatar: true }
           })

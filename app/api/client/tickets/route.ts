@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category")
 
     // Get client's company to find their account manager
-    const clientWithCompany = await prisma.clientUser.findUnique({
+    const clientWithCompany = await prisma.client_users.findUnique({
       where: { id: clientUser.id },
       include: {
         company: {
@@ -44,14 +44,14 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const tickets = await prisma.ticket.findMany({
+    const tickets = await prisma.tickets.findMany({
       where: {
         clientUserId: clientUser.id,
         ...(status && { status: status as any }),
         ...(category && { category: category as any }),
       },
       include: {
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get client user with company and account manager
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
         company: {
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate ticket ID
-    const lastTicket = await prisma.ticket.findFirst({
+    const lastTicket = await prisma.tickets.findFirst({
       orderBy: { createdAt: "desc" },
       select: { ticketId: true },
     })
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
     const ticketId = `TKT-${ticketNumber.toString().padStart(4, "0")}`
 
     // Create ticket - auto-assign to account manager
-    const ticket = await prisma.ticket.create({
+    const ticket = await prisma.tickets.create({
       data: {
         ticketId,
         clientUserId: clientUser.id,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         assignedTo: clientUser.company?.accountManagerId || null,
       },
       include: {
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         },
         responses: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,

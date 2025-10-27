@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const staffUserId = searchParams.get("staffUserId")
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true },
     })
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get tasks created by this client
-    const tasks = await prisma.task.findMany({
+    const tasks = await prisma.tasks.findMany({
       where,
       include: {
         company: {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
             companyName: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
           },
         },
         // Include both legacy and new assignment methods
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         },
         assignedStaff: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true },
     })
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify all staff users belong to the client's company
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: {
         id: { in: staffUserIds },
         companyId: clientUser.companyId,
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create ONE task with multiple assignments
-    const task = await prisma.task.create({
+    const task = await prisma.tasks.create({
       data: {
         title,
         description,
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
             companyName: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         },
         assignedStaff: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,

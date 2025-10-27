@@ -20,7 +20,7 @@ export async function GET(
     }
 
     // Fetch job acceptance with company info
-    const jobAcceptance = await prisma.jobAcceptance.findUnique({
+    const jobAcceptance = await prisma.job_acceptances.findUnique({
       where: { id: jobAcceptanceId },
       include: {
         company: {
@@ -45,7 +45,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      jobAcceptance: {
+      job_acceptances: {
         id: jobAcceptance.id,
         position: jobAcceptance.position,
         candidateEmail: jobAcceptance.candidateEmail,

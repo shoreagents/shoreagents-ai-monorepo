@@ -18,14 +18,14 @@ export async function POST(request: NextRequest) {
 
     // Get user details for personalization
     // Try StaffUser first
-    let user = await prisma.staffUser.findUnique({
+    let user = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true },
     })
 
     // If not staff, try ClientUser
     if (!user) {
-      const clientUser = await prisma.clientUser.findUnique({
+      const clientUser = await prisma.client_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true },
       })
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // If not client, try ManagementUser
     if (!user) {
-      const managementUser = await prisma.managementUser.findUnique({
+      const managementUser = await prisma.management_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true },
       })
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     let taskContext = ''
     if (taskIds && taskIds.length > 0) {
       console.log(`📋 Fetching ${taskIds.length} tasks for AI context...`)
-      const tasks = await prisma.task.findMany({
+      const tasks = await prisma.tasks.findMany({
         where: {
           id: { in: taskIds },
         },
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
               companyName: true,
             },
           },
-          clientUser: {
+          client_users: {
             select: {
               name: true,
             },
@@ -189,7 +189,7 @@ TASK DETAILS:\n` + tasks.map(task => {
               task.deadline ? `Deadline: ${new Date(task.deadline).toLocaleDateString()}` : null,
               task.tags.length > 0 ? `Tags: ${task.tags.join(', ')}` : null,
               task.company ? `Company: ${task.company.companyName}` : null,
-              task.clientUser ? `Client: ${task.clientUser.name}` : null,
+              task.client_users ? `Client: ${task.client_users.name}` : null,
               task.subtasks.length > 0 ? `\nSubtasks:\n${task.subtasks.map(st => `- [${st.completed ? 'x' : ' '}] ${st.title}`).join('\n')}` : null,
               task.responses.length > 0 ? `\nRecent Comments:\n${task.responses.slice(0, 3).map(r => `- ${r.content} (${new Date(r.createdAt).toLocaleDateString()})`).join('\n')}` : null,
               `---`,

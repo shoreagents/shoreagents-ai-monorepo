@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -94,7 +94,7 @@ export async function PATCH(request: NextRequest) {
 
     if (markAllAsRead) {
       // Mark all notifications as read
-      await prisma.notification.updateMany({
+      await prisma.notifications.updateMany({
         where: {
           userId: staffUser.id,
           read: false
@@ -116,7 +116,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Mark single notification as read
-    const notification = await prisma.notification.findUnique({
+    const notification = await prisma.notifications.findUnique({
       where: { id: notificationId }
     })
 
@@ -131,7 +131,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    await prisma.notification.update({
+    await prisma.notifications.update({
       where: { id: notificationId },
       data: {
         read: true,
@@ -159,7 +159,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -173,7 +173,7 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteAll) {
       // Delete all read notifications
-      await prisma.notification.deleteMany({
+      await prisma.notifications.deleteMany({
         where: {
           userId: staffUser.id,
           read: true
@@ -191,7 +191,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete single notification
-    const notification = await prisma.notification.findUnique({
+    const notification = await prisma.notifications.findUnique({
       where: { id: notificationId }
     })
 
@@ -206,7 +206,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.notification.delete({
+    await prisma.notifications.delete({
       where: { id: notificationId }
     })
 

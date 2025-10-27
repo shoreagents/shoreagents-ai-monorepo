@@ -1,0 +1,71 @@
+/**
+ * Schedule Interview API
+ * PATCH /api/admin/recruitment/interviews/[id]/schedule
+ * 
+ * Admin schedules an interview (sets time, meeting link, notes)
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verify admin is authenticated
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Verify user is an admin
+    if (session.user.role?.toUpperCase() !== 'ADMIN' && session.user.role?.toUpperCase() !== 'MANAGER') {
+      return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { scheduledTime, meetingLink, adminNotes } = body
+
+    // Validation
+    if (!scheduledTime) {
+      return NextResponse.json({ error: 'Scheduled time is required' }, { status: 400 })
+    }
+
+    // Convert scheduledTime string to Date
+    const scheduledDate = new Date(scheduledTime)
+    if (isNaN(scheduledDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid scheduled time format' }, { status: 400 })
+    }
+
+    console.log(`📅 Scheduling interview ${params.id} for ${scheduledDate.toISOString()}`)
+
+    // Update interview request
+    const updatedInterview = await prisma.interview_requests.update({
+      where: { id: params.id },
+      data: {
+        scheduledTime: scheduledDate,
+        meetingLink: meetingLink || null,
+        adminNotes: adminNotes || null,
+        status: 'SCHEDULED', // Change status from PENDING to SCHEDULED
+        updatedAt: new Date()
+      }
+    })
+
+    console.log(`✅ Interview scheduled successfully:`, updatedInterview.id)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Interview scheduled successfully',
+      interview: updatedInterview,
+    })
+  } catch (error) {
+    console.error('❌ Error scheduling interview:', error)
+    return NextResponse.json(
+      { error: 'Failed to schedule interview', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+

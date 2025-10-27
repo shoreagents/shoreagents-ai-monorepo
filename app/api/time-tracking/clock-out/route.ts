@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find active time entry with breaks in one query
-    const activeEntry = await prisma.timeEntry.findFirst({
+    const activeEntry = await prisma.time_entries.findFirst({
       where: {
         staffUserId: staffUser.id,
         clockOut: null,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const netWorkHours = totalHours - totalBreakTime
 
     // Update time entry
-    const timeEntry = await prisma.timeEntry.update({
+    const timeEntry = await prisma.time_entries.update({
       where: {
         id: activeEntry.id,
       },

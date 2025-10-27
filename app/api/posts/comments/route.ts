@@ -18,15 +18,15 @@ export async function POST(request: NextRequest) {
 
     // Determine user type and get database user ID
     const [staffUser, clientUser, managementUser] = await Promise.all([
-      prisma.staffUser.findUnique({ 
+      prisma.staff_users.findUnique({ 
         where: { authUserId: session.user.id },
         select: { id: true }
       }),
-      prisma.clientUser.findUnique({ 
+      prisma.client_users.findUnique({ 
         where: { authUserId: session.user.id },
         select: { id: true }
       }),
-      prisma.managementUser.findUnique({ 
+      prisma.management_users.findUnique({ 
         where: { authUserId: session.user.id },
         select: { id: true }
       })
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const userType = staffUser ? 'staff' : clientUser ? 'client' : 'management'
 
     // Create the comment
-    const comment = await prisma.postComment.create({
+    const comment = await prisma.post_comments.create({
       data: {
         postId,
         content,
@@ -51,21 +51,21 @@ export async function POST(request: NextRequest) {
         ...(userType === 'management' && { managementUserId: userId }),
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
             avatar: true
           }
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
             avatar: true
           }
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,

@@ -32,7 +32,7 @@ interface Review {
   improvements?: string
   additionalComments?: string
   managementNotes?: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -256,8 +256,8 @@ export default function AdminReviewsPage() {
                         <User className="h-5 w-5 text-foreground" />
                       </div>
                       <div>
-                        <CardTitle className="text-foreground">{review.staffUser.name}</CardTitle>
-                        <CardDescription className="text-muted-foreground">{review.staffUser.email}</CardDescription>
+                        <CardTitle className="text-foreground">{review.staff_users.name}</CardTitle>
+                        <CardDescription className="text-muted-foreground">{review.staff_users.email}</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

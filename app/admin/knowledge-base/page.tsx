@@ -19,7 +19,7 @@ interface Document {
   source: 'STAFF' | 'CLIENT' | 'ADMIN'
   sharedWithAll: boolean
   sharedWith: string[]
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string

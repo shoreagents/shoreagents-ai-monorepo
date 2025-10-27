@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     if (priority) where.priority = priority
 
     // Get all tasks with full details
-    const tasks = await prisma.task.findMany({
+    const tasks = await prisma.tasks.findMany({
       where,
       include: {
         company: {
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
             logo: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         },
         assignedStaff: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,

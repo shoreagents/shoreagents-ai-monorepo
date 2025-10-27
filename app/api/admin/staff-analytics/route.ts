@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch staff with all tracking data
-    const staff = await prisma.staffUser.findMany({
+    const staff = await prisma.staff_users.findMany({
       where,
       include: {
         company: {

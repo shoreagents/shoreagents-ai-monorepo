@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const entries = await prisma.timeEntry.findMany({
+    const entries = await prisma.time_entries.findMany({
       where,
       orderBy: {
         clockIn: "desc",

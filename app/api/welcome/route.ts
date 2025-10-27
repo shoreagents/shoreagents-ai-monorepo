@@ -10,10 +10,10 @@ export async function GET() {
     }
 
     // Get staff user with profile and company info
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
-        profile: true,
+        staff_profiles: true,
         company: true
       }
     })
@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     // Check if welcome form already exists
-    const existingWelcomeForm = await prisma.staffWelcomeForm.findUnique({
+    const existingWelcomeForm = await prisma.staff_welcome_forms.findUnique({
       where: { staffUserId: staffUser.id }
     })
 
@@ -38,8 +38,8 @@ export async function GET() {
     return NextResponse.json({
       name: staffUser.name,
       client: staffUser.company?.companyName || "ShoreAgents",
-      startDate: staffUser.profile?.startDate ? 
-        new Date(staffUser.profile.startDate).toLocaleDateString() : 
+      startDate: staffUser.staff_profiles?.startDate ? 
+        new Date(staffUser.staff_profiles.startDate).toLocaleDateString() : 
         new Date().toLocaleDateString()
     })
 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if welcome form already exists
-    const existingWelcomeForm = await prisma.staffWelcomeForm.findUnique({
+    const existingWelcomeForm = await prisma.staff_welcome_forms.findUnique({
       where: { staffUserId: staffUser.id }
     })
 
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create welcome form record
-    const welcomeForm = await prisma.staffWelcomeForm.create({
+    const welcomeForm = await prisma.staff_welcome_forms.create({
       data: {
         staffUserId: staffUser.id,
         name: name || staffUser.name,

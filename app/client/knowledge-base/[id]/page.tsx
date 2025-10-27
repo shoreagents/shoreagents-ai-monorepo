@@ -276,10 +276,10 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 Last updated: {new Date(document.updatedAt).toLocaleDateString()}
               </span>
               <span className="flex items-center gap-2">
-                {isStaffUpload && document.staffUser ? (
+                {isStaffUpload && document.staff_users ? (
                   <>
                     <User className="h-4 w-4" />
-                    Uploaded by: {document.staffUser.name}
+                    Uploaded by: {document.staff_users.name}
                   </>
                 ) : (
                   <>

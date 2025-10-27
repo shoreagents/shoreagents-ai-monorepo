@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find active time entry
-    const activeEntry = await prisma.timeEntry.findFirst({
+    const activeEntry = await prisma.time_entries.findFirst({
       where: {
         staffUserId: staffUser.id,
         clockOut: null,
@@ -19,18 +19,18 @@ export async function GET(request: NextRequest) {
     })
     
     // Get work schedules (same as profile API)
-    const staffUserWithProfile = await prisma.staffUser.findUnique({
+    const staffUserWithProfile = await prisma.staff_users.findUnique({
       where: { id: staffUser.id },
       include: {
         profile: {
           include: {
-            workSchedule: true
+            work_schedules: true
           }
         }
       }
     })
     
-    const workSchedules = staffUserWithProfile?.profile?.workSchedule || []
+    const workSchedules = staffUserWithProfile?.profile?.work_schedules || []
 
     if (activeEntry) {
       const clockIn = new Date(activeEntry.clockIn)
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       const hoursElapsed = (diffMs / (1000 * 60 * 60)).toFixed(2)
 
       // Find active break for this time entry (only breaks that have been started but not ended)
-      const activeBreak = await prisma.break.findFirst({
+      const activeBreak = await prisma.breaks.findFirst({
         where: {
           timeEntryId: activeEntry.id,
           actualStart: { not: null }, // Must have been started

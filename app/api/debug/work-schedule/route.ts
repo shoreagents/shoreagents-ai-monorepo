@@ -11,18 +11,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Get staff user with profile and work schedule
-    const staffUserWithSchedule = await prisma.staffUser.findUnique({
+    const staffUserWithSchedule = await prisma.staff_users.findUnique({
       where: { id: staffUser.id },
       include: {
         profile: {
           include: {
-            workSchedule: true
+            work_schedules: true
           }
         }
       }
     })
 
-    const workSchedules = staffUserWithSchedule?.profile?.workSchedule || []
+    const workSchedules = staffUserWithSchedule?.profile?.work_schedules || []
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
     const todaySchedule = workSchedules.find(s => s.dayOfWeek === today)
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         exists: !!staffUserWithSchedule?.profile,
         id: staffUserWithSchedule?.profile?.id
       },
-      workSchedule: {
+      work_schedules: {
         configured: workSchedules.length > 0,
         totalDays: workSchedules.length,
         schedules: workSchedules.map(s => ({

@@ -64,7 +64,7 @@ async function createTestUsers() {
       })
 
       // Create gamification profile
-      await prisma.gamificationProfile.create({
+      await prisma.gamification_profiles.create({
         data: {
           userId: staff.id,
           points: 0,
@@ -103,12 +103,12 @@ async function createTestUsers() {
 
     // 4. Client User
     const clientEmail = "client@techcorp.com"
-    let clientUser = await prisma.clientUser.findUnique({ 
+    let clientUser = await prisma.client_users.findUnique({ 
       where: { email: clientEmail } 
     })
     
     if (!clientUser) {
-      clientUser = await prisma.clientUser.create({
+      clientUser = await prisma.client_users.create({
         data: {
           email: clientEmail,
           name: "John Smith",
@@ -224,7 +224,7 @@ async function createTestUsers() {
       })
 
       // Create gamification profile
-      await prisma.gamificationProfile.create({
+      await prisma.gamification_profiles.create({
         data: {
           userId: staff.id,
           points: 0,
@@ -263,12 +263,12 @@ async function createTestUsers() {
 
     // 4. Client User
     const clientEmail = "client@techcorp.com"
-    let clientUser = await prisma.clientUser.findUnique({ 
+    let clientUser = await prisma.client_users.findUnique({ 
       where: { email: clientEmail } 
     })
     
     if (!clientUser) {
-      clientUser = await prisma.clientUser.create({
+      clientUser = await prisma.client_users.create({
         data: {
           email: clientEmail,
           name: "John Smith",

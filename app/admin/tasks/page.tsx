@@ -28,7 +28,7 @@ interface Task {
   clientUser?: { id: string; name: string; email: string; avatar: string | null } | null
   staffUser?: { id: string; name: string; email: string; avatar: string | null; role: string } | null
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string
@@ -145,7 +145,7 @@ export default function AdminTasksPage() {
           task.title.toLowerCase().includes(query) ||
           task.description?.toLowerCase().includes(query) ||
           task.company?.companyName.toLowerCase().includes(query) ||
-          task.clientUser?.name.toLowerCase().includes(query)
+          task.client_users?.name.toLowerCase().includes(query)
       )
     }
 
@@ -462,7 +462,7 @@ export default function AdminTasksPage() {
             {sortedTasks.map((task) => {
               const isExpanded = expandedTasks.has(task.id)
               const hasAttachments = task.attachments && task.attachments.length > 0
-              const assignedStaffCount = task.assignedStaff?.length || (task.staffUser ? 1 : 0)
+              const assignedStaffCount = task.assignedStaff?.length || (task.staff_users ? 1 : 0)
 
               return (
                 <React.Fragment key={task.id}>
@@ -595,10 +595,10 @@ export default function AdminTasksPage() {
                                     </span>
                                   </div>
                                 )}
-                                {task.clientUser && (
+                                {task.client_users && (
                                   <div className="flex items-center gap-2 text-sm">
                                     <span className="text-muted-foreground">
-                                      Created by {task.clientUser.name}
+                                      Created by {task.client_users.name}
                                     </span>
                                   </div>
                                 )}
@@ -729,26 +729,26 @@ export default function AdminTasksPage() {
                 </div>
 
                 {/* Client Creator */}
-                {selectedTask.clientUser && (
+                {selectedTask.client_users && (
                   <Card className="p-6 bg-blue-50 dark:bg-blue-900/20">
                     <div className="text-sm text-blue-700 dark:text-blue-400 mb-3 font-medium">Created by Client</div>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={selectedTask.clientUser.avatar || undefined} />
+                        <AvatarImage src={selectedTask.client_users.avatar || undefined} />
                         <AvatarFallback className="bg-blue-500 text-white text-lg">
-                          {selectedTask.clientUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                          {selectedTask.client_users.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{selectedTask.clientUser.name}</div>
-                        <div className="text-sm text-blue-700 dark:text-blue-400">{selectedTask.clientUser.email}</div>
+                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{selectedTask.client_users.name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-400">{selectedTask.client_users.email}</div>
                       </div>
                     </div>
                   </Card>
                 )}
 
                 {/* Assigned Staff */}
-                {(selectedTask.assignedStaff?.length || selectedTask.staffUser) && (
+                {(selectedTask.assignedStaff?.length || selectedTask.staff_users) && (
                   <Card className="p-6">
                     <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                       <Users className="h-5 w-5" />
@@ -756,43 +756,43 @@ export default function AdminTasksPage() {
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedTask.assignedStaff?.map((assignment) => (
-                        <div key={assignment.staffUser.id} className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                        <div key={assignment.staff_users.id} className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={assignment.staffUser.avatar || undefined} />
+                            <AvatarImage src={assignment.staff_users.avatar || undefined} />
                             <AvatarFallback className="bg-purple-500 text-white">
-                              {assignment.staffUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                              {assignment.staff_users.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold text-foreground truncate">
-                              {assignment.staffUser.name}
+                              {assignment.staff_users.name}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
-                              {assignment.staffUser.email}
+                              {assignment.staff_users.email}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {assignment.staffUser.role}
+                              {assignment.staff_users.role}
                             </div>
                           </div>
                         </div>
                       ))}
-                      {selectedTask.staffUser && !selectedTask.assignedStaff?.length && (
+                      {selectedTask.staff_users && !selectedTask.assignedStaff?.length && (
                         <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={selectedTask.staffUser.avatar || undefined} />
+                            <AvatarImage src={selectedTask.staff_users.avatar || undefined} />
                             <AvatarFallback className="bg-purple-500 text-white">
-                              {selectedTask.staffUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                              {selectedTask.staff_users.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold text-foreground truncate">
-                              {selectedTask.staffUser.name}
+                              {selectedTask.staff_users.name}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
-                              {selectedTask.staffUser.email}
+                              {selectedTask.staff_users.email}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {selectedTask.staffUser.role}
+                              {selectedTask.staff_users.role}
                             </div>
                           </div>
                         </div>
