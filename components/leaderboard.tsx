@@ -18,6 +18,7 @@ interface LeaderboardEntry {
 
 export default function Leaderboard() {
   const [rankings, setRankings] = useState<LeaderboardEntry[]>([])
+  const [currentUser, setCurrentUser] = useState<LeaderboardEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timePeriod, setTimePeriod] = useState<"this_week" | "this_month" | "all_time">("all_time")
@@ -33,6 +34,7 @@ export default function Leaderboard() {
       if (!response.ok) throw new Error("Failed to fetch leaderboard")
       const data = await response.json()
       setRankings(data.rankings)
+      setCurrentUser(data.currentUser)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load leaderboard")
     } finally {
@@ -68,13 +70,55 @@ export default function Leaderboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
-          <div className="grid gap-4 md:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-64 rounded-xl bg-slate-800/50 animate-pulse" />
-            ))}
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-6">
+          {/* Header Skeleton */}
+          <div className="h-32 rounded-2xl bg-slate-800/50 animate-pulse" />
+
+          {/* Current User Rank Skeleton */}
+          <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="h-20 w-20 rounded-full bg-slate-700/50" />
+                <div className="space-y-2">
+                  <div className="h-8 w-32 bg-slate-700/50 rounded" />
+                  <div className="h-4 w-48 bg-slate-700/50 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top 3 Podium Skeleton */}
+          <div className="relative flex items-end justify-center gap-4">
+            <div className="h-48 w-full rounded-t-2xl bg-slate-800/50 animate-pulse" />
+            <div className="z-10 h-60 w-full rounded-t-2xl bg-slate-800/50 animate-pulse" />
+            <div className="h-40 w-full rounded-t-2xl bg-slate-800/50 animate-pulse" />
+          </div>
+
+          {/* Full Rankings Skeleton */}
+          <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+            <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded-xl bg-slate-900/50 p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-slate-700/50" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-slate-700/50 rounded" />
+                      <div className="h-3 w-24 bg-slate-700/50 rounded" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-5 gap-4">
+                    {[...Array(5)].map((_, j) => (
+                      <div key={j} className="text-center">
+                        <div className="h-6 w-10 bg-slate-700/50 rounded mx-auto" />
+                        <div className="h-3 w-12 bg-slate-700/50 rounded mx-auto mt-1" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -83,8 +127,8 @@ export default function Leaderboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-5xl">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full">
           <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
             <h2 className="text-xl font-bold text-red-400">Error Loading Leaderboard</h2>
             <p className="mt-2 text-red-300">{error}</p>
@@ -94,14 +138,13 @@ export default function Leaderboard() {
     )
   }
 
-  const currentUser = rankings.find((entry) => entry.name === "Maria Santos")
   const topThree = rankings.slice(0, 3)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full space-y-6">
         {/* Header */}
-        <div className="rounded-2xl bg-gradient-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+        <div className="rounded-2xl bg-linear-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
@@ -132,11 +175,11 @@ export default function Leaderboard() {
 
         {/* Current User Rank */}
         {currentUser && (
-          <div className="rounded-2xl bg-gradient-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+          <div className="rounded-2xl bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
             <h2 className="mb-4 text-xl font-bold text-white">Your Current Rank</h2>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ring-blue-400/50">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ring-blue-400/50">
                   #{currentUser.rank}
                 </div>
                 <div>
@@ -164,7 +207,7 @@ export default function Leaderboard() {
         <div className="relative flex items-end justify-center gap-4">
           {/* 2nd Place */}
           {topThree[1] && (
-            <div className={`h-48 w-full rounded-t-2xl bg-gradient-to-br p-6 ring-2 ${getRankStyle(2)}`}>
+            <div className={`h-48 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(2)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(2)}
                 <div className="mt-2 text-4xl font-bold text-slate-300">2nd</div>
@@ -177,7 +220,7 @@ export default function Leaderboard() {
 
           {/* 1st Place */}
           {topThree[0] && (
-            <div className={`z-10 h-60 w-full rounded-t-2xl bg-gradient-to-br p-6 ring-2 ${getRankStyle(1)}`}>
+            <div className={`z-10 h-60 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(1)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(1)}
                 <div className="mt-2 text-5xl font-bold text-amber-300">1st</div>
@@ -190,7 +233,7 @@ export default function Leaderboard() {
 
           {/* 3rd Place */}
           {topThree[2] && (
-            <div className={`h-40 w-full rounded-t-2xl bg-gradient-to-br p-6 ring-2 ${getRankStyle(3)}`}>
+            <div className={`h-40 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(3)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(3)}
                 <div className="mt-2 text-3xl font-bold text-orange-400">3rd</div>
@@ -207,17 +250,17 @@ export default function Leaderboard() {
           <h2 className="mb-4 text-xl font-bold text-white">Full Rankings</h2>
           <div className="space-y-2">
             {rankings.map((entry) => (
-              <div
-                key={entry.id}
-                className={`flex items-center justify-between rounded-xl p-4 ring-1 transition-all hover:bg-slate-800/50 ${
-                  entry.name === "Maria Santos"
-                    ? "bg-blue-500/10 ring-blue-500/30"
-                    : "bg-slate-800/30 ring-white/5"
-                }`}
-              >
+               <div
+                 key={entry.id}
+                 className={`flex items-center justify-between rounded-xl p-4 ring-1 transition-all hover:bg-slate-800/50 ${
+                   currentUser && entry.id === currentUser.id
+                     ? "bg-blue-500/10 ring-blue-500/30"
+                     : "bg-slate-800/30 ring-white/5"
+                 }`}
+               >
                 <div className="flex items-center gap-4">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
-                    entry.rank <= 3 ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white" : "bg-slate-700 text-slate-300"
+                    entry.rank <= 3 ? "bg-linear-to-br from-amber-500 to-orange-500 text-white" : "bg-slate-700 text-slate-300"
                   }`}>
                     #{entry.rank}
                   </div>

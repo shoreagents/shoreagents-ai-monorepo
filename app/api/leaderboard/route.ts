@@ -57,8 +57,13 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.points - a.points)
       .map((user, index) => ({ ...user, rank: index + 1 }))
 
-    // Find current user in rankings
-    const currentUser = rankings.find((user) => user.id === session.user.id) || null
+    // Find current user's StaffUser record
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { authUserId: session.user.id }
+    })
+
+    // Find current user in rankings using staff user ID
+    const currentUser = staffUser ? rankings.find((user) => user.id === staffUser.id) || null : null
 
     return NextResponse.json({ rankings, currentUser })
   } catch (error) {
