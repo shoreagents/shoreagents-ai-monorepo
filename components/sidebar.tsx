@@ -50,6 +50,7 @@ const navItems = [
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)
+  const [todayActivity, setTodayActivity] = useState<any>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
   const pathname = usePathname()
   const router = useRouter()
@@ -58,6 +59,14 @@ export default function Sidebar() {
   useEffect(() => {
     if (status === "authenticated") {
       fetchProfileData()
+      fetchTodayActivity()
+      
+      // Refresh activity data every 30 seconds
+      const interval = setInterval(() => {
+        fetchTodayActivity()
+      }, 30000)
+      
+      return () => clearInterval(interval)
     }
   }, [status])
 
@@ -72,6 +81,48 @@ export default function Sidebar() {
       console.error("Failed to fetch profile data:", error)
     } finally {
       setLoadingProfile(false)
+    }
+  }
+
+  const fetchTodayActivity = async () => {
+    try {
+      const [analyticsResponse, tasksResponse] = await Promise.all([
+        fetch("/api/analytics"),
+        fetch("/api/tasks")
+      ])
+      
+      if (analyticsResponse.ok) {
+        const analyticsData = await analyticsResponse.json()
+        let activityData = analyticsData.today || {}
+        
+        // Fetch tasks data
+        if (tasksResponse.ok) {
+          const tasksData = await tasksResponse.json()
+          const tasks = tasksData.tasks || []
+          const completedTasks = tasks.filter((task: any) => task.status === "DONE" || task.status === "COMPLETED").length
+          const totalTasks = tasks.length
+          
+          activityData.tasksDone = totalTasks > 0 ? `${completedTasks}/${totalTasks}` : "0/0"
+        } else {
+          activityData.tasksDone = "0/0"
+        }
+        
+        // Fetch breaks count for today
+        try {
+          const today = new Date().toISOString().split('T')[0]
+          const breaksResponse = await fetch(`/api/breaks?date=${today}`)
+          if (breaksResponse.ok) {
+            const breaksData = await breaksResponse.json()
+            activityData.breaksTaken = breaksData.breaks?.length || 0
+          }
+        } catch (err) {
+          console.error("Failed to fetch breaks:", err)
+          activityData.breaksTaken = 0
+        }
+        setTodayActivity(activityData)
+      }
+    } catch (error) {
+      console.error("Failed to fetch today's activity:", error)
     }
   }
 
@@ -197,20 +248,29 @@ export default function Sidebar() {
               })}
             </nav>
 
-            <div className="space-y-3 rounded-xl p-4 bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 backdrop-blur-sm border border-purple-200/20">
+            <div className="space-y-3 rounded-xl p-4 bg-linear-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 backdrop-blur-sm border border-purple-200/20">
               <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Today's Activity</div>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Active Time</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">6h 32m</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity 
+                      ? `${Math.floor(todayActivity.activeTime / 3600)}h ${Math.floor((todayActivity.activeTime % 3600) / 60)}m`
+                      : "0h 0m"
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Tasks Done</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">8/12</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity?.tasksDone || "0/0"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Breaks Taken</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">3</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity?.breaksTaken || 0}
+                  </span>
                 </div>
               </div>
             </div>

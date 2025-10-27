@@ -162,32 +162,64 @@ export default function GamifiedDashboard({ offboardingData }: { offboardingData
           {/* Header skeleton */}
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <div className="h-10 w-72 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-12 w-72 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
               <div className="h-6 w-96 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-20 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+                <div key={i} className="h-20 w-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse p-4" />
               ))}
             </div>
           </div>
           
           {/* Quick actions skeleton */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="h-24 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse p-4" />
             ))}
           </div>
 
           {/* Main content grid skeleton */}
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-8">
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              {/* Tasks section */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-32 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
+              {/* Leaderboard section */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-12 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="space-y-8">
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-80 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              {/* Upcoming events */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
+              {/* Quick stats */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-36 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

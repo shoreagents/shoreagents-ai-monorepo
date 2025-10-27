@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,10 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, User } from "lucide-react"
 
-export default function AdminOffboardingDetail({ params }: { params: { staffUserId: string } }) {
+export default function AdminOffboardingDetail({ params }: { params: Promise<{ staffUserId: string }> }) {
   const router = useRouter()
+  const { staffUserId } = use(params)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
   const [offboarding, setOffboarding] = useState<any>(null)
@@ -23,11 +25,12 @@ export default function AdminOffboardingDetail({ params }: { params: { staffUser
 
   useEffect(() => {
     fetchOffboarding()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffUserId])
 
   async function fetchOffboarding() {
     try {
-      const response = await fetch(`/api/admin/staff/offboarding/${params.staffUserId}`)
+      const response = await fetch(`/api/admin/staff/offboarding/${staffUserId}`)
       const data = await response.json()
       setOffboarding(data.offboarding)
       setChecklist({
@@ -54,7 +57,7 @@ export default function AdminOffboardingDetail({ params }: { params: { staffUser
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffUserId: params.staffUserId,
+          staffUserId,
           ...checklist
         })
       })
@@ -90,10 +93,29 @@ export default function AdminOffboardingDetail({ params }: { params: { staffUser
   const exitData = offboarding.exitInterviewData ? JSON.parse(offboarding.exitInterviewData) : null
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">{offboarding.staffUser.name}</h1>
-        <p className="text-muted-foreground">Offboarding Details</p>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push('/admin/staff/offboarding')}
+          className="shrink-0 hover:bg-slate-100"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{offboarding.staffUser.name}</h1>
+            <Link href={`/admin/staff/${staffUserId}`}>
+              <Button variant="ghost" size="sm" className="hover:bg-slate-100">
+                <User className="h-4 w-4 mr-2" />
+                View Profile
+              </Button>
+            </Link>
+          </div>
+          <p className="text-muted-foreground">Offboarding Details</p>
+        </div>
       </div>
 
       {/* Basic Info */}

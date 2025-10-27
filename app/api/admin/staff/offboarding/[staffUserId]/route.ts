@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { staffUserId: string } }
+  { params }: { params: Promise<{ staffUserId: string }> }
 ) {
   try {
     const session = await auth()
@@ -12,8 +12,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const { staffUserId } = await params
+
     const offboarding = await prisma.staffOffboarding.findUnique({
-      where: { staffUserId: params.staffUserId },
+      where: { staffUserId },
       include: {
         staffUser: {
           select: {
