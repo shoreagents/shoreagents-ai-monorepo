@@ -41,6 +41,7 @@ model StaffUser {
   updatedAt              DateTime                @updatedAt
   email                  String                  @unique
   companyId              String?
+  active                 Boolean                 @default(true)
   activityPosts          ActivityPost[]
   breaks                 Break[]
   documents              Document[]
@@ -54,18 +55,17 @@ model StaffUser {
   postComments           PostComment[]
   postReactions          PostReaction[]
   reviewsReceived        Review[]
+  offboarding            StaffOffboarding?
   onboarding             StaffOnboarding?
   staff_personal_records staff_personal_records?
   profile                StaffProfile?
   company                Company?                @relation("CompanyStaff", fields: [companyId], references: [id])
+  welcomeForm            StaffWelcomeForm?
   taskAssignments        TaskAssignment[]
   legacyTasks            Task[]                  @relation("LegacyTaskAssignment")
   ticketResponses        TicketResponse[]
   tickets                Ticket[]
   timeEntries            TimeEntry[]
-  welcomeForm            StaffWelcomeForm?
-  active                 Boolean              @default(true)
-  offboarding            StaffOffboarding?
 
   @@map("staff_users")
 }
@@ -655,20 +655,27 @@ model notifications {
 }
 
 model InterviewRequest {
-  id                 String                 @id @default(uuid())
-  clientUserId       String
-  bpocCandidateId    String
-  candidateFirstName String
-  preferredTimes     Json
-  clientNotes        String?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  adminNotes         String?
-  meetingLink        String?
-  scheduledTime      DateTime?
-  status             InterviewRequestStatus @default(PENDING)
-  clientUser         ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  jobAcceptance      JobAcceptance?
+  id                   String                 @id @default(uuid())
+  clientUserId         String
+  bpocCandidateId      String
+  candidateFirstName   String
+  preferredTimes       Json
+  clientNotes          String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  adminNotes           String?
+  meetingLink          String?
+  scheduledTime        DateTime?
+  status               InterviewRequestStatus @default(PENDING)
+  clientPreferredStart DateTime?
+  finalStartDate       DateTime?
+  hireRequestedAt      DateTime?
+  hireRequestedBy      String?
+  offerDeclineReason   String?
+  offerResponseAt      DateTime?
+  offerSentAt          DateTime?
+  clientUser           ClientUser             @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  jobAcceptance        JobAcceptance?
 
   @@map("interview_requests")
 }
@@ -733,6 +740,62 @@ model EmploymentContract {
   staffUser          StaffUser     @relation(fields: [staffUserId], references: [id])
 
   @@map("employment_contracts")
+}
+
+model StaffWelcomeForm {
+  id               String    @id @default(uuid())
+  staffUserId      String    @unique
+  name             String
+  client           String
+  startDate        String
+  favoriteFastFood String
+  favoriteColor    String?
+  favoriteMusic    String?
+  favoriteMovie    String?
+  favoriteBook     String?
+  hobby            String?
+  dreamDestination String?
+  favoriteSeason   String?
+  petName          String?
+  favoriteSport    String?
+  favoriteGame     String?
+  favoriteQuote    String?
+  funFact          String?
+  additionalInfo   String?
+  completed        Boolean   @default(false)
+  submittedAt      DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  staffUser        StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_welcome_forms")
+}
+
+model StaffOffboarding {
+  id                     String            @id @default(uuid())
+  staffUserId            String            @unique
+  initiatedBy            String
+  reason                 OffboardingReason
+  reasonDetails          String?
+  lastWorkingDate        DateTime
+  offboardingNotes       String?
+  status                 OffboardingStatus @default(INITIATED)
+  exitInterviewCompleted Boolean           @default(false)
+  exitInterviewData      String?
+  equipmentReturned      Boolean           @default(false)
+  accessRevoked          Boolean           @default(false)
+  finalPaymentProcessed  Boolean           @default(false)
+  clearanceIssued        Boolean           @default(false)
+  clearanceDate          DateTime?
+  clearanceSignatureUrl  String?
+  createdAt              DateTime          @default(now())
+  completedAt            DateTime?
+  updatedAt              DateTime          @updatedAt
+  staffUser              StaffUser         @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([lastWorkingDate])
+  @@map("staff_offboarding")
 }
 
 enum ManagementRole {
@@ -958,62 +1021,11 @@ enum InterviewRequestStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
-}
-
-model StaffWelcomeForm {
-  id                String    @id @default(uuid())
-  staffUserId       String    @unique
-  name              String
-  client            String
-  startDate         String
-  favoriteFastFood  String
-  favoriteColor     String?
-  favoriteMusic     String?
-  favoriteMovie     String?
-  favoriteBook      String?
-  hobby             String?
-  dreamDestination  String?
-  favoriteSeason    String?
-  petName           String?
-  favoriteSport     String?
-  favoriteGame      String?
-  favoriteQuote     String?
-  funFact           String?
-  additionalInfo    String?
-  completed         Boolean   @default(false)
-  submittedAt       DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-
-  @@map("staff_welcome_forms")
-}
-
-model StaffOffboarding {
-  id                     String              @id @default(uuid())
-  staffUserId            String              @unique
-  initiatedBy            String
-  reason                 OffboardingReason
-  reasonDetails          String?
-  lastWorkingDate        DateTime
-  offboardingNotes       String?
-  status                 OffboardingStatus   @default(INITIATED)
-  exitInterviewCompleted Boolean             @default(false)
-  exitInterviewData      String?
-  equipmentReturned      Boolean             @default(false)
-  accessRevoked          Boolean             @default(false)
-  finalPaymentProcessed  Boolean             @default(false)
-  clearanceIssued        Boolean             @default(false)
-  clearanceDate          DateTime?
-  clearanceSignatureUrl  String?
-  createdAt              DateTime            @default(now())
-  completedAt            DateTime?
-  updatedAt              DateTime            @updatedAt
-  staffUser              StaffUser           @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
-  
-  @@index([status])
-  @@index([lastWorkingDate])
-  @@map("staff_offboarding")
+  HIRE_REQUESTED
+  OFFER_SENT
+  OFFER_ACCEPTED
+  OFFER_DECLINED
+  HIRED
 }
 
 enum OffboardingReason {
