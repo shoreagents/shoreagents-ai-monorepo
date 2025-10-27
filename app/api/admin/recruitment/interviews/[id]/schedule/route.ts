@@ -11,9 +11,12 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params (Next.js 15 requirement)
+    const { id } = await params
+    
     // Verify admin is authenticated
     const session = await auth()
     if (!session?.user?.id) {
@@ -39,11 +42,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid scheduled time format' }, { status: 400 })
     }
 
-    console.log(`📅 Scheduling interview ${params.id} for ${scheduledDate.toISOString()}`)
+    console.log(`📅 Scheduling interview ${id} for ${scheduledDate.toISOString()}`)
 
     // Update interview request
     const updatedInterview = await prisma.interview_requests.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         scheduledTime: scheduledDate,
         meetingLink: meetingLink || null,

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
           },
         },
-        responses: {
+        ticket_responses: {
           orderBy: { createdAt: "asc" },
           include: {
             staff_users: {

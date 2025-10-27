@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const staffList = await prisma.staff_users.findMany({
       where: whereClause,
       include: {
-        onboarding: {
+        staff_onboarding: {
           select: {
             completionPercent: true,
             isComplete: true,

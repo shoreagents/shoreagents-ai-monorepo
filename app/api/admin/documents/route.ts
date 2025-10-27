@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch all documents where source = 'ADMIN'
-    const documents = await prisma.document.findMany({
+    const documents = await prisma.documents.findMany({
       where: {
         source: 'ADMIN'
       },

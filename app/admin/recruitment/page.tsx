@@ -136,21 +136,13 @@ export default function AdminRecruitmentPage() {
     adminNotes: ''
   })
   const [scheduling, setScheduling] = useState(false)
-
-  // Finalize Hire Modal State
-  const [finalizeHireModalOpen, setFinalizeHireModalOpen] = useState(false)
-  const [interviewToFinalize, setInterviewToFinalize] = useState<InterviewRequest | null>(null)
-  const [finalizeFormData, setFinalizeFormData] = useState({
-    finalStartDate: '',
-    staffEmail: 'nora@nora.com' // Default email for staff account
-  })
-  const [finalizing, setFinalizing] = useState(false)
   
-  // Confirm Acceptance Modal State
+  // Finalize Hire Modal State (consolidated with confirm acceptance)
   const [confirmAcceptanceModalOpen, setConfirmAcceptanceModalOpen] = useState(false)
   const [interviewToConfirm, setInterviewToConfirm] = useState<InterviewRequest | null>(null)
   const [confirmFormData, setConfirmFormData] = useState({
     confirmedStartDate: '',
+    staffEmail: '',
     adminNotes: ''
   })
   const [confirming, setConfirming] = useState(false)
@@ -447,90 +439,7 @@ export default function AdminRecruitmentPage() {
     }
   }
 
-  async function openFinalizeHireModal(interview: InterviewRequest) {
-    setInterviewToFinalize(interview)
-    
-    // Pre-fill with client's preferred start date if available
-    let startDate = ''
-    if (interview.clientPreferredStart) {
-      const date = new Date(interview.clientPreferredStart)
-      startDate = date.toISOString().split('T')[0]
-    }
-    
-    setFinalizeFormData({
-      finalStartDate: startDate,
-      staffEmail: 'nora@nora.com' // This will be the email for staff signup
-    })
-    
-    setFinalizeHireModalOpen(true)
-  }
-
-  async function handleFinalizeHire() {
-    if (!interviewToFinalize) return
-
-    // Validation
-    if (!finalizeFormData.finalStartDate) {
-      toast({
-        title: "Error",
-        description: "Final start date is required",
-        variant: "destructive"
-      })
-      return
-    }
-
-    if (!finalizeFormData.staffEmail) {
-      toast({
-        title: "Error",
-        description: "Staff email is required",
-        variant: "destructive"
-      })
-      return
-    }
-
-    try {
-      setFinalizing(true)
-
-      const response = await fetch('/api/admin/recruitment/interviews/finalize-hire', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          interviewRequestId: interviewToFinalize.id,
-          finalStartDate: finalizeFormData.finalStartDate,
-          staffEmail: finalizeFormData.staffEmail,
-          bpocCandidateId: interviewToFinalize.bpocCandidateId
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast({
-          title: "Hire Finalized Successfully! 🎉",
-          description: `Staff signup invitation has been prepared for ${finalizeFormData.staffEmail}. When they create their account, it will be auto-matched to this hire.`,
-        })
-
-        // Refresh interviews list
-        await fetchInterviews()
-
-        // Close modal
-        setFinalizeHireModalOpen(false)
-        setInterviewToFinalize(null)
-      } else {
-        throw new Error(data.error || 'Failed to finalize hire')
-      }
-    } catch (error) {
-      console.error('Error finalizing hire:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to finalize hire",
-        variant: "destructive"
-      })
-    } finally {
-      setFinalizing(false)
-    }
-  }
-
-  // Confirm Offer Acceptance
+  // Finalize Hire (consolidated with confirm acceptance)
   async function openConfirmAcceptanceModal(interview: InterviewRequest) {
     setInterviewToConfirm(interview)
     
@@ -541,8 +450,22 @@ export default function AdminRecruitmentPage() {
       startDate = date.toISOString().split('T')[0]
     }
     
+    // Fetch candidate email from BPOC database
+    let candidateEmail = ''
+    try {
+      const response = await fetch(`/api/admin/recruitment/candidates/${interview.bpocCandidateId}`)
+      if (response.ok) {
+        const candidateData = await response.json()
+        candidateEmail = candidateData.resume_data?.email || candidateData.resume_data?.contact?.email || ''
+        console.log('📧 Pre-filled candidate email:', candidateEmail)
+      }
+    } catch (error) {
+      console.error('Error fetching candidate email:', error)
+    }
+    
     setConfirmFormData({
       confirmedStartDate: startDate,
+      staffEmail: candidateEmail,
       adminNotes: ''
     })
     
@@ -552,6 +475,25 @@ export default function AdminRecruitmentPage() {
   async function handleConfirmAcceptance() {
     if (!interviewToConfirm) return
 
+    // Validation
+    if (!confirmFormData.confirmedStartDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a confirmed start date",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!confirmFormData.staffEmail) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide the staff email address",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       setConfirming(true)
 
@@ -560,7 +502,9 @@ export default function AdminRecruitmentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           interviewRequestId: interviewToConfirm.id,
+          bpocCandidateId: interviewToConfirm.bpocCandidateId,
           confirmedStartDate: confirmFormData.confirmedStartDate,
+          staffEmail: confirmFormData.staffEmail,
           adminNotes: confirmFormData.adminNotes
         })
       })
@@ -569,8 +513,8 @@ export default function AdminRecruitmentPage() {
 
       if (data.success) {
         toast({
-          title: "Offer Accepted! 🎉",
-          description: `${interviewToConfirm.candidateFirstName} has accepted the offer. You can now finalize the hire.`,
+          title: "Hire Finalized! 🎉",
+          description: `${interviewToConfirm.candidateFirstName} can now sign up using ${confirmFormData.staffEmail} to begin onboarding.`,
         })
 
         // Refresh interviews list
@@ -580,13 +524,13 @@ export default function AdminRecruitmentPage() {
         setConfirmAcceptanceModalOpen(false)
         setInterviewToConfirm(null)
       } else {
-        throw new Error(data.error || 'Failed to confirm acceptance')
+        throw new Error(data.error || 'Failed to finalize hire')
       }
     } catch (error) {
-      console.error('Error confirming acceptance:', error)
+      console.error('Error finalizing hire:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to confirm acceptance",
+        description: error instanceof Error ? error.message : "Failed to finalize hire",
         variant: "destructive"
       })
     } finally {
@@ -1310,7 +1254,7 @@ export default function AdminRecruitmentPage() {
                             Send Offer
                           </Button>
                         )}
-                        {/* Show "Confirm Acceptance" and "Mark Declined" buttons for offer-sent */}
+                        {/* Show "Finalize Hire" and "Mark Declined" buttons for offer-sent */}
                         {status === 'offer-sent' && (
                           <div className="flex gap-2 w-full">
                             <Button 
@@ -1323,7 +1267,7 @@ export default function AdminRecruitmentPage() {
                               }}
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Confirm Acceptance
+                              Finalize Hire
                             </Button>
                             <Button 
                               variant="destructive" 
@@ -1338,21 +1282,6 @@ export default function AdminRecruitmentPage() {
                               Mark Declined
                             </Button>
                           </div>
-                        )}
-                        {/* Show "Finalize Hire" button for offer-accepted */}
-                        {status === 'offer-accepted' && (
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 animate-pulse"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openFinalizeHireModal(interview)
-                            }}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Finalize Hire
-                          </Button>
                         )}
                       </div>
 
@@ -1731,128 +1660,6 @@ export default function AdminRecruitmentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Finalize Hire Modal */}
-      <Dialog open={finalizeHireModalOpen} onOpenChange={setFinalizeHireModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
-              Finalize Hire & Create Staff Account
-            </DialogTitle>
-          </DialogHeader>
-          {interviewToFinalize && (
-            <div className="space-y-6">
-              {/* Success Message */}
-              <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-lg backdrop-blur-sm">
-                <div className="flex gap-3">
-                  <CheckCircle className="h-6 w-6 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-emerald-300">Candidate Accepted the Offer! 🎉</p>
-                    <p className="text-xs text-emerald-400/80">
-                      {interviewToFinalize.candidateFirstName} has accepted the job offer. Now finalize the hire by setting the start date.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Candidate Info */}
-              <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg backdrop-blur-sm">
-                <h3 className="font-semibold text-slate-200 mb-2">Candidate Information</h3>
-                <div className="space-y-1 text-sm">
-                  <p><span className="text-slate-400">Name:</span> <span className="text-slate-200 font-medium">{interviewToFinalize.candidateFirstName}</span></p>
-                  <p><span className="text-slate-400">BPOC ID:</span> <span className="text-slate-300 font-mono text-xs">{interviewToFinalize.bpocCandidateId}</span></p>
-                  <p><span className="text-slate-400">Staff Email:</span> <span className="text-slate-200 font-medium">{finalizeFormData.staffEmail}</span></p>
-                </div>
-              </div>
-
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="finalStartDate" className="text-sm font-medium text-slate-200">
-                    Final Start Date *
-                  </Label>
-                  <Input
-                    id="finalStartDate"
-                    type="date"
-                    value={finalizeFormData.finalStartDate}
-                    onChange={(e) => setFinalizeFormData(prev => ({ ...prev, finalStartDate: e.target.value }))}
-                    required
-                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
-                  />
-                  <p className="text-xs text-slate-400">
-                    This is the confirmed start date after negotiation with the candidate.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="staffEmail" className="text-sm font-medium text-slate-200">
-                    Staff Email Address *
-                  </Label>
-                  <Input
-                    id="staffEmail"
-                    type="email"
-                    value={finalizeFormData.staffEmail}
-                    onChange={(e) => setFinalizeFormData(prev => ({ ...prev, staffEmail: e.target.value }))}
-                    required
-                    placeholder="staff@example.com"
-                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20 font-medium"
-                  />
-                  <p className="text-xs text-slate-400">
-                    This email will be used for staff signup. When they create an account with this email, it will be automatically matched to this hire record.
-                  </p>
-                </div>
-              </div>
-
-              {/* Info Box */}
-              <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg backdrop-blur-sm">
-                <div className="flex gap-2">
-                  <UserCheck className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-300">What Happens Next?</p>
-                    <ul className="text-xs text-blue-400/80 space-y-1 list-disc list-inside">
-                      <li>Job acceptance record will be created in the database</li>
-                      <li>Interview status will be updated to "HIRED"</li>
-                      <li>Staff member can create their account using <strong className="text-blue-300">{finalizeFormData.staffEmail}</strong></li>
-                      <li>When they sign up, their profile will auto-populate from BPOC data</li>
-                      <li>They'll be automatically assigned to the correct company</li>
-                      <li>Onboarding process will begin</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleFinalizeHire}
-                  disabled={finalizing}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  {finalizing ? (
-                    <>
-                      <span className="animate-spin mr-2">⏳</span>
-                      Finalizing Hire...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Finalize Hire & Prepare Staff Account
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setFinalizeHireModalOpen(false)}
-                  disabled={finalizing}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Schedule Interview Modal */}
       <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 max-w-lg">
@@ -1959,26 +1766,32 @@ export default function AdminRecruitmentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Acceptance Modal */}
+      {/* Finalize Hire Modal (consolidated) */}
       <Dialog open={confirmAcceptanceModalOpen} onOpenChange={setConfirmAcceptanceModalOpen}>
         <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-emerald-400">
-              ✅ Confirm Offer Acceptance
+            <DialogTitle className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
+              <CheckCircle className="h-6 w-6" />
+              Finalize Hire & Create Staff Account
             </DialogTitle>
             <DialogDescription className="text-slate-400">
-              The candidate has verbally accepted the offer. Confirm the details below.
+              Candidate has accepted the offer! Finalize the hire by confirming the start date and email for onboarding.
             </DialogDescription>
           </DialogHeader>
 
           {interviewToConfirm && (
             <div className="space-y-6 py-4">
-              {/* Candidate Info */}
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                <h3 className="font-semibold text-emerald-300 mb-2">Candidate: {interviewToConfirm.candidateFirstName}</h3>
-                <p className="text-sm text-slate-300">
-                  You've confirmed that this candidate has accepted the job offer via phone/email.
-                </p>
+              {/* Success Message */}
+              <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-lg">
+                <div className="flex gap-3">
+                  <CheckCircle className="h-6 w-6 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-emerald-300">Candidate: {interviewToConfirm.candidateFirstName} 🎉</p>
+                    <p className="text-xs text-emerald-400/80">
+                      The candidate has accepted the job offer! Complete the details below to finalize the hire.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Confirmed Start Date */}
@@ -1998,10 +1811,28 @@ export default function AdminRecruitmentPage() {
                 </p>
               </div>
 
+              {/* Staff Email */}
+              <div className="space-y-2">
+                <Label htmlFor="staffEmail" className="text-slate-200 font-medium">
+                  Staff Email Address *
+                </Label>
+                <Input
+                  id="staffEmail"
+                  type="email"
+                  value={confirmFormData.staffEmail}
+                  onChange={(e) => setConfirmFormData({ ...confirmFormData, staffEmail: e.target.value })}
+                  placeholder="staff@example.com"
+                  className="bg-slate-800 border-slate-700 text-slate-100 font-medium placeholder:text-slate-500"
+                />
+                <p className="text-xs text-slate-400">
+                  Pre-filled from candidate's BPOC profile. This email will be used for staff signup and onboarding.
+                </p>
+              </div>
+
               {/* Admin Notes */}
               <div className="space-y-2">
                 <Label htmlFor="confirmNotes" className="text-slate-200 font-medium">
-                  Confirmation Notes (Optional)
+                  Admin Notes (Optional)
                 </Label>
                 <Textarea
                   id="confirmNotes"
@@ -2012,22 +1843,40 @@ export default function AdminRecruitmentPage() {
                 />
               </div>
 
+              {/* What Happens Next Info Box */}
+              <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+                <div className="flex gap-2">
+                  <UserCheck className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-blue-300">What Happens Next?</p>
+                    <ul className="text-xs text-blue-400/80 space-y-1 list-disc list-inside">
+                      <li>Job acceptance record will be created/updated</li>
+                      <li>Interview status will be updated to "HIRED"</li>
+                      <li>Staff member can create their account using <strong className="text-blue-300">{confirmFormData.staffEmail}</strong></li>
+                      <li>When they sign up, their profile will auto-populate from BPOC data</li>
+                      <li>They'll be automatically assigned to the correct company</li>
+                      <li>Contract signing & onboarding process will begin</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={handleConfirmAcceptance}
-                  disabled={confirming || !confirmFormData.confirmedStartDate}
+                  disabled={confirming || !confirmFormData.confirmedStartDate || !confirmFormData.staffEmail}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700"
                 >
                   {confirming ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Confirming...
+                      Finalizing Hire...
                     </>
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Confirm Acceptance
+                      Finalize Hire & Prepare Onboarding
                     </>
                   )}
                 </Button>

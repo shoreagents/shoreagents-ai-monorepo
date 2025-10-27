@@ -56,12 +56,12 @@ export async function GET(request: NextRequest) {
             logo: true,
           },
         },
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
           },
         },
-        performanceMetrics: {
+        performance_metrics: {
           where: {
             date: {
               gte: startDate,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
             date: "desc",
           },
         },
-        timeEntries: {
+        time_entries: {
           where: {
             clockIn: {
               gte: startDate,
@@ -94,8 +94,8 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats for each staff member
     const staffWithStats = staff.map((staffMember) => {
-      const metrics = staffMember.performanceMetrics
-      const timeEntries = staffMember.timeEntries
+      const metrics = staffMember.performance_metrics
+      const timeEntries = staffMember.time_entries
 
       // Calculate totals
       const totalMouseClicks = metrics.reduce((sum, m) => sum + m.mouseClicks, 0)
