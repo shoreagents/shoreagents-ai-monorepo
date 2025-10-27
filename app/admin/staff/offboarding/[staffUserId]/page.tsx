@@ -94,27 +94,30 @@ export default function AdminOffboardingDetail({ params }: { params: Promise<{ s
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="space-y-4">
+        {/* Back Button at top */}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.push('/admin/staff/offboarding')}
-          className="shrink-0 hover:bg-slate-100"
+          className="hover:bg-slate-100"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
+        
+        {/* Name and View Profile on same row */}
+        <div className="flex items-center justify-between">
+          <div>
             <h1 className="text-3xl font-bold">{offboarding.staffUser.name}</h1>
-            <Link href={`/admin/staff/${staffUserId}`}>
-              <Button variant="ghost" size="sm" className="hover:bg-slate-100">
-                <User className="h-4 w-4 mr-2" />
-                View Profile
-              </Button>
-            </Link>
+            <p className="text-muted-foreground">Offboarding Details</p>
           </div>
-          <p className="text-muted-foreground">Offboarding Details</p>
+          <Link href={`/admin/staff/${staffUserId}`}>
+            <Button variant="ghost" size="sm" className="hover:bg-slate-100">
+              <User className="h-4 w-4 mr-2" />
+              View Profile
+            </Button>
+          </Link>
         </div>
       </div>
 

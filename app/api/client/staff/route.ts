@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     const staffList = await prisma.staffUser.findMany({
       where: {
         companyId: clientUser.company.id,
+        active: true, // Only show active staff (not deactivated after offboarding)
         // Show all staff regardless of onboarding status
         // And whose start date is today or in the past
         profile: {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
             lte: today
           }
         }
-      },
+      } as any,
       include: {
         onboarding: {
           select: {

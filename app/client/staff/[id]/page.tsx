@@ -182,15 +182,17 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
       {staff.coverPhoto && (
         <div className="relative h-64 w-full">
           <Image src={staff.coverPhoto} alt={`${staff.name}'s cover`} fill className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50" />
+          <div className="absolute inset-0 bg-linear-to-b from-transparent to-gray-50" />
         </div>
       )}
 
       <header className={`bg-white border-b border-gray-200 ${staff.coverPhoto ? '-mt-20 relative z-10' : ''}`}>
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Link href="/client/staff">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button 
+              className="mb-6 bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 shadow-md hover:shadow-lg flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg transition-all"
+            >
+              <ArrowLeft className="h-5 w-5" />
               Back to Staff
             </Button>
           </Link>
@@ -202,33 +204,36 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
                   <Image src={staff.avatar} alt={staff.name} fill className="object-cover" />
                 </div>
               ) : (
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-4xl font-semibold ring-4 ring-white shadow-xl">
+                <div className="w-32 h-32 rounded-full bg-linear-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-4xl font-semibold ring-4 ring-white shadow-xl">
                   {staff.name.split(" ").map((n) => n[0]).join("")}
                 </div>
               )}
               <div className="pt-2">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
                   <h1 className="text-3xl font-bold text-gray-900">{staff.name}</h1>
                   {staff.currentStatus.isClockedIn && (
-                    <Badge className="bg-green-100 text-green-700 border-green-200">
-                      <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
-                      Online Now
+                    <Badge className="bg-green-100 text-green-800 border-2 border-green-300 px-3 py-1">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-600 mr-2 animate-pulse" />
+                      <span className="font-semibold">Online Now</span>
                     </Badge>
                   )}
                 </div>
-                <p className="text-lg text-gray-600 mb-3">{staff.assignment?.role || staff.profile?.currentRole}</p>
-                <div className="flex items-center gap-4 flex-wrap">
+                <p className="text-lg text-gray-600 mb-4">{staff.assignment?.role || staff.profile?.currentRole}</p>
+                <div className="flex items-center gap-2 flex-wrap">
                   {staff.profile && (
-                    <Badge className={getStatusColor(staff.profile.employmentStatus)}>
+                    <Badge className={`${getStatusColor(staff.profile.employmentStatus)} px-3 py-1 border-2 font-semibold`}>
                       {staff.profile.employmentStatus}
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-sm">
-                    <Star className="h-3 w-3 mr-1" />
+                  <Badge className="bg-indigo-100 text-indigo-800 border-2 border-indigo-300 px-3 py-1 font-semibold">
+                    <Star className="h-3.5 w-3.5 mr-1.5 fill-indigo-600" />
                     Level {staff.stats.level}
                   </Badge>
-                  <Badge variant="outline" className="text-sm">
-                    {staff.profile?.daysEmployed} days employed
+                  <Badge className="bg-purple-100 text-purple-800 border-2 border-purple-300 px-3 py-1 font-semibold">
+                    📅 {staff.profile?.daysEmployed} days employed
+                  </Badge>
+                  <Badge className="bg-blue-100 text-blue-800 border-2 border-blue-300 px-3 py-1 font-semibold">
+                    ⭐ {staff.stats.avgProductivity}% Productivity
                   </Badge>
                 </div>
               </div>
@@ -247,10 +252,10 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Contact & Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card className="p-6 bg-white">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <Card className="p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Mail className="h-5 w-5 text-blue-600" />
               Contact Information
@@ -275,7 +280,7 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </Card>
 
-          <Card className="p-6 bg-white">
+          <Card className="p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-blue-600" />
               Employment Details
@@ -342,26 +347,26 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <Card className="p-6 bg-linear-to-br from-blue-500 to-blue-600 text-white">
             <Clock className="h-8 w-8 mb-3 opacity-80" />
             <p className="text-3xl font-bold mb-1">{staff.stats.totalHoursThisMonth}h</p>
             <p className="text-sm opacity-90">Hours This Month</p>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+          <Card className="p-6 bg-linear-to-br from-purple-500 to-purple-600 text-white">
             <Activity className="h-8 w-8 mb-3 opacity-80" />
             <p className="text-3xl font-bold mb-1">{staff.tasks.stats.inProgress}</p>
             <p className="text-sm opacity-90">Active Tasks</p>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <Card className="p-6 bg-linear-to-br from-green-500 to-green-600 text-white">
             <CheckCircle2 className="h-8 w-8 mb-3 opacity-80" />
             <p className="text-3xl font-bold mb-1">{staff.tasks.stats.completed}</p>
             <p className="text-sm opacity-90">Tasks Completed</p>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+          <Card className="p-6 bg-linear-to-br from-orange-500 to-orange-600 text-white">
             <Coffee className="h-8 w-8 mb-3 opacity-80" />
             <p className="text-3xl font-bold mb-1">
               {staff.profile ? staff.profile.totalLeave - staff.profile.usedLeave : 0}
@@ -371,7 +376,7 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Leave Credits & Attendance */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {staff.profile && (
             <Card className="p-6 bg-white">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">

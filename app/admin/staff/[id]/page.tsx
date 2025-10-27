@@ -107,7 +107,7 @@ export default async function StaffDetailPage({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-1">
           <div>
             <h1 className="text-3xl font-semibold text-foreground">Staff Profile</h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -119,7 +119,7 @@ export default async function StaffDetailPage({
               <OffboardButton staffUserId={staff.id} />
             )}
             {staff.offboarding && (
-              <Badge variant="warning" className="ml-4">Offboarding in Progress</Badge>
+              <Badge variant="secondary" className="ml-4">Offboarding in Progress</Badge>
             )}
           </div>
         </div>

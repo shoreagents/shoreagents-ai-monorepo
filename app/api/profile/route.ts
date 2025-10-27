@@ -52,6 +52,8 @@ export async function GET(req: NextRequest) {
         role: staffUser.role,
         avatar: staffUser.avatar,
         coverPhoto: staffUser.coverPhoto,
+        // @ts-ignore - active field exists but not in generated types yet
+        active: staffUser.active,
       },
       company: staffUser.company ? {
         name: staffUser.company.companyName,

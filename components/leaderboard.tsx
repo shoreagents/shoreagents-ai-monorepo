@@ -16,7 +16,11 @@ interface LeaderboardEntry {
   rankChange: number
 }
 
-export default function Leaderboard() {
+interface LeaderboardProps {
+  isClient?: boolean
+}
+
+export default function Leaderboard({ isClient = false }: LeaderboardProps) {
   const [rankings, setRankings] = useState<LeaderboardEntry[]>([])
   const [currentUser, setCurrentUser] = useState<LeaderboardEntry | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,35 +46,50 @@ export default function Leaderboard() {
     }
   }
 
+
+  const getRankStyle = (rank: number) => {
+    if (isClient) {
+      switch (rank) {
+        case 1:
+          return "from-amber-100 to-orange-100 ring-amber-300 border border-amber-300"
+        case 2:
+          return "from-gray-100 to-gray-200 ring-gray-300 border border-gray-300"
+        case 3:
+          return "from-orange-100 to-orange-200 ring-orange-300 border border-orange-300"
+        default:
+          return "from-white to-gray-50 ring-gray-200 border border-gray-200"
+      }
+    } else {
+      switch (rank) {
+        case 1:
+          return "from-amber-500/30 to-orange-500/30 ring-amber-400/50"
+        case 2:
+          return "from-slate-600/30 to-slate-700/30 ring-slate-500/50"
+        case 3:
+          return "from-orange-600/30 to-orange-700/30 ring-orange-500/50"
+        default:
+          return "from-slate-800/50 to-slate-900/50 ring-white/10"
+      }
+    }
+  }
+
   const getRankIcon = (rank: number) => {
+    const iconClass = isClient ? "" : "text-"
     switch (rank) {
       case 1:
-        return <Crown className="h-8 w-8 text-amber-300" />
+        return <Crown className={`h-8 w-8 ${isClient ? 'text-amber-600' : 'text-amber-300'}`} />
       case 2:
-        return <Medal className="h-8 w-8 text-slate-300" />
+        return <Medal className={`h-8 w-8 ${isClient ? 'text-gray-600' : 'text-slate-300'}`} />
       case 3:
-        return <Award className="h-8 w-8 text-orange-400" />
+        return <Award className={`h-8 w-8 ${isClient ? 'text-orange-600' : 'text-orange-400'}`} />
       default:
         return null
     }
   }
 
-  const getRankStyle = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return "from-amber-500/30 to-orange-500/30 ring-amber-400/50"
-      case 2:
-        return "from-slate-600/30 to-slate-700/30 ring-slate-500/50"
-      case 3:
-        return "from-orange-600/30 to-orange-700/30 ring-orange-500/50"
-      default:
-        return "from-slate-800/50 to-slate-900/50 ring-white/10"
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className={`min-h-screen p-4 pt-20 md:p-8 lg:pt-8 ${isClient ? 'bg-gray-50' : 'bg-linear-to-br from-slate-950 via-slate-900 to-slate-950'}`}>
         <div className="mx-auto max-w-full space-y-6">
           {/* Header Skeleton */}
           <div className="h-32 rounded-2xl bg-slate-800/50 animate-pulse" />
@@ -127,7 +146,7 @@ export default function Leaderboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className={`min-h-screen p-4 pt-20 md:p-8 lg:pt-8 ${isClient ? 'bg-gray-50' : 'bg-linear-to-br from-slate-950 via-slate-900 to-slate-950'}`}>
         <div className="mx-auto max-w-full">
           <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
             <h2 className="text-xl font-bold text-red-400">Error Loading Leaderboard</h2>
@@ -141,17 +160,17 @@ export default function Leaderboard() {
   const topThree = rankings.slice(0, 3)
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+    <div className={`min-h-screen p-4 pt-20 md:p-8 lg:pt-8 ${isClient ? 'bg-gray-50' : 'bg-linear-to-br from-slate-950 via-slate-900 to-slate-950'}`}>
       <div className="mx-auto max-w-full space-y-6">
         {/* Header */}
-        <div className="rounded-2xl bg-linear-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+        <div className={`rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ${isClient ? 'bg-white border border-gray-200' : 'bg-linear-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 ring-white/10'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
+              <h1 className={`flex items-center gap-3 text-3xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>
                 <Trophy className="h-8 w-8 text-amber-400" />
                 Leaderboard
               </h1>
-              <p className="mt-1 text-slate-300">Team rankings and achievements</p>
+              <p className={`mt-1 ${isClient ? 'text-gray-600' : 'text-slate-300'}`}>Team rankings and achievements</p>
             </div>
             <div className="flex gap-2">
               {(["this_week", "this_month", "all_time"] as const).map((period) => (
@@ -160,8 +179,8 @@ export default function Leaderboard() {
                   onClick={() => setTimePeriod(period)}
                   className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                     timePeriod === period
-                      ? "bg-white/20 text-white"
-                      : "text-slate-400 hover:bg-white/10 hover:text-white"
+                      ? isClient ? "bg-blue-600 text-white" : "bg-white/20 text-white"
+                      : isClient ? "text-gray-600 hover:bg-gray-100" : "text-slate-400 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {period === "this_week" && "This Week"}
@@ -175,16 +194,16 @@ export default function Leaderboard() {
 
         {/* Current User Rank */}
         {currentUser && (
-          <div className="rounded-2xl bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
-            <h2 className="mb-4 text-xl font-bold text-white">Your Current Rank</h2>
+          <div className={`rounded-2xl p-6 shadow-xl backdrop-blur-xl ring-1 ${isClient ? 'bg-white border border-gray-200' : 'bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 ring-white/10'}`}>
+            <h2 className={`mb-4 text-xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>Your Current Rank</h2>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ring-blue-400/50">
+                <div className={`flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-3xl font-bold text-white ring-4 ${isClient ? 'ring-blue-300' : 'ring-blue-400/50'}`}>
                   #{currentUser.rank}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{currentUser.points} points</p>
-                  <p className="text-slate-300">Level {currentUser.level} • {currentUser.streakDays} day streak</p>
+                  <p className={`text-2xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{currentUser.points} points</p>
+                  <p className={isClient ? 'text-gray-600' : 'text-slate-300'}>Level {currentUser.level} • {currentUser.streakDays} day streak</p>
                   {currentUser.rankChange !== 0 && (
                     <div className="mt-1 flex items-center gap-1">
                       {currentUser.rankChange > 0 ? (
@@ -192,7 +211,7 @@ export default function Leaderboard() {
                       ) : (
                         <TrendingDown className="h-4 w-4 text-red-400" />
                       )}
-                      <span className={currentUser.rankChange > 0 ? "text-emerald-400" : "text-red-400"}>
+                      <span className={currentUser.rankChange > 0 ? (isClient ? "text-emerald-600" : "text-emerald-400") : (isClient ? "text-red-600" : "text-red-400")}>
                         {Math.abs(currentUser.rankChange)} from last week
                       </span>
                     </div>
@@ -210,10 +229,10 @@ export default function Leaderboard() {
             <div className={`h-48 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(2)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(2)}
-                <div className="mt-2 text-4xl font-bold text-slate-300">2nd</div>
-                <div className="mt-2 font-semibold text-white">{topThree[1].name}</div>
-                <div className="mt-1 text-2xl font-bold text-white">{topThree[1].points}</div>
-                <div className="text-xs text-slate-400">points</div>
+                <div className={`mt-2 text-4xl font-bold ${isClient ? 'text-gray-700' : 'text-slate-300'}`}>2nd</div>
+                <div className={`mt-2 font-semibold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[1].name}</div>
+                <div className={`mt-1 text-2xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[1].points}</div>
+                <div className={`text-xs ${isClient ? 'text-gray-600' : 'text-slate-400'}`}>points</div>
               </div>
             </div>
           )}
@@ -223,10 +242,10 @@ export default function Leaderboard() {
             <div className={`z-10 h-60 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(1)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(1)}
-                <div className="mt-2 text-5xl font-bold text-amber-300">1st</div>
-                <div className="mt-2 font-semibold text-white">{topThree[0].name}</div>
-                <div className="mt-1 text-3xl font-bold text-white">{topThree[0].points}</div>
-                <div className="text-xs text-slate-400">points</div>
+                <div className={`mt-2 text-5xl font-bold ${isClient ? 'text-amber-600' : 'text-amber-300'}`}>1st</div>
+                <div className={`mt-2 font-semibold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[0].name}</div>
+                <div className={`mt-1 text-3xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[0].points}</div>
+                <div className={`text-xs ${isClient ? 'text-gray-600' : 'text-slate-400'}`}>points</div>
               </div>
             </div>
           )}
@@ -236,65 +255,71 @@ export default function Leaderboard() {
             <div className={`h-40 w-full rounded-t-2xl bg-linear-to-br p-6 ring-2 ${getRankStyle(3)}`}>
               <div className="flex flex-col items-center text-center">
                 {getRankIcon(3)}
-                <div className="mt-2 text-3xl font-bold text-orange-400">3rd</div>
-                <div className="mt-2 font-semibold text-white">{topThree[2].name}</div>
-                <div className="mt-1 text-xl font-bold text-white">{topThree[2].points}</div>
-                <div className="text-xs text-slate-400">points</div>
+                <div className={`mt-2 text-3xl font-bold ${isClient ? 'text-orange-600' : 'text-orange-400'}`}>3rd</div>
+                <div className={`mt-2 font-semibold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[2].name}</div>
+                <div className={`mt-1 text-xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{topThree[2].points}</div>
+                <div className={`text-xs ${isClient ? 'text-gray-600' : 'text-slate-400'}`}>points</div>
               </div>
             </div>
           )}
         </div>
 
         {/* Full Rankings */}
-        <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-          <h2 className="mb-4 text-xl font-bold text-white">Full Rankings</h2>
+        <div className={`rounded-2xl p-6 backdrop-blur-xl ring-1 ${isClient ? 'bg-white border border-gray-200' : 'bg-slate-900/50 ring-white/10'}`}>
+          <h2 className={`mb-4 text-xl font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>Full Rankings</h2>
           <div className="space-y-2">
             {rankings.map((entry) => (
                <div
                  key={entry.id}
-                 className={`flex items-center justify-between rounded-xl p-4 ring-1 transition-all hover:bg-slate-800/50 ${
-                   currentUser && entry.id === currentUser.id
-                     ? "bg-blue-500/10 ring-blue-500/30"
-                     : "bg-slate-800/30 ring-white/5"
+                 className={`flex items-center justify-between rounded-xl p-4 ring-1 transition-all ${
+                   isClient
+                     ? currentUser && entry.id === currentUser.id
+                       ? "bg-blue-50 border-2 border-blue-300"
+                       : "bg-white border border-gray-200 hover:bg-gray-50"
+                     : currentUser && entry.id === currentUser.id
+                       ? "bg-blue-500/10 ring-blue-500/30 hover:bg-slate-800/50"
+                       : "bg-slate-800/30 ring-white/5 hover:bg-slate-800/50"
                  }`}
                >
                 <div className="flex items-center gap-4">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
-                    entry.rank <= 3 ? "bg-linear-to-br from-amber-500 to-orange-500 text-white" : "bg-slate-700 text-slate-300"
+                    isClient
+                      ? entry.rank <= 3 ? "bg-linear-to-br from-amber-100 to-orange-100 text-amber-700" : "bg-gray-200 text-gray-600"
+                      : entry.rank <= 3 ? "bg-linear-to-br from-amber-500 to-orange-500 text-white" : "bg-slate-700 text-slate-300"
                   }`}>
                     #{entry.rank}
                   </div>
                   <div>
-                    <div className="font-semibold text-white">{entry.name}</div>
-                    <div className="text-sm text-slate-400">Level {entry.level}</div>
+                    <div className={`font-semibold ${isClient ? 'text-gray-900' : 'text-white'}`}>{entry.name}</div>
+                    <div className={`text-sm ${isClient ? 'text-gray-600' : 'text-slate-400'}`}>Level {entry.level}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div className="text-center">
-                    <div className="font-bold text-white">{entry.points}</div>
-                    <div className="text-slate-400">Points</div>
+                    <div className={`font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{entry.points}</div>
+                    <div className={isClient ? 'text-gray-600' : 'text-slate-400'}>Points</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-white">{entry.tasksCompleted}</div>
-                    <div className="text-slate-400">Tasks</div>
+                    <div className={`font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{entry.tasksCompleted}</div>
+                    <div className={isClient ? 'text-gray-600' : 'text-slate-400'}>Tasks</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-white">{entry.performanceScore}%</div>
-                    <div className="text-slate-400">Performance</div>
+                    <div className={`font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>{entry.performanceScore}%</div>
+                    <div className={isClient ? 'text-gray-600' : 'text-slate-400'}>Performance</div>
                   </div>
                   <div className="text-center">
-                    <div className="flex items-center gap-0.5 font-bold text-white">
+                    <div className={`flex items-center gap-0.5 font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>
                       <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
                       {entry.reviewRating.toFixed(1)}
                     </div>
-                    <div className="text-slate-400">Review</div>
+                    <div className={isClient ? 'text-gray-600' : 'text-slate-400'}>Review</div>
                   </div>
                   <div className="text-center">
-                    <div className="flex items-center gap-1 font-bold text-white">
+                    <div className={`flex items-center gap-1 font-bold ${isClient ? 'text-gray-900' : 'text-white'}`}>
                       <Flame className="h-4 w-4 text-orange-400" />
                       {entry.streakDays}
                     </div>
-                    <div className="text-slate-400">Streak</div>
+                    <div className={isClient ? 'text-gray-600' : 'text-slate-400'}>Streak</div>
                   </div>
                 </div>
               </div>

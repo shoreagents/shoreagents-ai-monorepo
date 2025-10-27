@@ -104,8 +104,19 @@ export async function PUT(
       }
     })
 
-    // 🎉 Auto-generate activity post when task is completed
+    // 🎉 Update gamification profile and auto-generate activity post when task is completed
     if (isBeingCompleted) {
+      // Update gamification profile - increment tasks completed and add points
+      await prisma.gamificationProfile.update({
+        where: { staffUserId: staffUser.id },
+        data: {
+          tasksCompleted: { increment: 1 },
+          points: { increment: 50 }, // Award 50 points per task completed
+        },
+      })
+
+      console.log(`✅ Updated gamification for ${staffUser.name}: tasksCompleted +1, points +50`)
+
       await logTaskCompleted(
         staffUser.id,
         staffUser.name,

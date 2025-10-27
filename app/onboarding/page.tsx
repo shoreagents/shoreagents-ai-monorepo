@@ -129,6 +129,9 @@ export default function OnboardingPage() {
   
   const [formData, setFormData] = useState<Partial<OnboardingData>>({})
   
+  // State to store pending files before upload
+  const [pendingFiles, setPendingFiles] = useState<Map<string, File>>(new Map())
+  
   // NEW: Enhanced onboarding state
   const [nearbyClinics, setNearbyClinics] = useState<any[]>([])
   const [privacyData, setPrivacyData] = useState({
@@ -345,7 +348,32 @@ export default function OnboardingPage() {
     setSuccess("")
     
     try {
-      // First save the government IDs
+      // First upload all pending files and get their URLs
+      const uploadedUrls: Record<string, string> = {}
+      
+      for (const [documentType, file] of pendingFiles.entries()) {
+        try {
+          const url = await handleFileUpload(file, documentType)
+          uploadedUrls[documentType] = url
+          // Remove from pending after successful upload
+          setPendingFiles(prev => {
+            const newMap = new Map(prev)
+            newMap.delete(documentType)
+            return newMap
+          })
+        } catch (err) {
+          console.error(`Failed to upload ${documentType}:`, err)
+          // Continue with other files even if one fails
+        }
+      }
+      
+      // Map document types to form data fields
+      const sssDocUrl = uploadedUrls['sssDoc'] || formData.sssDocUrl
+      const tinDocUrl = uploadedUrls['tinDoc'] || formData.tinDocUrl
+      const philhealthDocUrl = uploadedUrls['philhealthDoc'] || formData.philhealthDocUrl
+      const pagibigDocUrl = uploadedUrls['pagibigDoc'] || formData.pagibigDocUrl
+      
+      // Now save the government IDs with uploaded URLs
       const response = await fetch("/api/onboarding/gov-ids", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -353,7 +381,11 @@ export default function OnboardingPage() {
           sss: formData.sss,
           tin: formData.tin,
           philhealthNo: formData.philhealthNo,
-          pagibigNo: formData.pagibigNo
+          pagibigNo: formData.pagibigNo,
+          sssDocUrl,
+          tinDocUrl,
+          philhealthDocUrl,
+          pagibigDocUrl
         })
       })
       
@@ -364,7 +396,7 @@ export default function OnboardingPage() {
       
       setSuccess("Government IDs saved!")
       await fetchOnboardingData()
-      setTimeout(() => setCurrentStep(3), 1000)
+      setTimeout(() => setCurrentStep(4), 1000)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -442,6 +474,12 @@ export default function OnboardingPage() {
     }
   }
 
+  const handleFileSelect = (file: File, documentType: string) => {
+    // Store file in pending files instead of uploading immediately
+    setPendingFiles(prev => new Map(prev).set(documentType, file))
+    setError("")
+  }
+
   const handleFileUpload = async (file: File, documentType: string) => {
     setUploading({ ...uploading, [documentType]: true })
     setError("")
@@ -461,9 +499,11 @@ export default function OnboardingPage() {
         throw new Error(data.error || "Failed to upload")
       }
       
-      await fetchOnboardingData()
+      const data = await response.json()
+      return data.url // Return the uploaded URL
     } catch (err: any) {
       setError(err.message)
+      throw err
     } finally {
       setUploading({ ...uploading, [documentType]: false })
     }
@@ -1185,11 +1225,11 @@ export default function OnboardingPage() {
                         </button>
                       </div>
                     </div>
-                  ) : formData.resumeUrl && formData.resumeStatus === "REJECTED" ? (
+                  ) : formData.resumeUrl && (formData.resumeStatus === "SUBMITTED" || formData.resumeStatus === "REJECTED") ? (
                     <div className="p-4 bg-slate-800/50 border border-slate-600 rounded-lg">
                       <div className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-slate-400" />
-                        <span className="text-slate-300">Resume uploaded (pending review)</span>
+                        <span className="text-slate-300">Resume uploaded{formData.resumeStatus === "SUBMITTED" ? " (pending review)" : " (rejected - please upload a new one)"}</span>
                         <button 
                           onClick={() => {
                             setImageLoading(true)
@@ -1310,7 +1350,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "sssDoc") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "sssDoc") }}
                                 />
                               </>
                             )}
@@ -1326,7 +1366,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "sssDoc") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "sssDoc") }} />
                         )}
                       </div>
                     )}
@@ -1379,7 +1419,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "tinDoc") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "tinDoc") }}
                                 />
                               </>
                             )}
@@ -1395,7 +1435,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "tinDoc") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "tinDoc") }} />
                         )}
                       </div>
                     )}
@@ -1448,7 +1488,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "philhealthDoc") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "philhealthDoc") }}
                                 />
                               </>
                             )}
@@ -1464,7 +1504,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "philhealthDoc") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "philhealthDoc") }} />
                         )}
                       </div>
                     )}
@@ -1517,7 +1557,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "pagibigDoc") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "pagibigDoc") }}
                                 />
                               </>
                             )}
@@ -1533,7 +1573,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.govIdStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "pagibigDoc") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "pagibigDoc") }} />
                         )}
                       </div>
                     )}
@@ -1603,7 +1643,7 @@ export default function OnboardingPage() {
                             disabled={formData.documentsStatus === "APPROVED"}
                             onChange={(e) => {
                               const file = e.target.files?.[0]
-                              if (file) handleFileUpload(file, "validId")
+                              if (file) handleFileSelect(file, "validId")
                             }}
                           />
                         )}
@@ -1644,7 +1684,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birthCert") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "birthCert") }}
                                 />
                               </>
                             )}
@@ -1660,7 +1700,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birthCert") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "birthCert") }} />
                         )}
                       </div>
                     )}
@@ -1699,7 +1739,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "nbiClearance") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "nbiClearance") }}
                                 />
                               </>
                             )}
@@ -1715,7 +1755,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "nbiClearance") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "nbiClearance") }} />
                         )}
                       </div>
                     )}
@@ -1754,7 +1794,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "policeClearance") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "policeClearance") }}
                                 />
                               </>
                             )}
@@ -1770,7 +1810,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "policeClearance") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "policeClearance") }} />
                         )}
                       </div>
                     )}
@@ -1809,7 +1849,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birForm2316") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "birForm2316") }}
                                 />
                               </>
                             )}
@@ -1825,7 +1865,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "birForm2316") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "birForm2316") }} />
                         )}
                       </div>
                     )}
@@ -1864,7 +1904,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "certificateEmp") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "certificateEmp") }}
                                 />
                               </>
                             )}
@@ -1880,7 +1920,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "certificateEmp") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "certificateEmp") }} />
                         )}
                       </div>
                     )}
@@ -1919,7 +1959,7 @@ export default function OnboardingPage() {
                                   type="file"
                                   accept=".jpg,.jpeg,.png"
                                   className="hidden"
-                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "idPhoto") }}
+                                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "idPhoto") }}
                                 />
                               </>
                             )}
@@ -1935,7 +1975,7 @@ export default function OnboardingPage() {
                           </div>
                         ) : (
                           <Input type="file" accept=".jpg,.jpeg,.png" className="bg-slate-700 border-slate-600 text-white" disabled={formData.documentsStatus === "APPROVED"}
-                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "idPhoto") }} />
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileSelect(file, "idPhoto") }} />
                         )}
                       </div>
                     )}
@@ -1950,13 +1990,27 @@ export default function OnboardingPage() {
                   >
                     Back
                   </Button>
-                  <Button
-                    onClick={() => setCurrentStep(4)}
-                    className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
-                    disabled={saving}
-                  >
-                    Next
-                  </Button>
+                  {formData.govIdStatus !== "APPROVED" ? (
+                    <Button
+                      onClick={handleGovIdsSubmit}
+                      disabled={saving}
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    >
+                      {saving ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving...
+                        </span>
+                      ) : "Save & Next"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setCurrentStep(4)}
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    >
+                      Next
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -2680,6 +2734,27 @@ export default function OnboardingPage() {
                   >
                     Back
                   </Button>
+                  {formData.emergencyContactStatus !== "APPROVED" ? (
+                    <Button
+                      onClick={handleEmergencyContactSubmit}
+                      disabled={saving}
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    >
+                      {saving ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving...
+                        </span>
+                      ) : "Save & Complete"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setCurrentStep(1)}
+                      className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
+                    >
+                      Review All Steps
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
