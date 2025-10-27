@@ -1,8 +1,8 @@
 /**
- * Admin Recruitment - Single Candidate API
+ * Admin Recruitment - Get Single Candidate API
  * GET /api/admin/recruitment/candidates/[id]
  * 
- * Fetch a single candidate from BPOC database by ID
+ * Fetches a single candidate's details from BPOC database
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,6 +14,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params (Next.js 15 requirement)
+    const { id } = await params
+    
     // Verify admin is authenticated
     const session = await auth()
     if (!session?.user?.id) {
@@ -26,53 +29,22 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
     }
 
-    // Await params (Next.js 15+)
-    const { id } = await params
+    console.log(`🔍 [ADMIN] Fetching candidate: ${id}`)
 
-    console.log(`🔍 [ADMIN] Fetching candidate ${id} from BPOC database`)
-
-    // Fetch candidate from BPOC database using existing helper
+    // Get candidate from BPOC database
     const candidate = await getCandidateById(id)
 
     if (!candidate) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Candidate not found' 
-      }, { status: 404 })
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // Extract contact info from resume_data if available
-    const resumeData = candidate.resume_data || {}
-    const email = resumeData.email || resumeData.contact?.email || ''
-    const phone = resumeData.phone || resumeData.contact?.phone || resumeData.contact?.mobile || ''
+    console.log(`✅ [ADMIN] Found candidate: ${candidate.first_name}`)
 
-    console.log(`✅ [ADMIN] Found candidate: ${candidate.first_name}`, { 
-      hasEmail: !!email, 
-      hasPhone: !!phone 
-    })
-
-    return NextResponse.json({
-      success: true,
-      candidate: {
-        id: candidate.id,
-        first_name: candidate.first_name,
-        email: email,
-        phone: phone,
-        position: candidate.position || '',
-        location_city: candidate.location_city,
-        location_country: candidate.location_country,
-        bio: candidate.bio,
-        avatar_url: candidate.avatar_url,
-        resume_data: candidate.resume_data
-      }
-    })
-
+    return NextResponse.json(candidate, { status: 200 })
   } catch (error: any) {
     console.error('❌ [ADMIN] Error fetching candidate:', error)
     return NextResponse.json({ 
-      success: false,
       error: error.message || 'Failed to fetch candidate' 
     }, { status: 500 })
   }
 }
-

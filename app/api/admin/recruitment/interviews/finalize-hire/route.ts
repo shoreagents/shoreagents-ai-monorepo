@@ -83,29 +83,52 @@ export async function POST(request: NextRequest) {
       candidatePhone = candidateData.resume_data.phone || candidateData.resume_data.contact?.phone || null
     }
 
-    // Create job acceptance record
-    const jobAcceptance = await prisma.job_acceptances.create({
-      data: {
-        id: crypto.randomUUID(),
-        interviewRequestId: interviewRequestId,
-        bpocCandidateId: bpocCandidateId || '',
-        candidateEmail: staffEmail,
-        candidatePhone: candidatePhone,
-        position: candidateData?.position || 'Staff Member',
-        companyId: interview.client_users?.companyId || '',
-        acceptedByAdminId: session.user.id, // Admin who finalized the hire
-        acceptedAt: new Date(),
-        signupEmailSent: false,
-        signupEmailSentAt: null,
-        staffUserId: null, // Will be set when staff creates account
-        contractSigned: false,
-        contractSignedAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+    // Check if job acceptance already exists
+    const existingJobAcceptance = await prisma.job_acceptances.findUnique({
+      where: { interviewRequestId: interviewRequestId }
     })
 
-    console.log('✅ [ADMIN] Created job acceptance record:', jobAcceptance.id)
+    let jobAcceptance
+    if (existingJobAcceptance) {
+      // Update existing job acceptance
+      console.log('📝 [ADMIN] Updating existing job acceptance:', existingJobAcceptance.id)
+      jobAcceptance = await prisma.job_acceptances.update({
+        where: { id: existingJobAcceptance.id },
+        data: {
+          candidateEmail: staffEmail,
+          candidatePhone: candidatePhone,
+          position: candidateData?.position || existingJobAcceptance.position,
+          bpocCandidateId: bpocCandidateId || existingJobAcceptance.bpocCandidateId,
+          acceptedByAdminId: session.user.id,
+          updatedAt: new Date()
+        }
+      })
+    } else {
+      // Create new job acceptance record
+      console.log('🆕 [ADMIN] Creating new job acceptance')
+      jobAcceptance = await prisma.job_acceptances.create({
+        data: {
+          id: crypto.randomUUID(),
+          interviewRequestId: interviewRequestId,
+          bpocCandidateId: bpocCandidateId || '',
+          candidateEmail: staffEmail,
+          candidatePhone: candidatePhone,
+          position: candidateData?.position || 'Staff Member',
+          companyId: interview.client_users?.companyId || '',
+          acceptedByAdminId: session.user.id,
+          acceptedAt: new Date(),
+          signupEmailSent: false,
+          signupEmailSentAt: null,
+          staffUserId: null, // Will be set when staff creates account
+          contractSigned: false,
+          contractSignedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+    }
+
+    console.log('✅ [ADMIN] Job acceptance record ready:', jobAcceptance.id)
 
     // Update interview request status to HIRED
     await prisma.interview_requests.update({
