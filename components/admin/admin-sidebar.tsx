@@ -189,7 +189,7 @@ const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
   { icon: "User", label: "My Profile", href: "/admin/profile", badge: null },
   { icon: "Building2", label: "Client", href: "/admin/clients", badge: null },
-  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/staff/onboarding", badge: null },
+  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/onboarding", badge: null },
   { icon: "Users", label: "Staff", href: "/admin/staff", badge: null },
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
   { icon: "TrendingUp", label: "Analytics", href: "/admin/analytics", badge: null },
@@ -248,10 +248,10 @@ export function AdminSidebar({
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-slate-800/50 bg-linear-to-b from-slate-900 via-slate-900 to-slate-950 backdrop-blur-sm">
+      <aside className="flex w-64 flex-col border-r border-slate-800/50 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 backdrop-blur-sm">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-slate-800/50 px-6">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-linear-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-lg shadow-indigo-500/20">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-lg shadow-indigo-500/20">
             <span className="text-sm font-bold text-white">SA</span>
           </div>
           <div>
@@ -271,24 +271,22 @@ export function AdminSidebar({
                 href={item.href}
                 className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-linear-to-r from-indigo-600/20 to-purple-600/20 text-white font-semibold shadow-lg"
+                    ? "bg-gradient-to-r from-indigo-600/20 to-purple-600/20 text-white font-semibold shadow-lg"
                     : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-linear-to-b from-indigo-400 to-purple-400 rounded-r-full" />
+                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 to-purple-400 rounded-r-full" />
                 )}
-                <div className={`h-4 w-4 transition-colors duration-200 ${
+                <IconComponent className={`h-4 w-4 transition-colors duration-200 ${
                   isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-indigo-400"
-                }`}>
-                  <IconComponent />
-                </div>
+                }`} />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge && (
                   <Badge
                     variant="secondary"
                     className={`${
-                      isActive ? "bg-linear-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/50" : "bg-slate-700 text-slate-300"
+                      isActive ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/50" : "bg-slate-700 text-slate-300"
                     } h-5 min-w-5 px-1.5 text-xs font-bold`}
                   >
                     {item.badge}
@@ -325,7 +323,7 @@ export function AdminSidebar({
           </Link>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-linear-to-r hover:from-red-600/20 hover:to-rose-600/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-200"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-gradient-to-r hover:from-red-600/20 hover:to-rose-600/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-200"
           >
             <Icons.LogOut />
             <span>Logout</span>
@@ -358,7 +356,7 @@ export function AdminSidebar({
               <Button variant="ghost" className="gap-2">
                 <Avatar className="size-7">
                   <AvatarImage src={user.avatar || undefined} />
-                  <AvatarFallback className="bg-linear-to-r from-indigo-600 to-purple-600 text-white text-xs">
+                  <AvatarFallback className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Check if user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -21,7 +21,7 @@ export async function GET() {
     }
 
     // Get all time entries with staff and company info
-    const entries = await prisma.timeEntry.findMany({
+    const entries = await prisma.time_entries.findMany({
       select: {
         id: true,
         clockIn: true,
@@ -31,7 +31,7 @@ export async function GET() {
         wasLate: true,
         lateBy: true,
         createdAt: true,
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

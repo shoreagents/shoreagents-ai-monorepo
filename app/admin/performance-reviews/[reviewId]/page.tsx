@@ -49,7 +49,7 @@ interface Review {
   reviewedByName?: string
   reviewedDate?: string
   acknowledgedDate?: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -395,14 +395,14 @@ export default function AdminReviewDetailPage({
           <Card className="rounded-lg bg-card border p-6">
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={review.staffUser.avatar} />
+                <AvatarImage src={review.staff_users.avatar} />
                 <AvatarFallback>
-                  {review.staffUser.name.split(" ").map(n => n[0]).join("")}
+                  {review.staff_users.name.split(" ").map(n => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-foreground">{review.staffUser.name}</h2>
-                <p className="text-muted-foreground">{review.staffUser.email}</p>
+                <h2 className="text-2xl font-bold text-foreground">{review.staff_users.name}</h2>
+                <p className="text-muted-foreground">{review.staff_users.email}</p>
               </div>
             </div>
           </Card>

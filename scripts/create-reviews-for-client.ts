@@ -12,7 +12,7 @@ async function main() {
   console.log('🚀 Creating PENDING reviews for CLIENT to submit...\n')
   
   // Get client user
-  const clientUser = await prisma.clientUser.findUnique({
+  const clientUser = await prisma.client_users.findUnique({
     where: { email: 'stephen@stepten.io' },
     include: { company: true }
   })
@@ -26,7 +26,7 @@ async function main() {
   console.log(`✅ Company: ${clientUser.company?.companyName}\n`)
   
   // Get all test staff with profiles
-  const staffList = await prisma.staffUser.findMany({
+  const staffList = await prisma.staff_users.findMany({
     where: {
       email: { endsWith: '@test.com' },
       companyId: clientUser.companyId
@@ -70,7 +70,7 @@ async function main() {
     }
     
     // Check if review already exists
-    const existing = await prisma.review.findFirst({
+    const existing = await prisma.reviews.findFirst({
       where: {
         staffUserId: staff.id,
         type: reviewType as any
@@ -83,7 +83,7 @@ async function main() {
     }
     
     // Create PENDING review
-    const review = await prisma.review.create({
+    const review = await prisma.reviews.create({
       data: {
         staffUserId: staff.id,
         type: reviewType as any,

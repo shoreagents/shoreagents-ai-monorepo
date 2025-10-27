@@ -33,7 +33,7 @@ interface Task {
   company?: { id: string; companyName: string } | null
   clientUser?: { id: string; name: string; email: string; avatar: string | null } | null
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string

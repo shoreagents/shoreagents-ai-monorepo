@@ -16,7 +16,7 @@ export async function DELETE(
     }
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 

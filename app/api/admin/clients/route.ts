@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
     })
 

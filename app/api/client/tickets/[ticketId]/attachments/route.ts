@@ -14,7 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -34,7 +34,7 @@ export async function PATCH(
     }
 
     // Verify ticket belongs to this client
-    const ticket = await prisma.ticket.findUnique({
+    const ticket = await prisma.tickets.findUnique({
       where: { id: ticketId },
       select: { 
         clientUserId: true,
@@ -53,7 +53,7 @@ export async function PATCH(
     const updatedAttachments = [...ticket.attachments, ...attachmentUrls]
 
     // Update ticket with new attachments
-    const updatedTicket = await prisma.ticket.update({
+    const updatedTicket = await prisma.tickets.update({
       where: { id: ticketId },
       data: {
         attachments: updatedAttachments,

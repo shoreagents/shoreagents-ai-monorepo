@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
       // Filter by client/company
       if (clientId) {
-        const staffUsers = await prisma.staffUser.findMany({
+        const staffUsers = await prisma.staff_users.findMany({
           where: { companyId: clientId },
           select: { id: true }
         })
@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const reviews = await prisma.review.findMany({
+    const reviews = await prisma.reviews.findMany({
       where,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch reviewer names from ClientUser table
     const reviewerEmails = [...new Set(reviews.map(r => r.reviewer))]
-    const clientUsers = await prisma.clientUser.findMany({
+    const clientUsers = await prisma.client_users.findMany({
       where: {
         email: { in: reviewerEmails }
       },
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch admin reviewer names from ManagementUser table
     const adminReviewerEmails = [...new Set(reviews.map(r => r.reviewedBy).filter(Boolean))]
-    const managementUsers = await prisma.managementUser.findMany({
+    const managementUsers = await prisma.management_users.findMany({
       where: {
         email: { in: adminReviewerEmails }
       },
@@ -129,10 +129,10 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get the review
-    const review = await prisma.review.findUnique({
+    const review = await prisma.reviews.findUnique({
       where: { id: reviewId },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -154,7 +154,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update review: SUBMITTED → UNDER_REVIEW
-    const updatedReview = await prisma.review.update({
+    const updatedReview = await prisma.reviews.update({
       where: { id: reviewId },
       data: { 
         status: "UNDER_REVIEW",
@@ -163,7 +163,7 @@ export async function PUT(request: NextRequest) {
         reviewedDate: new Date()
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -177,7 +177,7 @@ export async function PUT(request: NextRequest) {
     // TODO: Create notification for staff
     // await createNotification({
     //   type: "REVIEW_PROCESSED",
-    //   recipientUserId: review.staffUser.id,
+    //   recipientUserId: review.staff_users.id,
     //   title: "Your Performance Review is Ready",
     //   message: `Your ${review.type} review has been completed`,
     //   link: `/reviews`

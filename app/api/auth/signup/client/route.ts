@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { supabaseAdmin } from "@/lib/supabase"
+import { randomUUID } from "crypto"
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists in client_users
-    const existingUser = await prisma.clientUser.findUnique({
+    const existingUser = await prisma.client_users.findUnique({
       where: { email }
     })
 
@@ -56,18 +57,25 @@ export async function POST(req: NextRequest) {
 
     if (!company) {
       company = await prisma.company.create({
-        data: { companyName }
+        data: {
+          id: randomUUID(),
+          companyName,
+          organizationId: randomUUID(), // Unique org ID
+          updatedAt: new Date(),
+        }
       })
     }
 
     // 3. Create in client_users table (linked to Supabase auth user and Company)
-    const clientUser = await prisma.clientUser.create({
+    const clientUser = await prisma.client_users.create({
       data: {
+        id: randomUUID(),
         authUserId: authData.user.id, // Links to Supabase auth.users.id
         companyId: company.id,
         email,
         name,
         role: role || "MANAGER",
+        updatedAt: new Date(),
       }
     })
 
@@ -85,10 +93,17 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Client signup error:", error)
+    console.error("Error details:", {
+      message: error?.message,
+      code: error?.code,
+    })
     return NextResponse.json(
-      { error: "Failed to create account" },
+      { 
+        error: "Failed to create account",
+        details: error?.message || "Unknown error"
+      },
       { status: 500 }
     )
   }

@@ -34,7 +34,7 @@ export async function GET(
     }
 
     // Fetch comments
-    const comments = await prisma.documentComment.findMany({
+    const comments = await prisma.document_comments.findMany({
       where: { documentId },
       orderBy: { createdAt: 'asc' }
     })
@@ -91,7 +91,7 @@ export async function POST(
     let userId = session.user.id
 
     // Check if user is management (admin)
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true, avatar: true, role: true }
     })
@@ -105,7 +105,7 @@ export async function POST(
     }
 
     // Check if user is staff
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true, avatar: true }
     })
@@ -127,7 +127,7 @@ export async function POST(
       }
     } else {
       // Check if user is client
-      const clientUser = await prisma.clientUser.findUnique({
+      const clientUser = await prisma.client_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true, avatar: true, companyId: true }
       })
@@ -153,7 +153,7 @@ export async function POST(
     }
 
     // Create comment
-    const comment = await prisma.documentComment.create({
+    const comment = await prisma.document_comments.create({
       data: {
         documentId,
         content: content.trim(),

@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
 
         // 🚀 First determine user type to get the correct user ID
         const [staffUser, clientUser, managementUser] = await Promise.all([
-          prisma.staffUser.findUnique({ where: { authUserId: session.user.id } }),
-          prisma.clientUser.findUnique({ where: { authUserId: session.user.id } }),
-          prisma.managementUser.findUnique({ where: { authUserId: session.user.id } })
+          prisma.staff_users.findUnique({ where: { authUserId: session.user.id } }),
+          prisma.client_users.findUnique({ where: { authUserId: session.user.id } }),
+          prisma.management_users.findUnique({ where: { authUserId: session.user.id } })
         ])
 
         const userType = staffUser ? 'staff' : clientUser ? 'client' : managementUser ? 'management' : null
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         const userId = staffUser?.id || clientUser?.id || managementUser?.id
 
         // 🚀 Check if user already has this reaction (toggle behavior)
-        const existingReaction = await prisma.postReaction.findFirst({
+        const existingReaction = await prisma.post_reactions.findFirst({
           where: {
             postId,
             type: type as any,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         if (existingReaction) {
           // 🚀 Remove reaction (toggle off) - handle case where reaction might already be deleted
           try {
-            await prisma.postReaction.delete({
+            await prisma.post_reactions.delete({
               where: { id: existingReaction.id }
             })
           } catch (error: any) {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         } else {
           // 🚀 Add reaction (toggle on)
           try {
-            const reaction = await prisma.postReaction.create({
+            const reaction = await prisma.post_reactions.create({
               data: {
                 postId,
                 type: type as any,

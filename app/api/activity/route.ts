@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const posts = await prisma.activityPost.findMany({
+    const posts = await prisma.activity_posts.findMany({
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         },
         reactions: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         },
         comments: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const post = await prisma.activityPost.create({
+    const post = await prisma.activity_posts.create({
       data: {
         staffUserId: staffUser.id,
         content,
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         images: images || [],
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

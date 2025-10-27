@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Count pending reviews for this client
-    const pendingCount = await prisma.review.count({
+    const pendingCount = await prisma.reviews.count({
       where: {
         reviewer: clientUser.email,
         status: "PENDING"

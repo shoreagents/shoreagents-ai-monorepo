@@ -21,10 +21,10 @@ import { notFound } from "next/navigation"
 
 async function getTimeEntry(id: string) {
   try {
-    const entry = await prisma.timeEntry.findUnique({
+    const entry = await prisma.time_entries.findUnique({
       where: { id },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -125,26 +125,26 @@ export default async function TimeEntryDetailPage({
             <h3 className="text-lg font-semibold text-foreground mb-4">Staff Member</h3>
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16 ring-2 ring-white/10">
-                <AvatarImage src={entry.staffUser.avatar || undefined} alt={entry.staffUser.name} />
+                <AvatarImage src={entry.staff_users.avatar || undefined} alt={entry.staff_users.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-xl">
-                  {entry.staffUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {entry.staff_users.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h4 className="font-semibold text-foreground">{entry.staffUser.name}</h4>
-                <p className="text-sm text-muted-foreground">{entry.staffUser.email}</p>
+                <h4 className="font-semibold text-foreground">{entry.staff_users.name}</h4>
+                <p className="text-sm text-muted-foreground">{entry.staff_users.email}</p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="outline" className="text-xs">
-                    {entry.staffUser.role}
+                    {entry.staff_users.role}
                   </Badge>
-                  {entry.staffUser.profile?.currentRole && (
+                  {entry.staff_users.profile?.currentRole && (
                     <Badge variant="secondary" className="text-xs">
-                      {entry.staffUser.profile.currentRole}
+                      {entry.staff_users.profile.currentRole}
                     </Badge>
                   )}
                 </div>
                 <div className="mt-3">
-                  <Link href={`/admin/staff/${entry.staffUser.id}`}>
+                  <Link href={`/admin/staff/${entry.staff_users.id}`}>
                     <Button variant="outline" size="sm">
                       View Staff Profile
                     </Button>
@@ -155,15 +155,15 @@ export default async function TimeEntryDetailPage({
           </Card>
 
           {/* Company Card */}
-          {entry.staffUser.company && (
+          {entry.staff_users.company && (
             <Card className="p-6 border-border bg-card">
               <h3 className="text-lg font-semibold text-foreground mb-4">Company Assignment</h3>
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-white/10">
-                  {entry.staffUser.company.logo ? (
+                  {entry.staff_users.company.logo ? (
                     <img 
-                      src={entry.staffUser.company.logo} 
-                      alt={entry.staffUser.company.companyName} 
+                      src={entry.staff_users.company.logo} 
+                      alt={entry.staff_users.company.companyName} 
                       className="h-full w-full rounded-lg object-cover" 
                     />
                   ) : (
@@ -172,18 +172,18 @@ export default async function TimeEntryDetailPage({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-foreground">{entry.staffUser.company.companyName}</h4>
-                    <Badge variant={entry.staffUser.company.isActive ? "default" : "secondary"} className="text-xs">
-                      {entry.staffUser.company.isActive ? "Active" : "Inactive"}
+                    <h4 className="font-semibold text-foreground">{entry.staff_users.company.companyName}</h4>
+                    <Badge variant={entry.staff_users.company.isActive ? "default" : "secondary"} className="text-xs">
+                      {entry.staff_users.company.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  {entry.staffUser.company.tradingName && (
+                  {entry.staff_users.company.tradingName && (
                     <p className="text-xs text-muted-foreground">
-                      Trading as: {entry.staffUser.company.tradingName}
+                      Trading as: {entry.staff_users.company.tradingName}
                     </p>
                   )}
                   <div className="mt-3">
-                    <Link href={`/admin/clients/${entry.staffUser.company.id}`}>
+                    <Link href={`/admin/clients/${entry.staff_users.company.id}`}>
                       <Button variant="outline" size="sm">
                         View Company
                       </Button>
@@ -388,14 +388,14 @@ export default async function TimeEntryDetailPage({
           <Card className="p-6 border-border bg-card">
             <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              <Link href={`/admin/staff/${entry.staffUser.id}`} className="block">
+              <Link href={`/admin/staff/${entry.staff_users.id}`} className="block">
                 <Button variant="outline" className="w-full justify-start" size="sm">
                   <UserIcon className="h-4 w-4 mr-2" />
                   View Staff Profile
                 </Button>
               </Link>
-              {entry.staffUser.company && (
-                <Link href={`/admin/clients/${entry.staffUser.company.id}`} className="block">
+              {entry.staff_users.company && (
+                <Link href={`/admin/clients/${entry.staff_users.company.id}`} className="block">
                   <Button variant="outline" className="w-full justify-start" size="sm">
                     <Building2 className="h-4 w-4 mr-2" />
                     View Company

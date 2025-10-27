@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find active break (only breaks that have been started but not ended)
-    const activeBreak = await prisma.break.findFirst({
+    const activeBreak = await prisma.breaks.findFirst({
       where: {
         staffUserId: staffUser.id,
         actualStart: { not: null }, // Must have been started
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const updatedBreak = await prisma.break.update({
+    const updatedBreak = await prisma.breaks.update({
       where: { id: activeBreak.id },
       data: {
         actualEnd: endTime,

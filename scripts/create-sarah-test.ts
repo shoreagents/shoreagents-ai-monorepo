@@ -42,23 +42,23 @@ async function main() {
       console.log(`✅ Found existing Supabase user: ${existingUser.id}`)
       
       // Delete existing Prisma records if any
-      await prisma.review.deleteMany({
+      await prisma.reviews.deleteMany({
         where: {
-          staffUser: {
+          staff_users: {
             email: "sarah.test@test.com"
           }
         }
       })
       
-      await prisma.staffProfile.deleteMany({
+      await prisma.staff_profiles.deleteMany({
         where: {
-          staffUser: {
+          staff_users: {
             email: "sarah.test@test.com"
           }
         }
       })
       
-      await prisma.staffUser.deleteMany({
+      await prisma.staff_users.deleteMany({
         where: {
           email: "sarah.test@test.com"
         }
@@ -97,7 +97,7 @@ async function createPrismaRecords(supabaseUserId: string) {
 
   // Step 3: Create staff_users record
   console.log("\n📝 Step 3: Creating staff_users record...")
-  const staffUser = await prisma.staffUser.create({
+  const staffUser = await prisma.staff_users.create({
     data: {
       email: "sarah.test@test.com",
       name: "Sarah Test",
@@ -113,7 +113,7 @@ async function createPrismaRecords(supabaseUserId: string) {
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - 25) // 25 days ago (Month 1)
 
-  const profile = await prisma.staffProfile.create({
+  const profile = await prisma.staff_profiles.create({
     data: {
       staffUserId: staffUser.id,
       startDate: startDate,
@@ -130,7 +130,7 @@ async function createPrismaRecords(supabaseUserId: string) {
   const dueDate = new Date()
   dueDate.setDate(dueDate.getDate() + 7) // Due in 7 days
 
-  const review = await prisma.review.create({
+  const review = await prisma.reviews.create({
     data: {
       staffUserId: staffUser.id,
       type: "MONTH_1",
@@ -147,7 +147,7 @@ async function createPrismaRecords(supabaseUserId: string) {
 
   // Step 6: Verify
   console.log("\n📝 Step 6: Verifying creation...")
-  const verification = await prisma.staffUser.findUnique({
+  const verification = await prisma.staff_users.findUnique({
     where: { id: staffUser.id },
     include: {
       profile: true,

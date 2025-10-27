@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get admin user
-    const adminUser = await prisma.managementUser.findUnique({
+    const adminUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true, role: true }
     })
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         source: 'ADMIN'
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get admin/management user
-    const adminUser = await prisma.managementUser.findUnique({
+    const adminUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true }
     })
@@ -74,14 +74,14 @@ export async function POST(req: NextRequest) {
     if (adminUser) {
       // For management users, we'll use a placeholder staff user or create association differently
       // For now, find any staff user to satisfy the foreign key requirement
-      const anyStaffUser = await prisma.staffUser.findFirst({
+      const anyStaffUser = await prisma.staff_users.findFirst({
         select: { id: true }
       })
       staffUserId = anyStaffUser?.id || ""
       uploaderName = adminUser.name
     } else {
       // Try to get as staff user
-      const staffUser = await prisma.staffUser.findUnique({
+      const staffUser = await prisma.staff_users.findUnique({
         where: { authUserId: session.user.id },
         select: { id: true, name: true }
       })

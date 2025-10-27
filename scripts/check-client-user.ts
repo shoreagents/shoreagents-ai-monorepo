@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🔍 Checking for client user...\n')
   
-  const clientUser = await prisma.clientUser.findUnique({
+  const clientUser = await prisma.client_users.findUnique({
     where: { email: 'stephen@stepten.ai' },
     include: { company: true }
   })
@@ -22,7 +22,7 @@ async function main() {
   }
   
   console.log('\n📊 All client users:')
-  const allClients = await prisma.clientUser.findMany({
+  const allClients = await prisma.client_users.findMany({
     include: { company: true }
   })
   console.log(`Found ${allClients.length} client users:`)

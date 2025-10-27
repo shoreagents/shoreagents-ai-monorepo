@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
-        onboarding: true
+        staff_onboarding: true
       }
     })
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if onboarding exists
-    if (!staffUser.onboarding) {
+    if (!staffUser.staff_onboarding) {
       return NextResponse.json({ 
         exists: false,
         shouldRedirect: true,
@@ -33,9 +33,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ 
       exists: true,
-      shouldRedirect: !staffUser.onboarding.isComplete,
-      completionPercent: staffUser.onboarding.completionPercent,
-      isComplete: staffUser.onboarding.isComplete
+      shouldRedirect: !staffUser.staff_onboarding.isComplete,
+      completionPercent: staffUser.staff_onboarding.completionPercent,
+      isComplete: staffUser.staff_onboarding.isComplete
     })
 
   } catch (error) {

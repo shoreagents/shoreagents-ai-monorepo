@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
     // Run all checks in parallel to speed up the process
     const [activeEntry, todaysEntries, workSchedule] = await Promise.all([
       // Check if user is already clocked in
-      prisma.timeEntry.findFirst({
+      prisma.time_entries.findFirst({
         where: {
           staffUserId: staffUser.id,
           clockOut: null,
         },
       }),
       // Get all today's entries including breaks
-      prisma.timeEntry.findMany({
+      prisma.time_entries.findMany({
         where: {
           staffUserId: staffUser.id,
           clockIn: {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         }
       }),
       // Get today's work schedule (use profileId directly to avoid JOIN)
-      profileId ? prisma.workSchedule.findFirst({
+      profileId ? prisma.work_schedules.findFirst({
         where: {
           profileId: profileId,
           dayOfWeek: today
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new time entry with shift tracking
-    const timeEntry = await prisma.timeEntry.create({
+    const timeEntry = await prisma.time_entries.create({
       data: {
         staffUserId: staffUser.id,
         clockIn: now,
@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      timeEntry: {
-        ...timeEntry,
+      time_entries: {
+        ...time_entries,
         breaksScheduled: !!existingBreaksToday // Mark as scheduled if breaks exist today
       },
       wasLate,

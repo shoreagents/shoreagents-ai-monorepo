@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     let folderName: string = "staff_task"
 
     // Check if client
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       folderName = "client_task"
     } else {
       // Check if staff
-      const staffUser = await prisma.staffUser.findUnique({
+      const staffUser = await prisma.staff_users.findUnique({
         where: { authUserId: session.user.id },
       })
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         folderName = "staff_task"
       } else {
         // Check if management
-        const managementUser = await prisma.managementUser.findUnique({
+        const managementUser = await prisma.management_users.findUnique({
           where: { authUserId: session.user.id },
         })
 

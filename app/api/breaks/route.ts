@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const endOfDay = new Date(targetDate)
     endOfDay.setHours(23, 59, 59, 999)
 
-    const breaks = await prisma.break.findMany({
+    const breaks = await prisma.breaks.findMany({
       where: {
         staffUserId: staffUser.id,
         actualStart: {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the StaffUser record using authUserId
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if there's already an active break
-    const activeBreak = await prisma.break.findFirst({
+    const activeBreak = await prisma.breaks.findFirst({
       where: {
         staffUserId: staffUser.id,
         actualEnd: null,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const breakRecord = await prisma.break.create({
+    const breakRecord = await prisma.breaks.create({
       data: {
         staffUserId: staffUser.id,
         type,

@@ -12,10 +12,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ClientUser with profile
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: {
-        profile: true,
+        client_profiles: true,
         company: {
           select: {
             id: true,
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
     // If no profile exists, return null profile
     return NextResponse.json({
-      clientUser: {
+      client_users: {
         id: clientUser.id,
         name: clientUser.name,
         email: clientUser.email,
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
         coverPhoto: clientUser.coverPhoto,
         company: clientUser.company
       },
-      profile: clientUser.profile
+      profile: clientUser.client_profiles
     })
   } catch (error: any) {
     console.error("❌ Error fetching client profile:", error)
@@ -65,9 +65,9 @@ export async function PUT(req: NextRequest) {
     const body = await req.json()
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
-      include: { profile: true }
+      include: { client_profiles: true }
     })
 
     if (!clientUser) {
@@ -90,9 +90,9 @@ export async function PUT(req: NextRequest) {
 
     let profile
 
-    if (clientUser.profile) {
+    if (clientUser.client_profiles) {
       // Update existing profile
-      profile = await prisma.clientProfile.update({
+      profile = await prisma.client_profiles.update({
         where: { clientUserId: clientUser.id },
         data: {
           ...(position !== undefined && { position }),
@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest) {
       })
     } else {
       // Create new profile
-      profile = await prisma.clientProfile.create({
+      profile = await prisma.client_profiles.create({
         data: {
           clientUserId: clientUser.id,
           position: position || null,
@@ -130,7 +130,7 @@ export async function PUT(req: NextRequest) {
     const { name, role, avatar, coverPhoto } = body
 
     if (name !== undefined || role !== undefined || avatar !== undefined || coverPhoto !== undefined) {
-      await prisma.clientUser.update({
+      await prisma.client_users.update({
         where: { id: clientUser.id },
         data: {
           ...(name !== undefined && { name }),

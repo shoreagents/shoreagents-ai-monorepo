@@ -11,12 +11,12 @@ export async function GET() {
     }
 
     // Find the staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
         company: {
           include: {
-            clientUsers: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
@@ -29,7 +29,7 @@ export async function GET() {
                 createdAt: "desc",
               },
             },
-            accountManager: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -56,7 +56,7 @@ export async function GET() {
 
     return NextResponse.json({
       company: staffUser.company,
-      clientUsersCount: staffUser.company.clientUsers.length,
+      clientUsersCount: staffUser.company.client_users?.length || 0,
     })
   } catch (error) {
     console.error("Error fetching client company:", error)

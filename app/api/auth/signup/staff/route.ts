@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { supabaseAdmin } from "@/lib/supabase"
+import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { name, email, password, phone, jobAcceptanceId } = body
+
+    console.log('📝 [SIGNUP] Staff signup attempt:', { email, hasJobAcceptance: !!jobAcceptanceId })
 
     // Validation
     if (!name || !email || !password) {
@@ -23,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists in staff_users
-    const existingUser = await prisma.staffUser.findUnique({
+    const existingUser = await prisma.staff_users.findUnique({
       where: { email }
     })
 
@@ -34,27 +37,58 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // If jobAcceptanceId is provided, fetch job acceptance details
+    // Check for job acceptance data (from hire flow)
+    // FIRST: Try to auto-match by email (this is the key for recruitment flow!)
+    let companyId = null
+    let position = null
     let jobAcceptance = null
-    if (jobAcceptanceId) {
-      jobAcceptance = await prisma.jobAcceptance.findUnique({
+
+    // Auto-match by email first (most common scenario from hire flow)
+    jobAcceptance = await prisma.job_acceptances.findFirst({
+      where: {
+        candidateEmail: email,
+        staffUserId: null // Not yet linked to a staff account
+      },
+      include: {
+        company: true,
+        interview_requests: true
+      },
+      orderBy: {
+        createdAt: 'desc' // Get most recent if multiple
+      }
+    })
+
+    if (jobAcceptance) {
+      companyId = jobAcceptance.companyId
+      position = jobAcceptance.position
+      console.log('✅ [SIGNUP] Job acceptance AUTO-MATCHED by email:', {
+        jobAcceptanceId: jobAcceptance.id,
+        company: jobAcceptance.company.companyName,
+        position: jobAcceptance.position,
+        candidateName: jobAcceptance.interview_requests?.candidateFirstName
+      })
+    } else if (jobAcceptanceId) {
+      // Fallback: Try by jobAcceptanceId if provided
+      jobAcceptance = await prisma.job_acceptances.findUnique({
         where: { id: jobAcceptanceId },
-        include: { company: true }
+        include: {
+          company: true,
+          interview_requests: true
+        }
       })
 
-      if (!jobAcceptance) {
-        return NextResponse.json(
-          { error: "Invalid job acceptance link" },
-          { status: 400 }
-        )
+      if (jobAcceptance) {
+        companyId = jobAcceptance.companyId
+        position = jobAcceptance.position
+        console.log('✅ [SIGNUP] Job acceptance found by ID:', {
+          company: jobAcceptance.company.companyName,
+          position: jobAcceptance.position
+        })
+      } else {
+        console.warn('⚠️ [SIGNUP] Job acceptance not found:', jobAcceptanceId)
       }
-
-      if (jobAcceptance.staffUserId) {
-        return NextResponse.json(
-          { error: "This job acceptance link has already been used" },
-          { status: 400 }
-        )
-      }
+    } else {
+      console.log('ℹ️ [SIGNUP] No job acceptance found for email:', email)
     }
 
     // 1. Create user in Supabase Auth (auth.users table)
@@ -88,55 +122,53 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create in staff_users table (linked to Supabase auth user)
-    const staffUser = await prisma.staffUser.create({
+    const staffUserId = crypto.randomUUID()
+    const staffUser = await prisma.staff_users.create({
       data: {
+        id: staffUserId, // ✅ REQUIRED: Generate UUID
         authUserId: authData.user.id, // Links to Supabase auth.users.id
         email,
         name,
         role: "STAFF", // Default role
-        companyId: jobAcceptance?.companyId || null, // Assign company from job acceptance if exists
+        companyId: companyId, // ✅ Auto-assigned from job acceptance if available
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     })
 
-    // 3. If job acceptance exists, link it and create employment contract + onboarding
-    if (jobAcceptance && jobAcceptanceId) {
-      // Update job acceptance with staffUserId
-      await prisma.jobAcceptance.update({
-        where: { id: jobAcceptanceId },
-        data: { staffUserId: staffUser.id }
-      })
+    console.log('✅ [SIGNUP] Staff user created:', {
+      id: staffUser.id,
+      email: staffUser.email,
+      companyId: staffUser.companyId,
+      hasCompany: !!companyId
+    })
 
-      // Create employment contract
-      const employmentContract = await prisma.employmentContract.create({
-        data: {
-          jobAcceptanceId: jobAcceptance.id,
-          staffUserId: staffUser.id,
-          companyId: jobAcceptance.companyId,
-          employeeName: name,
-          employeeAddress: "", // To be filled during contract signing
-          contactType: "Project Employment Contract",
-          assignedClient: jobAcceptance.company.companyName,
-          position: jobAcceptance.position,
-          startDate: new Date(), // Placeholder - to be updated by admin
-          workSchedule: "Monday - Friday", // Placeholder
-          basicSalary: 0, // To be filled by admin
-          deMinimis: 0,
-          totalMonthlyGross: 0,
-          hmoOffer: "As per company policy", // Placeholder
-          paidLeave: "12 days per year", // Placeholder
-          probationaryPeriod: "3 months", // Placeholder
-        }
-      })
-      console.log(`✅ Created employment contract: ${employmentContract.id}`)
-
-      // Create staff onboarding record
-      const onboarding = await prisma.staffOnboarding.create({
+    // 2.5. Link job acceptance to staff user if found
+    if (jobAcceptance) {
+      await prisma.job_acceptances.update({
+        where: { id: jobAcceptance.id },
         data: {
           staffUserId: staffUser.id,
+          updatedAt: new Date()
         }
       })
-      console.log(`✅ Created onboarding record: ${onboarding.id}`)
+      console.log('✅ [SIGNUP] Job acceptance linked to staff user:', jobAcceptance.id)
+      
+      // 2.6. Update interview request status to HIRED
+      if (jobAcceptance.interviewRequestId) {
+        await prisma.interview_requests.update({
+          where: { id: jobAcceptance.interviewRequestId },
+          data: {
+            status: 'HIRED',
+            updatedAt: new Date(),
+            adminNotes: `Staff member ${name} created account on ${new Date().toLocaleDateString()}. Successfully matched to job acceptance ${jobAcceptance.id}.`
+          }
+        })
+        console.log('✅ [SIGNUP] Interview request status updated to HIRED:', jobAcceptance.interviewRequestId)
+      }
     }
+
+    // NOTE: Onboarding and contracts are separate features - will be created later in the flow
 
     return NextResponse.json(
       {
@@ -146,7 +178,11 @@ export async function POST(req: NextRequest) {
           name: staffUser.name,
           email: staffUser.email,
           role: staffUser.role,
-        }
+          companyId: staffUser.companyId,
+        },
+        fromJobAcceptance: !!jobAcceptance,
+        company: jobAcceptance ? jobAcceptance.company.companyName : null,
+        position: position,
       },
       { status: 201 }
     )

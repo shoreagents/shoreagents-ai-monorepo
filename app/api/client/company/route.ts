@@ -12,14 +12,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ClientUser with company
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: {
         company: {
           include: {
-            staffUsers: {
+            staff_users: {
               include: {
-                profile: {
+                staff_profiles: {
                   select: {
                     currentRole: true,
                     location: true,
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
                 }
               }
             },
-            accountManager: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -53,14 +53,15 @@ export async function GET(req: NextRequest) {
     // Transform the data to match the expected format
     const transformedCompany = {
       ...clientUser.company,
-      staffUsers: clientUser.company.staffUsers.map(staff => ({
+      staffUsers: clientUser.company.staff_users.map(staff => ({
         id: staff.id,
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
         role: staff.role,
-        profile: staff.profile
-      }))
+        profile: staff.staff_profiles
+      })),
+      accountManager: clientUser.company.management_users
     }
 
     return NextResponse.json({ company: transformedCompany })
@@ -85,7 +86,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json()
 
     // Get ClientUser with company
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -126,12 +127,13 @@ export async function PUT(req: NextRequest) {
         ...(industry !== undefined && { industry }),
         ...(logo !== undefined && { logo }),
         ...(coverPhoto !== undefined && { coverPhoto }),
-        ...(contractStart !== undefined && { contractStart: contractStart ? new Date(contractStart) : null })
+        ...(contractStart !== undefined && { contractStart: contractStart ? new Date(contractStart) : null }),
+        updatedAt: new Date()
       },
       include: {
-        staffUsers: {
+        staff_users: {
           include: {
-            profile: {
+            staff_profiles: {
               select: {
                 currentRole: true,
                 location: true,
@@ -141,7 +143,7 @@ export async function PUT(req: NextRequest) {
             }
           }
         },
-        accountManager: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -155,14 +157,15 @@ export async function PUT(req: NextRequest) {
     // Transform the data
     const transformedCompany = {
       ...updatedCompany,
-      staffUsers: updatedCompany.staffUsers.map(staff => ({
+      staffUsers: updatedCompany.staff_users.map(staff => ({
         id: staff.id,
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
         role: staff.role,
-        profile: staff.profile
-      }))
+        profile: staff.staff_profiles
+      })),
+      accountManager: updatedCompany.management_users
     }
 
     return NextResponse.json({ company: transformedCompany })

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ [CLIENT/STAFF] Session found:", session.user.email)
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { 
         company: {
@@ -42,26 +42,26 @@ export async function GET(request: NextRequest) {
 
     console.log("🔍 [CLIENT/STAFF] Looking for staff in company:", clientUser.company.id)
     
-    const staffList = await prisma.staffUser.findMany({
+    const staffList = await prisma.staff_users.findMany({
       where: {
         companyId: clientUser.company.id,
         active: true, // Only show active staff (not deactivated after offboarding)
         // Show all staff regardless of onboarding status
         // And whose start date is today or in the past
-        profile: {
+        staff_profiles: {
           startDate: {
             lte: today
           }
         }
       } as any,
       include: {
-        onboarding: {
+        staff_onboarding: {
           select: {
             isComplete: true,
             completionPercent: true
           }
         },
-        profile: {
+        staff_profiles: {
           select: {
             phone: true,
             location: true,
@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
             totalLeave: true,
             usedLeave: true,
             hmo: true,
-            workSchedule: true,
+            work_schedules: true,
           }
         },
-        gamificationProfile: {
+        gamification_profiles: {
           select: {
             level: true,
             points: true,
@@ -130,13 +130,13 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ [CLIENT/STAFF] Found staff:", staffList.length)
     staffList.forEach((staff, index) => {
-      console.log(`  ${index + 1}. ${staff.name} (${staff.email}) - Start: ${staff.profile?.startDate}`)
+      console.log(`  ${index + 1}. ${staff.name} (${staff.email}) - Start: ${staff.staff_profiles?.startDate}`)
     })
 
     // Format the response with calculated fields
     const formattedStaff = staffList.map(staff => {
       // Calculate days employed
-      const startDate = staff.profile?.startDate || new Date()
+      const startDate = staff.staff_profiles?.startDate || new Date()
       const daysEmployed = Math.floor((new Date().getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
 
       // Calculate average productivity
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
       }, 0)
 
       // Get shift time from work schedule
-      const workSchedule = staff.profile?.workSchedule.find(s => s.isWorkday) || null
+      const workSchedule = staff.staff_profiles?.work_schedules.find(s => s.isWorkday) || null
       const shift = workSchedule 
         ? `${workSchedule.startTime} - ${workSchedule.endTime}` 
         : "9:00 AM - 6:00 PM"
@@ -172,30 +172,30 @@ export async function GET(request: NextRequest) {
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
-        assignmentRole: staff.profile?.currentRole || null,
-        rate: staff.profile?.salary ? Number(staff.profile.salary) : null,
-        startDate: staff.profile?.startDate?.toISOString() || new Date().toISOString(),
+        assignmentRole: staff.staff_profiles?.currentRole || null,
+        rate: staff.staff_profiles?.salary ? Number(staff.profile.salary) : null,
+        startDate: staff.staff_profiles?.startDate?.toISOString() || new Date().toISOString(),
         managedBy: clientUser.company.accountManager?.name || "Not assigned",
         client: clientUser.company.companyName,
-        phone: staff.profile?.phone || null,
-        location: staff.profile?.location || null,
-        employmentStatus: staff.profile?.employmentStatus || "PROBATION",
+        phone: staff.staff_profiles?.phone || null,
+        location: staff.staff_profiles?.location || null,
+        employmentStatus: staff.staff_profiles?.employmentStatus || "PROBATION",
         daysEmployed,
-        currentRole: staff.profile?.currentRole || "Staff Member",
-        salary: staff.profile?.salary ? Number(staff.profile.salary) : 0,
-        totalLeave: staff.profile?.totalLeave || 12,
-        usedLeave: staff.profile?.usedLeave || 0,
-        hmo: staff.profile?.hmo || false,
+        currentRole: staff.staff_profiles?.currentRole || "Staff Member",
+        salary: staff.staff_profiles?.salary ? Number(staff.profile.salary) : 0,
+        totalLeave: staff.staff_profiles?.totalLeave || 12,
+        usedLeave: staff.staff_profiles?.usedLeave || 0,
+        hmo: staff.staff_profiles?.hmo || false,
         shift,
         activeTasks: staff.taskAssignments.length,
         avgProductivity,
         reviewScore,
         totalHoursThisMonth: Math.round(totalHoursThisMonth),
         isClockedIn,
-        level: staff.gamificationProfile?.level || 1,
-        points: staff.gamificationProfile?.points || 0,
-        onboardingComplete: staff.onboarding?.isComplete || false,
-        onboardingProgress: staff.onboarding?.completionPercent || 0,
+        level: staff.gamification_profiles?.level || 1,
+        points: staff.gamification_profiles?.points || 0,
+        onboardingComplete: staff.staff_onboarding?.isComplete || false,
+        onboardingProgress: staff.staff_onboarding?.completionPercent || 0,
       }
     })
 

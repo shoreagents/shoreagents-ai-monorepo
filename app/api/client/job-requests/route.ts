@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get client's company_id
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get client's company_id
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })

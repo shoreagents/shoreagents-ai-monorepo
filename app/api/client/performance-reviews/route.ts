@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -55,10 +55,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all reviews submitted BY this client user
-    const reviews = await prisma.review.findMany({
+    const reviews = await prisma.reviews.findMany({
       where,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -116,10 +116,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify review exists and is PENDING
-    const existingReview = await prisma.review.findUnique({
+    const existingReview = await prisma.reviews.findUnique({
       where: { id: reviewId },
       include: {
-        staffUser: true
+        staff_users: true
       }
     })
 
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify staff is assigned to this client (check companyId directly on staffUser)
-    if (existingReview.staffUser.companyId !== clientUser.company.id) {
+    if (existingReview.staff_users.companyId !== clientUser.company.id) {
       return NextResponse.json({ error: "Staff not assigned to your organization" }, { status: 403 })
     }
 
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     const performanceLevel = getPerformanceLevel(scoreCalc.percentage)
 
     // Update review with submission
-    const review = await prisma.review.update({
+    const review = await prisma.reviews.update({
       where: { id: reviewId },
       data: {
         status: "SUBMITTED",
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         submittedDate: new Date()
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     //   type: "REVIEW_SUBMITTED",
     //   recipientRole: "ADMIN",
     //   title: "New Review Submitted",
-    //   message: `${clientUser.name} completed review for ${review.staffUser.name}`,
+    //   message: `${clientUser.name} completed review for ${review.staff_users.name}`,
     //   link: `/admin/reviews/${review.id}`
     // })
 

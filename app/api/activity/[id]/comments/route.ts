@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Check if post exists
-    const post = await prisma.activityPost.findUnique({
+    const post = await prisma.activity_posts.findUnique({
       where: { id: params.id },
     })
 
@@ -34,7 +34,7 @@ export async function POST(
     }
 
     // Create comment
-    const comment = await prisma.postComment.create({
+    const comment = await prisma.post_comments.create({
       data: {
         postId: params.id,
         authorId: session.user.id,

@@ -262,12 +262,12 @@ export function useTimeTrackingWebSocket() {
     setState(prev => ({
       ...prev,
       isClockedIn: true,
-      activeEntry: data.timeEntry,
+      activeEntry: data.time_entries,
       // Add new entry to the top of the history
-      timeEntries: [data.timeEntry, ...prev.timeEntries.filter(e => e.id !== data.timeEntry.id)],
+      timeEntries: [data.time_entries, ...prev.timeEntries.filter(e => e.id !== data.time_entries.id)],
       weeklySchedule: data.workSchedules || prev.weeklySchedule,
       showBreakScheduler: data.showBreakScheduler || false,
-      pendingTimeEntryId: data.timeEntry?.id || null
+      pendingTimeEntryId: data.time_entries?.id || null
     }))
     
     // Refresh stats from API to get accurate calculations
@@ -295,7 +295,7 @@ export function useTimeTrackingWebSocket() {
       isClockedIn: false,
       activeEntry: null,
       // Remove the old entry (if it exists) and add the updated one with clockOut time
-      timeEntries: [data.timeEntry, ...prev.timeEntries.filter(e => e.id !== data.timeEntry.id)],
+      timeEntries: [data.time_entries, ...prev.timeEntries.filter(e => e.id !== data.time_entries.id)],
       weeklySchedule: data.workSchedules || prev.weeklySchedule
     }))
     

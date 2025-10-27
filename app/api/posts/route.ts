@@ -32,16 +32,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count for pagination
-    const totalCount = await prisma.activityPost.count({
+    const totalCount = await prisma.activity_posts.count({
       where: whereClause
     })
 
-    const posts = await prisma.activityPost.findMany({
+    const posts = await prisma.activity_posts.findMany({
       where: whereClause,
       skip,
       take: validLimit,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        reactions: {
+        post_reactions: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -89,9 +89,9 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        comments: {
+        post_comments: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     // Fetch tagged users if any posts have them
     const allTaggedUserIds = [...new Set(posts.flatMap(p => p.taggedUserIds || []).filter(Boolean))]
     const taggedUsers = allTaggedUserIds.length > 0 
-      ? await prisma.staffUser.findMany({
+      ? await prisma.staff_users.findMany({
           where: { id: { in: allTaggedUserIds } },
           select: { id: true, name: true, avatar: true }
         })
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     // Transform data to match frontend expectations
     const transformedPosts = posts.map(post => {
-      const postUser = post.staffUser || post.client_users || post.management_users
+      const postUser = post.staff_users || post.client_users || post.management_users
       
       if (!postUser) {
         return null
@@ -150,10 +150,10 @@ export async function GET(request: NextRequest) {
           id: postUser.id,
           name: postUser.name,
           avatar: postUser.avatar,
-          role: post.staffUser?.role || post.management_users?.role || 'Client'
+          role: post.staff_users?.role || post.management_users?.role || 'Client'
         },
         reactions: post.reactions.map(r => {
-          const reactUser = r.staffUser || r.client_users || r.management_users
+          const reactUser = r.staff_users || r.client_users || r.management_users
           return {
             id: r.id,
             type: r.type,
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
           }
         }),
         comments: post.comments.map(c => {
-          const commentUser = c.staffUser || c.client_users || c.management_users
+          const commentUser = c.staff_users || c.client_users || c.management_users
           return {
             id: c.id,
             content: c.content,
@@ -222,15 +222,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if it's a staff user, client user, or management user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const post = await prisma.activityPost.create({
+    const post = await prisma.activity_posts.create({
       data: {
         staffUserId: staffUser?.id || null,
         clientUserId: clientUser?.id || null,
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
         audience: audience || 'ALL',
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
       
       // Create notification for each tagged user
       const notificationPromises = taggedUserIds.map((userId: string) =>
-        prisma.notification.create({
+        prisma.notifications.create({
           data: {
             userId,
             type: 'TAG',

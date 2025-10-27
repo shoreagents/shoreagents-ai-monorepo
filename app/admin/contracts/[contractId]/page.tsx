@@ -24,7 +24,7 @@ interface ContractData {
   contractSigned: boolean
   signedAt: string
   createdAt: string
-  staffUser: {
+  staff_users: {
     name: string
     email: string
   }
@@ -145,9 +145,9 @@ export default function AdminContractViewPage() {
                 <p className="text-sm text-slate-400">Staff Member</p>
                 <p className="text-white flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  {contract.staffUser.name}
+                  {contract.staff_users.name}
                 </p>
-                <p className="text-slate-300 text-sm">{contract.staffUser.email}</p>
+                <p className="text-slate-300 text-sm">{contract.staff_users.email}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-400">Company</p>

@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all staff users for the same company
-    const teamMembers = await prisma.staffUser.findMany({
+    const teamMembers = await prisma.staff_users.findMany({
       where: {
         companyId: staffUser.companyId,
       },
       include: {
-        profile: true,
-        gamificationProfile: true,
+        staff_profiles: true,
+        gamification_profiles: true,
         company: true,
       },
     })
@@ -41,14 +41,14 @@ export async function GET(request: NextRequest) {
       avatar: member.avatar || "/placeholder-user.jpg",
       client: member.company?.companyName || "No Company",
       status: "online" as const, // Default to online; in real app, would check actual status
-      currentTask: member.profile?.currentRole || null,
-      mood: member.profile?.location || null, // Using location as mood placeholder
-      tasksCompleted: member.gamificationProfile?.tasksCompleted || 0,
-      pointsEarned: member.gamificationProfile?.points || 0,
-      streakDays: member.gamificationProfile?.streak || 0,
-      level: member.gamificationProfile?.level || 1,
-      rank: member.gamificationProfile?.rank || null,
-      performanceScore: member.gamificationProfile?.performanceScore || 0,
+      currentTask: member.staff_profiles?.currentRole || null,
+      mood: member.staff_profiles?.location || null, // Using location as mood placeholder
+      tasksCompleted: member.gamification_profiles?.tasksCompleted || 0,
+      pointsEarned: member.gamification_profiles?.points || 0,
+      streakDays: member.gamification_profiles?.streak || 0,
+      level: member.gamification_profiles?.level || 1,
+      rank: member.gamification_profiles?.rank || null,
+      performanceScore: member.gamification_profiles?.performanceScore || 0,
     }))
 
     return NextResponse.json({ members, clientName: staffUser.company?.companyName || null })

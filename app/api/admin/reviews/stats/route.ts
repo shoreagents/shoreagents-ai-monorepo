@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all reviews
-    const allReviews = await prisma.review.findMany({
+    const allReviews = await prisma.reviews.findMany({
       select: {
         id: true,
         status: true,
@@ -50,11 +50,11 @@ export async function GET(request: NextRequest) {
     const recurring = allReviews.filter(r => r.type === "RECURRING").length
 
     // Get recent reviews (last 5)
-    const recentReviews = await prisma.review.findMany({
+    const recentReviews = await prisma.reviews.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

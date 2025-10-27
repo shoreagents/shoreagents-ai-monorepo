@@ -50,7 +50,7 @@ interface Review {
   acknowledgedDate?: string
   createdAt: string
   updatedAt: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string

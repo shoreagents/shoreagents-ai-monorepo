@@ -21,7 +21,7 @@ interface Task {
   createdAt: string
   attachments: string[]
   assignedStaff?: Array<{
-    staffUser: {
+    staff_users: {
       id: string
       name: string
       email: string
@@ -50,9 +50,9 @@ export default function ClientTaskCard({ task, onUpdate, isDragging }: ClientTas
   // Get all assigned staff (from both assignedStaff and legacy staffUser)
   const allAssignedStaff = []
   if (task.assignedStaff) {
-    allAssignedStaff.push(...task.assignedStaff.map(a => a.staffUser))
-  } else if (task.staffUser) {
-    allAssignedStaff.push(task.staffUser)
+    allAssignedStaff.push(...task.assignedStaff.map(a => a.staff_users))
+  } else if (task.staff_users) {
+    allAssignedStaff.push(task.staff_users)
   }
 
   const style = {

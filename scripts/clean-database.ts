@@ -18,20 +18,20 @@ async function cleanDatabase() {
     // Delete in correct order (respecting foreign key constraints)
     
     console.log('🗑️  Deleting activity data...')
-    await prisma.postComment.deleteMany({})
-    await prisma.postReaction.deleteMany({})
-    await prisma.activityPost.deleteMany({})
+    await prisma.post_comments.deleteMany({})
+    await prisma.post_reactions.deleteMany({})
+    await prisma.activity_posts.deleteMany({})
     console.log('✅ Activity data deleted')
 
     console.log('🗑️  Deleting gamification data...')
-    await prisma.userBadge.deleteMany({})
-    await prisma.gamificationProfile.deleteMany({})
+    await prisma.user_badges.deleteMany({})
+    await prisma.gamification_profiles.deleteMany({})
     await prisma.kudos.deleteMany({})
     console.log('✅ Gamification data deleted')
 
     console.log('🗑️  Deleting support tickets...')
-    await prisma.ticketResponse.deleteMany({})
-    await prisma.ticket.deleteMany({})
+    await prisma.ticket_responses.deleteMany({})
+    await prisma.tickets.deleteMany({})
     console.log('✅ Support tickets deleted')
 
     console.log('🗑️  Deleting documents...')
@@ -39,23 +39,23 @@ async function cleanDatabase() {
     console.log('✅ Documents deleted')
 
     console.log('🗑️  Deleting reviews...')
-    await prisma.review.deleteMany({})
+    await prisma.reviews.deleteMany({})
     console.log('✅ Reviews deleted')
 
     console.log('🗑️  Deleting performance metrics...')
-    await prisma.performanceMetric.deleteMany({})
+    await prisma.performance_metrics.deleteMany({})
     console.log('✅ Performance metrics deleted')
 
     console.log('🗑️  Deleting time tracking...')
-    await prisma.timeEntry.deleteMany({})
+    await prisma.time_entries.deleteMany({})
     console.log('✅ Time entries deleted')
 
     console.log('🗑️  Deleting breaks...')
-    await prisma.break.deleteMany({})
+    await prisma.breaks.deleteMany({})
     console.log('✅ Breaks deleted')
 
     console.log('🗑️  Deleting tasks...')
-    await prisma.task.deleteMany({})
+    await prisma.tasks.deleteMany({})
     console.log('✅ Tasks deleted')
 
     console.log('🗑️  Deleting staff assignments...')
@@ -63,7 +63,7 @@ async function cleanDatabase() {
     console.log('✅ Staff assignments deleted')
 
     console.log('🗑️  Deleting client users...')
-    await prisma.clientUser.deleteMany({})
+    await prisma.client_users.deleteMany({})
     console.log('✅ Client users deleted')
 
     console.log('🗑️  Deleting clients...')
@@ -71,7 +71,7 @@ async function cleanDatabase() {
     console.log('✅ Clients deleted')
 
     console.log('🗑️  Deleting work schedules...')
-    await prisma.workSchedule.deleteMany({})
+    await prisma.work_schedules.deleteMany({})
     console.log('✅ Work schedules deleted')
 
     console.log('🗑️  Deleting profiles...')

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status")
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get legacy tasks (old method with staffUserId)
-    const legacyTasks = await prisma.task.findMany({
+    const legacyTasks = await prisma.tasks.findMany({
       where: {
         staffUserId: staffUser.id,
         ...(status && { status }),
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
             companyName: true,
           }
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -50,12 +50,12 @@ export async function GET(request: NextRequest) {
     })
 
     // Get new tasks (via TaskAssignment)
-    const taskAssignments = await prisma.taskAssignment.findMany({
+    const taskAssignments = await prisma.task_assignments.findMany({
       where: {
         staffUserId: staffUser.id,
       },
       include: {
-        task: {
+        tasks: {
           include: {
             company: {
               select: {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
                 companyName: true,
               }
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,
@@ -71,9 +71,9 @@ export async function GET(request: NextRequest) {
                 avatar: true,
               }
             },
-            assignedStaff: {
+            task_assignments: {
               include: {
-                staffUser: {
+                staff_users: {
                   select: {
                     id: true,
                     name: true,
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     // Extract tasks from assignments and filter by status if needed
     const newTasks = taskAssignments
-      .map(assignment => assignment.task)
+      .map(assignment => assignment.tasks)
       .filter(task => !status || task.status === status)
 
     // Combine and dedupe tasks
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create task for themselves using new TaskAssignment method
-    const task = await prisma.task.create({
+    const task = await prisma.tasks.create({
       data: {
         companyId: staffUser.companyId,
         title,
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         createdByType: "STAFF",
         createdById: staffUser.id,
         // Use new assignment method
-        assignedStaff: {
+        task_assignments: {
           create: {
             staffUserId: staffUser.id,
           }
@@ -173,9 +173,9 @@ export async function POST(request: NextRequest) {
             companyName: true,
           }
         },
-        assignedStaff: {
+        task_assignments: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,

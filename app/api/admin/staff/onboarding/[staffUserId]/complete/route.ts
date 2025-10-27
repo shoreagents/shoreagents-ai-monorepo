@@ -15,7 +15,7 @@ export async function POST(
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -78,7 +78,7 @@ export async function POST(
     }
 
     // Get staff onboarding
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId },
       include: { 
         onboarding: true,
@@ -110,7 +110,7 @@ export async function POST(
     }
 
     // Check if contract is signed
-    const employmentContract = await prisma.employmentContract.findFirst({
+    const employmentContract = await prisma.employment_contracts.findFirst({
       where: { staffUserId: staffUser.id }
     })
 
@@ -140,7 +140,7 @@ export async function POST(
 
     // Assign staff to company & update legal name from onboarding
     const fullName = `${onboarding.firstName} ${onboarding.middleName || ''} ${onboarding.lastName}`.trim()
-    await prisma.staffUser.update({
+    await prisma.staff_users.update({
       where: { id: staffUser.id },
       data: { 
         companyId: companyId,
@@ -163,7 +163,7 @@ export async function POST(
     const vacationLeave = employmentStatus === "PROBATION" ? 0 : 12
 
     // Create StaffProfile with data from onboarding + management input
-    const profile = await prisma.staffProfile.create({
+    const profile = await prisma.staff_profiles.create({
       data: {
         staffUserId: staffUser.id,
         phone: onboarding.contactNo || "",
@@ -266,7 +266,7 @@ export async function POST(
       isWorkday: !["Saturday", "Sunday"].includes(day)
     }))
 
-    await prisma.workSchedule.createMany({ data: schedules })
+    await prisma.work_schedules.createMany({ data: schedules })
     console.log("✅ WORK SCHEDULE CREATED:", { 
       profileId: profile.id, 
       schedulesCount: schedules.length,
@@ -275,7 +275,7 @@ export async function POST(
 
     // Create empty welcome form record
     try {
-      const welcomeForm = await prisma.staffWelcomeForm.create({
+      const welcomeForm = await prisma.staff_welcome_forms.create({
         data: {
           staffUserId: staffUser.id,
           name: fullName,
@@ -296,7 +296,7 @@ export async function POST(
     }
 
     // Mark onboarding as complete
-    await prisma.staffOnboarding.update({
+    await prisma.staff_onboarding.update({
       where: { id: onboarding.id },
       data: {
         isComplete: true,

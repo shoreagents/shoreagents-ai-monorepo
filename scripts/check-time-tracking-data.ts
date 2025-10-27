@@ -6,7 +6,7 @@ async function checkData() {
   console.log("🔍 CHECKING TIME TRACKING DATA\n")
   
   // Find client users
-  const clientUsers = await prisma.clientUser.findMany({
+  const clientUsers = await prisma.client_users.findMany({
     include: {
       company: {
         select: {
@@ -31,7 +31,7 @@ async function checkData() {
     console.log(`   Client: ${client.email}`)
     console.log(`   Company ID: ${client.company.id}`)
 
-    const staff = await prisma.staffUser.findMany({
+    const staff = await prisma.staff_users.findMany({
       where: {
         companyId: client.company.id
       },
@@ -63,7 +63,7 @@ async function checkData() {
       endOfDay.setHours(23, 59, 59, 999)
 
       const staffIds = staff.map(s => s.id)
-      const timeEntries = await prisma.timeEntry.findMany({
+      const timeEntries = await prisma.time_entries.findMany({
         where: {
           staffUserId: { in: staffIds },
           clockIn: {
@@ -72,7 +72,7 @@ async function checkData() {
           }
         },
         include: {
-          staffUser: {
+          staff_users: {
             select: {
               name: true
             }
@@ -86,7 +86,7 @@ async function checkData() {
         console.log(`   ℹ️  No one clocked in today`)
       } else {
         timeEntries.forEach(entry => {
-          console.log(`      - ${entry.staffUser.name}`)
+          console.log(`      - ${entry.staff_users.name}`)
           console.log(`        Clock In: ${entry.clockIn}`)
           console.log(`        Clock Out: ${entry.clockOut || 'Still active'}`)
           console.log(`        Breaks: ${entry.breaks.length}`)

@@ -25,25 +25,36 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [ADMIN] Fetching all interview requests')
 
-    // Fetch ALL interview requests with client user info
-    const interviews = await prisma.$queryRaw<any[]>`
-      SELECT 
-        ir.*,
-        cu.name as client_name,
-        cu.email as client_email,
-        c.company_name as company_name
-      FROM interview_requests ir
-      LEFT JOIN client_users cu ON ir.client_user_id = cu.id
-      LEFT JOIN companies c ON cu.company_id = c.id
-      ORDER BY ir.created_at DESC
-    `
+    // Fetch ALL interview requests with client user info using Prisma ORM
+    const interviews = await prisma.interview_requests.findMany({
+      include: {
+        client_users: {
+          include: {
+            company: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    // Transform data to match expected format
+    const formattedInterviews = interviews.map(interview => ({
+      ...interview,
+      status: interview.status.toLowerCase().replace('_', '-'), // Normalize: OFFER_SENT → offer-sent
+      client_name: interview.client_users?.name || 'Unknown',
+      client_email: interview.client_users?.email || 'Unknown',
+      company_name: interview.client_users?.company?.companyName || 'Unknown',
+    }))
 
     console.log(`✅ [ADMIN] Found ${interviews.length} interview requests`)
+    console.log(`📊 [ADMIN] Interview statuses:`, formattedInterviews.map(i => ({ name: i.candidateFirstName, status: i.status })))
 
     return NextResponse.json({
       success: true,
-      interviews: interviews,
-      count: interviews.length,
+      interviews: formattedInterviews,
+      count: formattedInterviews.length,
     })
   } catch (error) {
     console.error('❌ [ADMIN] Error fetching interview requests:', error)

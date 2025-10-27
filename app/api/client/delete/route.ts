@@ -18,7 +18,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email }
     })
 

@@ -23,7 +23,7 @@ export async function POST(
     }
 
     // Check if ticket exists
-    const ticket = await prisma.ticket.findUnique({
+    const ticket = await prisma.tickets.findUnique({
       where: { id: ticketId },
     })
 
@@ -32,7 +32,7 @@ export async function POST(
     }
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -46,7 +46,7 @@ export async function POST(
     }
 
     // Create response
-    const response = await prisma.ticketResponse.create({
+    const response = await prisma.ticket_responses.create({
       data: {
         ticketId,
         message,
@@ -55,7 +55,7 @@ export async function POST(
         attachments: attachments || [],
       },
       include: {
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,

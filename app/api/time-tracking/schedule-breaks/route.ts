@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // breaks = [{ type: 'MORNING', scheduledStart: '10:00 AM', scheduledEnd: '10:15 AM' }, ...]
     
     // Verify timeEntry belongs to user and is today's active session
-    const timeEntry = await prisma.timeEntry.findUnique({
+    const timeEntry = await prisma.time_entries.findUnique({
       where: { id: timeEntryId }
     })
     
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Create scheduled break records
     const createdBreaks = await Promise.all(
       breaks.map((b: any) => 
-        prisma.break.create({
+        prisma.breaks.create({
           data: {
             staffUserId: staffUser.id,
             timeEntryId,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     )
     
     // Mark time entry as having breaks scheduled
-    await prisma.timeEntry.update({
+    await prisma.time_entries.update({
       where: { id: timeEntryId },
       data: { breaksScheduled: true }
     })

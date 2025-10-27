@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get client user and their organization
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all staff assigned to this company
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: { companyId: clientUser.company.id },
       select: { id: true }
     })
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     startDate.setHours(0, 0, 0, 0)
 
     // Fetch all staff with their user info and performance metrics
-    const staffMembers = await prisma.staffUser.findMany({
+    const staffMembers = await prisma.staff_users.findMany({
       where: {
         id: { in: staffIds }
       },
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Fetch performance metrics for all staff in the date range
-    const performanceMetrics = await prisma.performanceMetric.findMany({
+    const performanceMetrics = await prisma.performance_metrics.findMany({
       where: {
         staffUserId: { in: staffIds },
         date: {

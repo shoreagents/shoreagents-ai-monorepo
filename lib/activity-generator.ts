@@ -152,7 +152,7 @@ export async function createActivityPost(activity: ActivityData) {
     const content = generatePostContent(activity)
     const postType = getPostType(activity.type)
 
-    const post = await prisma.activityPost.create({
+    const post = await prisma.activity_posts.create({
       data: {
         staffUserId: activity.staffUserId,
         type: postType,

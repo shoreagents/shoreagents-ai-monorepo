@@ -34,7 +34,7 @@ export async function PATCH(
     }
 
     // Check if ticket exists
-    const ticket = await prisma.ticket.findUnique({
+    const ticket = await prisma.tickets.findUnique({
       where: { id: ticketId },
     })
 
@@ -46,7 +46,7 @@ export async function PATCH(
     console.log(`[Status Update] Current status: ${ticket.status}, Requested: ${status}`)
 
     // Update ticket status
-    const updatedTicket = await prisma.ticket.update({
+    const updatedTicket = await prisma.tickets.update({
       where: { id: ticketId },
       data: {
         status,
@@ -55,7 +55,7 @@ export async function PATCH(
           : {}),
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -64,7 +64,7 @@ export async function PATCH(
             role: true,
           },
         },
-        managementUser: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -73,7 +73,7 @@ export async function PATCH(
             role: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -84,7 +84,7 @@ export async function PATCH(
         responses: {
           orderBy: { createdAt: "asc" },
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -93,7 +93,7 @@ export async function PATCH(
                 role: true,
               },
             },
-            managementUser: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -102,7 +102,7 @@ export async function PATCH(
                 role: true,
               },
             },
-            clientUser: {
+            client_users: {
               select: {
                 id: true,
                 name: true,

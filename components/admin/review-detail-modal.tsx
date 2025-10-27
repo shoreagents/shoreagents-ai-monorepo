@@ -30,7 +30,7 @@ interface Review {
   improvements?: string
   additionalComments?: string
   managementNotes?: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -121,8 +121,8 @@ export default function ReviewDetailModal({ review, isOpen, onClose, onProcess }
               <User className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{review.staffUser.name}</h3>
-              <p className="text-slate-400">{review.staffUser.email}</p>
+              <h3 className="text-lg font-semibold text-white">{review.staff_users.name}</h3>
+              <p className="text-slate-400">{review.staff_users.email}</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Badge className={getStatusColor(review.status)}>

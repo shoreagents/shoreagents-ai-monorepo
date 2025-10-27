@@ -21,7 +21,7 @@ export async function PATCH(
     const { id: breakId } = await params
 
     // Find the break
-    const existingBreak = await prisma.break.findUnique({
+    const existingBreak = await prisma.breaks.findUnique({
       where: { id: breakId }
     })
 
@@ -46,7 +46,7 @@ export async function PATCH(
     const newRemainingTime = existingBreak.pausedduration || 0
 
     // Resume the break
-    const updatedBreak = await prisma.break.update({
+    const updatedBreak = await prisma.breaks.update({
       where: { id: breakId },
       data: {
         ispaused: false,

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check staff users
-    const allStaffUsers = await prisma.staffUser.findMany({
+    const allStaffUsers = await prisma.staff_users.findMany({
       where: {
         companyId: clientUser.company.id
       },
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      clientUser: {
+      client_users: {
         email: clientUser.email,
         company: clientUser.company?.companyName,
         companyId: clientUser.company?.id

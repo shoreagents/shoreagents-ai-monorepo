@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { 
   Briefcase, 
   Plus, 
@@ -68,7 +69,21 @@ interface Candidate {
   leaderboardScore: number | null
 }
 
-type TabType = 'talent-pool' | 'job-requests'
+interface InterviewRequest {
+  id: string
+  candidateFirstName: string
+  bpocCandidateId: string
+  preferredTimes: any
+  clientNotes: string | null
+  status: string
+  createdAt: string
+  scheduledTime: string | null
+  adminNotes: string | null
+  meetingLink: string | null
+  clientPreferredStart?: string | null
+}
+
+type TabType = 'talent-pool' | 'job-requests' | 'interviews'
 
 export default function RecruitmentPage() {
   const router = useRouter()
@@ -85,6 +100,19 @@ export default function RecruitmentPage() {
   const [candidatesLoading, setCandidatesLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  
+  // Interviews State
+  const [interviews, setInterviews] = useState<InterviewRequest[]>([])
+  const [interviewsLoading, setInterviewsLoading] = useState(true)
+  const [hireRequestingId, setHireRequestingId] = useState<string | null>(null)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  
+  // Hire/Reject Modals
+  const [hireModalOpen, setHireModalOpen] = useState(false)
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [selectedInterview, setSelectedInterview] = useState<InterviewRequest | null>(null)
+  const [hireData, setHireData] = useState({ preferredStartDate: '', hireNotes: '' })
+  const [rejectData, setRejectData] = useState({ rejectReason: '' })
   
   // Filters
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
@@ -130,6 +158,13 @@ export default function RecruitmentPage() {
     }
   }, [activeTab, searchQuery, selectedSkills, location, minExperience, selectedDiscTypes, minCulturalFit])
 
+  // Fetch interviews
+  useEffect(() => {
+    if (activeTab === 'interviews') {
+      fetchInterviews()
+    }
+  }, [activeTab])
+
   async function fetchJobRequests() {
     try {
       setJobsLoading(true)
@@ -172,6 +207,97 @@ export default function RecruitmentPage() {
       console.error('Failed to fetch candidates:', error)
     } finally {
       setCandidatesLoading(false)
+    }
+  }
+
+  async function fetchInterviews() {
+    try {
+      setInterviewsLoading(true)
+      const response = await fetch("/api/client/interviews")
+      if (!response.ok) throw new Error("Failed to fetch interviews")
+      const data = await response.json()
+      if (data.success) {
+        setInterviews(data.interviews || [])
+        console.log(`✅ [CLIENT] Loaded ${data.interviews?.length || 0} interviews`)
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch interviews:', error)
+    } finally {
+      setInterviewsLoading(false)
+    }
+  }
+
+  async function handleHireRequest() {
+    if (!selectedInterview) return
+    
+    try {
+      setHireRequestingId(selectedInterview.id)
+      
+      const response = await fetch("/api/client/interviews/hire-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interviewRequestId: selectedInterview.id,
+          preferredStartDate: hireData.preferredStartDate,
+          notes: hireData.hireNotes || "Client would like to hire this candidate"
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert("✅ Hire request sent to admin successfully!")
+        setHireModalOpen(false)
+        setHireData({ preferredStartDate: '', hireNotes: '' })
+        setSelectedInterview(null)
+        // Refresh interviews to show updated status
+        await fetchInterviews()
+      } else {
+        throw new Error(data.error || "Failed to send hire request")
+      }
+    } catch (error) {
+      console.error('❌ Error sending hire request:', error)
+      alert(`Failed to send hire request: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setHireRequestingId(null)
+    }
+  }
+
+  async function handleRejectRequest() {
+    if (!selectedInterview || !rejectData.rejectReason.trim()) {
+      alert("Please provide a reason for rejection")
+      return
+    }
+    
+    try {
+      setRejectingId(selectedInterview.id)
+      
+      const response = await fetch("/api/client/interviews/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interviewRequestId: selectedInterview.id,
+          rejectReason: rejectData.rejectReason
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert("✅ Rejection sent to admin successfully!")
+        setRejectModalOpen(false)
+        setRejectData({ rejectReason: '' })
+        setSelectedInterview(null)
+        // Refresh interviews to show updated status
+        await fetchInterviews()
+      } else {
+        throw new Error(data.error || "Failed to send rejection")
+      }
+    } catch (error) {
+      console.error('❌ Error sending rejection:', error)
+      alert(`Failed to send rejection: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setRejectingId(null)
     }
   }
 
@@ -339,6 +465,20 @@ export default function RecruitmentPage() {
                 <Badge className="bg-blue-500 text-white">{jobRequests.length}</Badge>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('interviews')}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'interviews'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              Interviews
+              {activeTab === 'interviews' && interviews.length > 0 && (
+                <Badge className="bg-blue-500 text-white">{interviews.length}</Badge>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -382,6 +522,26 @@ export default function RecruitmentPage() {
             addArrayItem={addArrayItem}
             removeArrayItem={removeArrayItem}
             updateArrayItem={updateArrayItem}
+          />
+        )}
+
+        {activeTab === 'interviews' && (
+          <InterviewsTab
+            interviews={interviews}
+            loading={interviewsLoading}
+            hireRequestingId={hireRequestingId}
+            rejectingId={rejectingId}
+            hireModalOpen={hireModalOpen}
+            setHireModalOpen={setHireModalOpen}
+            rejectModalOpen={rejectModalOpen}
+            setRejectModalOpen={setRejectModalOpen}
+            setSelectedInterview={setSelectedInterview}
+            hireData={hireData}
+            setHireData={setHireData}
+            rejectData={rejectData}
+            setRejectData={setRejectData}
+            handleHireRequest={handleHireRequest}
+            handleRejectRequest={handleRejectRequest}
           />
         )}
       </main>
@@ -1290,6 +1450,540 @@ function JobRequestsTab({
                 </div>
               </Card>
             ))}
+    </div>
+  )
+}
+
+// ============================================================================
+// TAB 3: INTERVIEWS
+// ============================================================================
+
+function InterviewsTab({ 
+  interviews, 
+  loading, 
+  hireRequestingId,
+  rejectingId,
+  hireModalOpen,
+  setHireModalOpen,
+  rejectModalOpen,
+  setRejectModalOpen,
+  setSelectedInterview,
+  hireData,
+  setHireData,
+  rejectData,
+  setRejectData,
+  handleHireRequest,
+  handleRejectRequest
+}: { 
+  interviews: InterviewRequest[]
+  loading: boolean
+  hireRequestingId: string | null
+  rejectingId: string | null
+  hireModalOpen: boolean
+  setHireModalOpen: (open: boolean) => void
+  rejectModalOpen: boolean
+  setRejectModalOpen: (open: boolean) => void
+  setSelectedInterview: (interview: InterviewRequest | null) => void
+  hireData: { preferredStartDate: string; hireNotes: string }
+  setHireData: (data: { preferredStartDate: string; hireNotes: string }) => void
+  rejectData: { rejectReason: string }
+  setRejectData: (data: { rejectReason: string }) => void
+  handleHireRequest: () => void
+  handleRejectRequest: () => void
+}) {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (interviews.length === 0) {
+    return (
+      <Card className="p-12 text-center">
+        <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Interview Requests Yet</h3>
+        <p className="text-gray-600">
+          When you request interviews with candidates, they will appear here
+        </p>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {interviews.map((interview: InterviewRequest) => {
+        // Normalize status to lowercase for comparison
+        const status = interview.status.toLowerCase()
+        
+        return (
+        <Card key={interview.id} className="p-6 bg-white shadow-sm border-l-4 border-l-blue-500">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-4">
+              {/* Header */}
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-xl font-semibold text-gray-900">{interview.candidateFirstName}</h3>
+                    <Badge className={
+                      status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                        : status === 'scheduled'
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : status === 'hire-requested' || status === 'hire_requested'
+                        ? 'bg-orange-100 text-orange-800 border-orange-200'
+                        : status === 'offer-sent' || status === 'offer_sent'
+                        ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                        : status === 'offer-accepted' || status === 'offer_accepted'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : status === 'offer-declined' || status === 'offer_declined'
+                        ? 'bg-red-100 text-red-800 border-red-200'
+                        : status === 'hired'
+                        ? 'bg-purple-100 text-purple-800 border-purple-200'
+                        : status === 'completed'
+                        ? 'bg-green-100 text-green-800 border-green-200'
+                        : 'bg-gray-100 text-gray-800 border-gray-200'
+                    }>
+                      {status.toUpperCase().replace(/_/g, ' ').replace(/-/g, ' ')}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Requested: {new Date(interview.createdAt).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Message */}
+              {status === 'pending' && (
+                <div className="rounded-lg p-4 bg-yellow-50 border border-yellow-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                      <Clock className="h-5 w-5 text-yellow-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-yellow-900">Waiting for Admin ⏳</p>
+                      <p className="text-sm text-yellow-800 mt-1">
+                        Our admin team is coordinating with the candidate to schedule your interview. You'll be notified once a time is confirmed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {status === 'scheduled' && (
+                <div className="rounded-lg p-4 bg-blue-50 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                      <Calendar className="h-5 w-5 text-blue-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-900">Interview Scheduled! 📅</p>
+                      {interview.scheduledTime && (
+                        <p className="text-sm text-blue-800 mt-2 font-medium">
+                          📆 {new Date(interview.scheduledTime).toLocaleString('en-US', {
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </p>
+                      )}
+                      {interview.meetingLink && (
+                        <a 
+                          href={interview.meetingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                          Join Meeting
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {status === 'completed' && (
+                <div className="rounded-lg p-4 bg-green-50 border border-green-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                      <CheckCircle2 className="h-5 w-5 text-green-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-green-900">Interview Complete! 🎉</p>
+                      <p className="text-sm text-green-800 mt-1">
+                        The interview is complete. Would you like to hire this candidate?
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(status === 'hire-requested' || status === 'hire_requested') && (
+                <div className="rounded-lg p-4 bg-orange-50 border border-orange-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                      <Clock className="h-5 w-5 text-orange-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-orange-900">Hire Request Sent ⏳</p>
+                      <p className="text-sm text-orange-800 mt-1">
+                        Your hire request has been sent to the admin. Waiting for them to send the job offer to the candidate.
+                      </p>
+                      {interview.clientPreferredStart && (
+                        <div className="mt-3 p-3 bg-orange-100 border border-orange-200 rounded-lg">
+                          <p className="text-xs font-medium text-orange-900 mb-1">Your Preferred Start Date:</p>
+                          <p className="text-sm font-semibold text-orange-900">
+                            📅 {new Date(interview.clientPreferredStart).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(status === 'offer-sent' || status === 'offer_sent') && (
+                <div className="rounded-lg p-4 bg-indigo-50 border border-indigo-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                      <Calendar className="h-5 w-5 text-indigo-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-indigo-900">Job Offer Sent 📧</p>
+                      <p className="text-sm text-indigo-800 mt-1">
+                        Admin has sent the job offer to the candidate. Waiting for their response.
+                      </p>
+                      {interview.clientPreferredStart && (
+                        <div className="mt-3 p-3 bg-indigo-100 border border-indigo-200 rounded-lg">
+                          <p className="text-xs font-medium text-indigo-900 mb-1">Your Preferred Start Date:</p>
+                          <p className="text-sm font-semibold text-indigo-900">
+                            📅 {new Date(interview.clientPreferredStart).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(status === 'offer-accepted' || status === 'offer_accepted') && (
+                <div className="rounded-lg p-4 bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg flex-shrink-0">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-emerald-900">Offer Accepted! 🎉</p>
+                      <p className="text-sm text-emerald-800 mt-1">
+                        Candidate has accepted the job offer! Waiting for them to create their account and complete onboarding.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(status === 'offer-declined' || status === 'offer_declined') && (
+                <div className="rounded-lg p-4 bg-red-50 border border-red-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
+                      <X className="h-5 w-5 text-red-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-red-900">Offer Declined</p>
+                      <p className="text-sm text-red-800 mt-1">
+                        Unfortunately, the candidate has declined the job offer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {status === 'hired' && (
+                <div className="rounded-lg p-4 bg-purple-50 border border-purple-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                      <UserCheck className="h-5 w-5 text-purple-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-purple-900">Candidate Hired! 🎉</p>
+                      <p className="text-sm text-purple-800 mt-1">
+                        The candidate has created their account and is now part of your team!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {status === 'rejected' && (
+                <div className="rounded-lg p-4 bg-gray-50 border border-gray-300">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-gray-200 rounded-lg flex-shrink-0">
+                      <X className="h-5 w-5 text-gray-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Candidate Rejected</p>
+                      <p className="text-sm text-gray-700 mt-1">
+                        You have declined to move forward with this candidate. Admin has been notified.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Your Preferred Times - Only show before hiring stage */}
+              {interview.preferredTimes && interview.preferredTimes.length > 0 && 
+               (status === 'pending' || status === 'scheduled' || status === 'completed') && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-gray-200 rounded">
+                      <Clock className="h-4 w-4 text-gray-700" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">Your Preferred Interview Times:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {interview.preferredTimes.map((time: string, idx: number) => (
+                      <Badge key={idx} variant="outline" className="bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {new Date(time).toLocaleString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Client Notes */}
+              {interview.clientNotes && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-gray-200 rounded">
+                      <FileText className="h-4 w-4 text-gray-700" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">Your Notes:</span>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed">
+                    {interview.clientNotes}
+                  </p>
+                </div>
+              )}
+
+              {/* Admin Notes */}
+              {interview.adminNotes && (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-blue-200 rounded">
+                      <FileText className="h-4 w-4 text-blue-700" />
+                    </div>
+                    <span className="text-sm font-semibold text-blue-900">Message from Admin:</span>
+                  </div>
+                  <p className="text-sm text-blue-800 leading-relaxed">{interview.adminNotes}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 flex-shrink-0">
+              {status === 'completed' && (
+                <>
+                  <Button 
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      setSelectedInterview(interview)
+                      setHireData({ preferredStartDate: '', hireNotes: '' })
+                      setHireModalOpen(true)
+                    }}
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Request to Hire
+                  </Button>
+                  <Button 
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => {
+                      setSelectedInterview(interview)
+                      setRejectData({ rejectReason: '' })
+                      setRejectModalOpen(true)
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reject Candidate
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+        )
+      })}
+
+      {/* Hire Modal */}
+      <Dialog open={hireModalOpen} onOpenChange={setHireModalOpen}>
+        <DialogContent className="bg-white text-gray-900 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Request to Hire Candidate
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Provide details about the hire request for the admin team
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="preferredStartDate" className="text-gray-900 font-medium mb-2 block">
+                Preferred Start Date *
+              </Label>
+              <Input
+                id="preferredStartDate"
+                type="date"
+                value={hireData.preferredStartDate}
+                onChange={(e) => setHireData({ ...hireData, preferredStartDate: e.target.value })}
+                className="bg-white text-gray-900 border-gray-300"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Admin will confirm this date with the candidate</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="hireNotes" className="text-gray-900 font-medium mb-2 block">
+                Additional Notes (Optional)
+              </Label>
+              <Textarea
+                id="hireNotes"
+                value={hireData.hireNotes}
+                onChange={(e) => setHireData({ ...hireData, hireNotes: e.target.value })}
+                placeholder="Any additional information for the admin (e.g., salary offer, benefits, etc.)"
+                className="bg-white text-gray-900 border-gray-300"
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setHireModalOpen(false)
+                setHireData({ preferredStartDate: '', hireNotes: '' })
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleHireRequest}
+              disabled={!hireData.preferredStartDate || hireRequestingId !== null}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+            >
+              {hireRequestingId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Send Hire Request
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Modal */}
+      <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
+        <DialogContent className="bg-white text-gray-900 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Reject Candidate
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Please provide a reason for rejecting this candidate
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="rejectReason" className="text-gray-900 font-medium mb-2 block">
+                Rejection Reason *
+              </Label>
+              <Textarea
+                id="rejectReason"
+                value={rejectData.rejectReason}
+                onChange={(e) => setRejectData({ rejectReason: e.target.value })}
+                placeholder="Please explain why this candidate is not a good fit..."
+                className="bg-white text-gray-900 border-gray-300"
+                rows={5}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This will be sent to the admin team for their records
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectModalOpen(false)
+                setRejectData({ rejectReason: '' })
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRejectRequest}
+              disabled={!rejectData.rejectReason.trim() || rejectingId !== null}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            >
+              {rejectingId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Confirm Rejection
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

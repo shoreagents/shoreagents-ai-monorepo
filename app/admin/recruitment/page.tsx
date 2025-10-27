@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   Search, 
@@ -25,7 +25,8 @@ import {
   Award,
   Zap,
   CheckCircle,
-  Mail
+  Mail,
+  XCircle
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -67,13 +68,27 @@ interface JobRequest {
 
 interface InterviewRequest {
   id: string
-  client_user_id: string
-  bpoc_candidate_id: string
-  candidate_first_name: string
-  preferred_times: string[]
-  client_notes: string | null
+  clientUserId: string
+  bpocCandidateId: string
+  candidateFirstName: string
+  preferredTimes: string[]
+  clientNotes: string | null
   status: string
-  created_at: string
+  createdAt: string
+  clientPreferredStart?: string | null
+  client_name?: string
+  client_email?: string
+  company_name?: string
+  client_users?: {
+    id: string
+    name: string
+    email: string
+    companyId: string
+    company?: {
+      id: string
+      companyName: string
+    }
+  }
 }
 
 type TabType = 'candidates' | 'job-requests' | 'interviews'
@@ -107,9 +122,44 @@ export default function AdminRecruitmentPage() {
     position: '',
     companyId: '',
     candidateEmail: '',
-    candidatePhone: ''
+    candidatePhone: '',
+    clientPreferredStart: '' // NEW: Client's preferred start date
   })
   const [hiring, setHiring] = useState(false)
+  
+  // Schedule Interview Modal State
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
+  const [interviewToSchedule, setInterviewToSchedule] = useState<InterviewRequest | null>(null)
+  const [scheduleFormData, setScheduleFormData] = useState({
+    scheduledTime: '',
+    meetingLink: '',
+    adminNotes: ''
+  })
+  const [scheduling, setScheduling] = useState(false)
+
+  // Finalize Hire Modal State
+  const [finalizeHireModalOpen, setFinalizeHireModalOpen] = useState(false)
+  const [interviewToFinalize, setInterviewToFinalize] = useState<InterviewRequest | null>(null)
+  const [finalizeFormData, setFinalizeFormData] = useState({
+    finalStartDate: '',
+    staffEmail: 'nora@nora.com' // Default email for staff account
+  })
+  const [finalizing, setFinalizing] = useState(false)
+  
+  // Confirm Acceptance Modal State
+  const [confirmAcceptanceModalOpen, setConfirmAcceptanceModalOpen] = useState(false)
+  const [interviewToConfirm, setInterviewToConfirm] = useState<InterviewRequest | null>(null)
+  const [confirmFormData, setConfirmFormData] = useState({
+    confirmedStartDate: '',
+    adminNotes: ''
+  })
+  const [confirming, setConfirming] = useState(false)
+  
+  // Decline Offer Modal State
+  const [declineModalOpen, setDeclineModalOpen] = useState(false)
+  const [interviewToDecline, setInterviewToDecline] = useState<InterviewRequest | null>(null)
+  const [declineReason, setDeclineReason] = useState('')
+  const [declining, setDeclining] = useState(false)
   
   // Stats
   const [stats, setStats] = useState({
@@ -176,8 +226,11 @@ export default function AdminRecruitmentPage() {
       const response = await fetch('/api/admin/recruitment/interviews')
       const data = await response.json()
       if (data.success) {
+        console.log('🔍 [FRONTEND] Interviews received:', data.interviews.length)
+        console.log('🔍 [FRONTEND] Interview statuses:', data.interviews.map((i: InterviewRequest) => ({ name: i.candidateFirstName, status: i.status })))
         setInterviews(data.interviews)
         const pendingCount = data.interviews.filter((i: InterviewRequest) => i.status === 'pending').length
+        console.log('🔍 [FRONTEND] Pending count:', pendingCount)
         setStats(prev => ({ ...prev, pendingInterviews: pendingCount }))
       }
     } catch (error) {
@@ -204,14 +257,114 @@ export default function AdminRecruitmentPage() {
     fetchCompanies()
   }, [])
 
-  function openHireModal(interview: InterviewRequest) {
+  async function handleScheduleInterview() {
+    if (!interviewToSchedule) return
+
+    // Validation
+    if (!scheduleFormData.scheduledTime) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a scheduled time for the interview.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setScheduling(true)
+    try {
+      const response = await fetch(`/api/admin/recruitment/interviews/${interviewToSchedule.id}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduledTime: scheduleFormData.scheduledTime,
+          meetingLink: scheduleFormData.meetingLink,
+          adminNotes: scheduleFormData.adminNotes
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Interview Scheduled!",
+          description: `Interview with ${interviewToSchedule.candidateFirstName} has been scheduled.`,
+        })
+        setScheduleModalOpen(false)
+        fetchInterviews() // Refresh the list
+      } else {
+        throw new Error(data.error || 'Failed to schedule interview')
+      }
+    } catch (error: any) {
+      console.error('Error scheduling interview:', error)
+      toast({
+        title: "Schedule Failed",
+        description: error.message || "Failed to schedule the interview. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setScheduling(false)
+    }
+  }
+
+  async function openHireModal(interview: InterviewRequest) {
     setInterviewToHire(interview)
-    setHireFormData({
-      position: '',
-      companyId: '',
-      candidateEmail: '',
-      candidatePhone: ''
-    })
+    setHiring(true) // Show loading state
+    
+    try {
+      // Fetch candidate details from BPOC database to get email
+      const bpocResponse = await fetch(`/api/admin/recruitment/candidates/${interview.bpocCandidateId}`)
+      let candidateEmail = ''
+      let candidatePhone = ''
+      let candidatePosition = ''
+      
+      if (bpocResponse.ok) {
+        const bpocData = await bpocResponse.json()
+        if (bpocData.success && bpocData.candidate) {
+          candidateEmail = bpocData.candidate.email || ''
+          candidatePhone = bpocData.candidate.phone || ''
+          candidatePosition = bpocData.candidate.position || ''
+        }
+      }
+      
+      // Get client's company ID from interview request
+      const clientCompanyId = interview.client_users?.company?.id || interview.client_users?.companyId || ''
+      
+      // Format client preferred start date if it exists
+      let preferredStart = ''
+      if (interview.clientPreferredStart) {
+        const date = new Date(interview.clientPreferredStart)
+        preferredStart = date.toISOString().split('T')[0] // Format as YYYY-MM-DD
+      }
+      
+      console.log('📋 Pre-filling hire form:', {
+        position: candidatePosition,
+        companyId: clientCompanyId,
+        companyName: interview.client_users?.company?.companyName || interview.company_name,
+        preferredStart: preferredStart,
+        clientName: interview.client_users?.name || interview.client_name
+      })
+      
+      setHireFormData({
+        position: candidatePosition, // Pre-fill from BPOC
+        companyId: clientCompanyId, // Pre-fill from client's company
+        candidateEmail: candidateEmail, // Pre-fill from BPOC
+        candidatePhone: candidatePhone, // Pre-fill from BPOC
+        clientPreferredStart: preferredStart // Pre-fill from client's request
+      })
+    } catch (error) {
+      console.error('Error fetching candidate details:', error)
+      // Still open modal with empty form if fetch fails
+      setHireFormData({
+        position: '',
+        companyId: '',
+        candidateEmail: '',
+        candidatePhone: '',
+        clientPreferredStart: ''
+      })
+    } finally {
+      setHiring(false)
+    }
+    
     setHireModalOpen(true)
   }
 
@@ -258,7 +411,8 @@ export default function AdminRecruitmentPage() {
           companyId: hireFormData.companyId,
           candidateEmail: hireFormData.candidateEmail,
           candidatePhone: hireFormData.candidatePhone,
-          bpocCandidateId: interviewToHire.bpoc_candidate_id
+          bpocCandidateId: interviewToHire.bpocCandidateId,
+          clientPreferredStart: hireFormData.clientPreferredStart // NEW: Client's preferred start date
         })
       })
 
@@ -266,9 +420,11 @@ export default function AdminRecruitmentPage() {
 
       if (data.success) {
         toast({
-          title: "Candidate Hired Successfully!",
-          description: `Signup link has been generated for ${interviewToHire.candidate_first_name}`,
+          title: "Job Offer Sent Successfully! 🎉",
+          description: `Offer email has been sent to ${hireFormData.candidateEmail}. Waiting for candidate response.`,
         })
+
+        console.log('📧 Offer acceptance link:', data.offerLink)
 
         // Refresh interviews list
         await fetchInterviews()
@@ -277,17 +433,225 @@ export default function AdminRecruitmentPage() {
         setHireModalOpen(false)
         setInterviewToHire(null)
       } else {
-        throw new Error(data.error || 'Failed to hire candidate')
+        throw new Error(data.error || 'Failed to send job offer')
       }
     } catch (error) {
-      console.error('Error hiring candidate:', error)
+      console.error('Error sending job offer:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to hire candidate",
+        description: error instanceof Error ? error.message : "Failed to send job offer",
         variant: "destructive"
       })
     } finally {
       setHiring(false)
+    }
+  }
+
+  async function openFinalizeHireModal(interview: InterviewRequest) {
+    setInterviewToFinalize(interview)
+    
+    // Pre-fill with client's preferred start date if available
+    let startDate = ''
+    if (interview.clientPreferredStart) {
+      const date = new Date(interview.clientPreferredStart)
+      startDate = date.toISOString().split('T')[0]
+    }
+    
+    setFinalizeFormData({
+      finalStartDate: startDate,
+      staffEmail: 'nora@nora.com' // This will be the email for staff signup
+    })
+    
+    setFinalizeHireModalOpen(true)
+  }
+
+  async function handleFinalizeHire() {
+    if (!interviewToFinalize) return
+
+    // Validation
+    if (!finalizeFormData.finalStartDate) {
+      toast({
+        title: "Error",
+        description: "Final start date is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!finalizeFormData.staffEmail) {
+      toast({
+        title: "Error",
+        description: "Staff email is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setFinalizing(true)
+
+      const response = await fetch('/api/admin/recruitment/interviews/finalize-hire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewRequestId: interviewToFinalize.id,
+          finalStartDate: finalizeFormData.finalStartDate,
+          staffEmail: finalizeFormData.staffEmail,
+          bpocCandidateId: interviewToFinalize.bpocCandidateId
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Hire Finalized Successfully! 🎉",
+          description: `Staff signup invitation has been prepared for ${finalizeFormData.staffEmail}. When they create their account, it will be auto-matched to this hire.`,
+        })
+
+        // Refresh interviews list
+        await fetchInterviews()
+
+        // Close modal
+        setFinalizeHireModalOpen(false)
+        setInterviewToFinalize(null)
+      } else {
+        throw new Error(data.error || 'Failed to finalize hire')
+      }
+    } catch (error) {
+      console.error('Error finalizing hire:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to finalize hire",
+        variant: "destructive"
+      })
+    } finally {
+      setFinalizing(false)
+    }
+  }
+
+  // Confirm Offer Acceptance
+  async function openConfirmAcceptanceModal(interview: InterviewRequest) {
+    setInterviewToConfirm(interview)
+    
+    // Pre-fill with client's preferred start date if available
+    let startDate = ''
+    if (interview.clientPreferredStart) {
+      const date = new Date(interview.clientPreferredStart)
+      startDate = date.toISOString().split('T')[0]
+    }
+    
+    setConfirmFormData({
+      confirmedStartDate: startDate,
+      adminNotes: ''
+    })
+    
+    setConfirmAcceptanceModalOpen(true)
+  }
+
+  async function handleConfirmAcceptance() {
+    if (!interviewToConfirm) return
+
+    try {
+      setConfirming(true)
+
+      const response = await fetch('/api/admin/recruitment/interviews/confirm-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewRequestId: interviewToConfirm.id,
+          confirmedStartDate: confirmFormData.confirmedStartDate,
+          adminNotes: confirmFormData.adminNotes
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Offer Accepted! 🎉",
+          description: `${interviewToConfirm.candidateFirstName} has accepted the offer. You can now finalize the hire.`,
+        })
+
+        // Refresh interviews list
+        await fetchInterviews()
+
+        // Close modal
+        setConfirmAcceptanceModalOpen(false)
+        setInterviewToConfirm(null)
+      } else {
+        throw new Error(data.error || 'Failed to confirm acceptance')
+      }
+    } catch (error) {
+      console.error('Error confirming acceptance:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to confirm acceptance",
+        variant: "destructive"
+      })
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  // Mark Offer as Declined
+  async function openDeclineModal(interview: InterviewRequest) {
+    setInterviewToDecline(interview)
+    setDeclineReason('')
+    setDeclineModalOpen(true)
+  }
+
+  async function handleMarkDeclined() {
+    if (!interviewToDecline) return
+
+    // Validation
+    if (!declineReason.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a reason for the decline",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setDeclining(true)
+
+      const response = await fetch('/api/admin/recruitment/interviews/mark-declined', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewRequestId: interviewToDecline.id,
+          declineReason: declineReason
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Offer Marked as Declined",
+          description: `${interviewToDecline.candidateFirstName} has declined the offer. The interview request has been closed.`,
+        })
+
+        // Refresh interviews list
+        await fetchInterviews()
+
+        // Close modal
+        setDeclineModalOpen(false)
+        setInterviewToDecline(null)
+      } else {
+        throw new Error(data.error || 'Failed to mark as declined')
+      }
+    } catch (error) {
+      console.error('Error marking as declined:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to mark as declined",
+        variant: "destructive"
+      })
+    } finally {
+      setDeclining(false)
     }
   }
 
@@ -317,9 +681,9 @@ export default function AdminRecruitmentPage() {
   )
 
   // Filter interviews
-  const filteredInterviews = interviews.filter(i =>
-    i.candidate_first_name.toLowerCase().includes(interviewSearch.toLowerCase()) ||
-    i.status.toLowerCase().includes(interviewSearch.toLowerCase())
+  const filteredInterviews = (interviews || []).filter(i =>
+    (i.candidateFirstName || '')?.toLowerCase().includes(interviewSearch.toLowerCase()) ||
+    (i.status || '')?.toLowerCase().includes(interviewSearch.toLowerCase())
   )
 
   return (
@@ -592,52 +956,67 @@ export default function AdminRecruitmentPage() {
           <div className="space-y-6">
             
             {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Card className="p-4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-yellow-800">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-900">
+                    <p className="text-sm font-medium text-yellow-400">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-300">
                       {interviews.filter(i => i.status === 'pending').length}
                     </p>
                   </div>
-                  <Clock className="h-8 w-8 text-yellow-600" />
+                  <Clock className="h-8 w-8 text-yellow-400/70" />
                 </div>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <Card className="p-4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-800">Scheduled</p>
-                    <p className="text-2xl font-bold text-blue-900">
-                      {interviews.filter(i => i.status === 'scheduled').length}
+                    <p className="text-sm font-medium text-orange-400">Offers Pending</p>
+                    <p className="text-2xl font-bold text-orange-300">
+                      {interviews.filter(i => {
+                        const s = i.status.toLowerCase().replace(/_/g, '-')
+                        return ['hire-requested', 'offer-sent'].includes(s)
+                      }).length}
                     </p>
                   </div>
-                  <Calendar className="h-8 w-8 text-blue-600" />
+                  <UserCheck className="h-8 w-8 text-orange-400/70" />
                 </div>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <Card className="p-4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-800">Completed</p>
-                    <p className="text-2xl font-bold text-green-900">
+                    <p className="text-sm font-medium text-green-400">Offer Accepted</p>
+                    <p className="text-2xl font-bold text-green-300">
+                      {interviews.filter(i => i.status === 'offer-accepted').length}
+                    </p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-400/70" />
+                </div>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-400">Completed</p>
+                    <p className="text-2xl font-bold text-blue-300">
                       {interviews.filter(i => i.status === 'completed').length}
                     </p>
                   </div>
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <Calendar className="h-8 w-8 text-blue-400/70" />
                 </div>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <Card className="p-4 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-purple-800">Hired</p>
-                    <p className="text-2xl font-bold text-purple-900">
+                    <p className="text-sm font-medium text-purple-400">Hired</p>
+                    <p className="text-2xl font-bold text-purple-300">
                       {interviews.filter(i => i.status === 'hired').length}
                     </p>
                   </div>
-                  <UserCheck className="h-8 w-8 text-purple-600" />
+                  <UserCheck className="h-8 w-8 text-purple-400/70" />
                 </div>
               </Card>
             </div>
@@ -645,12 +1024,12 @@ export default function AdminRecruitmentPage() {
             {/* Search */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder="Search interviews by candidate name or status..."
                   value={interviewSearch}
                   onChange={(e) => setInterviewSearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 bg-slate-800/50 border-slate-700/50 text-foreground placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -668,7 +1047,11 @@ export default function AdminRecruitmentPage() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {filteredInterviews.map((interview) => (
+                {filteredInterviews.map((interview) => {
+                  // Normalize status to lowercase for comparison
+                  const status = interview.status.toLowerCase().replace(/_/g, '-')
+                  
+                  return (
                   <Card key={interview.id} className="p-6 hover:shadow-lg transition-all border-l-4 border-l-blue-500">
                     <div className="flex items-start justify-between gap-4">
                       
@@ -682,19 +1065,27 @@ export default function AdminRecruitmentPage() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-3 flex-wrap">
-                              <h3 className="text-xl font-semibold">{interview.candidate_first_name}</h3>
+                              <h3 className="text-xl font-semibold text-foreground">{interview.candidateFirstName}</h3>
                               <Badge className={
-                                interview.status === 'pending' 
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
-                                  : interview.status === 'scheduled'
-                                  ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
-                                  : interview.status === 'hired'
-                                  ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
-                                  : interview.status === 'completed'
-                                  ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
-                                  : 'bg-gray-100 text-gray-800 border-gray-300'
+                                status === 'pending' 
+                                  ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 hover:bg-yellow-500/30'
+                                  : status === 'scheduled'
+                                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 hover:bg-blue-500/30'
+                                  : status === 'hire-requested'
+                                  ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 hover:bg-orange-500/30'
+                                  : status === 'offer-sent'
+                                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30'
+                                  : status === 'offer-accepted'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                                  : status === 'offer-declined'
+                                  ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30'
+                                  : status === 'hired'
+                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30'
+                                  : status === 'completed'
+                                  ? 'bg-green-500/20 text-green-300 border-green-500/50 hover:bg-green-500/30'
+                                  : 'bg-gray-500/20 text-gray-300 border-gray-500/50'
                               }>
-                                {interview.status.toUpperCase()}
+                                {status.toUpperCase().replace(/-/g, ' ')}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
@@ -711,79 +1102,152 @@ export default function AdminRecruitmentPage() {
 
                         {/* Status Message Box */}
                         <div className={`rounded-lg p-4 border-l-4 ${
-                          interview.status === 'pending'
-                            ? 'bg-yellow-50 border-l-yellow-500'
-                            : interview.status === 'scheduled'
-                            ? 'bg-blue-50 border-l-blue-500'
-                            : interview.status === 'hired'
-                            ? 'bg-purple-50 border-l-purple-500'
-                            : 'bg-green-50 border-l-green-500'
+                          status === 'pending'
+                            ? 'bg-yellow-500/10 border-l-yellow-500'
+                            : status === 'scheduled'
+                            ? 'bg-blue-500/10 border-l-blue-500'
+                            : status === 'hire-requested'
+                            ? 'bg-orange-500/10 border-l-orange-500'
+                            : status === 'offer-sent'
+                            ? 'bg-indigo-500/10 border-l-indigo-500'
+                            : status === 'offer-accepted'
+                            ? 'bg-emerald-500/10 border-l-emerald-500'
+                            : status === 'offer-declined'
+                            ? 'bg-red-500/10 border-l-red-500'
+                            : status === 'hired'
+                            ? 'bg-purple-500/10 border-l-purple-500'
+                            : status === 'completed'
+                            ? 'bg-green-500/10 border-l-green-500'
+                            : 'bg-gray-500/10 border-l-gray-500'
                         }`}>
-                          {interview.status === 'pending' && (
+                          {status === 'pending' && (
                             <div className="flex items-start gap-3">
-                              <Clock className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                              <Clock className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <p className="font-semibold text-yellow-900">Action Required</p>
-                                <p className="text-sm text-yellow-800 mt-1">
+                                <p className="font-semibold text-yellow-300">Action Required</p>
+                                <p className="text-sm text-yellow-400/80 mt-1">
                                   Coordinate with the candidate to schedule this interview. Click "Schedule" to set a time.
                                 </p>
                               </div>
                             </div>
                           )}
-                          {interview.status === 'scheduled' && (
+                          {status === 'scheduled' && (
                             <div className="flex items-start gap-3">
-                              <Calendar className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <Calendar className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <p className="font-semibold text-blue-900">Interview Scheduled</p>
-                                <p className="text-sm text-blue-800 mt-1">
+                                <p className="font-semibold text-blue-300">Interview Scheduled</p>
+                                <p className="text-sm text-blue-400/80 mt-1">
                                   Interview has been scheduled. Waiting for completion.
                                 </p>
                               </div>
                             </div>
                           )}
-                          {interview.status === 'hired' && (
+                          {status === 'hire-requested' && (
                             <div className="flex items-start gap-3">
-                              <UserCheck className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <UserCheck className="h-5 w-5 text-orange-400 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-semibold text-orange-300">Client Wants to Hire! 🎯</p>
+                                <p className="text-sm text-orange-400/80 mt-1">
+                                  Client has requested to hire this candidate. Click "Send Offer" to proceed.
+                                </p>
+                                {interview.clientPreferredStart && (
+                                  <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                                    <p className="text-xs font-medium text-orange-300 mb-1">Client's Preferred Start Date:</p>
+                                    <p className="text-sm font-semibold text-orange-200">
+                                      📅 {new Date(interview.clientPreferredStart).toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      })}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {status === 'offer-sent' && (
+                            <div className="flex items-start gap-3">
+                              <Mail className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <p className="font-semibold text-purple-900">Candidate Hired! 🎉</p>
-                                <p className="text-sm text-purple-800 mt-1">
-                                  This candidate has been hired and contract generation is ready.
+                                <p className="font-semibold text-indigo-300">Job Offer Sent 📧</p>
+                                <p className="text-sm text-indigo-400/80 mt-1">
+                                  Job offer has been sent to candidate. Waiting for their response.
                                 </p>
                               </div>
                             </div>
                           )}
-                          {interview.status === 'completed' && (
+                          {status === 'offer-accepted' && (
                             <div className="flex items-start gap-3">
-                              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <CheckCircle className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <p className="font-semibold text-green-900">Interview Complete</p>
-                                <p className="text-sm text-green-800 mt-1">
-                                  Interview completed. Client will make hiring decision.
+                                <p className="font-semibold text-emerald-300">Offer Accepted! 🎉</p>
+                                <p className="text-sm text-emerald-400/80 mt-1">
+                                  Candidate has accepted the job offer! Waiting for them to create account and complete onboarding.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {status === 'offer-declined' && (
+                            <div className="flex items-start gap-3">
+                              <XCircle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-red-300">Offer Declined</p>
+                                <p className="text-sm text-red-400/80 mt-1">
+                                  Candidate has declined the job offer. You may close this request.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {status === 'hired' && (
+                            <div className="flex items-start gap-3">
+                              <UserCheck className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-purple-300">Candidate Hired! 🎉</p>
+                                <p className="text-sm text-purple-400/80 mt-1">
+                                  Candidate has created their account and started onboarding. They are now part of the team!
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {status === 'completed' && (
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-green-300">Interview Complete</p>
+                                <p className="text-sm text-green-400/80 mt-1">
+                                  Interview completed. Ready to send job offer when you're ready.
                                 </p>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Preferred Times */}
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Client's Preferred Times:</span>
+                        {/* Preferred Interview Times - Only show before hiring stage */}
+                        {(status === 'pending' || status === 'scheduled' || status === 'completed') && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Client's Preferred Interview Times:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(() => {
+                                const times = interview.preferredTimes || interview.preferred_times || [];
+                                const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
+                                return timesArray.map((time, idx) => (
+                                  <Badge key={idx} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/50">
+                                    {new Date(time).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </Badge>
+                                ));
+                              })()}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {interview.preferred_times.map((time, idx) => (
-                              <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                {new Date(time).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
+                        )}
 
                         {/* Client Notes */}
                         {interview.client_notes && (
@@ -811,17 +1275,28 @@ export default function AdminRecruitmentPage() {
                           <Eye className="h-4 w-4 mr-2" />
                           View Full
                         </Button>
-                        {interview.status === 'pending' && (
+                        {status === 'pending' && (
                           <Button 
                             variant="default" 
                             size="sm"
                             className="w-full bg-blue-600 hover:bg-blue-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setInterviewToSchedule(interview)
+                              setScheduleFormData({
+                                scheduledTime: '',
+                                meetingLink: '',
+                                adminNotes: ''
+                              })
+                              setScheduleModalOpen(true)
+                            }}
                           >
                             <Calendar className="h-4 w-4 mr-2" />
                             Schedule
                           </Button>
                         )}
-                        {interview.status !== 'hired' && interview.status === 'completed' && (
+                        {/* Show "Send Offer" button for completed interviews or hire-requested */}
+                        {(status === 'completed' || status === 'hire-requested') && (
                           <Button 
                             variant="default" 
                             size="sm" 
@@ -831,15 +1306,60 @@ export default function AdminRecruitmentPage() {
                               openHireModal(interview)
                             }}
                           >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Send Offer
+                          </Button>
+                        )}
+                        {/* Show "Confirm Acceptance" and "Mark Declined" buttons for offer-sent */}
+                        {status === 'offer-sent' && (
+                          <div className="flex gap-2 w-full">
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openConfirmAcceptanceModal(interview)
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Confirm Acceptance
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openDeclineModal(interview)
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Mark Declined
+                            </Button>
+                          </div>
+                        )}
+                        {/* Show "Finalize Hire" button for offer-accepted */}
+                        {status === 'offer-accepted' && (
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 animate-pulse"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openFinalizeHireModal(interview)
+                            }}
+                          >
                             <CheckCircle className="h-4 w-4 mr-2" />
-                            Hire
+                            Finalize Hire
                           </Button>
                         )}
                       </div>
 
                     </div>
                   </Card>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -998,7 +1518,7 @@ export default function AdminRecruitmentPage() {
           {selectedInterview && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold text-foreground">{selectedInterview.candidate_first_name}</h3>
+                <h3 className="text-xl font-bold text-foreground">{selectedInterview.candidateFirstName}</h3>
                 <Badge className={
                   selectedInterview.status === 'pending' 
                     ? 'bg-blue-600 text-white border border-blue-500'
@@ -1018,9 +1538,13 @@ export default function AdminRecruitmentPage() {
               <div>
                 <label className="text-sm text-muted-foreground">Preferred Interview Times</label>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  {selectedInterview.preferred_times.map((time, idx) => (
-                    <li key={idx} className="text-foreground">{new Date(time).toLocaleString()}</li>
-                  ))}
+                  {(() => {
+                    const times = selectedInterview.preferredTimes || selectedInterview.preferred_times || [];
+                    const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
+                    return timesArray.map((time, idx) => (
+                      <li key={idx} className="text-foreground">{new Date(time).toLocaleString()}</li>
+                    ));
+                  })()}
                 </ul>
               </div>
 
@@ -1040,22 +1564,46 @@ export default function AdminRecruitmentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Hire Candidate Modal */}
+      {/* Send Job Offer Modal */}
       <Dialog open={hireModalOpen} onOpenChange={setHireModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Hire Candidate
+              <Mail className="h-5 w-5 text-green-600" />
+              Send Job Offer
             </DialogTitle>
           </DialogHeader>
           {interviewToHire && (
             <div className="space-y-6">
+              {/* Client Company Information */}
+              {interviewToHire.client_users?.company && (
+                <div className="p-4 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-2 border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    {interviewToHire.client_users.company.logo ? (
+                      <img 
+                        src={interviewToHire.client_users.company.logo} 
+                        alt={interviewToHire.client_users.company.companyName}
+                        className="w-16 h-16 rounded-lg object-cover border-2 border-blue-500/50"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-2 border-blue-500/50">
+                        <Building2 className="h-8 w-8 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Hiring Company</p>
+                      <h3 className="text-lg font-bold text-foreground">{interviewToHire.client_users.company.companyName}</h3>
+                      <p className="text-sm text-muted-foreground">Client: {interviewToHire.client_users.name}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-4 bg-muted rounded-lg">
                 <h3 className="font-semibold text-foreground mb-2">Candidate Information</h3>
                 <div className="space-y-1 text-sm">
-                  <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-medium">{interviewToHire.candidate_first_name}</span></p>
-                  <p><span className="text-muted-foreground">BPOC ID:</span> <span className="text-foreground font-mono text-xs">{interviewToHire.bpoc_candidate_id}</span></p>
+                  <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-medium">{interviewToHire.candidateFirstName}</span></p>
+                  <p><span className="text-muted-foreground">BPOC ID:</span> <span className="text-foreground font-mono text-xs">{interviewToHire.bpocCandidateId}</span></p>
                 </div>
               </div>
 
@@ -1073,21 +1621,32 @@ export default function AdminRecruitmentPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="company">Assign to Company *</Label>
-                  <Select
-                    value={hireFormData.companyId}
-                    onValueChange={(value) => setHireFormData(prev => ({ ...prev, companyId: value }))}
-                  >
-                    <SelectTrigger id="company">
-                      <SelectValue placeholder="Select company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.companyName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {interviewToHire?.client_users?.company ? (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 border-2 border-blue-300 dark:border-blue-700 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        ✓ {interviewToHire.client_users.company.companyName}
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        Pre-selected from client's hire request
+                      </p>
+                    </div>
+                  ) : (
+                    <Select
+                      value={hireFormData.companyId}
+                      onValueChange={(value) => setHireFormData(prev => ({ ...prev, companyId: value }))}
+                    >
+                      <SelectTrigger id="company">
+                        <SelectValue placeholder="Select company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1100,7 +1659,7 @@ export default function AdminRecruitmentPage() {
                     onChange={(e) => setHireFormData(prev => ({ ...prev, candidateEmail: e.target.value }))}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Signup link will be sent to this email</p>
+                  <p className="text-xs text-muted-foreground">Job offer will be sent to this email</p>
                 </div>
 
                 <div className="space-y-2">
@@ -1113,6 +1672,19 @@ export default function AdminRecruitmentPage() {
                     onChange={(e) => setHireFormData(prev => ({ ...prev, candidatePhone: e.target.value }))}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="clientPreferredStart">Preferred Start Date (Optional)</Label>
+                  <Input
+                    id="clientPreferredStart"
+                    type="date"
+                    value={hireFormData.clientPreferredStart}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, clientPreferredStart: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This is the client's preferred start date. The final start date will be negotiated with the candidate.
+                  </p>
+                </div>
               </div>
 
               <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -1121,8 +1693,8 @@ export default function AdminRecruitmentPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Next Steps</p>
                     <p className="text-xs text-blue-700 dark:text-blue-300">
-                      After hiring, a signup link will be generated and sent to the candidate's email. 
-                      They will be able to create their account, sign the employment contract, and complete onboarding.
+                      After sending the offer, the candidate will receive an email with details. They can accept or decline the offer.
+                      Once accepted, they'll receive a signup link to create their account and complete onboarding.
                     </p>
                   </div>
                 </div>
@@ -1137,12 +1709,12 @@ export default function AdminRecruitmentPage() {
                   {hiring ? (
                     <>
                       <span className="animate-spin mr-2">⏳</span>
-                      Hiring...
+                      Sending Offer...
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Confirm Hire & Send Email
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Job Offer to Candidate
                     </>
                   )}
                 </Button>
@@ -1150,6 +1722,430 @@ export default function AdminRecruitmentPage() {
                   variant="outline"
                   onClick={() => setHireModalOpen(false)}
                   disabled={hiring}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Finalize Hire Modal */}
+      <Dialog open={finalizeHireModalOpen} onOpenChange={setFinalizeHireModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              Finalize Hire & Create Staff Account
+            </DialogTitle>
+          </DialogHeader>
+          {interviewToFinalize && (
+            <div className="space-y-6">
+              {/* Success Message */}
+              <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-lg backdrop-blur-sm">
+                <div className="flex gap-3">
+                  <CheckCircle className="h-6 w-6 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-emerald-300">Candidate Accepted the Offer! 🎉</p>
+                    <p className="text-xs text-emerald-400/80">
+                      {interviewToFinalize.candidateFirstName} has accepted the job offer. Now finalize the hire by setting the start date.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Candidate Info */}
+              <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg backdrop-blur-sm">
+                <h3 className="font-semibold text-slate-200 mb-2">Candidate Information</h3>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-slate-400">Name:</span> <span className="text-slate-200 font-medium">{interviewToFinalize.candidateFirstName}</span></p>
+                  <p><span className="text-slate-400">BPOC ID:</span> <span className="text-slate-300 font-mono text-xs">{interviewToFinalize.bpocCandidateId}</span></p>
+                  <p><span className="text-slate-400">Staff Email:</span> <span className="text-slate-200 font-medium">{finalizeFormData.staffEmail}</span></p>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="finalStartDate" className="text-sm font-medium text-slate-200">
+                    Final Start Date *
+                  </Label>
+                  <Input
+                    id="finalStartDate"
+                    type="date"
+                    value={finalizeFormData.finalStartDate}
+                    onChange={(e) => setFinalizeFormData(prev => ({ ...prev, finalStartDate: e.target.value }))}
+                    required
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-slate-400">
+                    This is the confirmed start date after negotiation with the candidate.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="staffEmail" className="text-sm font-medium text-slate-200">
+                    Staff Email Address *
+                  </Label>
+                  <Input
+                    id="staffEmail"
+                    type="email"
+                    value={finalizeFormData.staffEmail}
+                    onChange={(e) => setFinalizeFormData(prev => ({ ...prev, staffEmail: e.target.value }))}
+                    required
+                    placeholder="staff@example.com"
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20 font-medium"
+                  />
+                  <p className="text-xs text-slate-400">
+                    This email will be used for staff signup. When they create an account with this email, it will be automatically matched to this hire record.
+                  </p>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg backdrop-blur-sm">
+                <div className="flex gap-2">
+                  <UserCheck className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-blue-300">What Happens Next?</p>
+                    <ul className="text-xs text-blue-400/80 space-y-1 list-disc list-inside">
+                      <li>Job acceptance record will be created in the database</li>
+                      <li>Interview status will be updated to "HIRED"</li>
+                      <li>Staff member can create their account using <strong className="text-blue-300">{finalizeFormData.staffEmail}</strong></li>
+                      <li>When they sign up, their profile will auto-populate from BPOC data</li>
+                      <li>They'll be automatically assigned to the correct company</li>
+                      <li>Onboarding process will begin</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleFinalizeHire}
+                  disabled={finalizing}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {finalizing ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Finalizing Hire...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Finalize Hire & Prepare Staff Account
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setFinalizeHireModalOpen(false)}
+                  disabled={finalizing}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Interview Modal */}
+      <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-100">
+              Schedule Interview with {interviewToSchedule?.candidateFirstName}
+            </DialogTitle>
+          </DialogHeader>
+
+          {interviewToSchedule && (
+            <div className="space-y-4">
+              {/* Client's Preferred Times */}
+              <div className="p-3 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+                <p className="text-sm font-medium text-blue-300 mb-2">Client's Preferred Times:</p>
+                <div className="space-y-1">
+                  {interviewToSchedule.preferredTimes.map((time, idx) => (
+                    <p key={idx} className="text-xs text-blue-400/80">
+                      • {new Date(time).toLocaleString()}
+                    </p>
+                  ))}
+                </div>
+                {interviewToSchedule.clientNotes && (
+                  <p className="text-xs text-blue-400/60 mt-2 italic">
+                    Note: {interviewToSchedule.clientNotes}
+                  </p>
+                )}
+              </div>
+
+              {/* Scheduled Time */}
+              <div className="space-y-2">
+                <Label htmlFor="scheduledTime" className="text-sm font-medium text-slate-200">
+                  Scheduled Time *
+                </Label>
+                <Input
+                  id="scheduledTime"
+                  type="datetime-local"
+                  value={scheduleFormData.scheduledTime}
+                  onChange={(e) => setScheduleFormData(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                  required
+                  className="bg-slate-800/50 border-slate-700/50 text-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Meeting Link */}
+              <div className="space-y-2">
+                <Label htmlFor="meetingLink" className="text-sm font-medium text-slate-200">
+                  Meeting Link (Optional)
+                </Label>
+                <Input
+                  id="meetingLink"
+                  type="url"
+                  value={scheduleFormData.meetingLink}
+                  onChange={(e) => setScheduleFormData(prev => ({ ...prev, meetingLink: e.target.value }))}
+                  placeholder="https://meet.google.com/..."
+                  className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Admin Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="adminNotes" className="text-sm font-medium text-slate-200">
+                  Internal Notes (Optional)
+                </Label>
+                <Textarea
+                  id="adminNotes"
+                  value={scheduleFormData.adminNotes}
+                  onChange={(e) => setScheduleFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                  placeholder="Any internal notes about this interview..."
+                  rows={3}
+                  className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleScheduleInterview}
+                  disabled={scheduling}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {scheduling ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Scheduling...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Confirm Schedule
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setScheduleModalOpen(false)}
+                  disabled={scheduling}
+                  className="border-slate-700 hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Acceptance Modal */}
+      <Dialog open={confirmAcceptanceModalOpen} onOpenChange={setConfirmAcceptanceModalOpen}>
+        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-emerald-400">
+              ✅ Confirm Offer Acceptance
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              The candidate has verbally accepted the offer. Confirm the details below.
+            </DialogDescription>
+          </DialogHeader>
+
+          {interviewToConfirm && (
+            <div className="space-y-6 py-4">
+              {/* Candidate Info */}
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                <h3 className="font-semibold text-emerald-300 mb-2">Candidate: {interviewToConfirm.candidateFirstName}</h3>
+                <p className="text-sm text-slate-300">
+                  You've confirmed that this candidate has accepted the job offer via phone/email.
+                </p>
+              </div>
+
+              {/* Confirmed Start Date */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmedStartDate" className="text-slate-200 font-medium">
+                  Confirmed Start Date *
+                </Label>
+                <Input
+                  id="confirmedStartDate"
+                  type="date"
+                  value={confirmFormData.confirmedStartDate}
+                  onChange={(e) => setConfirmFormData({ ...confirmFormData, confirmedStartDate: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-slate-100"
+                />
+                <p className="text-xs text-slate-400">
+                  Pre-filled from client's preferred date. Update if candidate requested a different date.
+                </p>
+              </div>
+
+              {/* Admin Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmNotes" className="text-slate-200 font-medium">
+                  Confirmation Notes (Optional)
+                </Label>
+                <Textarea
+                  id="confirmNotes"
+                  placeholder="E.g., Spoke with candidate on phone, they're excited to start..."
+                  value={confirmFormData.adminNotes}
+                  onChange={(e) => setConfirmFormData({ ...confirmFormData, adminNotes: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-slate-100 min-h-[100px]"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleConfirmAcceptance}
+                  disabled={confirming || !confirmFormData.confirmedStartDate}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {confirming ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Confirm Acceptance
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmAcceptanceModalOpen(false)}
+                  disabled={confirming}
+                  className="border-slate-700 hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Declined Modal */}
+      <Dialog open={declineModalOpen} onOpenChange={setDeclineModalOpen}>
+        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-400">
+              ❌ Mark Offer as Declined
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Record why the candidate declined the offer
+            </DialogDescription>
+          </DialogHeader>
+
+          {interviewToDecline && (
+            <div className="space-y-6 py-4">
+              {/* Candidate Info */}
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <h3 className="font-semibold text-red-300 mb-2">Candidate: {interviewToDecline.candidateFirstName}</h3>
+                <p className="text-sm text-slate-300">
+                  Document the reason for declining so the team understands what happened.
+                </p>
+              </div>
+
+              {/* Decline Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="declineReason" className="text-slate-200 font-medium">
+                  Reason for Declining *
+                </Label>
+                <Textarea
+                  id="declineReason"
+                  placeholder="E.g., Accepted another job offer, Personal circumstances changed, Salary expectations not met..."
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-slate-100 min-h-[120px]"
+                  required
+                />
+              </div>
+
+              {/* Quick Reason Buttons */}
+              <div className="space-y-2">
+                <p className="text-sm text-slate-400">Quick reasons:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeclineReason('Candidate accepted another job offer')}
+                    className="border-slate-700 hover:bg-slate-800"
+                  >
+                    Accepted Another Job
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeclineReason('Personal circumstances changed')}
+                    className="border-slate-700 hover:bg-slate-800"
+                  >
+                    Personal Circumstances
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeclineReason('Salary/compensation not acceptable')}
+                    className="border-slate-700 hover:bg-slate-800"
+                  >
+                    Salary Issues
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeclineReason('Location/remote work requirements not met')}
+                    className="border-slate-700 hover:bg-slate-800"
+                  >
+                    Location Issues
+                  </Button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="destructive"
+                  onClick={handleMarkDeclined}
+                  disabled={declining || !declineReason.trim()}
+                  className="flex-1"
+                >
+                  {declining ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Marking as Declined...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Mark as Declined
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeclineModalOpen(false)}
+                  disabled={declining}
+                  className="border-slate-700 hover:bg-slate-800"
                 >
                   Cancel
                 </Button>

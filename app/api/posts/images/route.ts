@@ -24,17 +24,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the user type and determine bucket
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true }
     })
 
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true }
     })
 
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       select: { id: true, name: true }
     })

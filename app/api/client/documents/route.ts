@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all staff assigned to this company
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       where: { companyId: clientUser.company.id },
       select: { id: true }
     })
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         ],
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       category: doc.category.toLowerCase().replace("_", "-"),
       description: doc.content?.substring(0, 150) || "No description available",
       uploadedBy: doc.uploadedBy,
-      uploadedByUser: doc.staffUser,
+      uploadedByUser: doc.staff_users,
       size: doc.size,
       fileUrl: doc.fileUrl,
       lastUpdated: doc.updatedAt.toISOString().split("T")[0],
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ [CLIENT] Client user found: ${clientUser.name} (Company: ${clientUser.company.companyName})`)
 
     // Get first staff assigned to this client (for storing in staffUserId relation)
-    const firstStaff = await prisma.staffUser.findFirst({
+    const firstStaff = await prisma.staff_users.findFirst({
       where: {
         companyId: clientUser.company.id
       }
@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
         sharedWith: sharedWith  // Array of specific staff user IDs (used when sharedWithAll is false)
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
         title: document.title,
         category: document.category.toLowerCase(),
         uploadedBy: document.uploadedBy,
-        uploadedByUser: document.staffUser,
+        uploadedByUser: document.staff_users,
         lastUpdated: document.updatedAt.toISOString().split("T")[0],
         createdAt: document.createdAt.toISOString(),
         fileUrl: document.fileUrl,

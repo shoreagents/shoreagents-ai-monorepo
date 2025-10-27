@@ -19,7 +19,7 @@ export async function PATCH(
     const { title, description, status, priority, deadline, tags } = body
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -28,7 +28,7 @@ export async function PATCH(
     }
 
     // Verify task exists and belongs to client
-    const existingTask = await prisma.task.findUnique({
+    const existingTask = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -41,7 +41,7 @@ export async function PATCH(
     }
 
     // Update task
-    const task = await prisma.task.update({
+    const task = await prisma.tasks.update({
       where: { id },
       data: {
         ...(title && { title }),
@@ -61,7 +61,7 @@ export async function PATCH(
             companyName: true,
           },
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -69,7 +69,7 @@ export async function PATCH(
             avatar: true,
           },
         },
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -80,7 +80,7 @@ export async function PATCH(
         },
         assignedStaff: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -116,7 +116,7 @@ export async function DELETE(
     const { id } = await params
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
     })
 
@@ -125,7 +125,7 @@ export async function DELETE(
     }
 
     // Verify task exists and belongs to client
-    const existingTask = await prisma.task.findUnique({
+    const existingTask = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -138,7 +138,7 @@ export async function DELETE(
     }
 
     // Delete task (cascade will delete TaskAssignments)
-    await prisma.task.delete({
+    await prisma.tasks.delete({
       where: { id },
     })
 

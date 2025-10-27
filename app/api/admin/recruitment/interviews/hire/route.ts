@@ -1,8 +1,9 @@
 /**
- * Admin Recruitment - Hire Candidate API
+ * Admin Recruitment - Send Job Offer API
  * POST /api/admin/recruitment/interviews/hire
  * 
- * Admin marks interview as hired and creates job acceptance record
+ * Admin sends job offer to candidate (does NOT immediately hire)
+ * Sets status to OFFER_SENT and waits for candidate acceptance
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is admin/manager
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -33,7 +34,8 @@ export async function POST(request: NextRequest) {
       companyId,
       candidateEmail,
       candidatePhone,
-      bpocCandidateId
+      bpocCandidateId,
+      clientPreferredStart // Optional: client's preferred start date
     } = body
 
     // Validation
@@ -57,11 +59,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'BPOC candidate ID is required' }, { status: 400 })
     }
 
-    console.log(`🎯 [ADMIN] Hiring candidate for position: ${position}`)
+    console.log(`📧 [ADMIN] Sending job offer to candidate for position: ${position}`)
 
     // Check if interview request exists
     const interviewRequest = await prisma.interview_requests.findUnique({
-      where: { id: interviewRequestId }
+      where: { id: interviewRequestId },
+      include: {
+        client_users: {
+          include: {
+            company: true
+          }
+        }
+      }
     })
 
     if (!interviewRequest) {
@@ -77,25 +86,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if already hired
+    // Check if already has a job acceptance (offer sent)
     const existingJobAcceptance = await prisma.job_acceptances.findUnique({
       where: { interviewRequestId }
     })
 
     if (existingJobAcceptance) {
-      return NextResponse.json({ error: 'This candidate has already been hired' }, { status: 400 })
+      return NextResponse.json({ error: 'Job offer has already been sent to this candidate' }, { status: 400 })
     }
 
-    // Update interview request status
+    // Update interview request status to OFFER_SENT
     await prisma.interview_requests.update({
       where: { id: interviewRequestId },
       data: {
-        status: 'COMPLETED',
+        status: 'OFFER_SENT',
+        hireRequestedBy: 'admin',
+        hireRequestedAt: new Date(),
+        offerSentAt: new Date(),
+        clientPreferredStart: clientPreferredStart ? new Date(clientPreferredStart) : null,
         updatedAt: new Date()
       }
     })
 
-    // Create job acceptance record
+    // Create job acceptance record (pending candidate acceptance)
     const jobAcceptance = await prisma.job_acceptances.create({
       data: {
         id: crypto.randomUUID(),
@@ -110,29 +123,34 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log(`✅ [ADMIN] Job acceptance created: ${jobAcceptance.id}`)
+    console.log(`✅ [ADMIN] Job offer sent: ${jobAcceptance.id}`)
 
-    // TODO: Send signup email to candidate with jobAcceptanceId token
-    // This will be implemented in Phase 12 (Email Notifications)
-    // For now, we'll just log the signup link
-    const signupLink = `${process.env.NEXT_PUBLIC_APP_URL}/login/staff/signup?jobAcceptanceId=${jobAcceptance.id}`
-    console.log(`📧 [ADMIN] Signup link (email to be sent): ${signupLink}`)
+    // Generate offer acceptance link (not signup yet!)
+    const offerLink = `${process.env.NEXT_PUBLIC_APP_URL}/offer/accept?jobId=${jobAcceptance.id}`
+    console.log(`📧 [ADMIN] Offer acceptance link (email to be sent): ${offerLink}`)
+
+    // TODO: Send email to candidate with offer details and acceptance link
+    // This will include:
+    // - Position details
+    // - Company information
+    // - Preferred start date
+    // - Accept/Decline buttons
 
     // Log activity
-    console.log(`🎉 [ADMIN] Successfully hired candidate for ${position} at ${company.companyName}`)
+    console.log(`🎉 [ADMIN] Job offer sent for ${position} at ${company.companyName}`)
 
     return NextResponse.json({
       success: true,
-      message: 'Candidate hired successfully',
+      message: 'Job offer sent to candidate. Waiting for their response.',
       jobAcceptance,
-      signupLink // Return this for now until email is implemented
+      offerLink, // Return this for now until email is implemented
+      nextSteps: 'Candidate will receive an email to accept or decline the offer. Once accepted, you can finalize the start date and they will be able to create their account.'
     })
   } catch (error) {
-    console.error('❌ [ADMIN] Error hiring candidate:', error)
+    console.error('❌ [ADMIN] Error sending job offer:', error)
     return NextResponse.json(
-      { error: 'Failed to hire candidate', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to send job offer', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
-

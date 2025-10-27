@@ -10,7 +10,7 @@ interface ContractData {
   assignedClient: string
   position: string
   startDate: Date | string
-  workSchedule: string
+  work_schedules: string
   basicSalary: number
   deMinimis: number
   totalMonthlyGross: number
@@ -66,7 +66,7 @@ export function generateContractHTML(contractData: ContractData): string {
             <p><strong>Client:</strong> ${contractData.assignedClient}</p>
             <p><strong>Position:</strong> ${contractData.position}</p>
             <p><strong>Start Date:</strong> ${formattedDate}</p>
-            <p><strong>Work Schedule:</strong> ${contractData.workSchedule}</p>
+            <p><strong>Work Schedule:</strong> ${contractData.work_schedules}</p>
           </div>
           
           <p class="mt-4">The employment shall commence on the Start Date specified above and shall continue for the duration of the project or as otherwise specified by the Employer and the Client.</p>

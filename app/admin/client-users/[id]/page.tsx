@@ -9,7 +9,7 @@ import { notFound } from "next/navigation"
 
 async function getClientUser(id: string) {
   try {
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { id },
       include: {
         company: {

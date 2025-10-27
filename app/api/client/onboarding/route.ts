@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const staffList = await prisma.staffUser.findMany({
+    const staffList = await prisma.staff_users.findMany({
       where: { 
         companyId: clientUser.companyId,
         // Must have completed onboarding

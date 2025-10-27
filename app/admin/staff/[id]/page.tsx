@@ -22,7 +22,7 @@ import OffboardButton from "./offboard-button"
 
 async function getStaffUser(id: string) {
   try {
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { id },
       include: {
         company: {

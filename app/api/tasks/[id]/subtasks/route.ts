@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params
 
     // Check if task exists
-    const task = await prisma.task.findUnique({
+    const task = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -26,7 +26,7 @@ export async function GET(
     }
 
     // Get all subtasks for this task
-    const subtasks = await prisma.subtask.findMany({
+    const subtasks = await prisma.subtasks.findMany({
       where: { taskId: id },
       orderBy: { order: 'asc' },
     })
@@ -75,7 +75,7 @@ export async function POST(
     }
 
     // Check if task exists
-    const task = await prisma.task.findUnique({
+    const task = await prisma.tasks.findUnique({
       where: { id },
     })
 
@@ -84,7 +84,7 @@ export async function POST(
     }
 
     // Get the highest order number
-    const lastSubtask = await prisma.subtask.findFirst({
+    const lastSubtask = await prisma.subtasks.findFirst({
       where: { taskId: id },
       orderBy: { order: 'desc' },
     })
@@ -92,7 +92,7 @@ export async function POST(
     const nextOrder = (lastSubtask?.order || 0) + 1
 
     // Create subtask
-    const subtask = await prisma.subtask.create({
+    const subtask = await prisma.subtasks.create({
       data: {
         taskId: id,
         title,
@@ -134,7 +134,7 @@ export async function PUT(
     }
 
     // Check if subtask exists and belongs to this task
-    const subtask = await prisma.subtask.findUnique({
+    const subtask = await prisma.subtasks.findUnique({
       where: { id: subtaskId },
     })
 
@@ -158,7 +158,7 @@ export async function PUT(
       updateData.title = title
     }
 
-    const updatedSubtask = await prisma.subtask.update({
+    const updatedSubtask = await prisma.subtasks.update({
       where: { id: subtaskId },
       data: updateData,
     })
@@ -197,7 +197,7 @@ export async function DELETE(
     }
 
     // Check if subtask exists and belongs to this task
-    const subtask = await prisma.subtask.findUnique({
+    const subtask = await prisma.subtasks.findUnique({
       where: { id: subtaskId },
     })
 
@@ -206,7 +206,7 @@ export async function DELETE(
     }
 
     // Delete subtask
-    await prisma.subtask.delete({
+    await prisma.subtasks.delete({
       where: { id: subtaskId },
     })
 

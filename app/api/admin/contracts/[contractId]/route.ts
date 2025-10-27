@@ -14,7 +14,7 @@ export async function GET(
     }
 
     // Check if user is admin/management
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -25,10 +25,10 @@ export async function GET(
     const { contractId } = await context.params
 
     // Get contract with related data
-    const contract = await prisma.employmentContract.findUnique({
+    const contract = await prisma.employment_contracts.findUnique({
       where: { id: contractId },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             name: true,
             email: true

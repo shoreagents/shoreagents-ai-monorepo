@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch all staff users
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       select: {
         id: true,
         name: true,

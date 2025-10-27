@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get management user
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(filePath)
 
     // Update database with cover photo URL
-    await prisma.managementUser.update({
+    await prisma.management_users.update({
       where: { id: managementUser.id },
       data: { coverPhoto: publicUrl }
     })

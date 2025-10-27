@@ -339,7 +339,7 @@ function startBreakAutoStartJob(io) {
       const currentMinute = now.getMinutes()
       
       // Find all clocked-in users
-      const activeEntries = await prisma.timeEntry.findMany({
+      const activeEntries = await prisma.time_entries.findMany({
         where: {
           clockOut: null
         },
@@ -357,7 +357,7 @@ function startBreakAutoStartJob(io) {
       // For each active session, check scheduled breaks
       for (const entry of activeEntries) {
         // Get scheduled breaks for this time entry
-        const scheduledBreaks = await prisma.break.findMany({
+        const scheduledBreaks = await prisma.breaks.findMany({
           where: {
             timeEntryId: entry.id,
             actualStart: null, // Not started yet

@@ -14,39 +14,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timePeriod = searchParams.get("period") || "all_time" // this_week, this_month, all_time
 
-    // Check if this is a client user - if so, filter by their company
-    const clientUser = await prisma.clientUser.findUnique({
-      where: { email: session.user.email },
-      include: { company: true }
-    })
-
-    // Build the where clause based on user type
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const whereClause: any = {
-      role: "STAFF", // Only show staff members in leaderboard
-      active: true, // Only show active staff (not deactivated after offboarding)
-      // Only show staff who have started (start date is today or in the past)
-      profile: {
-        startDate: {
-          lte: today
-        }
-      }
-    }
-
-    // If client user, only show staff assigned to their company
-    if (clientUser?.companyId) {
-      console.log(`🔍 [LEADERBOARD] Filtering for company: ${clientUser.companyId}`)
-      whereClause.companyId = clientUser.companyId
-    }
-
-    // Get staff users with their gamification profiles and task assignments
-    const staffUsers = await prisma.staffUser.findMany({
-      where: whereClause,
+    // Get all staff users with their gamification profiles
+    const staffUsers = await prisma.staff_users.findMany({
+      where: {
+        role: "STAFF", // Only show staff members in leaderboard
+      },
       include: {
-        gamificationProfile: true,
-        reviewsReceived: {
+        gamification_profiles: true,
+        reviews: {
           select: {
             overallScore: true,
           },
@@ -77,11 +52,11 @@ export async function GET(request: NextRequest) {
     const rankings = staffUsers
       .map((user) => {
         const avgReviewScore =
-          user.reviewsReceived.length > 0
-            ? user.reviewsReceived.reduce(
+          user.reviews.length > 0
+            ? user.reviews.reduce(
                 (sum, review) => sum + Number(review.overallScore || 0),
                 0
-              ) / user.reviewsReceived.length
+              ) / user.reviews.length
             : 0
 
         // Calculate actual completed tasks from task assignments
@@ -107,12 +82,12 @@ export async function GET(request: NextRequest) {
           id: user.id,
           name: user.name,
           email: user.email,
-          points: totalPoints, // Calculate from completed tasks (50 pts each)
-          level: user.gamificationProfile?.level || 1,
-          tasksCompleted: actualCompletedTasks, // Use actual count from tasks
-          performanceScore: avgPerformanceScore, // Calculate from recent PerformanceMetrics
+          points: user.gamification_profiles?.points || 0,
+          level: user.gamification_profiles?.level || 1,
+          tasksCompleted: user.gamification_profiles?.tasksCompleted || 0,
+          performanceScore: user.gamification_profiles?.performanceScore || 0,
           reviewRating: Number(avgReviewScore.toFixed(1)),
-          streakDays: user.gamificationProfile?.streak || 0,
+          streakDays: user.gamification_profiles?.streak || 0,
           badges: [],
           rankChange: 0,
         }

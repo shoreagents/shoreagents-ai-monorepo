@@ -28,7 +28,7 @@ export async function PUT(
     } = body
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -37,7 +37,7 @@ export async function PUT(
     }
 
     // Verify task belongs to user (check both legacy and new assignment methods)
-    const existingTask = await prisma.task.findUnique({
+    const existingTask = await prisma.tasks.findUnique({
       where: { id },
       include: {
         assignedStaff: true,
@@ -59,7 +59,7 @@ export async function PUT(
     // Check if task is being marked as completed (status changing to COMPLETED)
     const isBeingCompleted = status === "COMPLETED" && existingTask.status !== "COMPLETED"
 
-    const task = await prisma.task.update({
+    const task = await prisma.tasks.update({
       where: { id },
       data: {
         ...(title && { title }),
@@ -80,7 +80,7 @@ export async function PUT(
             companyName: true,
           }
         },
-        clientUser: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -90,7 +90,7 @@ export async function PUT(
         },
         assignedStaff: {
           include: {
-            staffUser: {
+            staff_users: {
               select: {
                 id: true,
                 name: true,
@@ -151,7 +151,7 @@ export async function DELETE(
     const { id } = await params
 
     // Get staff user first
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -160,7 +160,7 @@ export async function DELETE(
     }
 
     // Verify task exists and was self-created (staff can only delete their own tasks)
-    const existingTask = await prisma.task.findUnique({
+    const existingTask = await prisma.tasks.findUnique({
       where: { id },
       include: {
         assignedStaff: true,
@@ -176,7 +176,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden: You can only delete self-created tasks" }, { status: 403 })
     }
 
-    await prisma.task.delete({
+    await prisma.tasks.delete({
       where: { id },
     })
 

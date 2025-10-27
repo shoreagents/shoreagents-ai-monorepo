@@ -15,7 +15,7 @@ export async function GET(
     }
 
     // Get ClientUser
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { email: session.user.email },
       include: { company: true }
     })
@@ -27,10 +27,10 @@ export async function GET(
     const { reviewId } = await params
 
     // Get review
-    const review = await prisma.review.findUnique({
+    const review = await prisma.reviews.findUnique({
       where: { id: reviewId },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

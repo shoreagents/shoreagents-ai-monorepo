@@ -18,7 +18,7 @@ import { notFound } from "next/navigation"
 
 async function getManagementUser(id: string) {
   try {
-    const managementUser = await prisma.managementUser.findUnique({
+    const managementUser = await prisma.management_users.findUnique({
       where: { id },
     })
 

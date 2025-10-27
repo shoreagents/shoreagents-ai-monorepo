@@ -19,7 +19,7 @@ interface Review {
   status: string
   dueDate: string
   evaluationPeriod: string
-  staffUser: {
+  staff_users: {
     id: string
     name: string
     email: string
@@ -185,14 +185,14 @@ export default function SubmitReviewPage({
         <Card className="bg-white border-2 border-purple-200 hover:border-purple-400 transition-all hover:shadow-lg p-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16 border-2 border-purple-200 ring-2 ring-purple-50">
-              <AvatarImage src={review.staffUser.avatar} />
+              <AvatarImage src={review.staff_users.avatar} />
               <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white text-xl font-semibold">
-                {review.staffUser.name.split(" ").map(n => n[0]).join("")}
+                {review.staff_users.name.split(" ").map(n => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900">{review.staffUser.name}</h2>
-              <p className="text-gray-600">{review.staffUser.email}</p>
+              <h2 className="text-xl font-bold text-gray-900">{review.staff_users.name}</h2>
+              <p className="text-gray-600">{review.staff_users.email}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${typeBadge.bgColor} ${typeBadge.color}`}>
                   {typeBadge.icon} {typeBadge.label}

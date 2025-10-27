@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if user is admin
-    const user = await prisma.managementUser.findUnique({
+    const user = await prisma.management_users.findUnique({
       where: { email: session.user.email }
     })
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     startDate.setHours(0, 0, 0, 0)
 
     // Get all staff users
-    const staffUsers = await prisma.staffUser.findMany({
+    const staffUsers = await prisma.staff_users.findMany({
       include: {
         company: true,
         performanceMetrics: {

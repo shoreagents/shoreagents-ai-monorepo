@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import crypto from "crypto"
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,9 +19,9 @@ export async function POST(req: NextRequest) {
     } = body
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
-      include: { onboarding: true }
+      include: { staff_onboarding: true }
     })
 
     if (!staffUser) {
@@ -28,14 +29,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if section is locked (already approved)
-    if (staffUser.onboarding?.emergencyContactStatus === "APPROVED") {
+    if (staffUser.staff_onboarding?.emergencyContactStatus === "APPROVED") {
       return NextResponse.json({ 
         error: "This section has been approved and is locked" 
       }, { status: 403 })
     }
 
     // Update or create onboarding
-    const onboarding = await prisma.staffOnboarding.upsert({
+    const onboarding = await prisma.staff_onboarding.upsert({
       where: { staffUserId: staffUser.id },
       update: {
         emergencyContactName,
@@ -45,11 +46,14 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date()
       },
       create: {
+        id: crypto.randomUUID(),
         staffUserId: staffUser.id,
+        email: staffUser.email,
         emergencyContactName,
         emergencyContactNo,
         emergencyRelationship,
-        emergencyContactStatus: "SUBMITTED"
+        emergencyContactStatus: "SUBMITTED",
+        updatedAt: new Date()
       }
     })
 
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
     await updateCompletionPercent(onboarding.id)
 
     // Fetch updated onboarding to get completion percent
-    const updatedOnboarding = await prisma.staffOnboarding.findUnique({
+    const updatedOnboarding = await prisma.staff_onboarding.findUnique({
       where: { id: onboarding.id }
     })
 
@@ -78,38 +82,32 @@ export async function POST(req: NextRequest) {
 
 // Helper function to calculate completion percentage
 async function updateCompletionPercent(onboardingId: string) {
-  const onboarding = await prisma.staffOnboarding.findUnique({
+  const onboarding = await prisma.staff_onboarding.findUnique({
     where: { id: onboardingId }
   })
 
   if (!onboarding) return
 
-  const sections = [
-    onboarding.personalInfoStatus,
-    onboarding.resumeStatus,
-    onboarding.govIdStatus,
-    onboarding.educationStatus,
-    onboarding.medicalStatus,
-    onboarding.dataPrivacyStatus,
-    onboarding.signatureStatus,
-    onboarding.emergencyContactStatus
-  ]
+  const totalSteps = 8
+  let completedSteps = 0
 
-  // Each section = 12.5% when APPROVED (8 sections total)
-  // 100% = All sections approved by admin
-  let totalProgress = 0
-  sections.forEach(status => {
-    if (status === "APPROVED") {
-      totalProgress += Math.round(100 / sections.length)
-    }
-  })
+  // Count each step as completed if it's SUBMITTED or APPROVED
+  if (onboarding.personalInfoStatus === 'SUBMITTED' || onboarding.personalInfoStatus === 'APPROVED') completedSteps++
+  if (onboarding.resumeStatus === 'SUBMITTED' || onboarding.resumeStatus === 'APPROVED') completedSteps++
+  if (onboarding.govIdStatus === 'SUBMITTED' || onboarding.govIdStatus === 'APPROVED') completedSteps++
+  if (onboarding.educationStatus === 'SUBMITTED' || onboarding.educationStatus === 'APPROVED') completedSteps++
+  if (onboarding.medicalStatus === 'SUBMITTED' || onboarding.medicalStatus === 'APPROVED') completedSteps++
+  if (onboarding.dataPrivacyStatus === 'SUBMITTED' || onboarding.dataPrivacyStatus === 'APPROVED') completedSteps++
+  if (onboarding.signatureStatus === 'SUBMITTED' || onboarding.signatureStatus === 'APPROVED') completedSteps++
+  if (onboarding.emergencyContactStatus === 'SUBMITTED' || onboarding.emergencyContactStatus === 'APPROVED') completedSteps++
 
+  const totalProgress = Math.floor((completedSteps / totalSteps) * 100)
   const completionPercent = Math.min(totalProgress, 100)
   
   // DON'T set isComplete here - only admin can complete via complete route!
   // 100% just means staff has submitted everything, not that it's verified
 
-  await prisma.staffOnboarding.update({
+  await prisma.staff_onboarding.update({
     where: { id: onboardingId },
     data: { 
       completionPercent

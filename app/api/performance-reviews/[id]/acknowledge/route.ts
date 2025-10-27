@@ -16,7 +16,7 @@ export async function POST(
     }
 
     // Get staff user
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -27,7 +27,7 @@ export async function POST(
     const { id } = await params
 
     // Verify review belongs to staff user
-    const existingReview = await prisma.review.findUnique({
+    const existingReview = await prisma.reviews.findUnique({
       where: { id },
     })
 
@@ -48,7 +48,7 @@ export async function POST(
     }
 
     // Update review: UNDER_REVIEW → COMPLETED
-    const review = await prisma.review.update({
+    const review = await prisma.reviews.update({
       where: { id },
       data: {
         status: "COMPLETED",

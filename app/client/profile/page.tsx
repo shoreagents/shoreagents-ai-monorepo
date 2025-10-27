@@ -48,7 +48,7 @@ type ClientUser = {
 }
 
 type ProfileData = {
-  clientUser: ClientUser
+  client_users: ClientUser
   profile: ClientProfile | null
 }
 
@@ -95,8 +95,8 @@ export default function ClientProfilePage() {
       notifyWeeklyReports: data?.profile?.notifyWeeklyReports ?? true
     })
     setEditedClientUser({
-      name: data?.clientUser?.name || '',
-      role: data?.clientUser?.role || ''
+      name: data?.client_users?.name || '',
+      role: data?.client_users?.role || ''
     })
     setEditing(true)
   }
@@ -239,13 +239,13 @@ export default function ClientProfilePage() {
 
     try {
       // Delete old avatar if exists using server-side API
-      if (data.clientUser.avatar) {
+      if (data.client_users.avatar) {
         try {
-          console.log('Deleting old avatar:', data.clientUser.avatar)
+          console.log('Deleting old avatar:', data.client_users.avatar)
           const deleteResponse = await fetch('/api/client/delete', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileUrl: data.clientUser.avatar }),
+            body: JSON.stringify({ fileUrl: data.client_users.avatar }),
           })
           
           if (deleteResponse.ok) {
@@ -340,13 +340,13 @@ export default function ClientProfilePage() {
 
     try {
       // Delete old cover if exists using server-side API
-      if (data.clientUser.coverPhoto) {
+      if (data.client_users.coverPhoto) {
         try {
-          console.log('Deleting old cover photo:', data.clientUser.coverPhoto)
+          console.log('Deleting old cover photo:', data.client_users.coverPhoto)
           const deleteResponse = await fetch('/api/client/delete', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileUrl: data.clientUser.coverPhoto }),
+            body: JSON.stringify({ fileUrl: data.client_users.coverPhoto }),
           })
           
           if (deleteResponse.ok) {
@@ -608,7 +608,7 @@ export default function ClientProfilePage() {
     )
   }
 
-  const { clientUser, profile } = data
+  const { client_users: clientUser, profile } = data
   const initials = clientUser.name
     .split(' ')
     .map(n => n[0])
