@@ -1918,7 +1918,7 @@ export default function OnboardingPage() {
                     Back
                   </Button>
                   <Button
-                    onClick={() => setCurrentStep(5)}
+                    onClick={() => setCurrentStep(4)}
                     className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
                     disabled={saving}
                   >
@@ -2044,7 +2044,7 @@ export default function OnboardingPage() {
                     Back
                   </Button>
                   <Button
-                    onClick={() => setCurrentStep(6)}
+                    onClick={() => setCurrentStep(5)}
                     className="flex-1 bg-linear-to-r from-purple-600 to-indigo-600"
                     disabled={saving}
                   >
