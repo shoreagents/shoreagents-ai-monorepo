@@ -1,5 +1,5 @@
 import Leaderboard from "@/components/leaderboard"
 
 export default function ClientLeaderboardPage() {
-  return <Leaderboard />
+  return <Leaderboard isClient={true} />
 }

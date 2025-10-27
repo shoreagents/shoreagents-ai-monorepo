@@ -253,12 +253,6 @@ export function useAddReaction(currentUserId?: string, currentUser?: { name: str
       
       return { previousPosts }
     },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      if (context?.previousPosts) {
-        queryClient.setQueryData(activityKeys.posts(), context.previousPosts)
-      }
-    },
     onSuccess: (result, { postId, type }) => {
       console.log('✅ [API Success] Reaction toggle completed:', result.action)
       

@@ -945,8 +945,8 @@ export default function TimeTracking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+      <div className="mx-auto max-w-full space-y-8">
         {/* Connection Status */}
         {!isConnected && (
           <div className="rounded-lg bg-red-500/20 border border-red-500/30 p-4 text-center">
@@ -959,16 +959,6 @@ export default function TimeTracking() {
           </div>
         )}
 
-        {/* DEBUG BANNER */}
-        <div className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-center">
-          <p className="text-white font-bold text-lg">
-            🎉 NEW WEBSOCKET TIME TRACKING! v3.0
-          </p>
-          <p className="text-white/80 text-sm">
-            Real-time updates with WebSocket technology!
-          </p>
-        </div>
-        
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
@@ -1318,22 +1308,19 @@ export default function TimeTracking() {
                   const isCompleted = breakItem.actualEnd
                   
                   // Parse time strings like "10:00 AM" into Date objects
-                  const parseTimeString = (timeStr: string) => {
-                    if (!timeStr || timeStr === 'Invalid Date') {
-                      console.warn('Invalid time string:', timeStr)
+                  const parseTimeString = (timeStr: string | null | undefined) => {
+                    if (!timeStr || timeStr === 'Invalid Date' || timeStr === 'null' || timeStr === 'undefined') {
                       return new Date()
                     }
                     
                     try {
                       const [time, period] = timeStr.split(' ')
                       if (!time || !period) {
-                        console.warn('Invalid time format:', timeStr)
                         return new Date()
                       }
                       
                       const [hours, minutes] = time.split(':')
                       if (!hours || !minutes) {
-                        console.warn('Invalid time format:', timeStr)
                         return new Date()
                       }
                       
@@ -1347,7 +1334,6 @@ export default function TimeTracking() {
                       date.setHours(hour, min, 0, 0)
                       return date
                     } catch (error) {
-                      console.error('Error parsing time string:', timeStr, error)
                       return new Date()
                     }
                   }

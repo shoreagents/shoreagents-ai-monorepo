@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth()
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -26,8 +26,27 @@ export async function GET(request: NextRequest) {
             overallScore: true,
           },
         },
+        taskAssignments: {
+          include: {
+            task: {
+              select: {
+                status: true,
+              }
+            }
+          }
+        },
+        performanceMetrics: {
+          orderBy: { date: 'desc' },
+          take: 30, // Last 30 days
+          select: {
+            productivityScore: true,
+          }
+        },
       },
     })
+
+    console.log(`📊 [LEADERBOARD] Found ${staffUsers.length} staff members`)
+
 
     // Calculate rankings
     const rankings = staffUsers
@@ -39,6 +58,25 @@ export async function GET(request: NextRequest) {
                 0
               ) / user.reviews.length
             : 0
+
+        // Calculate actual completed tasks from task assignments
+        const actualCompletedTasks = user.taskAssignments.filter(
+          ta => ta.task?.status === 'COMPLETED'
+        ).length
+
+        // Calculate points based on completed tasks (50 points per task)
+        // Add any existing points from gamification profile
+        const basePoints = user.gamificationProfile?.points || 0
+        const taskPoints = actualCompletedTasks * 50
+        const totalPoints = basePoints + taskPoints
+
+        // Calculate average performance score from recent metrics (last 30 days)
+        const avgPerformanceScore = user.performanceMetrics.length > 0
+          ? Math.round(
+              user.performanceMetrics.reduce((sum, m) => sum + (m.productivityScore || 0), 0) /
+              user.performanceMetrics.length
+            )
+          : 0
 
         return {
           id: user.id,
@@ -57,8 +95,16 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.points - a.points)
       .map((user, index) => ({ ...user, rank: index + 1 }))
 
-    // Find current user in rankings
-    const currentUser = rankings.find((user) => user.id === session.user.id) || null
+    // Find current user's StaffUser record (only if not a client user)
+    let currentUser = null
+    if (!clientUser) {
+      const staffUser = await prisma.staffUser.findUnique({
+        where: { authUserId: session.user.id }
+      })
+      
+      // Find current user in rankings using staff user ID
+      currentUser = staffUser ? rankings.find((user) => user.id === staffUser.id) || null : null
+    }
 
     return NextResponse.json({ rankings, currentUser })
   } catch (error) {

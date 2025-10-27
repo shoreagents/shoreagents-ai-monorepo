@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard } from "lucide-react"
+import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard, GraduationCap, Stethoscope, PenTool } from "lucide-react"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
 
@@ -46,6 +46,14 @@ interface ProfileData {
     emergencyContactRelation: string | null
     emergencyContactPhone: string | null
     emergencyContactAddress: string | null
+    sssDocUrl?: string | null
+    tinDocUrl?: string | null
+    philhealthDocUrl?: string | null
+    pagibigDocUrl?: string | null
+    validIdUrl?: string | null
+    birthCertUrl?: string | null
+    nbiClearanceUrl?: string | null
+    policeClearanceUrl?: string | null
   } | null
   workSchedules: Array<{
     id: string
@@ -57,6 +65,12 @@ interface ProfileData {
   onboarding: {
     isComplete: boolean
     completionPercent: number
+    resumeUrl?: string | null
+    medicalCertUrl?: string | null
+    diplomaTorUrl?: string | null
+    dataPrivacyConsentUrl?: string | null
+    bankAccountDetails?: string | null
+    signatureUrl?: string | null
   } | null
 }
 
@@ -69,13 +83,26 @@ export default function ProfileView() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'personal' | 'documents'>('profile')
+  const [isScrolled, setIsScrolled] = useState(false)
   
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
     fetchProfileData()
+  }, [])
+
+  // Handle scroll to resize tabs
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      setIsScrolled(scrollY > 50)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const fetchProfileData = async () => {
@@ -231,8 +258,8 @@ export default function ProfileView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-6xl space-y-6">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-6">
           <div className="h-80 rounded-2xl bg-slate-800/50 animate-pulse" />
           <div className="grid gap-6 md:grid-cols-2">
             <div className="h-96 rounded-xl bg-slate-800/50 animate-pulse" />
@@ -245,8 +272,8 @@ export default function ProfileView() {
 
   if (error || !profileData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-6xl">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full">
           <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
             <h2 className="text-xl font-bold text-red-400">Error Loading Profile</h2>
             <p className="mt-2 text-red-300">{error || "No profile data found"}</p>
@@ -259,8 +286,8 @@ export default function ProfileView() {
   // Handle case where profile is null but onboarding is complete (shouldn't happen)
   if (!profileData.profile && (!profileData.onboarding || profileData.onboarding.isComplete)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-6xl">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full">
           <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
             <h2 className="text-xl font-bold text-red-400">Error Loading Profile</h2>
             <p className="mt-2 text-red-300">No profile data found</p>
@@ -274,44 +301,54 @@ export default function ProfileView() {
   const remainingLeave = profile ? profile.totalLeave - profile.usedLeave : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-6xl space-y-6 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full space-y-6 animate-in fade-in duration-700">
         
         
-        {/* Tab Navigation */}
-        <div className="flex gap-2 rounded-2xl bg-slate-900/50 p-2 backdrop-blur-xl ring-1 ring-white/10">
+        {/* Tab Navigation - Sticky with resize */}
+        <div className={`sticky z-50 flex gap-2 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 shadow-xl transition-all duration-1000 ease-in-out ${
+          isScrolled 
+            ? 'top-2 max-w-2xl p-2 mx-auto' 
+            : 'top-4 w-full p-2'
+        }`}>
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-1000 ease-in-out ${
+              isScrolled ? 'flex-1 px-3 py-2 text-sm' : 'flex-1 px-6 py-3'
+            } ${
               activeTab === 'profile'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white '
+                ? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white '
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
             }`}
           >
-            <User className="h-5 w-5" />
-            Profile
+            <User className={`transition-all duration-1000 ease-in-out ${isScrolled ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            <span className="transition-all duration-1000 ease-in-out">Profile</span>
           </button>
           <button
             onClick={() => setActiveTab('personal')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-1000 ease-in-out ${
+              isScrolled ? 'flex-1 px-3 py-2 text-sm' : 'flex-1 px-6 py-3'
+            } ${
               activeTab === 'personal'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white '
+                ? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white '
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
             }`}
           >
-            <IdCard className="h-5 w-5" />
-            Personal Info
+            <IdCard className={`transition-all duration-1000 ease-in-out ${isScrolled ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            <span className="transition-all duration-1000 ease-in-out">Personal Info</span>
           </button>
           <button
             onClick={() => setActiveTab('documents')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-1000 ease-in-out ${
+              isScrolled ? 'flex-1 px-3 py-2 text-sm' : 'flex-1 px-6 py-3'
+            } ${
               activeTab === 'documents'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
+                ? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white'
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
             }`}
           >
-            <FileText className="h-5 w-5" />
-            Documents
+            <FileText className={`transition-all duration-1000 ease-in-out ${isScrolled ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            <span className="transition-all duration-1000 ease-in-out">Documents</span>
           </button>
         </div>
 
@@ -319,12 +356,12 @@ export default function ProfileView() {
       {activeTab === 'profile' && (
         <>
       {/* Cover Photo & Avatar Section */}
-      <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900/90 via-indigo-900/30 to-slate-900/90  ring-1 ring-white/10 backdrop-blur-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30 hover:">
+      <div className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900/90 via-indigo-900/30 to-slate-900/90  ring-1 ring-white/10 backdrop-blur-xl transition-all duration-500 hover:ring-white/20 hover:shadow-indigo-500/30 hover:">
           {/* Cover Photo */}
-          <div className="relative h-64 overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
+          <div className="relative h-64 overflow-hidden bg-linear-to-br from-indigo-600 via-purple-600 to-pink-600">
             {/* Animated overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+            <div className="absolute inset-0 bg-[radial-linear(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
             
             {user.coverPhoto ? (
               <Image
@@ -385,7 +422,7 @@ export default function ProfileView() {
             <div className="relative -mt-20 mb-4">
               <div className="group relative inline-block">
                 {/* Glowing ring effect */}
-                <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-lg transition-all duration-500 group-hover:opacity-100 group-hover:blur-xl" />
+                <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-75 blur-lg transition-all duration-500 group-hover:opacity-100 group-hover:blur-xl" />
                 <div className="relative h-44 w-44 overflow-hidden rounded-3xl ring-4 ring-slate-900 transition-all duration-300 group-hover:ring-indigo-500/50">
                   <Image
                     src={user.avatar || "/placeholder-user.jpg"}
@@ -426,19 +463,19 @@ export default function ProfileView() {
             {/* Name & Info */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-5xl font-black text-transparent animate-in fade-in slide-in-from-left-5 duration-700">{user.name}</h1>
-                <p className="mt-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-2xl font-semibold text-transparent animate-in fade-in slide-in-from-left-5 delay-150 duration-700">{profile?.currentRole || "Role not assigned"}</p>
+                <h1 className="bg-linear-to-r from-white via-indigo-200 to-white bg-clip-text text-5xl font-black text-transparent animate-in fade-in slide-in-from-left-5 duration-700">{user.name}</h1>
+                <p className="mt-2 bg-linear-to-r from-indigo-400 to-purple-400 bg-clip-text text-2xl font-semibold text-transparent animate-in fade-in slide-in-from-left-5 delay-150 duration-700">{profile?.currentRole || "Role not assigned"}</p>
                 <p className="mt-2 flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-5 delay-300 duration-700">
                   <Building2 className="h-5 w-5 text-indigo-400" />
                   {company?.name || "No company assigned"}
                 </p>
               </div>
               <div className="flex gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 px-6 py-3 ring-1 ring-emerald-400/30">
+                <div className="rounded-xl bg-linear-to-br from-emerald-500/20 to-teal-500/20 px-6 py-3 ring-1 ring-emerald-400/30">
                   <div className="text-xs text-emerald-300">Status</div>
                   <div className="text-lg font-bold text-emerald-400">{profile?.employmentStatus || "Pending"}</div>
                 </div>
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 px-6 py-3 ring-1 ring-indigo-400/30">
+                <div className="rounded-xl bg-linear-to-br from-indigo-500/20 to-purple-500/20 px-6 py-3 ring-1 ring-indigo-400/30">
                   <div className="text-xs text-indigo-300">Days</div>
                   <div className="text-lg font-bold text-indigo-400">{profile?.daysEmployed || 0}</div>
                 </div>
@@ -449,9 +486,9 @@ export default function ProfileView() {
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Personal Information */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group space-y-6 rounded-3xl bg-linear-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
             <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 p-2.5 ">
                 <User className="h-6 w-6 text-white" />
               </div>
               Personal Information
@@ -497,9 +534,9 @@ export default function ProfileView() {
           </div>
 
           {/* Employment Details */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group space-y-6 rounded-3xl bg-linear-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
             <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-2.5 ">
                 <Briefcase className="h-6 w-6 text-white" />
               </div>
               Employment Details
@@ -545,9 +582,9 @@ export default function ProfileView() {
 
         {/* Work Schedule */}
         {workSchedules && workSchedules.length > 0 && (
-          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-amber-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group rounded-3xl bg-linear-to-br from-slate-900/80 via-amber-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
             <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-amber-500 to-orange-500 p-2.5 ">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               Work Schedule
@@ -585,15 +622,15 @@ export default function ProfileView() {
         {/* Leave Credits & Benefits */}
         {profile && (
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-cyan-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+            <div className="group rounded-3xl bg-linear-to-br from-slate-900/80 via-cyan-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
               <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-                <div className="rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 p-2.5 ">
+                <div className="rounded-xl bg-linear-to-br from-cyan-500 to-blue-500 p-2.5 ">
                   <Umbrella className="h-6 w-6 text-white" />
                 </div>
                 Leave Credits
               </h2>
               <div className="space-y-4">
-                <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-6 ring-1 ring-blue-400/30">
+                <div className="rounded-xl bg-linear-to-br from-blue-500/20 to-cyan-500/20 p-6 ring-1 ring-blue-400/30">
                   <div className="text-center">
                     <div className="text-5xl font-bold text-blue-400">{remainingLeave}</div>
                     <div className="mt-2 text-sm text-slate-300">Days Remaining</div>
@@ -608,7 +645,7 @@ export default function ProfileView() {
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-800">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                        className="h-full bg-linear-to-r from-blue-500 to-cyan-500"
                         style={{ width: `${(profile.vacationUsed / profile.totalLeave) * 100}%` }}
                       />
                     </div>
@@ -620,7 +657,7 @@ export default function ProfileView() {
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-800">
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                        className="h-full bg-linear-to-r from-purple-500 to-pink-500"
                         style={{ width: `${(profile.sickUsed / profile.totalLeave) * 100}%` }}
                       />
                     </div>
@@ -629,9 +666,9 @@ export default function ProfileView() {
               </div>
             </div>
 
-          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-pink-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group rounded-3xl bg-linear-to-br from-slate-900/80 via-pink-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
             <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-pink-500 to-rose-500 p-2.5 ">
                 <Heart className="h-6 w-6 text-white" />
               </div>
               Benefits
@@ -652,7 +689,7 @@ export default function ProfileView() {
                 </div>
               </div>
               {profile?.totalLeave && (
-                <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 p-4 ring-1 ring-blue-400/30 transition-all hover:scale-105">
+                <div className="rounded-xl bg-linear-to-br from-blue-500/20 to-indigo-500/20 p-4 ring-1 ring-blue-400/30 transition-all hover:scale-105">
                   <div className="flex items-center gap-3">
                     <Calendar className="h-5 w-5 text-blue-400" />
                     <div className="flex-1">
@@ -673,9 +710,9 @@ export default function ProfileView() {
       {activeTab === 'personal' && (
         <div className="space-y-6">
           {/* Personal Details Section */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
             <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 p-2.5 ">
                 <User className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-black text-white">Personal Details</h2>
@@ -703,9 +740,9 @@ export default function ProfileView() {
           </div>
 
           {/* Government IDs Section */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-indigo-500/20">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-indigo-500/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-indigo-500 to-purple-500 p-2.5 ">
                 <IdCard className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-black text-white">Government IDs</h2>
@@ -739,9 +776,9 @@ export default function ProfileView() {
           </div>
 
           {/* Emergency Contact Section */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-red-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-red-500/20">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-red-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-red-500/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-red-500 to-orange-500 p-2.5 ">
+              <div className="rounded-xl bg-linear-to-br from-red-500 to-orange-500 p-2.5 ">
                 <Phone className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-black text-white">Emergency Contact</h2>
@@ -786,9 +823,9 @@ export default function ProfileView() {
       {activeTab === 'documents' && (
         <div className="space-y-6">
           {/* Government Documents */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-purple-500/20">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-purple-500/20">
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5">
+            <div className="rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-2.5">
               <FileText className="h-6 w-6 text-white" />
             </div>
               <h2 className="text-2xl font-black text-white">Government Documents</h2>
@@ -802,7 +839,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-orange-500 to-red-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-orange-500 to-red-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
         </div>
                     <div className="flex-1">
@@ -819,7 +856,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-pink-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-pink-500 to-purple-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -836,7 +873,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-indigo-500 to-blue-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -853,7 +890,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-cyan-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-cyan-500 to-teal-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -870,9 +907,9 @@ export default function ProfileView() {
           </div>
 
           {/* Personal Documents */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-blue-500/20">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-blue-500/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5">
+              <div className="rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 p-2.5">
                 <IdCard className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-black text-white">Personal Documents</h2>
@@ -886,7 +923,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-blue-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-blue-500 to-indigo-500 p-3">
                       <IdCard className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -903,7 +940,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-purple-500 to-violet-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -920,9 +957,9 @@ export default function ProfileView() {
           </div>
 
           {/* Clearance Documents */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-emerald-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-emerald-500/20">
+          <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-emerald-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-emerald-500/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 p-2.5">
+              <div className="rounded-xl bg-linear-to-br from-emerald-500 to-green-500 p-2.5">
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-black text-white">Clearance Documents</h2>
@@ -936,7 +973,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-emerald-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 p-3">
                       <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -953,7 +990,7 @@ export default function ProfileView() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-green-500/50 hover:scale-[1.02]"
                   >
-                    <div className="rounded-lg bg-gradient-to-br from-green-500 to-lime-500 p-3">
+                    <div className="rounded-lg bg-linear-to-br from-green-500 to-lime-500 p-3">
                       <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
@@ -968,6 +1005,154 @@ export default function ProfileView() {
               <p className="text-slate-400 text-center py-8">No clearance documents available</p>
             )}
           </div>
+
+          {/* New Onboarding Documents */}
+          {profileData.onboarding && (profileData.onboarding.resumeUrl || profileData.onboarding.diplomaTorUrl || profileData.onboarding.medicalCertUrl || profileData.onboarding.signatureUrl) && (
+            <>
+              {/* Resume & Education */}
+              {(profileData.onboarding.resumeUrl || profileData.onboarding.diplomaTorUrl) && (
+                <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-indigo-500/20">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="rounded-xl bg-linear-to-br from-indigo-500 to-purple-500 p-2.5">
+                      <Briefcase className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white">Resume & Education</h2>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {profileData.onboarding.resumeUrl && (
+                      <a
+                        href={profileData.onboarding.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02]"
+                      >
+                        <div className="rounded-lg bg-linear-to-br from-indigo-500 to-purple-500 p-3">
+                          <Briefcase className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-white">Resume</div>
+                          <div className="text-sm text-slate-400">Click to view</div>
+                        </div>
+                        <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-indigo-400" />
+                      </a>
+                    )}
+                    {profileData.onboarding.diplomaTorUrl && (
+                      <a
+                        href={profileData.onboarding.diplomaTorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-emerald-500/50 hover:scale-[1.02]"
+                      >
+                        <div className="rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 p-3">
+                          <GraduationCap className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-white">Diploma/TOR</div>
+                          <div className="text-sm text-slate-400">Click to view</div>
+                        </div>
+                        <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-emerald-400" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Medical Certificate */}
+              {profileData.onboarding.medicalCertUrl && (
+                <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-rose-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-rose-500/20">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="rounded-xl bg-linear-to-br from-rose-500 to-pink-500 p-2.5">
+                      <Stethoscope className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white">Medical Certificate</h2>
+                  </div>
+                  <div className="grid gap-4">
+                    <a
+                      href={profileData.onboarding.medicalCertUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-rose-500/50 hover:scale-[1.02]"
+                    >
+                      <div className="rounded-lg bg-linear-to-br from-rose-500 to-pink-500 p-3">
+                        <Stethoscope className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-white">Medical Certificate</div>
+                        <div className="text-sm text-slate-400">Click to view</div>
+                      </div>
+                      <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-rose-400" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Signature */}
+              {profileData.onboarding.signatureUrl && (
+                <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-amber-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-amber-500/20">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="rounded-xl bg-linear-to-br from-amber-500 to-orange-500 p-2.5">
+                      <PenTool className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white">Signature</h2>
+                  </div>
+                  <div className="grid gap-4">
+                    <a
+                      href={profileData.onboarding.signatureUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-amber-500/50 hover:scale-[1.02]"
+                    >
+                      <div className="rounded-lg bg-linear-to-br from-amber-500 to-orange-500 p-3">
+                        <PenTool className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-white">Digital Signature</div>
+                        <div className="text-sm text-slate-400">Click to view</div>
+                      </div>
+                      <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-amber-400" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Data Privacy & Bank Details */}
+              {profileData.onboarding.bankAccountDetails && (
+                <div className="rounded-3xl bg-linear-to-br from-slate-900/80 via-teal-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-teal-500/20">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="rounded-xl bg-linear-to-br from-teal-500 to-cyan-500 p-2.5">
+                      <Shield className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white">Bank Account Details</h2>
+                  </div>
+                  <div className="rounded-xl bg-slate-800/50 p-6 ring-1 ring-white/5">
+                    {(() => {
+                      try {
+                        const bankDetails = JSON.parse(profileData.onboarding.bankAccountDetails)
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-slate-400 text-sm">Bank Name</span>
+                              <p className="text-white font-semibold">{bankDetails.bankName || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 text-sm">Account Name</span>
+                              <p className="text-white font-semibold">{bankDetails.accountName || 'N/A'}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                              <span className="text-slate-400 text-sm">Account Number</span>
+                              <p className="text-white font-mono font-semibold">{bankDetails.accountNumber || 'N/A'}</p>
+                            </div>
+                          </div>
+                        )
+                      } catch (error) {
+                        return <p className="text-slate-300">Bank details available</p>
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

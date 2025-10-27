@@ -21,7 +21,7 @@ interface OnboardingStatus {
   isComplete: boolean
 }
 
-export default function GamifiedDashboard() {
+export default function GamifiedDashboard({ offboardingData }: { offboardingData?: any }) {
   const [data, setData] = useState<DashboardData>({
     tasks: [],
     reviews: [],
@@ -158,16 +158,68 @@ export default function GamifiedDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <div className="h-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-64 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+        <div className="mx-auto max-w-full space-y-8">
+          {/* Header skeleton */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="h-12 w-72 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+              <div className="h-6 w-96 rounded-lg bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
             </div>
-            <div className="space-y-6">
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
-              <div className="h-48 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse" />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-20 w-32 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse p-4" />
+              ))}
+            </div>
+          </div>
+          
+          {/* Quick actions skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="h-24 rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 animate-pulse p-4" />
+            ))}
+          </div>
+
+          {/* Main content grid skeleton */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
+              {/* Tasks section */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-32 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
+              {/* Leaderboard section */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-12 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-8">
+              {/* Upcoming events */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
+              {/* Quick stats */}
+              <div className="rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 animate-pulse">
+                <div className="h-6 w-36 bg-slate-700/50 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 rounded-xl bg-slate-800/50" />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -177,7 +229,7 @@ export default function GamifiedDashboard() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
+      <div className="mx-auto max-w-full space-y-8 animate-in fade-in duration-700">
         {/* Welcome Header & Quick Stats */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -282,6 +334,34 @@ export default function GamifiedDashboard() {
                     }`}
                     style={{ width: `${onboardingStatus.completionPercent}%` }}
                   />
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Offboarding Banner */}
+        {offboardingData && !offboardingData.exitInterviewCompleted && (
+          <Link href="/offboarding" className="block mb-6">
+            <div className="cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] border-yellow-500/50 bg-linear-to-r from-yellow-900/30 to-orange-900/30 hover:border-yellow-500 hover:shadow-yellow-500/30">
+              <div className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="shrink-0 rounded-full p-2.5 bg-yellow-500">
+                    <AlertCircle className="h-5 w-5 text-yellow-900" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold text-white mb-0.5">
+                      Offboarding Initiated
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-tight">
+                      Your last working day is {new Date(offboardingData.lastWorkingDate).toLocaleDateString()}. Please complete your exit form.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap transition-colors bg-yellow-500 text-yellow-900 hover:bg-yellow-400">
+                    Complete Exit Form →
+                  </div>
                 </div>
               </div>
             </div>

@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
         staff_onboarding: {
           select: {
             isComplete: true,
-            completionPercent: true
+            completionPercent: true,
+            resumeUrl: true,
+            medicalCertUrl: true,
+            diplomaTorUrl: true,
+            dataPrivacyConsentUrl: true,
+            bankAccountDetails: true,
+            signatureUrl: true
           }
         }
       }
@@ -46,6 +52,8 @@ export async function GET(req: NextRequest) {
         role: staffUser.role,
         avatar: staffUser.avatar,
         coverPhoto: staffUser.coverPhoto,
+        // @ts-ignore - active field exists but not in generated types yet
+        active: staffUser.active,
       },
       company: staffUser.company ? {
         name: staffUser.company.companyName,
