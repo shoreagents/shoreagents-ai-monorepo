@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        responses: {
+        ticket_responses: {
           include: {
             staff_users: {
               select: {

@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
     // Get all active staff users with their profiles (which contain startDate)
     const staffUsers = await prisma.staff_users.findMany({
       where: {
-        profile: {
+        staff_profiles: {
           startDate: { not: null }
         }
       },
       include: {
         company: true,
-        profile: true
+        staff_profiles: true
       }
     })
 
@@ -33,12 +33,12 @@ export async function POST(request: NextRequest) {
     const results: any[] = []
 
     for (const staff of staffUsers) {
-      if (!staff.profile?.startDate) {
+      if (!staff.staff_profiles?.startDate) {
         skipped++
         continue
       }
 
-      const startDate = staff.profile.startDate
+      const startDate = staff.staff_profiles.startDate
       const daysSinceStart = getDaysSinceStart(startDate)
       
       // Get existing reviews for this staff

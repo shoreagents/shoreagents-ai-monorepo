@@ -15,7 +15,7 @@ async function getCompanyDetails(id: string) {
     const company = await prisma.company.findUnique({
       where: { id },
       include: {
-        clientUsers: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -25,7 +25,7 @@ async function getCompanyDetails(id: string) {
             createdAt: true,
           }
         },
-        staffUsers: {
+        staff_users: {
           select: {
             id: true,
             name: true,
@@ -38,7 +38,7 @@ async function getCompanyDetails(id: string) {
             createdAt: 'desc'
           }
         },
-        accountManager: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -192,22 +192,22 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           </Card>
 
           {/* Account Manager */}
-          {company.accountManager && (
+          {company.management_users && (
             <Card className="p-6 border-border bg-card">
               <h2 className="text-lg font-semibold text-foreground mb-4">Account Manager</h2>
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={company.accountManager.avatar || undefined} />
+                  <AvatarImage src={company.management_users.avatar || undefined} />
                   <AvatarFallback>
-                    {company.accountManager.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                    {company.management_users.name.split(" ").map(n => n[0]).join("").toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="font-medium text-foreground">{company.accountManager.name}</div>
-                  <div className="text-xs text-muted-foreground">{company.accountManager.department}</div>
-                  {company.accountManager.email && (
-                    <a href={`mailto:${company.accountManager.email}`} className="text-xs text-blue-400 hover:underline">
-                      {company.accountManager.email}
+                  <div className="font-medium text-foreground">{company.management_users.name}</div>
+                  <div className="text-xs text-muted-foreground">{company.management_users.department}</div>
+                  {company.management_users.email && (
+                    <a href={`mailto:${company.management_users.email}`} className="text-xs text-blue-400 hover:underline">
+                      {company.management_users.email}
                     </a>
                   )}
                 </div>
@@ -221,11 +221,11 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Staff Assigned</span>
-                <span className="text-lg font-semibold text-foreground">{company.staffUsers.length}</span>
+                <span className="text-lg font-semibold text-foreground">{company.staff_users.length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Client Users</span>
-                <span className="text-lg font-semibold text-foreground">{company.clientUsers.length}</span>
+                <span className="text-lg font-semibold text-foreground">{company.client_users.length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Active Tasks</span>
@@ -250,19 +250,19 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           {/* Staff Members */}
           <Card className="p-6 border-border bg-card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">Assigned Staff ({company.staffUsers.length})</h2>
+              <h2 className="text-lg font-semibold text-foreground">Assigned Staff ({company.staff_users.length})</h2>
               <Button size="sm" variant="outline">
                 <Users className="h-4 w-4 mr-2" />
                 Manage Staff
               </Button>
             </div>
-            {company.staffUsers.length === 0 ? (
+            {company.staff_users.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No staff members assigned yet
               </div>
             ) : (
               <div className="space-y-3">
-                {company.staffUsers.map((staff) => (
+                {company.staff_users.map((staff) => (
                   <div key={staff.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={staff.avatar || undefined} />
@@ -284,19 +284,19 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           {/* Client Users */}
           <Card className="p-6 border-border bg-card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">Client Users ({company.clientUsers.length})</h2>
+              <h2 className="text-lg font-semibold text-foreground">Client Users ({company.client_users.length})</h2>
               <Button size="sm" variant="outline">
                 <Users className="h-4 w-4 mr-2" />
                 Add User
               </Button>
             </div>
-            {company.clientUsers.length === 0 ? (
+            {company.client_users.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No client users yet
               </div>
             ) : (
               <div className="space-y-3">
-                {company.clientUsers.map((user) => (
+                {company.client_users.map((user) => (
                   <div key={user.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={user.avatar || undefined} />

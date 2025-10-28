@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     const staffUsers = await prisma.staff_users.findMany({
       include: {
         company: true,
-        performanceMetrics: {
+        performance_metrics: {
           where: {
             date: {
               gte: startDate,
@@ -54,9 +54,9 @@ export async function GET(req: NextRequest) {
     // Get all client companies
     const companies = await prisma.company.findMany({
       include: {
-        staffUsers: {
+        staff_users: {
           include: {
-            performanceMetrics: {
+            performance_metrics: {
               where: {
                 date: {
                   gte: startDate,
@@ -70,18 +70,18 @@ export async function GET(req: NextRequest) {
     })
 
     // Calculate overall statistics
-    const allMetrics = staffUsers.flatMap(staff => staff.performanceMetrics)
+    const allMetrics = staffUsers.flatMap(staff => staff.performance_metrics)
     
     const totalStaff = staffUsers.length
     const activeStaff = staffUsers.filter(staff => 
-      staff.performanceMetrics.some(metric => 
+      staff.performance_metrics.some(metric => 
         new Date(metric.date).toDateString() === new Date().toDateString()
       )
     ).length
 
     // Calculate average productivity score
     const latestMetrics = staffUsers.map(staff => {
-      const latest = staff.performanceMetrics[0]
+      const latest = staff.performance_metrics[0]
       return latest ? latest.productivityScore : 0
     })
     const averageProductivity = latestMetrics.length > 0 
@@ -184,8 +184,8 @@ export async function GET(req: NextRequest) {
 
     // Calculate department performance with detailed metrics
     const departmentStats = companies.map(company => {
-      const companyStaff = company.staffUsers
-      const companyMetrics = companyStaff.flatMap(staff => staff.performanceMetrics)
+      const companyStaff = company.staff_users
+      const companyMetrics = companyStaff.flatMap(staff => staff.performance_metrics)
       
       const avgProductivity = companyMetrics.length > 0
         ? Math.round(companyMetrics.reduce((sum, metric) => sum + metric.productivityScore, 0) / companyMetrics.length)
@@ -233,7 +233,7 @@ export async function GET(req: NextRequest) {
         companyName: company.companyName || 'Unknown Company',
         staffCount: companyStaff.length,
         activeStaff: companyStaff.filter(staff => 
-          staff.performanceMetrics.some(metric => 
+          staff.performance_metrics.some(metric => 
             new Date(metric.date).toDateString() === new Date().toDateString()
           )
         ).length,
@@ -248,7 +248,7 @@ export async function GET(req: NextRequest) {
     // Calculate top performers
     const topPerformers = staffUsers
       .map(staff => {
-        const latest = staff.performanceMetrics[0]
+        const latest = staff.performance_metrics[0]
         return {
           id: staff.id,
           name: staff.name,
@@ -310,9 +310,9 @@ export async function GET(req: NextRequest) {
       companies: companies.map(company => ({
         id: company.id,
         name: company.companyName,
-        staffCount: company.staffUsers.length,
-        activeStaff: company.staffUsers.filter(staff => 
-          staff.performanceMetrics.some(metric => 
+        staffCount: company.staff_users.length,
+        activeStaff: company.staff_users.filter(staff => 
+          staff.performance_metrics.some(metric => 
             new Date(metric.date).toDateString() === new Date().toDateString()
           )
         ).length

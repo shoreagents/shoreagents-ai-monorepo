@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const companies = await prisma.company.findMany({
       include: {
-        clientUsers: {
+        client_users: {
           select: {
             id: true,
             name: true,
@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
             role: true,
           }
         },
-        staffUsers: {
+        staff_users: {
           select: {
             id: true,
             name: true,
             email: true,
           }
         },
-        accountManager: {
+        management_users: {
           select: {
             id: true,
             name: true,

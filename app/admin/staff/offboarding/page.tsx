@@ -237,7 +237,7 @@ export default function AdminOffboardingDashboard() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
                           <h3 className="text-lg font-semibold">
-                            {offboarding.staffUser.name}
+                            {offboarding.staff_users.name}
                           </h3>
                           {getStatusBadge(offboarding.status)}
                         </div>

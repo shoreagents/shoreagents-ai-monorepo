@@ -47,14 +47,14 @@ export async function GET(
             industry: true,
           },
         },
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
             phone: true,
             location: true,
           },
         },
-        performanceMetrics: {
+        performance_metrics: {
           where: {
             date: {
               gte: startDate,
@@ -65,7 +65,7 @@ export async function GET(
             date: "desc",
           },
         },
-        timeEntries: {
+        time_entries: {
           where: {
             clockIn: {
               gte: startDate,
@@ -90,8 +90,8 @@ export async function GET(
       return NextResponse.json({ error: "Staff member not found" }, { status: 404 })
     }
 
-    const metrics = staffMember.performanceMetrics
-    const timeEntries = staffMember.timeEntries
+    const metrics = staffMember.performance_metrics
+    const timeEntries = staffMember.time_entries
 
     // Calculate overall stats
     const totalMouseClicks = metrics.reduce((sum, m) => sum + m.mouseClicks, 0)
@@ -237,7 +237,7 @@ export async function GET(
         avatar: staffMember.avatar,
         role: staffMember.role,
         company: staffMember.company,
-        profile: staffMember.profile,
+        profile: staffMember.staff_profiles,
         isClockedIn,
         currentEntry,
       },

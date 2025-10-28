@@ -22,9 +22,9 @@ interface Company {
   website: string | null
   logo: string | null
   isActive: boolean
-  staffUsers: { id: string; name: string; email: string }[]
-  clientUsers: { id: string; name: string; email: string; role: string }[]
-  accountManager: { id: string; name: string; email: string; department: string } | null
+  staff_users: { id: string; name: string; email: string }[]
+  client_users: { id: string; name: string; email: string; role: string }[]
+  management_users: { id: string; name: string; email: string; department: string } | null
 }
 
 interface ClientUser {
@@ -45,7 +45,7 @@ export default function AdminClientsPage() {
   const tabParam = searchParams.get('tab') as TabType | null
   const [activeTab, setActiveTab] = useState<TabType>(tabParam === 'users' ? 'users' : 'companies')
   const [companies, setCompanies] = useState<Company[]>([])
-  const [clientUsers, setClientUsers] = useState<ClientUser[]>([])
+  const [client_users, setClient_users] = useState<ClientUser[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -84,10 +84,10 @@ export default function AdminClientsPage() {
     try {
       const response = await fetch('/api/admin/client-users')
       const data = await response.json()
-      setClientUsers(data.clientUsers || [])
+      setClient_users(data.client_users || [])
     } catch (error) {
       console.error('Error fetching client users:', error)
-      setClientUsers([])
+      setClient_users([])
     } finally {
       setLoading(false)
     }
@@ -102,7 +102,7 @@ export default function AdminClientsPage() {
   )
 
   // Filter client users based on search
-  const filteredClientUsers = clientUsers.filter(user =>
+  const filteredClient_users = client_users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.company?.companyName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -154,9 +154,9 @@ export default function AdminClientsPage() {
         >
           <UsersIcon className="size-4" />
           Users
-          {!loading && clientUsers.length > 0 && (
+          {!loading && client_users.length > 0 && (
             <Badge variant="secondary" className="ml-1">
-              {clientUsers.length}
+              {client_users.length}
             </Badge>
           )}
         </button>
@@ -203,13 +203,13 @@ export default function AdminClientsPage() {
             <Card className="p-4 border-border bg-card">
               <div className="text-sm text-muted-foreground">Total Staff Assigned</div>
               <div className="text-2xl font-semibold text-blue-500 mt-1">
-                {companies.reduce((acc, c) => acc + c.staffUsers.length, 0)}
+                {companies.reduce((acc, c) => acc + c.staff_users.length, 0)}
               </div>
             </Card>
             <Card className="p-4 border-border bg-card">
               <div className="text-sm text-muted-foreground">Client Users</div>
               <div className="text-2xl font-semibold text-purple-500 mt-1">
-                {companies.reduce((acc, c) => acc + c.clientUsers.length, 0)}
+                {companies.reduce((acc, c) => acc + c.client_users.length, 0)}
               </div>
             </Card>
           </div>
@@ -283,20 +283,20 @@ export default function AdminClientsPage() {
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       <div className="rounded-lg bg-muted/30 p-2 text-center">
                         <div className="text-xs text-muted-foreground">Staff</div>
-                        <div className="text-lg font-semibold text-foreground">{company.staffUsers.length}</div>
+                        <div className="text-lg font-semibold text-foreground">{company.staff_users.length}</div>
                       </div>
                       <div className="rounded-lg bg-muted/30 p-2 text-center">
                         <div className="text-xs text-muted-foreground">Users</div>
-                        <div className="text-lg font-semibold text-foreground">{company.clientUsers.length}</div>
+                        <div className="text-lg font-semibold text-foreground">{company.client_users.length}</div>
                       </div>
                     </div>
 
                     {/* Account Manager */}
-                    {company.accountManager && (
+                    {company.management_users && (
                       <div className="rounded-lg bg-muted/30 p-3 mb-4">
                         <div className="text-xs text-muted-foreground mb-1">Account Manager</div>
-                        <div className="font-medium text-sm text-foreground">{company.accountManager.name}</div>
-                        <div className="text-xs text-muted-foreground">{company.accountManager.department}</div>
+                        <div className="font-medium text-sm text-foreground">{company.management_users.name}</div>
+                        <div className="text-xs text-muted-foreground">{company.management_users.department}</div>
                       </div>
                     )}
 
@@ -331,7 +331,7 @@ export default function AdminClientsPage() {
         <>
           {/* Users Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredClientUsers.map((user) => (
+            {filteredClient_users.map((user) => (
               <Card key={user.id} className="p-6 border-border bg-card hover:bg-card/80 transition-colors">
                 <div className="flex items-start gap-4">
                   {/* Avatar */}
@@ -379,7 +379,7 @@ export default function AdminClientsPage() {
             ))}
           </div>
 
-          {filteredClientUsers.length === 0 && (
+          {filteredClient_users.length === 0 && (
             <Card className="p-12 border-border bg-card text-center">
               <UsersIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No Users Found</h3>

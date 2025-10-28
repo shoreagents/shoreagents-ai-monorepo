@@ -40,7 +40,7 @@ async function getTimeEntry(id: string) {
                 isActive: true,
               },
             },
-            profile: {
+            staff_profiles: {
               select: {
                 currentRole: true,
                 phone: true,
@@ -137,9 +137,9 @@ export default async function TimeEntryDetailPage({
                   <Badge variant="outline" className="text-xs">
                     {entry.staff_users.role}
                   </Badge>
-                  {entry.staff_users.profile?.currentRole && (
+                  {entry.staff_users.staff_profiles?.currentRole && (
                     <Badge variant="secondary" className="text-xs">
-                      {entry.staff_users.profile.currentRole}
+                      {entry.staff_users.staff_profiles.currentRole}
                     </Badge>
                   )}
                 </div>
