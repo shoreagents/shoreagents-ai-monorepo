@@ -113,7 +113,7 @@ export function useRealtimeMonitoring(selectedDays: number) {
         setLoading(true)
       }
       console.log('Fetching monitoring data for days:', selectedDays)
-      const response = await fetch(`/api/client/monitoring?days=${selectedDays}`)
+      const response = await fetch(`/api/client/analytics?days=${selectedDays}`)
       if (!response.ok) throw new Error("Failed to fetch monitoring data")
       const result = await response.json()
       setData(result)

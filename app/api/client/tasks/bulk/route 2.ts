@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             clientUserId: clientUser.id,
             companyId: clientUser.companyId,
             // Create assignments for all selected staff
-            assignedStaff: {
+            task_assignments: {
               create: staffUserIds.map((staffUserId: string) => ({
                 staffUserId,
               })),
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
                 avatar: true,
               },
             },
-            assignedStaff: {
+            task_assignments: {
               include: {
                 staff_users: {
                   select: {

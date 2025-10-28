@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        assignedStaff: {
+        task_assignments: {
           include: {
             staff_users: {
               select: {
@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     })
 
-    // If filtering by staff, do it manually (since it can be in either staffUser or assignedStaff)
+    // If filtering by staff, do it manually (since it can be in either staffUser or task_assignments)
     let filteredTasks = tasks
     if (staffUserId) {
       filteredTasks = tasks.filter(
         (task) =>
           task.staffUserId === staffUserId ||
-          task.assignedStaff.some((assignment) => assignment.staffUserId === staffUserId)
+          task.task_assignments.some((assignment) => assignment.staffUserId === staffUserId)
       )
     }
 
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
         clientUserId: clientUser.id,
         companyId: clientUser.companyId,
         // Create assignments for all selected staff
-        assignedStaff: {
+        task_assignments: {
           create: staffUserIds.map((staffUserId: string) => ({
             staffUserId,
           })),
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        assignedStaff: {
+        task_assignments: {
           include: {
             staff_users: {
               select: {

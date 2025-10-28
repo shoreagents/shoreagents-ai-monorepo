@@ -19,7 +19,7 @@ export async function GET(
     const documentId = id
 
     // Get document with staffUser relation
-    const document = await prisma.document.findUnique({
+    const document = await prisma.documents.findUnique({
       where: { id: documentId },
       include: {
         staff_users: {
@@ -72,7 +72,7 @@ export async function DELETE(
     const documentId = id
 
     // Get document to check ownership and get fileUrl
-    const document = await prisma.document.findUnique({
+    const document = await prisma.documents.findUnique({
       where: { id: documentId }
     })
 
@@ -117,7 +117,7 @@ export async function DELETE(
     }
 
     // Delete document from database
-    await prisma.document.delete({
+    await prisma.documents.delete({
       where: { id: documentId }
     })
 

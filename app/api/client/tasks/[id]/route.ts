@@ -78,7 +78,7 @@ export async function PATCH(
             role: true,
           },
         },
-        assignedStaff: {
+        task_assignments: {
           include: {
             staff_users: {
               select: {

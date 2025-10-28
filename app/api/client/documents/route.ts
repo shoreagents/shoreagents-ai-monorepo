@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import CloudConvert from 'cloudconvert'
+import { randomUUID } from "crypto"
 
 // GET - Fetch documents for client: own uploads + staff documents shared with them
 export async function GET(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     // 1. Client's own uploads (source=CLIENT)
     // 2. Staff documents that are shared (sharedWithAll=true or client in sharedWith)
     // 3. Admin documents that are shared (sharedWithAll=true or client in sharedWith)
-    const documents = await prisma.document.findMany({
+    const documents = await prisma.documents.findMany({
       where: {
         OR: [
           // Client's own documents
@@ -347,8 +348,10 @@ export async function POST(request: NextRequest) {
     // - If specific staff are selected, use the sharedWith array
     
     // Create document with CLIENT source
-    const document = await prisma.document.create({
+    const now = new Date()
+    const document = await prisma.documents.create({
       data: {
+        id: randomUUID(),
         staffUserId: firstStaff.id, // Use first staff as placeholder for relation
         title,
         category,
@@ -358,7 +361,9 @@ export async function POST(request: NextRequest) {
         fileUrl,
         uploadedBy: clientUser.company.companyName,  // Store company name for dynamic filtering
         sharedWithAll: sharedWithAll,  // TRUE = all staff in this company, FALSE = specific staff only
-        sharedWith: sharedWith  // Array of specific staff user IDs (used when sharedWithAll is false)
+        sharedWith: sharedWith,  // Array of specific staff user IDs (used when sharedWithAll is false)
+        createdAt: now,
+        updatedAt: now
       },
       include: {
         staff_users: {

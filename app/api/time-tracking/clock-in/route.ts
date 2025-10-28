@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getStaffUser } from "@/lib/auth-helpers"
 import { logClockedIn } from "@/lib/activity-generator"
+import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +24,8 @@ export async function POST(request: NextRequest) {
     endOfDay.setHours(23, 59, 59, 999)
     const today = now.toLocaleDateString('en-US', { weekday: 'long' })
     
-    // Get profile ID first (staffUser already includes profile from getStaffUser)
-    const profileId = staffUser.profile?.id
+    // Get profile ID first (staffUser already includes staff_profiles from getStaffUser)
+    const profileId = staffUser.staff_profiles?.id
     
     // Run all checks in parallel to speed up the process
     const [activeEntry, todaysEntries, workSchedule] = await Promise.all([
@@ -126,8 +127,10 @@ export async function POST(request: NextRequest) {
     // Create new time entry with shift tracking
     const timeEntry = await prisma.time_entries.create({
       data: {
+        id: randomUUID(),
         staffUserId: staffUser.id,
         clockIn: now,
+        updatedAt: now,
         expectedClockIn,
         wasLate,
         lateBy
@@ -147,8 +150,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      time_entries: {
-        ...time_entries,
+      timeEntry: {
+        ...timeEntry,
         breaksScheduled: !!existingBreaksToday // Mark as scheduled if breaks exist today
       },
       wasLate,

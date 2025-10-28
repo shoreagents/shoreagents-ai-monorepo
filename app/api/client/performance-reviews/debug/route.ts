@@ -30,12 +30,12 @@ export async function GET(req: NextRequest) {
         companyId: clientUser.company.id
       },
       include: {
-        profile: true
+        staff_profiles: true
       }
     })
 
     // Filter to only include staff with startDate
-    const staffUsers = allStaffUsers.filter(staff => staff.profile?.startDate)
+    const staffUsers = allStaffUsers.filter(staff => staff.staff_profiles?.startDate)
 
     return NextResponse.json({
       success: true,
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       staffUsers: staffUsers.map(staff => ({
         name: staff.name,
         email: staff.email,
-        startDate: staff.profile?.startDate,
+        startDate: staff.staff_profiles?.startDate,
         companyId: staff.companyId
       }))
     })

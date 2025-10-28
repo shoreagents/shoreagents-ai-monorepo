@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { randomUUID } from "crypto"
 
 // GET /api/client/tickets - Get client's own tickets
 export async function GET(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       include: {
         company: {
           include: {
-            accountManager: {
+            management_users: {
               select: {
                 id: true,
                 name: true,
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
             company: {
               select: {
-                accountManager: {
+                management_users: {
                   select: {
                     id: true,
                     name: true,
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        responses: {
+        ticket_responses: {
           orderBy: { createdAt: "asc" },
           include: {
             staff_users: {
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
     // Add account manager info to response
     const ticketsWithAccountManager = tickets.map((ticket) => ({
       ...ticket,
-      accountManager: clientWithCompany?.company?.accountManager || null,
+      accountManager: clientWithCompany?.company?.management_users || null,
     }))
 
     return NextResponse.json({ tickets: ticketsWithAccountManager })
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       include: {
         company: {
           include: {
-            accountManager: true,
+            management_users: true,
           },
         },
       },
@@ -175,8 +176,10 @@ export async function POST(request: NextRequest) {
     const ticketId = `TKT-${ticketNumber.toString().padStart(4, "0")}`
 
     // Create ticket - auto-assign to account manager
+    const now = new Date()
     const ticket = await prisma.tickets.create({
       data: {
+        id: randomUUID(),
         ticketId,
         clientUserId: clientUser.id,
         title,
@@ -187,6 +190,8 @@ export async function POST(request: NextRequest) {
         attachments: attachments || [],
         createdByType: "CLIENT",
         assignedTo: clientUser.company?.accountManagerId || null,
+        createdAt: now,
+        updatedAt: now,
       },
       include: {
         client_users: {
@@ -197,7 +202,7 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        responses: {
+        ticket_responses: {
           include: {
             staff_users: {
               select: {

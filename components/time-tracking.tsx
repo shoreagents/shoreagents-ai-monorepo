@@ -958,16 +958,6 @@ export default function TimeTracking() {
             </p>
           </div>
         )}
-
-        {/* DEBUG BANNER */}
-        <div className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-center">
-          <p className="text-white font-bold text-lg">
-            🎉 NEW WEBSOCKET TIME TRACKING! v3.0
-          </p>
-          <p className="text-white/80 text-sm">
-            Real-time updates with WebSocket technology!
-          </p>
-        </div>
         
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -1353,9 +1343,9 @@ export default function TimeTracking() {
                   }
                   
                   // Check if break has expired (scheduled end time has passed and break wasn't taken)
-                  const scheduledEndTime = parseTimeString(breakItem.scheduledEnd)
+                  const scheduledEndTime = breakItem.scheduledEnd ? parseTimeString(breakItem.scheduledEnd) : new Date()
                   const now = new Date()
-                  const isExpired = !isCompleted && !isOnBreak && now > scheduledEndTime
+                  const isExpired = !isCompleted && !isOnBreak && breakItem.scheduledEnd && now > scheduledEndTime
                   
                   
                   // For completed breaks, show actual times; for scheduled breaks, show scheduled times
@@ -1365,10 +1355,10 @@ export default function TimeTracking() {
                   // Parse dates correctly based on whether break is completed or scheduled
                   const startDate = isCompleted 
                     ? (startTime ? new Date(startTime) : new Date())
-                    : parseTimeString(breakItem.scheduledStart)
+                    : (breakItem.scheduledStart ? parseTimeString(breakItem.scheduledStart) : new Date())
                   const endDate = isCompleted 
                     ? (endTime ? new Date(endTime) : new Date())
-                    : parseTimeString(breakItem.scheduledEnd)
+                    : (breakItem.scheduledEnd ? parseTimeString(breakItem.scheduledEnd) : new Date())
                   
                   const breakEmojis: Record<string, string> = {
                     MORNING: "☕",
@@ -1437,7 +1427,7 @@ export default function TimeTracking() {
                           )}
                         </div>
                       </div>
-                      {!isCompleted && !isOnBreak && !isExpired && (
+                      {!isCompleted && !isOnBreak && !isExpired && breakItem.scheduledStart && (
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs font-medium text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                             🤖 Auto-starts at {parseTimeString(breakItem.scheduledStart).toLocaleTimeString("en-US", {

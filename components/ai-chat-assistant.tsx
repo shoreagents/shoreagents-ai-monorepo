@@ -11,6 +11,7 @@ import { useRef, useEffect, useState } from "react"
 import ReactMarkdown from 'react-markdown'
 import DocumentUpload from "./document-upload"
 import { DocumentSourceBadge } from "@/components/ui/document-source-badge"
+import { useSession } from "next-auth/react"
 
 type Message = {
   id: string
@@ -174,52 +175,29 @@ export default function AIChatAssistant() {
   const fetchDocuments = async () => {
     setLoadingDocs(true)
     try {
-      // Fetch from all three sources: staff, client, and admin
-      const [staffResponse, clientResponse, adminResponse] = await Promise.all([
-        fetch('/api/documents'),        // Staff's own + shared admin docs
-        fetch('/api/client/documents'),  // Client docs visible to this staff
-        fetch('/api/admin/documents')    // Admin docs (if any shared)
-      ])
+      // Determine which endpoint to use based on current route/portal
+      // Staff users: /api/documents (already includes admin+client shared docs)
+      // Client users: /api/client/documents
+      // Admin users: /api/admin/documents
       
-      let allDocuments: any[] = []
+      // For now, assume staff portal since the component is at /ai-assistant
+      // TODO: Make this more dynamic if needed for client/admin portals
+      const response = await fetch('/api/documents')
       
-      // Add staff documents
-      if (staffResponse.ok) {
-        const staffData = await staffResponse.json()
-        const staffDocs = (staffData.documents || []).map((doc: any) => ({
-          ...doc,
-          source: doc.source || 'STAFF'  // Ensure source field exists
-        }))
-        allDocuments = [...allDocuments, ...staffDocs]
+      if (!response.ok) {
+        console.error(`Failed to fetch documents: ${response.status}`)
+        setDocuments([])
+        return
       }
       
-      // Add client documents
-      if (clientResponse.ok) {
-        const clientData = await clientResponse.json()
-        const clientDocs = (clientData.documents || []).map((doc: any) => ({
-          ...doc,
-          source: doc.source || (doc.isStaffUpload ? 'STAFF' : 'CLIENT')  // Map from client API format
-        }))
-        allDocuments = [...allDocuments, ...clientDocs]
-      }
-      
-      // Add admin documents
-      if (adminResponse.ok) {
-        const adminData = await adminResponse.json()
-        const adminDocs = (Array.isArray(adminData) ? adminData : []).map((doc: any) => ({
-          ...doc,
-          source: doc.source || 'ADMIN'  // Ensure source field exists
-        }))
-        allDocuments = [...allDocuments, ...adminDocs]
-      }
-      
-      // Deduplicate by ID (in case same doc appears in multiple sources)
-      const uniqueDocs = Array.from(
-        new Map(allDocuments.map(doc => [doc.id, doc])).values()
-      )
+      const data = await response.json()
+      const fetchedDocs = (data.documents || []).map((doc: any) => ({
+        ...doc,
+        source: doc.source || 'STAFF'  // Ensure source field exists
+      }))
       
       // Sort: Admin docs FIRST, then Staff docs, then Client docs
-      const sortedDocs = uniqueDocs.sort((a, b) => {
+      const sortedDocs = fetchedDocs.sort((a: any, b: any) => {
         if (a.source === b.source) {
           // If same type, sort by date (newest first)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -229,10 +207,11 @@ export default function AIChatAssistant() {
         return (sourcePriority[a.source] || 99) - (sourcePriority[b.source] || 99)
       })
       
-      console.log(`✅ Fetched ${sortedDocs.length} total documents (admin + staff + client)`)
+      console.log(`✅ Fetched ${sortedDocs.length} documents from /api/documents (includes admin+client shared)`)
       setDocuments(sortedDocs)
     } catch (error) {
       console.error('Error fetching documents:', error)
+      setDocuments([])
     } finally {
       setLoadingDocs(false)
     }

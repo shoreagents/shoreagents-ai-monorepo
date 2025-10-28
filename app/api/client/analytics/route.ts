@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/client/monitoring - Get performance metrics for all assigned staff
+// GET /api/client/analytics - Get performance metrics for all assigned staff
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         name: true,
         email: true,
         avatar: true,
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
             location: true,
@@ -211,12 +211,12 @@ export async function GET(req: NextRequest) {
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
-        position: staff.profile?.currentRole || 'Staff Member',
-        department: staff.company?.companyName || staff.profile?.location || 'General',
-        employmentStatus: staff.profile?.employmentStatus || 'Unknown',
-        startDate: staff.profile?.startDate,
-        salary: staff.profile?.salary,
-        location: staff.profile?.location,
+        position: staff.staff_profiles?.currentRole || 'Staff Member',
+        department: staff.company?.companyName || staff.staff_profiles?.location || 'General',
+        employmentStatus: staff.staff_profiles?.employmentStatus || 'Unknown',
+        startDate: staff.staff_profiles?.startDate,
+        salary: staff.staff_profiles?.salary,
+        location: staff.staff_profiles?.location,
         metrics: staffMetrics.length > 0 ? {
           // Latest day metrics
           latest: latestMetric ? {
@@ -325,9 +325,9 @@ export async function GET(req: NextRequest) {
       }
     })
   } catch (error) {
-    console.error("Error fetching client monitoring data:", error)
+    console.error("Error fetching client analytics data:", error)
     return NextResponse.json(
-      { error: "Failed to fetch monitoring data" },
+      { error: "Failed to fetch analytics data" },
       { status: 500 }
     )
   }

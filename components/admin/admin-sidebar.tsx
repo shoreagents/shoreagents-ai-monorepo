@@ -176,6 +176,13 @@ const Icons = {
       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
     </svg>
   ),
+  UserMinus: () => (
+    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  ),
 }
 
 const navItems = [
@@ -192,6 +199,7 @@ const navItems = [
   { icon: "BookOpen", label: "Knowledge Base", href: "/admin/knowledge-base", badge: null },
   { icon: "Megaphone", label: "The Feed", href: "/admin/activity", badge: null },
   { icon: "Trophy", label: "Leaderboard", href: "/admin/leaderboard", badge: null },
+  { icon: "UserMinus", label: "Offboarding", href: "/admin/staff/offboarding", badge: null },
   { icon: "Briefcase", label: "Recruitment", href: "/admin/recruitment", badge: null },
   { icon: "Settings", label: "Settings", href: "/admin/settings", badge: null },
 ]

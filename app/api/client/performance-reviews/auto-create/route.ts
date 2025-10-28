@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
         companyId: clientUser.company.id
       },
       include: {
-        profile: true
+        staff_profiles: true
       }
     })
 
     // Filter to only include staff with startDate
-    const staffWithStartDate = staffUsers.filter(staff => staff.profile?.startDate)
+    const staffWithStartDate = staffUsers.filter(staff => staff.staff_profiles?.startDate)
 
     console.log(`👥 Found ${staffUsers.length} total staff users, ${staffWithStartDate.length} with start dates`)
 
@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
     const results: any[] = []
 
     for (const staff of staffWithStartDate) {
-      if (!staff.profile?.startDate) {
+      if (!staff.staff_profiles?.startDate) {
         console.log(`⚠️  ${staff.name}: No start date in profile`)
         continue
       }
       
-      const startDate = staff.profile.startDate
+      const startDate = staff.staff_profiles.startDate
       const daysSinceStart = getDaysSinceStart(startDate)
       
       console.log(`\n🔍 Checking ${staff.name}:`)
