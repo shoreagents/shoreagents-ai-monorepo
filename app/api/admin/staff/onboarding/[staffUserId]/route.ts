@@ -63,6 +63,7 @@ export async function GET(
       adminProgress = Math.round(adminProgress)
     }
 
+    // Transform to match frontend expectations (camelCase)
     return NextResponse.json({ 
       staff: {
         id: staffUser.id,
@@ -77,7 +78,9 @@ export async function GET(
       } : null,
       profile: staffUser.staff_profiles ? {
         ...staffUser.staff_profiles,
-        daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.staff_profiles.startDate).getTime()) / (1000 * 60 * 60 * 24))
+        daysEmployed: staffUser.staff_profiles.startDate 
+          ? Math.floor((new Date().getTime() - new Date(staffUser.staff_profiles.startDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 0
       } : null
     })
 
@@ -89,4 +92,3 @@ export async function GET(
     )
   }
 }
-

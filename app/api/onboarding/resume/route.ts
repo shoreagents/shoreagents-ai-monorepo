@@ -12,11 +12,16 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📄 [RESUME] Starting resume upload...')
+    
     // Verify staff is authenticated
     const session = await auth()
     if (!session?.user?.id) {
+      console.error('❌ [RESUME] Unauthorized - no session')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('✅ [RESUME] Session found:', session.user.email)
 
     // Find staff user
     const staffUser = await prisma.staff_users.findUnique({
@@ -25,29 +30,40 @@ export async function POST(request: NextRequest) {
     })
 
     if (!staffUser) {
+      console.error('❌ [RESUME] Staff user not found for authUserId:', session.user.id)
       return NextResponse.json({ error: 'Staff user not found' }, { status: 404 })
     }
 
+    console.log('✅ [RESUME] Staff user found:', staffUser.name)
+
     if (!staffUser.staff_onboarding) {
+      console.error('❌ [RESUME] Onboarding record not found for staff:', staffUser.id)
       return NextResponse.json({ error: 'Onboarding record not found' }, { status: 404 })
     }
+
+    console.log('✅ [RESUME] Onboarding record found')
 
     // Get resume file from form data
     const formData = await request.formData()
     const resumeFile = formData.get('resume') as File
 
     if (!resumeFile) {
+      console.error('❌ [RESUME] No resume file in request')
       return NextResponse.json({ error: 'Resume file is required' }, { status: 400 })
     }
+
+    console.log('✅ [RESUME] File received:', resumeFile.name, 'Type:', resumeFile.type, 'Size:', resumeFile.size)
 
     // Validate file type
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if (!allowedTypes.includes(resumeFile.type)) {
+      console.error('❌ [RESUME] Invalid file type:', resumeFile.type)
       return NextResponse.json({ error: 'Invalid file type. Only PDF, DOC, and DOCX are allowed' }, { status: 400 })
     }
 
     // Upload to Supabase Storage
     const fileName = `${staffUser.id}/resume.${resumeFile.name.split('.').pop()}`
+    console.log('📤 [RESUME] Uploading to Supabase:', fileName)
     const fileBuffer = await resumeFile.arrayBuffer()
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin
@@ -59,9 +75,11 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Supabase upload error:', uploadError)
-      return NextResponse.json({ error: 'Failed to upload resume' }, { status: 500 })
+      console.error('❌ [RESUME] Supabase upload error:', uploadError)
+      return NextResponse.json({ error: 'Failed to upload resume', details: uploadError.message }, { status: 500 })
     }
+
+    console.log('✅ [RESUME] Uploaded to Supabase successfully')
 
     // Get public URL
     const { data: urlData } = supabaseAdmin
@@ -70,8 +88,10 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(`staff_onboarding/${fileName}`)
 
     const resumeUrl = urlData.publicUrl
+    console.log('✅ [RESUME] Public URL generated:', resumeUrl)
 
     // Update onboarding record
+    console.log('💾 [RESUME] Updating onboarding record...')
     const updatedOnboarding = await prisma.staff_onboarding.update({
       where: { staffUserId: staffUser.id },
       data: {
@@ -80,8 +100,12 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('✅ [RESUME] Onboarding record updated')
+
     // Update completion percentage
+    console.log('📊 [RESUME] Updating completion percentage...')
     await updateCompletionPercent(updatedOnboarding.id)
+    console.log('✅ [RESUME] Completion percentage updated')
 
     console.log(`✅ [ONBOARDING] Resume uploaded for staff: ${staffUser.name}`)
 
@@ -118,11 +142,10 @@ async function updateCompletionPercent(onboardingId: string) {
     onboarding.emergencyContactStatus
   ]
 
-  // Each section = 12.5% when APPROVED (8 sections total)
-  // 100% = All sections approved by admin
+  // Each section = 12.5% when SUBMITTED or APPROVED (8 sections total)
   let totalProgress = 0
   sections.forEach(status => {
-    if (status === "APPROVED") {
+    if (status === "SUBMITTED" || status === "APPROVED") {
       totalProgress += Math.round(100 / sections.length)
     }
   })

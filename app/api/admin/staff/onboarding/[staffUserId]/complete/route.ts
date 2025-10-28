@@ -47,51 +47,22 @@ export async function POST(
       adminId: managementUser.id
     })
 
-    // Validation
-    if (!companyId) {
-      return NextResponse.json({ 
-        error: "Company ID is required" 
-      }, { status: 400 })
-    }
-
-    if (!currentRole) {
-      return NextResponse.json({ 
-        error: "Role title is required" 
-      }, { status: 400 })
-    }
-
-    if (!salary || salary <= 0) {
-      return NextResponse.json({ 
-        error: "Valid salary is required" 
-      }, { status: 400 })
-    }
-
-    // Verify company exists
-    const company = await prisma.company.findUnique({
-      where: { id: companyId }
-    })
-
-    if (!company) {
-      return NextResponse.json({ 
-        error: "Company not found" 
-      }, { status: 404 })
-    }
-
-    // Get staff onboarding
+    // Get staff onboarding FIRST to check if profile exists
     const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId },
       include: { 
-        onboarding: true,
-        profile: true
+        staff_onboarding: true,
+        staff_profiles: true,
+        company: true
       }
     })
 
-    if (!staffUser || !staffUser.onboarding) {
+    if (!staffUser || !staffUser.staff_onboarding) {
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 })
     }
 
     // Check if all 9 sections are approved (GUNTING 9-step system)
-    const { onboarding } = staffUser
+    const onboarding = staffUser.staff_onboarding
     const allApproved = 
       onboarding.personalInfoStatus === "APPROVED" &&
       onboarding.govIdStatus === "APPROVED" &&
@@ -120,22 +91,64 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Check if profile already exists
-    if (staffUser.profile) {
-      console.log("✅ PROFILE ALREADY EXISTS:", { 
-        profileId: staffUser.profile.id,
+    // 🎯 CHECK IF PROFILE ALREADY EXISTS (from hiring process)
+    if (staffUser.staff_profiles) {
+      console.log("✅ PROFILE ALREADY EXISTS - JUST MARK COMPLETE:", { 
+        profileId: staffUser.staff_profiles.id,
         staffUserId: staffUser.id,
-        staffName: staffUser.name
+        staffName: staffUser.name,
+        companyId: staffUser.companyId
       })
       
+      // Just mark onboarding as complete
+      await prisma.staff_onboarding.update({
+        where: { staffUserId: staffUser.id },
+        data: {
+          isComplete: true,
+          updatedAt: new Date()
+        }
+      })
+
+      console.log("🎉 ONBOARDING MARKED COMPLETE (profile existed)")
+
       return NextResponse.json({ 
         success: true,
-        message: `Profile already exists for ${staffUser.name}. Onboarding was completed previously.`,
-        profileId: staffUser.profile.id,
-        companyName: company.companyName,
+        message: `Onboarding completed for ${staffUser.name}. Profile already exists from hiring process.`,
+        profileId: staffUser.staff_profiles.id,
+        companyName: staffUser.company?.companyName || "N/A",
         staffName: staffUser.name,
         alreadyExists: true
       })
+    }
+
+    // Profile doesn't exist - validate employment data
+    if (!companyId) {
+      return NextResponse.json({ 
+        error: "Company ID is required" 
+      }, { status: 400 })
+    }
+
+    if (!currentRole) {
+      return NextResponse.json({ 
+        error: "Role title is required" 
+      }, { status: 400 })
+    }
+
+    if (!salary || salary <= 0) {
+      return NextResponse.json({ 
+        error: "Valid salary is required" 
+      }, { status: 400 })
+    }
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    })
+
+    if (!company) {
+      return NextResponse.json({ 
+        error: "Company not found" 
+      }, { status: 404 })
     }
 
     // Assign staff to company & update legal name from onboarding

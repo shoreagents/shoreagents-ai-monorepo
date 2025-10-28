@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     
     if (filter === "pending") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: false,
           OR: [
             { personalInfoStatus: "SUBMITTED" },
@@ -40,13 +40,13 @@ export async function GET(req: NextRequest) {
       }
     } else if (filter === "incomplete") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: false
         }
       }
     } else if (filter === "complete") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: true
         }
       }
@@ -74,7 +74,15 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ staff: staffList })
+    // Transform to match frontend expectations (camelCase)
+    const transformedStaff = staffList.map(staff => ({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email,
+      onboarding: staff.staff_onboarding // Transform snake_case to camelCase
+    }))
+
+    return NextResponse.json({ staff: transformedStaff })
 
   } catch (error) {
     console.error("Admin onboarding list error:", error)

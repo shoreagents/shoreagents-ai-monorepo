@@ -3,6 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
 
+// Helper function to retry Prisma queries
+async function retryQuery<T>(queryFn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await queryFn()
+    } catch (error) {
+      console.error(`[CONTRACT] Query attempt ${i + 1}/${retries} failed:`, error)
+      if (i === retries - 1) throw error
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i))) // 1s, 2s, 4s
+    }
+  }
+  throw new Error('Retry limit exceeded')
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -11,7 +25,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const staffUser = await prisma.staff_users.findUnique({
+    const staffUser = await retryQuery(() => prisma.staff_users.findUnique({
       where: { authUserId: session.user.id },
       include: {
         job_acceptances: {
@@ -22,20 +36,20 @@ export async function GET(req: NextRequest) {
         },
         company: true
       }
-    });
+    }));
 
     if (!staffUser) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 });
     }
 
-    let contract = await prisma.employment_contracts.findUnique({
+    let contract = await retryQuery(() => prisma.employment_contracts.findUnique({
       where: { staffUserId: staffUser.id },
       include: {
         company: {
           select: { companyName: true }
         }
       }
-    });
+    }));
 
     // Auto-create contract if none exists and staff has job acceptance
     if (!contract && staffUser.job_acceptances && staffUser.companyId) {

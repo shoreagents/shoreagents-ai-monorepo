@@ -340,7 +340,7 @@ export default function AdminOnboardingDetailPage() {
     setConfirmCompleteModal(false)
     
     // Double-check that onboarding is not already complete
-    if (onboarding?.isComplete || profile) {
+    if (onboarding?.isComplete) {
       setError("This staff member's onboarding has already been completed.")
       return
     }
@@ -575,7 +575,7 @@ export default function AdminOnboardingDetailPage() {
          )}
 
          {/* Onboarding Already Complete */}
-         {(onboarding.isComplete || profile) && (
+         {onboarding.isComplete && profile && (
            <Card className="mb-6 bg-linear-to-br from-green-900/40 to-green-800/20 border-green-600">
              <CardHeader>
                <div className="flex items-start gap-3">
@@ -634,6 +634,48 @@ export default function AdminOnboardingDetailPage() {
              </CardContent>
            </Card>
          )}
+
+        {/* Mark as Complete Button - When profile exists but onboarding not marked complete */}
+        {onboarding.personalInfoStatus === "APPROVED" &&
+         onboarding.govIdStatus === "APPROVED" &&
+         onboarding.documentsStatus === "APPROVED" &&
+         onboarding.signatureStatus === "APPROVED" &&
+         onboarding.emergencyContactStatus === "APPROVED" &&
+         onboarding.resumeStatus === "APPROVED" &&
+         onboarding.educationStatus === "APPROVED" &&
+         onboarding.medicalStatus === "APPROVED" &&
+         onboarding.dataPrivacyStatus === "APPROVED" &&
+         !onboarding.isComplete &&
+         profile && (
+          <Card className="mb-6 bg-green-900/30 border-green-700">
+            <CardHeader>
+              <CardTitle className="text-white">Ready to Complete Onboarding</CardTitle>
+              <CardDescription className="text-slate-300">
+                All documents have been verified and employment profile already exists. Click below to mark onboarding as complete.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => setConfirmCompleteModal(true)}
+                disabled={completing}
+                size="lg"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                {completing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Marking Complete...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Mark Onboarding as Complete
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Complete Onboarding Button - Only show when ALL documents APPROVED and no profile exists */}
         {onboarding.personalInfoStatus === "APPROVED" &&

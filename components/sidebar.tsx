@@ -52,7 +52,7 @@ export default function Sidebar() {
   const [profileData, setProfileData] = useState<any>(null)
   const [todayActivity, setTodayActivity] = useState<any>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
-  const [isMounted, setIsMounted] = useState(false)
+  const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -64,14 +64,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (status === "authenticated") {
       fetchProfileData()
-      fetchTodayActivity()
-      
-      // Refresh activity data every 30 seconds
-      const interval = setInterval(() => {
-        fetchTodayActivity()
-      }, 30000)
-      
-      return () => clearInterval(interval)
+      fetchOnboardingStatus()
     }
   }, [status])
 
@@ -89,45 +82,15 @@ export default function Sidebar() {
     }
   }
 
-  const fetchTodayActivity = async () => {
+  const fetchOnboardingStatus = async () => {
     try {
-      const [analyticsResponse, tasksResponse] = await Promise.all([
-        fetch("/api/analytics"),
-        fetch("/api/tasks")
-      ])
-      
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json()
-        let activityData = analyticsData.today || {}
-        
-        // Fetch tasks data
-        if (tasksResponse.ok) {
-          const tasksData = await tasksResponse.json()
-          const tasks = tasksData.tasks || []
-          const completedTasks = tasks.filter((task: any) => task.status === "DONE" || task.status === "COMPLETED").length
-          const totalTasks = tasks.length
-          
-          activityData.tasksDone = totalTasks > 0 ? `${completedTasks}/${totalTasks}` : "0/0"
-        } else {
-          activityData.tasksDone = "0/0"
-        }
-        
-        // Fetch breaks count for today
-        try {
-          const today = new Date().toISOString().split('T')[0]
-          const breaksResponse = await fetch(`/api/breaks?date=${today}`)
-          if (breaksResponse.ok) {
-            const breaksData = await breaksResponse.json()
-            activityData.breaksTaken = breaksData.breaks?.length || 0
-          }
-        } catch (err) {
-          console.error("Failed to fetch breaks:", err)
-          activityData.breaksTaken = 0
-        }
-        setTodayActivity(activityData)
+      const response = await fetch("/api/onboarding/status")
+      if (response.ok) {
+        const data = await response.json()
+        setOnboardingStatus(data)
       }
     } catch (error) {
-      console.error("Failed to fetch today's activity:", error)
+      console.error("Failed to fetch onboarding status:", error)
     }
   }
 
@@ -255,6 +218,9 @@ export default function Sidebar() {
                     <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
                     {item.label === "The Feed" && (
                       <NotificationBadge className="ml-auto" />
+                    )}
+                    {item.label === "Onboarding" && onboardingStatus && onboardingStatus.completionPercent < 100 && (
+                      <span className="ml-auto flex h-2 w-2 items-center justify-center rounded-full bg-red-500 shadow-lg shadow-red-500/50 animate-pulse" />
                     )}
                   </Link>
                 )

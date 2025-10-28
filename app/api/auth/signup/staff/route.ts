@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       
       // 2.6. Update interview request status to HIRED
       if (jobAcceptance.interviewRequestId) {
-        await prisma.interview_requests.update({
+        const interview = await prisma.interview_requests.update({
           where: { id: jobAcceptance.interviewRequestId },
           data: {
             status: 'HIRED',
@@ -165,6 +165,23 @@ export async function POST(req: NextRequest) {
           }
         })
         console.log('✅ [SIGNUP] Interview request status updated to HIRED:', jobAcceptance.interviewRequestId)
+        
+        // 2.7. Create staff_profiles with position and start date
+        const startDate = interview.finalStartDate || new Date()
+        await prisma.staff_profiles.create({
+          data: {
+            id: crypto.randomUUID(),
+            staffUserId: staffUser.id,
+            currentRole: position || 'Staff Member',
+            startDate: startDate,
+            salary: 50000.00, // Default salary
+            employmentStatus: 'PROBATION',
+            daysEmployed: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+        console.log('✅ [SIGNUP] Staff profile created with position:', position)
       }
     }
 
