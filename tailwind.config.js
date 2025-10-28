@@ -75,6 +75,8 @@ module.exports = {
         'bounce-in': 'bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         wave: 'wave 2s ease-in-out infinite',
+        shimmer: 'shimmer 2s ease-in-out infinite',
+        'shimmer-slow': 'shimmer 4s ease-in-out infinite',
       },
       keyframes: {
         'fade-in-up': {
@@ -119,6 +121,10 @@ module.exports = {
           '50%': { transform: 'rotate(10deg)' },
           '60%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(0deg)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
     },

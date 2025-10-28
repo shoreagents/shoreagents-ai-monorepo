@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard } from "lucide-react"
+import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard, Sparkles, Award, Zap, Star, Coffee, Rocket } from "lucide-react"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
 
@@ -69,6 +69,8 @@ export default function ProfileView() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'personal' | 'documents'>('profile')
+  const [isHoveringAvatar, setIsHoveringAvatar] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
   
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -426,21 +428,33 @@ export default function ProfileView() {
             {/* Name & Info */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-5xl font-black text-transparent animate-in fade-in slide-in-from-left-5 duration-700">{user.name}</h1>
-                <p className="mt-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-2xl font-semibold text-transparent animate-in fade-in slide-in-from-left-5 delay-150 duration-700">{profile?.currentRole || "Role not assigned"}</p>
-                <p className="mt-2 flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-5 delay-300 duration-700">
+                <div className="flex items-center gap-3">
+                  <h1 className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-5xl font-black text-transparent animate-in fade-in slide-in-from-left-5 duration-700">{user.name}</h1>
+                  <Sparkles className="h-8 w-8 text-yellow-400 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Rocket className="h-5 w-5 text-purple-400 animate-bounce" />
+                  <p className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-2xl font-semibold text-transparent animate-in fade-in slide-in-from-left-5 delay-150 duration-700">{profile?.currentRole || "Role not assigned"}</p>
+                </div>
+                <p className="mt-2 flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-5 delay-300 duration-700 hover:text-indigo-300 transition-colors">
                   <Building2 className="h-5 w-5 text-indigo-400" />
                   {company?.name || "No company assigned"}
                 </p>
               </div>
               <div className="flex gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 px-6 py-3 ring-1 ring-emerald-400/30">
-                  <div className="text-xs text-emerald-300">Status</div>
-                  <div className="text-lg font-bold text-emerald-400">{profile?.employmentStatus || "Pending"}</div>
+                <div className="group cursor-pointer rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 px-6 py-3 ring-1 ring-emerald-400/30 transition-all duration-300 hover:scale-110 hover:ring-2 hover:ring-emerald-400 hover:shadow-lg hover:shadow-emerald-500/50">
+                  <div className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-emerald-400 group-hover:animate-spin" />
+                    <div className="text-xs text-emerald-300">Status</div>
+                  </div>
+                  <div className="text-lg font-bold text-emerald-400 group-hover:text-emerald-300">{profile?.employmentStatus || "Pending"}</div>
                 </div>
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 px-6 py-3 ring-1 ring-indigo-400/30">
-                  <div className="text-xs text-indigo-300">Days</div>
-                  <div className="text-lg font-bold text-indigo-400">{profile?.daysEmployed || 0}</div>
+                <div className="group cursor-pointer rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 px-6 py-3 ring-1 ring-indigo-400/30 transition-all duration-300 hover:scale-110 hover:ring-2 hover:ring-indigo-400 hover:shadow-lg hover:shadow-indigo-500/50">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-indigo-400 group-hover:animate-pulse" />
+                    <div className="text-xs text-indigo-300">Days</div>
+                  </div>
+                  <div className="text-lg font-bold text-indigo-400 group-hover:text-indigo-300">{profile?.daysEmployed || 0}</div>
                 </div>
               </div>
             </div>
@@ -449,24 +463,24 @@ export default function ProfileView() {
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Personal Information */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-blue-500/30 hover:scale-[1.02]">
             <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5 ">
+              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5 group-hover:rotate-12 transition-transform duration-300">
                 <User className="h-6 w-6 text-white" />
               </div>
-              Personal Information
+              <span className="group-hover:text-blue-300 transition-colors">Personal Information</span>
             </h2>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-slate-400" />
+              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-blue-400/50">
+                <Mail className="h-5 w-5 text-blue-400 animate-pulse" />
                 <div className="flex-1">
                   <div className="text-sm text-slate-400">Email</div>
                   <div className="font-semibold text-white">{user.email}</div>
                 </div>
               </div>
               {profile?.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-slate-400" />
+                <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-cyan-400/50">
+                  <Phone className="h-5 w-5 text-cyan-400" />
                   <div className="flex-1">
                     <div className="text-sm text-slate-400">Phone</div>
                     <div className="font-semibold text-white">{profile.phone}</div>
@@ -474,10 +488,10 @@ export default function ProfileView() {
                 </div>
               )}
               {profile?.startDate && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-slate-400" />
+                <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-indigo-400/50">
+                  <Calendar className="h-5 w-5 text-indigo-400" />
                   <div className="flex-1">
-                    <div className="text-sm text-slate-400">Start Date</div>
+                    <div className="text-sm text-slate-400">Start Date 🎉</div>
                     <div className="font-semibold text-white">
                       {mounted ? formatDate(profile.startDate) : profile.startDate}
                     </div>
@@ -485,10 +499,10 @@ export default function ProfileView() {
                 </div>
               )}
               {profile?.daysEmployed !== undefined && (
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-slate-400" />
+                <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-purple-400/50">
+                  <Clock className="h-5 w-5 text-purple-400" />
                   <div className="flex-1">
-                    <div className="text-sm text-slate-400">Days Employed</div>
+                    <div className="text-sm text-slate-400">Days Employed 💪</div>
                     <div className="font-semibold text-white">{profile.daysEmployed} days</div>
                   </div>
                 </div>
@@ -497,43 +511,43 @@ export default function ProfileView() {
           </div>
 
           {/* Employment Details */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-purple-500/30 hover:scale-[1.02]">
             <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 ">
+              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 group-hover:-rotate-12 transition-transform duration-300">
                 <Briefcase className="h-6 w-6 text-white" />
               </div>
-              Employment Details
+              <span className="group-hover:text-purple-300 transition-colors">Employment Details</span>
             </h2>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Building2 className="h-5 w-5 text-slate-400" />
+              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-purple-400/50">
+                <Building2 className="h-5 w-5 text-purple-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-slate-400">Company/Client</div>
+                  <div className="text-sm text-slate-400">Company/Client 🏢</div>
                   <div className="font-semibold text-white">{company?.name || "No company assigned"}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-slate-400" />
+              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-pink-400/50">
+                <User className="h-5 w-5 text-pink-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-slate-400">Account Manager</div>
+                  <div className="text-sm text-slate-400">Account Manager ☕</div>
                   <div className="font-semibold text-white">{company?.accountManager || "Not assigned"}</div>
                 </div>
               </div>
               {profile?.salary && (
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-slate-400" />
+                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-green-500/20 p-4 ring-1 ring-emerald-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-emerald-400 hover:shadow-lg hover:shadow-emerald-500/50">
+                  <DollarSign className="h-5 w-5 text-emerald-400 animate-pulse" />
                   <div className="flex-1">
-                    <div className="text-sm text-slate-400">Salary</div>
-                    <div className="font-semibold text-white">{formatCurrency(profile.salary)}/month</div>
+                    <div className="text-sm text-emerald-300">Salary 💰</div>
+                    <div className="font-bold text-emerald-400 text-lg">{formatCurrency(profile.salary)}/month</div>
                   </div>
                 </div>
               )}
               {profile?.lastPayIncrease && profile?.lastIncreaseAmount && (
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-green-500/20 to-teal-500/20 p-4 ring-1 ring-green-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-green-400">
+                  <TrendingUp className="h-5 w-5 text-green-400" />
                   <div className="flex-1">
-                    <div className="text-sm text-slate-400">Last Pay Increase</div>
-                    <div className="font-semibold text-white">
+                    <div className="text-sm text-green-300">Last Pay Increase 📈</div>
+                    <div className="font-semibold text-green-400">
                       {formatCurrency(profile.lastIncreaseAmount)} on {mounted ? formatDate(profile.lastPayIncrease) : profile.lastPayIncrease}
                     </div>
                   </div>
@@ -545,34 +559,35 @@ export default function ProfileView() {
 
         {/* Work Schedule */}
         {workSchedules && workSchedules.length > 0 && (
-          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-amber-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-amber-900/10 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-amber-500/30">
             <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-2.5 ">
+              <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-2.5 group-hover:scale-110 transition-transform duration-300">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
-              Work Schedule
+              <span className="group-hover:text-amber-300 transition-colors">Work Schedule 📅</span>
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
-              {workSchedules.map((schedule) => (
+              {workSchedules.map((schedule, index) => (
               <div
                 key={schedule.id}
-                className={`rounded-xl p-4 ring-1 transition-all hover:scale-105 ${
+                className={`group/day rounded-xl p-4 ring-1 transition-all duration-300 hover:scale-110 hover:rotate-2 hover:z-10 ${
                   schedule.isWorkday
-                    ? "bg-emerald-500/10 ring-emerald-500/30 hover:bg-emerald-500/20"
-                    : "bg-slate-800/50 ring-white/10 hover:bg-slate-800/70"
+                    ? "bg-gradient-to-br from-emerald-500/20 to-green-500/20 ring-emerald-500/30 hover:ring-2 hover:ring-emerald-400 hover:shadow-lg hover:shadow-emerald-500/50"
+                    : "bg-gradient-to-br from-slate-800/50 to-slate-700/50 ring-white/10 hover:ring-2 hover:ring-blue-400 hover:shadow-lg hover:shadow-blue-500/50"
                 }`}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="text-center">
-                  <div className="font-semibold text-white">{schedule.dayOfWeek}</div>
-                  <div className="mt-2 text-sm text-slate-400">
+                  <div className="font-bold text-white text-lg group-hover/day:scale-110 transition-transform">{schedule.dayOfWeek}</div>
+                  <div className="mt-2 text-sm">
                     {schedule.isWorkday ? (
                       <>
-                        <div>{schedule.startTime}</div>
-                        <div>-</div>
-                        <div>{schedule.endTime}</div>
+                        <div className="text-emerald-300 font-semibold">💼 {schedule.startTime}</div>
+                        <div className="text-slate-400">-</div>
+                        <div className="text-emerald-300 font-semibold">{schedule.endTime}</div>
                       </>
                     ) : (
-                      <div>Off</div>
+                      <div className="text-blue-300 font-semibold text-lg">🎉 Off</div>
                     )}
                   </div>
                 </div>
@@ -585,42 +600,44 @@ export default function ProfileView() {
         {/* Leave Credits & Benefits */}
         {profile && (
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-cyan-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+            <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-cyan-900/10 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-cyan-500/30 hover:scale-[1.02]">
               <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-                <div className="rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 p-2.5 ">
+                <div className="rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 p-2.5 group-hover:rotate-12 transition-transform duration-300">
                   <Umbrella className="h-6 w-6 text-white" />
                 </div>
-                Leave Credits
+                <span className="group-hover:text-cyan-300 transition-colors">Leave Credits 🌴</span>
               </h2>
               <div className="space-y-4">
-                <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-6 ring-1 ring-blue-400/30">
-                  <div className="text-center">
-                    <div className="text-5xl font-bold text-blue-400">{remainingLeave}</div>
-                    <div className="mt-2 text-sm text-slate-300">Days Remaining</div>
-                    <div className="mt-1 text-xs text-slate-500">Out of {profile.totalLeave} total days</div>
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-6 ring-1 ring-blue-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-cyan-400 hover:shadow-xl hover:shadow-cyan-500/50">
+                  {/* Animated background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-cyan-400/10 to-blue-400/0 animate-shimmer" />
+                  <div className="relative text-center">
+                    <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 animate-pulse">{remainingLeave}</div>
+                    <div className="mt-2 text-sm text-cyan-300 font-semibold">Days Remaining 🎉</div>
+                    <div className="mt-1 text-xs text-slate-400">Out of {profile.totalLeave} total days</div>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div>
+                  <div className="group/bar">
                     <div className="mb-2 flex justify-between text-sm">
-                      <span className="text-slate-400">Vacation Leave Used</span>
-                      <span className="font-semibold text-white">{profile.vacationUsed} days</span>
+                      <span className="text-slate-400 group-hover/bar:text-blue-300 transition-colors">🏖️ Vacation Leave Used</span>
+                      <span className="font-bold text-blue-400 group-hover/bar:scale-110 transition-transform inline-block">{profile.vacationUsed} days</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-800 ring-1 ring-white/5">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                        className="h-full bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 transition-all duration-1000 ease-out bg-[length:200%_100%] animate-shimmer-slow"
                         style={{ width: `${(profile.vacationUsed / profile.totalLeave) * 100}%` }}
                       />
                     </div>
                   </div>
-                  <div>
+                  <div className="group/bar">
                     <div className="mb-2 flex justify-between text-sm">
-                      <span className="text-slate-400">Sick Leave Used</span>
-                      <span className="font-semibold text-white">{profile.sickUsed} days</span>
+                      <span className="text-slate-400 group-hover/bar:text-pink-300 transition-colors">🤧 Sick Leave Used</span>
+                      <span className="font-bold text-pink-400 group-hover/bar:scale-110 transition-transform inline-block">{profile.sickUsed} days</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-800 ring-1 ring-white/5">
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                        className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 transition-all duration-1000 ease-out bg-[length:200%_100%] animate-shimmer-slow"
                         style={{ width: `${(profile.sickUsed / profile.totalLeave) * 100}%` }}
                       />
                     </div>
@@ -629,39 +646,51 @@ export default function ProfileView() {
               </div>
             </div>
 
-          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-pink-900/10 to-slate-900/80 p-8  backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 ">
+          <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-pink-900/10 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-pink-500/30 hover:scale-[1.02]">
             <h2 className="mb-6 flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 p-2.5 ">
-                <Heart className="h-6 w-6 text-white" />
+              <div className="rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 p-2.5 group-hover:-rotate-12 transition-transform duration-300">
+                <Heart className="h-6 w-6 text-white animate-pulse" />
               </div>
-              Benefits
+              <span className="group-hover:text-pink-300 transition-colors">Benefits 💖</span>
             </h2>
             <div className="space-y-3">
-              <div className={`rounded-xl p-4 ring-1 transition-all hover:scale-105 ${profile?.hmo ? "bg-emerald-500/10 ring-emerald-500/30" : "bg-slate-800/50 ring-white/10"}`}>
+              <div className={`group/benefit rounded-xl p-4 ring-1 transition-all duration-300 hover:scale-105 ${profile?.hmo ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 ring-emerald-500/30 hover:ring-2 hover:ring-emerald-400 hover:shadow-lg hover:shadow-emerald-500/50" : "bg-slate-800/50 ring-white/10 hover:ring-slate-400"}`}>
                 <div className="flex items-center gap-3">
-                  <Shield className={`h-5 w-5 ${profile?.hmo ? "text-emerald-400" : "text-slate-400"}`} />
+                  <Shield className={`h-6 w-6 transition-transform group-hover/benefit:scale-110 ${profile?.hmo ? "text-emerald-400" : "text-slate-400"}`} />
                   <div className="flex-1">
-                    <div className="font-semibold text-white">HMO Benefits</div>
+                    <div className="font-bold text-white flex items-center gap-2">
+                      HMO Benefits {profile?.hmo && "🏥"}
+                    </div>
                     <div className="text-sm text-slate-400">{profile?.hmo ? "Active" : "Not enrolled"}</div>
                   </div>
                   {profile?.hmo && (
-                    <div className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400">
+                    <div className="rounded-full bg-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-300 ring-1 ring-emerald-400/50 animate-pulse">
                       ✓ Active
                     </div>
                   )}
                 </div>
               </div>
               {profile?.totalLeave && (
-                <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 p-4 ring-1 ring-blue-400/30 transition-all hover:scale-105">
+                <div className="group/benefit rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 p-4 ring-1 ring-blue-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-blue-400 hover:shadow-lg hover:shadow-blue-500/50">
                   <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-blue-400" />
+                    <Calendar className="h-6 w-6 text-blue-400 transition-transform group-hover/benefit:rotate-12" />
                     <div className="flex-1">
-                      <div className="font-semibold text-white">Leave Credits</div>
-                      <div className="text-sm text-slate-400">{profile.totalLeave} days annual leave</div>
+                      <div className="font-bold text-white">Leave Credits 🌊</div>
+                      <div className="text-sm text-blue-300 font-semibold">{profile.totalLeave} days annual leave</div>
                     </div>
+                    <Star className="h-5 w-5 text-yellow-400 animate-spin group-hover/benefit:animate-ping" />
                   </div>
                 </div>
               )}
+              <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-violet-500/20 p-4 ring-1 ring-purple-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-purple-400 hover:shadow-lg hover:shadow-purple-500/50">
+                <div className="flex items-center gap-3">
+                  <Coffee className="h-6 w-6 text-purple-400 animate-bounce" />
+                  <div className="flex-1">
+                    <div className="font-bold text-white">Work Culture ✨</div>
+                    <div className="text-sm text-purple-300">Flexible & Fun!</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
