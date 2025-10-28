@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify client user
-    const clientUser = await prisma.clientUser.findUnique({
+    const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
     })
@@ -20,14 +20,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Get offboardings for staff in this client's company
-    const offboardings = await prisma.staffOffboarding.findMany({
+    const offboardings = await prisma.staff_offboarding.findMany({
       where: {
-        staffUser: {
+        staff_users: {
           companyId: clientUser.companyId
         }
       },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

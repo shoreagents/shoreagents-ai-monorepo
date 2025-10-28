@@ -67,6 +67,12 @@ export async function GET(req: NextRequest) {
             emergencyContactStatus: true,
             updatedAt: true
           }
+        },
+        employment_contracts: {
+          select: {
+            signed: true,
+            adminApproved: true
+          }
         }
       },
       orderBy: {
@@ -75,12 +81,27 @@ export async function GET(req: NextRequest) {
     })
 
     // Transform to match frontend expectations (camelCase)
-    const transformedStaff = staffList.map(staff => ({
-      id: staff.id,
-      name: staff.name,
-      email: staff.email,
-      onboarding: staff.staff_onboarding // Transform snake_case to camelCase
-    }))
+    const transformedStaff = staffList.map(staff => {
+      // employment_contracts is a one-to-one optional relationship
+      let contractStatus = "None"
+      if (staff.employment_contracts) {
+        if (staff.employment_contracts.adminApproved) {
+          contractStatus = "Approved"
+        } else if (staff.employment_contracts.signed) {
+          contractStatus = "Signed"
+        } else {
+          contractStatus = "Pending"
+        }
+      }
+      
+      return {
+        id: staff.id,
+        name: staff.name,
+        email: staff.email,
+        onboarding: staff.staff_onboarding,
+        contractStatus
+      }
+    })
 
     return NextResponse.json({ staff: transformedStaff })
 

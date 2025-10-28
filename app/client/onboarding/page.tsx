@@ -16,7 +16,11 @@ import {
   FileText,
   Shield,
   PenTool,
-  Phone
+  Phone,
+  GraduationCap,
+  Heart,
+  FileIcon,
+  Lock
 } from "lucide-react"
 
 type OnboardingStatus = "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED"
@@ -37,6 +41,10 @@ type StaffOnboarding = {
       documents: OnboardingStatus
       signature: OnboardingStatus
       emergencyContact: OnboardingStatus
+      education: OnboardingStatus
+      medical: OnboardingStatus
+      resume: OnboardingStatus
+      dataPrivacy: OnboardingStatus
     }
     updatedAt: Date
   } | null
@@ -106,6 +114,10 @@ export default function ClientOnboardingPage() {
     { key: "documents" as const, label: "Documents", icon: Shield },
     { key: "signature" as const, label: "Signature", icon: PenTool },
     { key: "emergencyContact" as const, label: "Emergency Contact", icon: Phone },
+    { key: "education" as const, label: "Education", icon: GraduationCap },
+    { key: "medical" as const, label: "Medical", icon: Heart },
+    { key: "resume" as const, label: "Resume", icon: FileIcon },
+    { key: "dataPrivacy" as const, label: "Data Privacy", icon: Lock },
   ]
 
   if (loading) {

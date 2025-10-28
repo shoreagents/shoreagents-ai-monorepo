@@ -9,14 +9,14 @@ datasource db {
 }
 
 model activity_posts {
-  id               String            @id
+  id               String            @id @default(cuid())
   staffUserId      String?
   type             PostType
   content          String
   achievement      Json?
   images           String[]
   createdAt        DateTime          @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime          @updatedAt
   clientUserId     String?
   taggedUserIds    String[]          @default([])
   audience         PostAudience?     @default(ALL)
@@ -307,7 +307,7 @@ model notifications {
 }
 
 model performance_metrics {
-  id                String      @id
+  id                String      @id @default(cuid())
   staffUserId       String
   date              DateTime    @default(now())
   mouseMovements    Int         @default(0)
@@ -325,7 +325,7 @@ model performance_metrics {
   tabsSwitched      Int         @default(0)
   productivityScore Int         @default(0)
   createdAt         DateTime    @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime    @updatedAt
   applicationsused  Json?       @default("[]")
   visitedurls       Json?       @default("[]")
   screenshoturls    Json?       @default("[]")
@@ -550,14 +550,14 @@ model staff_users {
 }
 
 model staff_welcome_forms {
-  id               String      @id
+  id               String      @id @default(cuid())
   staffUserId      String      @unique
   name             String
   favoriteFastFood String
   favoriteMovie    String?
   completed        Boolean     @default(false)
   createdAt        DateTime    @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime    @updatedAt
   startDate        String
   additionalInfo   String?
   client           String
@@ -717,7 +717,7 @@ model work_schedules {
 }
 
 model staff_offboarding {
-  id                     String            @id
+  id                     String            @id @default(cuid())
   staffUserId            String            @unique
   initiatedBy            String
   reason                 OffboardingReason
@@ -735,7 +735,7 @@ model staff_offboarding {
   clearanceSignatureUrl  String?
   createdAt              DateTime          @default(now())
   completedAt            DateTime?
-  updatedAt              DateTime
+  updatedAt              DateTime          @updatedAt
   staff_users            staff_users       @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@index([lastWorkingDate])

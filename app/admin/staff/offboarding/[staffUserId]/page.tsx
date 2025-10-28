@@ -109,7 +109,7 @@ export default function AdminOffboardingDetail({ params }: { params: Promise<{ s
         {/* Name and View Profile on same row */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">{offboarding.staffUser.name}</h1>
+            <h1 className="text-3xl font-bold">{offboarding.staff_users?.name || 'Unknown Staff'}</h1>
             <p className="text-muted-foreground">Offboarding Details</p>
           </div>
           <Link href={`/admin/staff/${staffUserId}`}>

@@ -122,9 +122,9 @@ export async function GET(request: NextRequest) {
 
       // Get all visited URLs (from JSON field)
       const allVisitedUrls: any[] = []
-      metrics.forEach((metric) => {
-        if (metric.visitedUrls && Array.isArray(metric.visitedUrls)) {
-          allVisitedUrls.push(...metric.visitedUrls)
+      metrics.forEach((metric: any) => {
+        if (metric.visitedurls && Array.isArray(metric.visitedurls)) {
+          allVisitedUrls.push(...metric.visitedurls)
         }
       })
 

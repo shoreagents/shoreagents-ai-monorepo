@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         name: true,
         email: true,
         avatar: true,
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
             location: true,
@@ -211,12 +211,12 @@ export async function GET(req: NextRequest) {
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
-        position: staff.profile?.currentRole || 'Staff Member',
-        department: staff.company?.companyName || staff.profile?.location || 'General',
-        employmentStatus: staff.profile?.employmentStatus || 'Unknown',
-        startDate: staff.profile?.startDate,
-        salary: staff.profile?.salary,
-        location: staff.profile?.location,
+        position: staff.staff_profiles?.currentRole || 'Staff Member',
+        department: staff.company?.companyName || staff.staff_profiles?.location || 'General',
+        employmentStatus: staff.staff_profiles?.employmentStatus || 'Unknown',
+        startDate: staff.staff_profiles?.startDate,
+        salary: staff.staff_profiles?.salary,
+        location: staff.staff_profiles?.location,
         metrics: staffMetrics.length > 0 ? {
           // Latest day metrics
           latest: latestMetric ? {
@@ -235,9 +235,9 @@ export async function GET(req: NextRequest) {
             urlsVisited: latestMetric.urlsVisited,
             tabsSwitched: latestMetric.tabsSwitched,
             productivityScore: latestMetric.productivityScore,
-            applicationsUsed: (latestMetric as any).applicationsUsed || [],
-            visitedUrls: (latestMetric as any).visitedUrls || [],
-            screenshotUrls: (latestMetric as any).screenshotUrls || []
+            applicationsUsed: (latestMetric as any).applicationsused || [],
+            visitedUrls: (latestMetric as any).visitedurls || [],
+            screenshotUrls: (latestMetric as any).screenshoturls || []
           } : null,
           // Totals across all days
           totals: {
@@ -255,9 +255,9 @@ export async function GET(req: NextRequest) {
             urlsVisited: totals.urlsVisited,
             tabsSwitched: totals.tabsSwitched,
             productivityScore: productivityScore,
-            applicationsUsed: (latestMetric as any)?.applicationsUsed || [],
-            visitedUrls: (latestMetric as any)?.visitedUrls || [],
-            screenshotUrls: (latestMetric as any)?.screenshotUrls || []
+            applicationsUsed: (latestMetric as any)?.applicationsused || [],
+            visitedUrls: (latestMetric as any)?.visitedurls || [],
+            screenshotUrls: (latestMetric as any)?.screenshoturls || []
           },
           // All historical data
           history: staffMetrics,

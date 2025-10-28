@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         companyId: clientUser.company.id
       },
       include: {
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
             work_schedules: true,
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
             employmentStatus: true
           }
         },
-        onboarding: {
+        staff_onboarding: {
           select: {
             isComplete: true
           }
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
             email: true,
             avatar: true,
             role: true,
-            profile: {
+            staff_profiles: {
               select: {
                 currentRole: true,
                 employmentStatus: true

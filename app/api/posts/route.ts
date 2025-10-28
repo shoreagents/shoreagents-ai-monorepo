@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
           avatar: postUser.avatar,
           role: post.staff_users?.role || post.management_users?.role || 'Client'
         },
-        reactions: post.reactions.map(r => {
+        reactions: post.post_reactions?.map(r => {
           const reactUser = r.staff_users || r.client_users || r.management_users
           return {
             id: r.id,
@@ -162,8 +162,8 @@ export async function GET(request: NextRequest) {
               name: reactUser?.name || 'Unknown'
             }
           }
-        }),
-        comments: post.comments.map(c => {
+        }) || [],
+        comments: post.post_comments?.map(c => {
           const commentUser = c.staff_users || c.client_users || c.management_users
           return {
             id: c.id,
@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
               avatar: commentUser?.avatar || null
             }
           }
-        })
+        }) || []
       }
     }).filter(Boolean)
 

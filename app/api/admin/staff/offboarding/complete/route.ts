@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify admin
-    const adminUser = await prisma.managementUser.findUnique({
+    const adminUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Get offboarding record
-    const offboarding = await prisma.staffOffboarding.findUnique({
+    const offboarding = await prisma.staff_offboarding.findUnique({
       where: { staffUserId },
       include: {
-        staffUser: true
+        staff_users: true
       }
     })
 
@@ -42,23 +42,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Update offboarding - mark complete
-    await prisma.staffOffboarding.update({
+    await prisma.staff_offboarding.update({
       where: { id: offboarding.id },
       data: {
         equipmentReturned: true,
         finalPaymentProcessed: true,
         accessRevoked: true,
         status: 'COMPLETED',
-        completedAt: new Date()
+        completedAt: new Date(),
+        updatedAt: new Date()
       }
     })
 
     // Deactivate staff user
-    await prisma.staffUser.update({
+    await prisma.staff_users.update({
       where: { id: staffUserId },
       data: {
         active: false,
-        companyId: null // Remove company assignment
+        companyId: null, // Remove company assignment
+        updatedAt: new Date()
       }
     })
 

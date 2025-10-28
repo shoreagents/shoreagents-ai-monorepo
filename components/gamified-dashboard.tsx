@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   CheckSquare, Coffee, Star, Headphones, Trophy, Activity, MessageSquare,
-  Calendar, Clock, TrendingUp, AlertCircle, Users
+  Calendar, Clock, TrendingUp, AlertCircle, Users, UserMinus
 } from "lucide-react"
 
 interface DashboardData {
@@ -35,6 +35,7 @@ export default function GamifiedDashboard({ offboardingData }: { offboardingData
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
   const [userName, setUserName] = useState("there")
   const [welcomeFormStatus, setWelcomeFormStatus] = useState<{ needsCompletion: boolean } | null>(null)
+  const [offboardingStatus, setOffboardingStatus] = useState<any>(null)
 
   useEffect(() => {
     // Update time
@@ -50,6 +51,7 @@ export default function GamifiedDashboard({ offboardingData }: { offboardingData
     fetchDashboardData()
     fetchOnboardingStatus()
     fetchUserName()
+    fetchOffboardingStatus()
 
     return () => clearInterval(interval)
   }, [])
@@ -101,6 +103,18 @@ export default function GamifiedDashboard({ offboardingData }: { offboardingData
       }
     } catch (err) {
       console.error("Error fetching onboarding status:", err)
+    }
+  }
+
+  const fetchOffboardingStatus = async () => {
+    try {
+      const response = await fetch("/api/offboarding")
+      if (response.ok) {
+        const data = await response.json()
+        setOffboardingStatus(data.offboarding)
+      }
+    } catch (err) {
+      console.error("Error fetching offboarding status:", err)
     }
   }
 
@@ -272,6 +286,172 @@ export default function GamifiedDashboard({ offboardingData }: { offboardingData
               </div>
             </div>
           </Link>
+        )}
+
+        {/* Offboarding Banner */}
+        {offboardingStatus && offboardingStatus.status !== "COMPLETED" && (
+          offboardingStatus.exitInterviewCompleted ? (
+            <div className="block mb-6">
+              <div className="rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl border-orange-500/50 bg-linear-to-r from-orange-900/30 to-amber-900/30">
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="shrink-0 rounded-full p-2.5 bg-orange-500">
+                      <UserMinus className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-bold text-white mb-0.5">
+                        ⚠️ Offboarding Process Active
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-tight">
+                        Your exit interview has been submitted. Offboarding is now being processed by management.
+                      </p>
+                    {offboardingStatus.lastWorkingDate && (
+                      <p className="text-xs text-orange-300 mt-1 font-medium">
+                        Last working day: {new Date(offboardingStatus.lastWorkingDate).toLocaleDateString('en-US', { 
+                          weekday: 'long',
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                        {(() => {
+                          const lastDay = new Date(offboardingStatus.lastWorkingDate)
+                          const today = new Date()
+                          const daysRemaining = Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                          return daysRemaining > 0 ? ` (${daysRemaining} days remaining)` : daysRemaining === 0 ? ' (Today)' : ''
+                        })()}
+                      </p>
+                     )}
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-3 shrink-0">
+                   <div className="text-right">
+                     <div className="text-xl font-bold text-green-400 leading-none">
+                       ✓ Submitted
+                     </div>
+                     <div className="text-xs text-slate-400 mt-0.5">
+                       Processing
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               <div className="mt-3">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+                  <div
+                    className="h-full transition-all duration-500 bg-linear-to-r from-orange-500 to-amber-500"
+                    style={{ 
+                      width: `${(() => {
+                        if (!offboardingStatus.lastWorkingDate) return 0
+                        
+                        const lastWorkingDay = new Date(offboardingStatus.lastWorkingDate)
+                        const today = new Date()
+                        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                        const lastDayStart = new Date(lastWorkingDay.getFullYear(), lastWorkingDay.getMonth(), lastWorkingDay.getDate())
+                        
+                        const diffTime = todayStart.getTime() - lastDayStart.getTime()
+                        const diffDays = diffTime / (1000 * 60 * 60 * 24)
+                        
+                        // If past or on the last working day, show 100%
+                        if (diffDays >= 0) return 100
+                        
+                        // Assume typical offboarding is 30 days from initiation to last day
+                        // Calculate progress: how many days have elapsed out of 30 total
+                        // If 0 days remaining (at last day) = 100%
+                        // If 30 days remaining = 0%
+                        const daysRemaining = Math.abs(diffDays)
+                        const maxOffboardingPeriod = 30
+                        const progress = Math.min(100, Math.max(5, ((maxOffboardingPeriod - daysRemaining) / maxOffboardingPeriod) * 100))
+                        
+                        return progress
+                      })()}%`
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          ) : (
+            <Link href="/offboarding" className="block mb-6">
+              <div className="cursor-pointer rounded-2xl border-2 p-5 shadow-xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] border-orange-500/50 bg-linear-to-r from-orange-900/30 to-amber-900/30 hover:border-orange-500 hover:shadow-orange-500/30">
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="shrink-0 rounded-full p-2.5 bg-orange-500">
+                      <UserMinus className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-bold text-white mb-0.5">
+                        ⚠️ Offboarding Process Active
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-tight">
+                        Complete your exit interview form to finalize the offboarding process.
+                      </p>
+                      {offboardingStatus.lastWorkingDate && (
+                        <p className="text-xs text-orange-300 mt-1 font-medium">
+                          Last working day: {new Date(offboardingStatus.lastWorkingDate).toLocaleDateString('en-US', { 
+                            weekday: 'long',
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                          {(() => {
+                            const lastDay = new Date(offboardingStatus.lastWorkingDate)
+                            const today = new Date()
+                            const daysRemaining = Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                            return daysRemaining > 0 ? ` (${daysRemaining} days remaining)` : daysRemaining === 0 ? ' (Today)' : ''
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-white leading-none">
+                        Start
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Exit Interview
+                      </div>
+                    </div>
+                    <div className="rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap transition-colors bg-orange-500 text-white hover:bg-orange-400">
+                      Start Interview →
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+                    <div
+                      className="h-full transition-all duration-500 bg-linear-to-r from-orange-500 to-amber-500"
+                      style={{ 
+                        width: `${(() => {
+                          if (!offboardingStatus.lastWorkingDate) return 0
+                          
+                          const lastWorkingDay = new Date(offboardingStatus.lastWorkingDate)
+                          const today = new Date()
+                          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                          const lastDayStart = new Date(lastWorkingDay.getFullYear(), lastWorkingDay.getMonth(), lastWorkingDay.getDate())
+                          
+                          const diffTime = todayStart.getTime() - lastDayStart.getTime()
+                          const diffDays = diffTime / (1000 * 60 * 60 * 24)
+                          
+                          // If past or on the last working day, show 100%
+                          if (diffDays >= 0) return 100
+                          
+                          // Assume typical offboarding is 30 days from initiation to last day
+                          // Calculate progress: how many days have elapsed out of 30 total
+                          // If 0 days remaining (at last day) = 100%
+                          // If 30 days remaining = 0%
+                          const daysRemaining = Math.abs(diffDays)
+                          const maxOffboardingPeriod = 30
+                          const progress = Math.min(100, Math.max(5, ((maxOffboardingPeriod - daysRemaining) / maxOffboardingPeriod) * 100))
+                          
+                          return progress
+                        })()}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )
         )}
 
         {/* Onboarding Banner */}

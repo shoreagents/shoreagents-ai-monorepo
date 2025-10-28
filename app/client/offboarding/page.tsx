@@ -119,14 +119,14 @@ export default function ClientOffboardingPage() {
                   <div className="space-y-4 flex-1">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-14 w-14 ring-2 ring-white/50 shadow-lg">
-                        <AvatarImage src={offboarding.staffUser.avatar || undefined} alt={offboarding.staffUser.name} />
+                        <AvatarImage src={offboarding.staff_users?.avatar || undefined} alt={offboarding.staff_users?.name || 'Staff'} />
                         <AvatarFallback className="bg-linear-to-br from-blue-500 via-purple-500 to-pink-500 text-white font-bold text-lg">
-                          {offboarding.staffUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          {offboarding.staff_users?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'ST'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <h3 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                          {offboarding.staffUser.name}
+                          {offboarding.staff_users?.name || 'Unknown Staff'}
                         </h3>
                         {getStatusBadge(offboarding.status)}
                       </div>

@@ -54,6 +54,7 @@ export default function Sidebar() {
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
+  const [offboardingStatus, setOffboardingStatus] = useState<any>(null)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -66,6 +67,7 @@ export default function Sidebar() {
     if (status === "authenticated") {
       fetchProfileData()
       fetchOnboardingStatus()
+      fetchOffboardingStatus()
     }
   }, [status])
 
@@ -92,6 +94,18 @@ export default function Sidebar() {
       }
     } catch (error) {
       console.error("Failed to fetch onboarding status:", error)
+    }
+  }
+
+  const fetchOffboardingStatus = async () => {
+    try {
+      const response = await fetch("/api/offboarding")
+      if (response.ok) {
+        const data = await response.json()
+        setOffboardingStatus(data.offboarding)
+      }
+    } catch (error) {
+      console.error("Failed to fetch offboarding status:", error)
     }
   }
 
@@ -222,6 +236,9 @@ export default function Sidebar() {
                     )}
                     {item.label === "Onboarding" && onboardingStatus && onboardingStatus.completionPercent < 100 && (
                       <span className="ml-auto flex h-2 w-2 items-center justify-center rounded-full bg-red-500 shadow-lg shadow-red-500/50 animate-pulse" />
+                    )}
+                    {item.label === "Offboarding" && offboardingStatus && offboardingStatus.status !== "COMPLETED" && (
+                      <span className="ml-auto flex h-2 w-2 items-center justify-center rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 animate-pulse" />
                     )}
                   </Link>
                 )

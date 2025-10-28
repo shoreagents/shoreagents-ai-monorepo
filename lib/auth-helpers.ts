@@ -13,7 +13,7 @@ export async function getStaffUser() {
 
   const staffUser = await prisma.staff_users.findUnique({
     where: { authUserId: session.user.id },
-    include: { profile: true, company: true }
+    include: { staff_profiles: true, company: true }
   })
 
   return staffUser

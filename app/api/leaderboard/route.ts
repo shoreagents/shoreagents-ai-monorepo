@@ -26,16 +26,16 @@ export async function GET(request: NextRequest) {
             overallScore: true,
           },
         },
-        taskAssignments: {
+        task_assignments: {
           include: {
-            task: {
+            tasks: {
               select: {
                 status: true,
               }
             }
           }
         },
-        performanceMetrics: {
+        performance_metrics: {
           orderBy: { date: 'desc' },
           take: 30, // Last 30 days
           select: {
@@ -50,31 +50,31 @@ export async function GET(request: NextRequest) {
 
     // Calculate rankings
     const rankings = staffUsers
-      .map((user) => {
+      .map((user: any) => {
         const avgReviewScore =
-          user.reviews.length > 0
+          user.reviews?.length > 0
             ? user.reviews.reduce(
-                (sum, review) => sum + Number(review.overallScore || 0),
+                (sum: number, review: any) => sum + Number(review.overallScore || 0),
                 0
               ) / user.reviews.length
             : 0
 
         // Calculate actual completed tasks from task assignments
-        const actualCompletedTasks = user.taskAssignments.filter(
-          ta => ta.task?.status === 'COMPLETED'
-        ).length
+        const actualCompletedTasks = user.task_assignments?.filter(
+          (ta: any) => ta.tasks?.status === 'COMPLETED'
+        ).length || 0
 
         // Calculate points based on completed tasks (50 points per task)
         // Add any existing points from gamification profile
-        const basePoints = user.gamificationProfile?.points || 0
+        const basePoints = user.gamification_profiles?.points || 0
         const taskPoints = actualCompletedTasks * 50
         const totalPoints = basePoints + taskPoints
 
         // Calculate average performance score from recent metrics (last 30 days)
-        const avgPerformanceScore = user.performanceMetrics.length > 0
+        const avgPerformanceScore = user.performance_metrics?.length > 0
           ? Math.round(
-              user.performanceMetrics.reduce((sum, m) => sum + (m.productivityScore || 0), 0) /
-              user.performanceMetrics.length
+              user.performance_metrics.reduce((sum: number, m: any) => sum + (m.productivityScore || 0), 0) /
+              user.performance_metrics.length
             )
           : 0
 
@@ -95,15 +95,15 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.points - a.points)
       .map((user, index) => ({ ...user, rank: index + 1 }))
 
-    // Find current user's StaffUser record (only if not a client user)
+    // Find current user's StaffUser record
     let currentUser = null
-    if (!clientUser) {
-      const staffUser = await prisma.staffUser.findUnique({
-        where: { authUserId: session.user.id }
-      })
-      
-      // Find current user in rankings using staff user ID
-      currentUser = staffUser ? rankings.find((user) => user.id === staffUser.id) || null : null
+    const staffUser = await prisma.staff_users.findUnique({
+      where: { authUserId: session.user.id }
+    })
+    
+    // Find current user in rankings using staff user ID
+    if (staffUser) {
+      currentUser = rankings.find((user) => user.id === staffUser.id) || null
     }
 
     return NextResponse.json({ rankings, currentUser })

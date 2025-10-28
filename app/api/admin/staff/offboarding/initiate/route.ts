@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const adminUser = await prisma.managementUser.findUnique({
+    const adminUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const staffUser = await prisma.staffUser.findUnique({
+    const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId }
     })
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Staff not found" }, { status: 404 })
     }
 
-    const existing = await prisma.staffOffboarding.findUnique({
+    const existing = await prisma.staff_offboarding.findUnique({
       where: { staffUserId }
     })
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Already offboarding" }, { status: 400 })
     }
 
-    const offboarding = await prisma.staffOffboarding.create({
+    const offboarding = await prisma.staff_offboarding.create({
       data: {
         staffUserId,
         initiatedBy: adminUser.id,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         lastWorkingDate: new Date(lastWorkingDate),
         offboardingNotes,
         status: "INITIATED"
-      }
+      } as any
     })
 
     return NextResponse.json({ success: true, offboarding })

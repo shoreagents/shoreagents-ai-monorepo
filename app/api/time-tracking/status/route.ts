@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const staffUserWithProfile = await prisma.staff_users.findUnique({
       where: { id: staffUser.id },
       include: {
-        profile: {
+        staff_profiles: {
           include: {
             work_schedules: true
           }
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    const workSchedules = staffUserWithProfile?.profile?.work_schedules || []
+    const workSchedules = (staffUserWithProfile as any)?.staff_profiles?.work_schedules || []
 
     if (activeEntry) {
       const clockIn = new Date(activeEntry.clockIn)

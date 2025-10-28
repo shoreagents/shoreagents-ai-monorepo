@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     // Get client user
     const clientUser = await prisma.client_users.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.user.email as string },
       include: { company: true }
     })
 
@@ -20,22 +20,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Client user or company not found" }, { status: 404 })
     }
 
-    // Get all staff for this company who have completed onboarding but haven't started yet
+    // Get all staff for this company who have onboarding data
+    // Show all staff who have onboarding records (completed or in progress)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     const staffList = await prisma.staff_users.findMany({
       where: { 
         companyId: clientUser.companyId,
-        // Must have completed onboarding
+        // Must have onboarding data
         staff_onboarding: {
-          isComplete: true
-        },
-        // But start date must be in the future
-        staff_profiles: {
-          startDate: {
-            gt: today
-          }
+          isNot: null
         }
       },
       include: {
@@ -49,6 +44,10 @@ export async function GET(req: NextRequest) {
             documentsStatus: true,
             signatureStatus: true,
             emergencyContactStatus: true,
+            educationStatus: true,
+            medicalStatus: true,
+            resumeStatus: true,
+            dataPrivacyStatus: true,
             updatedAt: true,
             firstName: true,
             lastName: true,
@@ -81,7 +80,7 @@ export async function GET(req: NextRequest) {
         startDateFormatted = startDate.toISOString().split('T')[0] // YYYY-MM-DD
       }
 
-      // Calculate overall onboarding progress
+      // Calculate overall onboarding progress (now 9 sections total)
       let sectionsApproved = 0
       if (staff.staff_onboarding) {
         const statuses = [
@@ -89,7 +88,11 @@ export async function GET(req: NextRequest) {
           staff.staff_onboarding.govIdStatus,
           staff.staff_onboarding.documentsStatus,
           staff.staff_onboarding.signatureStatus,
-          staff.staff_onboarding.emergencyContactStatus
+          staff.staff_onboarding.emergencyContactStatus,
+          staff.staff_onboarding.educationStatus,
+          staff.staff_onboarding.medicalStatus,
+          staff.staff_onboarding.resumeStatus,
+          staff.staff_onboarding.dataPrivacyStatus
         ]
         sectionsApproved = statuses.filter(s => s === "APPROVED").length
       }
@@ -103,13 +106,17 @@ export async function GET(req: NextRequest) {
           completionPercent: staff.staff_onboarding.completionPercent,
           isComplete: staff.staff_onboarding.isComplete,
           sectionsApproved,
-          totalSections: 5,
+          totalSections: 9,
           sections: {
             personalInfo: staff.staff_onboarding.personalInfoStatus,
             govId: staff.staff_onboarding.govIdStatus,
             documents: staff.staff_onboarding.documentsStatus,
             signature: staff.staff_onboarding.signatureStatus,
             emergencyContact: staff.staff_onboarding.emergencyContactStatus,
+            education: staff.staff_onboarding.educationStatus,
+            medical: staff.staff_onboarding.medicalStatus,
+            resume: staff.staff_onboarding.resumeStatus,
+            dataPrivacy: staff.staff_onboarding.dataPrivacyStatus,
           },
           updatedAt: staff.staff_onboarding.updatedAt
         } : null,

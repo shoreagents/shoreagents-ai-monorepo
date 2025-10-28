@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       include: { 
         company: {
           include: {
-            accountManager: {
+            management_users: {
               select: {
                 name: true
               }
@@ -81,24 +81,24 @@ export async function GET(request: NextRequest) {
             points: true,
           }
         },
-        performanceMetrics: {
+        performance_metrics: {
           orderBy: { date: 'desc' },
           take: 7, // Last 7 days
           select: {
             productivityScore: true,
           }
         },
-        taskAssignments: {
-          where: {
-            task: {
-              status: {
-                in: ['TODO', 'IN_PROGRESS']
+        task_assignments: {
+          include: {
+            tasks: {
+              select: {
+                id: true,
+                status: true
               }
             }
-          },
-          select: { id: true }
+          }
         },
-        reviewsReceived: {
+        reviews: {
           where: {
             acknowledgedDate: { not: null }
           },
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
             overallScore: true
           }
         },
-        timeEntries: {
+        time_entries: {
           where: {
             createdAt: {
               gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) // Start of current month
@@ -134,23 +134,23 @@ export async function GET(request: NextRequest) {
     })
 
     // Format the response with calculated fields
-    const formattedStaff = staffList.map(staff => {
+    const formattedStaff = staffList.map((staff: any) => {
       // Calculate days employed
       const startDate = staff.staff_profiles?.startDate || new Date()
       const daysEmployed = Math.floor((new Date().getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
 
       // Calculate average productivity
-      const avgProductivity = staff.performanceMetrics.length > 0
-        ? Math.round(staff.performanceMetrics.reduce((sum, m) => sum + m.productivityScore, 0) / staff.performanceMetrics.length)
+      const avgProductivity = staff.performance_metrics.length > 0
+        ? Math.round(staff.performance_metrics.reduce((sum: number, m: any) => sum + m.productivityScore, 0) / staff.performance_metrics.length)
         : 0
 
       // Calculate average review score
-      const reviewScore = staff.reviewsReceived.length > 0
-        ? Math.round((staff.reviewsReceived.reduce((sum, r) => sum + (r.overallScore ? Number(r.overallScore) : 0), 0) / staff.reviewsReceived.length) * 10) / 10
+      const reviewScore = staff.reviews.length > 0
+        ? Math.round((staff.reviews.reduce((sum: number, r: any) => sum + (r.overallScore ? Number(r.overallScore) : 0), 0) / staff.reviews.length) * 10) / 10
         : 0
 
       // Calculate total hours this month
-      const totalHoursThisMonth = staff.timeEntries.reduce((total, entry) => {
+      const totalHoursThisMonth = staff.time_entries.reduce((total: number, entry: any) => {
         if (entry.clockIn && entry.clockOut) {
           const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60)
           return total + hours
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
       }, 0)
 
       // Get shift time from work schedule
-      const workSchedule = staff.staff_profiles?.work_schedules.find(s => s.isWorkday) || null
+      const workSchedule = staff.staff_profiles?.work_schedules?.find((s: any) => s.isWorkday) || null
       const shift = workSchedule 
         ? `${workSchedule.startTime} - ${workSchedule.endTime}` 
         : "9:00 AM - 6:00 PM"
@@ -173,21 +173,21 @@ export async function GET(request: NextRequest) {
         email: staff.email,
         avatar: staff.avatar,
         assignmentRole: staff.staff_profiles?.currentRole || null,
-        rate: staff.staff_profiles?.salary ? Number(staff.profile.salary) : null,
+        rate: staff.staff_profiles?.salary ? Number(staff.staff_profiles.salary) : null,
         startDate: staff.staff_profiles?.startDate?.toISOString() || new Date().toISOString(),
-        managedBy: clientUser.company.accountManager?.name || "Not assigned",
+        managedBy: clientUser.company.management_users?.name || "Not assigned",
         client: clientUser.company.companyName,
         phone: staff.staff_profiles?.phone || null,
         location: staff.staff_profiles?.location || null,
         employmentStatus: staff.staff_profiles?.employmentStatus || "PROBATION",
         daysEmployed,
         currentRole: staff.staff_profiles?.currentRole || "Staff Member",
-        salary: staff.staff_profiles?.salary ? Number(staff.profile.salary) : 0,
+        salary: staff.staff_profiles?.salary ? Number(staff.staff_profiles.salary) : 0,
         totalLeave: staff.staff_profiles?.totalLeave || 12,
         usedLeave: staff.staff_profiles?.usedLeave || 0,
         hmo: staff.staff_profiles?.hmo || false,
         shift,
-        activeTasks: staff.taskAssignments.length,
+        activeTasks: (staff as any).task_assignments?.filter((ta: any) => ['TODO', 'IN_PROGRESS'].includes(ta.tasks?.status)).length || 0,
         avgProductivity,
         reviewScore,
         totalHoursThisMonth: Math.round(totalHoursThisMonth),

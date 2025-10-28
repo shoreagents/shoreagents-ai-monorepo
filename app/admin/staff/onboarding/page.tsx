@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Eye, CheckCircle2, Clock, AlertCircle, FileText, Circle, CircleDot, PlayCircle, PauseCircle, Play } from "lucide-react"
+import { Loader2, Eye, CheckCircle2, Clock, AlertCircle, FileText, Circle, CircleDot, PlayCircle, PauseCircle, Play, FileCheck } from "lucide-react"
 
 interface StaffOnboarding {
   id: string
@@ -30,6 +30,7 @@ interface StaffOnboarding {
     emergencyContactStatus: string
     updatedAt: string
   } | null
+  contractStatus: string
 }
 
 export default function AdminOnboardingPage() {
@@ -71,6 +72,19 @@ export default function AdminOnboardingPage() {
       return <Badge className="bg-orange-500"><PauseCircle className="h-3 w-3 mr-1" />Started</Badge>
     } else {
       return <Badge className="bg-red-500"><Play className="h-3 w-3 mr-1" />Just Started</Badge>
+    }
+  }
+
+  const getContractBadge = (status: string) => {
+    switch(status) {
+      case "Approved":
+        return <Badge className="bg-green-600"><FileCheck className="h-3 w-3 mr-1" />Approved</Badge>
+      case "Signed":
+        return <Badge className="bg-blue-500"><FileText className="h-3 w-3 mr-1" />Signed</Badge>
+      case "Pending":
+        return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+      default:
+        return <Badge variant="outline" className="border-slate-500 text-slate-400"><AlertCircle className="h-3 w-3 mr-1" />No Contract</Badge>
     }
   }
 
@@ -138,6 +152,7 @@ export default function AdminOnboardingPage() {
                     <TableHead className="text-slate-300">Email</TableHead>
                     <TableHead className="text-slate-300">Progress</TableHead>
                     <TableHead className="text-slate-300">Status</TableHead>
+                    <TableHead className="text-slate-300">Contract Status</TableHead>
                     <TableHead className="text-slate-300">Pending Review</TableHead>
                     <TableHead className="text-slate-300">Last Updated</TableHead>
                     <TableHead className="text-slate-300">Actions</TableHead>
@@ -172,6 +187,9 @@ export default function AdminOnboardingPage() {
                             staff.onboarding?.completionPercent || 0,
                             staff.onboarding?.isComplete || false
                           )}
+                        </TableCell>
+                        <TableCell>
+                          {getContractBadge(staff.contractStatus)}
                         </TableCell>
                         <TableCell>
                           {pending > 0 ? (

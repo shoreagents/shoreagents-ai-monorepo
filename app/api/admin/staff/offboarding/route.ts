@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify admin
-    const adminUser = await prisma.managementUser.findUnique({
+    const adminUser = await prisma.management_users.findUnique({
       where: { authUserId: session.user.id }
     })
 
@@ -28,10 +28,10 @@ export async function GET(req: NextRequest) {
       where.status = 'COMPLETED'
     }
 
-    const offboardings = await prisma.staffOffboarding.findMany({
+    const offboardings = await prisma.staff_offboarding.findMany({
       where,
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

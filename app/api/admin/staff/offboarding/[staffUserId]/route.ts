@@ -14,10 +14,10 @@ export async function GET(
 
     const { staffUserId } = await params
 
-    const offboarding = await prisma.staffOffboarding.findUnique({
+    const offboarding = await prisma.staff_offboarding.findUnique({
       where: { staffUserId },
       include: {
-        staffUser: {
+        staff_users: {
           select: {
             id: true,
             name: true,

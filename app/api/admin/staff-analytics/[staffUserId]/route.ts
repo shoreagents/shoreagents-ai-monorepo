@@ -47,14 +47,14 @@ export async function GET(
             industry: true,
           },
         },
-        profile: {
+        staff_profiles: {
           select: {
             currentRole: true,
             phone: true,
             location: true,
           },
         },
-        performanceMetrics: {
+        performance_metrics: {
           where: {
             date: {
               gte: startDate,
@@ -65,7 +65,7 @@ export async function GET(
             date: "desc",
           },
         },
-        timeEntries: {
+        time_entries: {
           where: {
             clockIn: {
               gte: startDate,
@@ -90,8 +90,8 @@ export async function GET(
       return NextResponse.json({ error: "Staff member not found" }, { status: 404 })
     }
 
-    const metrics = staffMember.performanceMetrics
-    const timeEntries = staffMember.timeEntries
+    const metrics = staffMember.performance_metrics
+    const timeEntries = staffMember.time_entries
 
     // Calculate overall stats
     const totalMouseClicks = metrics.reduce((sum, m) => sum + m.mouseClicks, 0)
@@ -111,10 +111,10 @@ export async function GET(
 
     // Collect all visited URLs with timestamps
     const allVisitedUrls: any[] = []
-    metrics.forEach((metric) => {
-      if (metric.visitedUrls && Array.isArray(metric.visitedUrls)) {
+    metrics.forEach((metric: any) => {
+      if (metric.visitedurls && Array.isArray(metric.visitedurls)) {
         allVisitedUrls.push(
-          ...metric.visitedUrls.map((urlData: any) => ({
+          ...metric.visitedurls.map((urlData: any) => ({
             ...urlData,
             date: metric.date,
           }))
@@ -151,10 +151,10 @@ export async function GET(
 
     // Collect all applications used
     const allApplications: any[] = []
-    metrics.forEach((metric) => {
-      if (metric.applicationsUsed && Array.isArray(metric.applicationsUsed)) {
+    metrics.forEach((metric: any) => {
+      if (metric.applicationsused && Array.isArray(metric.applicationsused)) {
         allApplications.push(
-          ...metric.applicationsUsed.map((appData: any) => ({
+          ...metric.applicationsused.map((appData: any) => ({
             ...appData,
             date: metric.date,
           }))
@@ -217,10 +217,10 @@ export async function GET(
 
     // Get screenshots
     const allScreenshots: any[] = []
-    metrics.forEach((metric) => {
-      if (metric.screenshotUrls && Array.isArray(metric.screenshotUrls)) {
+    metrics.forEach((metric: any) => {
+      if (metric.screenshoturls && Array.isArray(metric.screenshoturls)) {
         allScreenshots.push(
-          ...metric.screenshotUrls.map((screenshotData: any) => ({
+          ...metric.screenshoturls.map((screenshotData: any) => ({
             ...screenshotData,
             date: metric.date,
           }))
@@ -237,7 +237,7 @@ export async function GET(
         avatar: staffMember.avatar,
         role: staffMember.role,
         company: staffMember.company,
-        profile: staffMember.profile,
+        profile: staffMember.staff_profiles,
         isClockedIn,
         currentEntry,
       },
