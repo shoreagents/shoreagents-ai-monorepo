@@ -163,6 +163,13 @@ export async function GET(req: NextRequest) {
       staffLocation: contract.employeeAddress
     };
 
+    console.log('📧 [CONTRACT API] Contact details:', {
+      email: staffUser.email,
+      phone: staffProfile?.phone,
+      address: contract.employeeAddress,
+      staffProfileExists: !!staffProfile
+    });
+
     if (contract.signed) {
       return NextResponse.json({ 
         success: true, 

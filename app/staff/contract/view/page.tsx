@@ -64,6 +64,10 @@ export default function StaffContractViewPage() {
       }
       
       const data = await response.json()
+      console.log('📋 [CONTRACT VIEW] Full contract data:', data.contract)
+      console.log('📧 [CONTRACT VIEW] Email:', data.contract.staffEmail)
+      console.log('📱 [CONTRACT VIEW] Phone:', data.contract.staffPhone)
+      console.log('📍 [CONTRACT VIEW] Address:', data.contract.employeeAddress)
       setContract(data.contract)
     } catch (err) {
       setError("Failed to load contract details")
