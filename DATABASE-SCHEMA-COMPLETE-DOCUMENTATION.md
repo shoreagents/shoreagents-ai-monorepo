@@ -80,7 +80,7 @@ model staff_offboarding {
 
 ## 📊 COMPLETE TABLE RELATIONSHIPS
 
-### Total Tables: **31**
+### Total Tables: **33**
 
 ### Core User Tables (3)
 ```
@@ -1475,7 +1475,7 @@ DIRECT_URL="postgresql://user:pass@host:5432/db"
 ## 📊 STATISTICS
 
 - **Total Tables**: 33
-- **Total Enums**: 23
+- **Total Enums**: 28
 - **Total API Endpoints**: 100+
 - **User Types**: 3 (Staff, Client, Management)
 - **Roles**: 8 (across all user types)
