@@ -54,8 +54,22 @@ export async function GET() {
       }, { status: 404 })
     }
 
+    // Transform response to match frontend expectations (camelCase)
     return NextResponse.json({
-      company: staffUser.company,
+      company: {
+        id: staffUser.company.id,
+        companyName: staffUser.company.companyName,
+        tradingName: staffUser.company.tradingName,
+        logo: staffUser.company.logo,
+        industry: staffUser.company.industry,
+        location: staffUser.company.location,
+        billingEmail: staffUser.company.billingEmail,
+        phone: staffUser.company.phone,
+        website: staffUser.company.website,
+        bio: staffUser.company.bio,
+        clientUsers: staffUser.company.client_users || [], // Transform snake_case to camelCase
+        accountManager: staffUser.company.management_users || null
+      },
       clientUsersCount: staffUser.company.client_users?.length || 0,
     })
   } catch (error) {
