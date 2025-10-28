@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { 
   Search, 
   Briefcase, 
@@ -26,7 +27,8 @@ import {
   Zap,
   CheckCircle,
   Mail,
-  XCircle
+  XCircle,
+  User
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -66,12 +68,19 @@ interface JobRequest {
   company_id: string
 }
 
+interface PreferredTime {
+  datetime: string
+  timezone: string
+  timezoneDisplay: string
+}
+
 interface InterviewRequest {
   id: string
   clientUserId: string
   bpocCandidateId: string
   candidateFirstName: string
-  preferredTimes: string[]
+  preferredTimes: (string | PreferredTime)[]
+  preferred_times?: (string | PreferredTime)[] // snake_case variant
   clientNotes: string | null
   status: string
   createdAt: string
@@ -92,6 +101,27 @@ interface InterviewRequest {
 }
 
 type TabType = 'candidates' | 'job-requests' | 'interviews'
+
+// Helper functions for time picker (30-minute intervals)
+function parseTimeSlot(time: string) {
+  if (!time) return { date: '', hour: 9, minute: 0, ampm: 'AM' } // Default to 9 AM
+  const [datePart, timePart] = time.split('T')
+  const [hourStr, minuteStr] = timePart.split(':')
+  const hour24 = parseInt(hourStr)
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+  const ampm = hour24 >= 12 ? 'PM' : 'AM'
+  return { date: datePart, hour: hour12, minute: parseInt(minuteStr), ampm }
+}
+
+function buildTimeSlot(date: string, hour: number, minute: number, ampm: string) {
+  let hour24 = hour
+  if (ampm === 'PM' && hour !== 12) hour24 = hour + 12
+  if (ampm === 'AM' && hour === 12) hour24 = 0
+  
+  const hourStr = hour24.toString().padStart(2, '0')
+  const minStr = minute.toString().padStart(2, '0')
+  return `${date}T${hourStr}:${minStr}`
+}
 
 export default function AdminRecruitmentPage() {
   const [activeTab, setActiveTab] = useState<TabType>('candidates')
@@ -123,7 +153,14 @@ export default function AdminRecruitmentPage() {
     companyId: '',
     candidateEmail: '',
     candidatePhone: '',
-    clientPreferredStart: '' // NEW: Client's preferred start date
+    clientPreferredStart: '',
+    salary: '',
+    shiftType: 'DAY_SHIFT' as 'DAY_SHIFT' | 'NIGHT_SHIFT' | 'MID_SHIFT',
+    workLocation: 'OFFICE' as 'WORK_FROM_HOME' | 'OFFICE' | 'HYBRID',
+    hmoIncluded: false,
+    leaveCredits: 12,
+    clientTimezone: '',
+    workHours: '9 hours (includes 1 hour break, 15 min either side)'
   })
   const [hiring, setHiring] = useState(false)
   
@@ -140,6 +177,65 @@ export default function AdminRecruitmentPage() {
   // Finalize Hire Modal State (consolidated with confirm acceptance)
   const [confirmAcceptanceModalOpen, setConfirmAcceptanceModalOpen] = useState(false)
   const [interviewToConfirm, setInterviewToConfirm] = useState<InterviewRequest | null>(null)
+
+  // Helper function to format times with dual timezone display
+  function formatPreferredTimeWithTimezone(time: string | PreferredTime) {
+    try {
+      // Handle new object format
+      if (typeof time === 'object' && time !== null && time.datetime) {
+        const dateObj = new Date(time.datetime)
+        if (isNaN(dateObj.getTime())) {
+          return {
+            clientTime: 'Invalid Date',
+            clientTimezone: time.timezoneDisplay || '',
+            fullDisplay: `Invalid Date (${time.timezoneDisplay || 'Unknown'})`
+          }
+        }
+        const clientTime = dateObj.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+        
+        return {
+          clientTime,
+          clientTimezone: time.timezoneDisplay || time.timezone || 'UTC',
+          fullDisplay: `${clientTime} (${time.timezoneDisplay || time.timezone || 'UTC'})`
+        }
+      }
+      
+      // Handle old string format
+      const dateObj = new Date(time as string)
+      if (isNaN(dateObj.getTime())) {
+        return {
+          clientTime: 'Invalid Date',
+          clientTimezone: '',
+          fullDisplay: time as string
+        }
+      }
+      const formatted = dateObj.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+      return {
+        clientTime: formatted,
+        clientTimezone: 'UTC',
+        fullDisplay: formatted
+      }
+    } catch (error) {
+      console.error('Error formatting time:', error, time)
+      return {
+        clientTime: 'Error',
+        clientTimezone: '',
+        fullDisplay: typeof time === 'string' ? time : JSON.stringify(time)
+      }
+    }
+  }
   const [confirmFormData, setConfirmFormData] = useState({
     confirmedStartDate: '',
     staffEmail: '',
@@ -304,18 +400,28 @@ export default function AdminRecruitmentPage() {
     
     try {
       // Fetch candidate details from BPOC database to get email
+      console.log('🔍 Fetching candidate from BPOC:', interview.bpocCandidateId)
       const bpocResponse = await fetch(`/api/admin/recruitment/candidates/${interview.bpocCandidateId}`)
       let candidateEmail = ''
       let candidatePhone = ''
       let candidatePosition = ''
       
+      console.log('📡 BPOC Response status:', bpocResponse.status)
+      
       if (bpocResponse.ok) {
         const bpocData = await bpocResponse.json()
+        console.log('📦 BPOC Data received:', JSON.stringify(bpocData, null, 2))
+        
         if (bpocData.success && bpocData.candidate) {
           candidateEmail = bpocData.candidate.email || ''
           candidatePhone = bpocData.candidate.phone || ''
           candidatePosition = bpocData.candidate.position || ''
+          console.log('✅ Candidate data extracted:', { candidateEmail, candidatePhone, candidatePosition })
+        } else {
+          console.warn('⚠️ BPOC response missing success or candidate field')
         }
+      } else {
+        console.error('❌ BPOC fetch failed:', bpocResponse.statusText)
       }
       
       // Get client's company ID from interview request
@@ -328,12 +434,20 @@ export default function AdminRecruitmentPage() {
         preferredStart = date.toISOString().split('T')[0] // Format as YYYY-MM-DD
       }
       
+      // Get client timezone from their profile
+      console.log('🌍 Looking for client timezone in:', interview.client_users)
+      const clientTimezone = interview.client_users?.client_profiles?.timezone || 'UTC'
+      console.log('🌍 Client timezone found:', clientTimezone)
+      
       console.log('📋 Pre-filling hire form:', {
         position: candidatePosition,
         companyId: clientCompanyId,
         companyName: interview.client_users?.company?.companyName || interview.company_name,
         preferredStart: preferredStart,
-        clientName: interview.client_users?.name || interview.client_name
+        clientName: interview.client_users?.name || interview.client_name,
+        candidateEmail,
+        candidatePhone,
+        clientTimezone
       })
       
       setHireFormData({
@@ -341,7 +455,14 @@ export default function AdminRecruitmentPage() {
         companyId: clientCompanyId, // Pre-fill from client's company
         candidateEmail: candidateEmail, // Pre-fill from BPOC
         candidatePhone: candidatePhone, // Pre-fill from BPOC
-        clientPreferredStart: preferredStart // Pre-fill from client's request
+        clientPreferredStart: preferredStart, // Pre-fill from client's request
+        salary: '', // Admin will enter
+        shiftType: 'DAY_SHIFT', // Default
+        workLocation: 'OFFICE', // Default (first option)
+        hmoIncluded: false, // Default NO, approved after regularization
+        leaveCredits: 12, // Company standard
+        clientTimezone: clientTimezone, // Client's business timezone
+        workHours: '9 hours (includes 1 hour break, 15 min either side)' // Default Philippines standard
       })
     } catch (error) {
       console.error('Error fetching candidate details:', error)
@@ -351,7 +472,14 @@ export default function AdminRecruitmentPage() {
         companyId: '',
         candidateEmail: '',
         candidatePhone: '',
-        clientPreferredStart: ''
+        clientPreferredStart: '',
+        salary: '',
+        shiftType: 'DAY_SHIFT',
+        workLocation: 'OFFICE',
+        hmoIncluded: false,
+        leaveCredits: 12,
+        clientTimezone: '',
+        workHours: '9 hours (includes 1 hour break, 15 min either side)'
       })
     } finally {
       setHiring(false)
@@ -382,6 +510,15 @@ export default function AdminRecruitmentPage() {
       return
     }
 
+    if (!hireFormData.salary) {
+      toast({
+        title: "Error",
+        description: "Salary is required",
+        variant: "destructive"
+      })
+      return
+    }
+
     if (!hireFormData.candidateEmail) {
       toast({
         title: "Error",
@@ -404,7 +541,15 @@ export default function AdminRecruitmentPage() {
           candidateEmail: hireFormData.candidateEmail,
           candidatePhone: hireFormData.candidatePhone,
           bpocCandidateId: interviewToHire.bpocCandidateId,
-          clientPreferredStart: hireFormData.clientPreferredStart // NEW: Client's preferred start date
+          clientPreferredStart: hireFormData.clientPreferredStart,
+          // New comprehensive offer details
+          salary: hireFormData.salary,
+          shiftType: hireFormData.shiftType,
+          workLocation: hireFormData.workLocation,
+          hmoIncluded: hireFormData.hmoIncluded,
+          leaveCredits: hireFormData.leaveCredits,
+          clientTimezone: hireFormData.clientTimezone,
+          workHours: hireFormData.workHours
         })
       })
 
@@ -1032,15 +1177,36 @@ export default function AdminRecruitmentPage() {
                                 {status.toUpperCase().replace(/-/g, ' ')}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Requested: {new Date(interview.created_at).toLocaleString('en-US', {
+                            <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground mt-1">
+                              <span>
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                {new Date(interview.created_at).toLocaleString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit'
                               })}
-                            </p>
+                              </span>
+                              {(interview.client_name || interview.client_users?.name) && (
+                                <span className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">•</span>
+                                  <User className="h-3 w-3 inline" />
+                                  <span className="font-medium text-foreground">
+                                    {interview.client_name || interview.client_users?.name}
+                                  </span>
+                                </span>
+                              )}
+                              {(interview.company_name || interview.client_users?.company?.companyName) && (
+                                <span className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">•</span>
+                                  <Building2 className="h-3 w-3 inline" />
+                                  <span className="font-medium text-blue-400">
+                                    {interview.company_name || interview.client_users?.company?.companyName}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -1169,28 +1335,29 @@ export default function AdminRecruitmentPage() {
 
                         {/* Preferred Interview Times - Only show before hiring stage */}
                         {(status === 'pending' || status === 'scheduled' || status === 'completed') && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm font-medium">Client's Preferred Interview Times:</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {(() => {
-                                const times = interview.preferredTimes || interview.preferred_times || [];
-                                const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
-                                return timesArray.map((time, idx) => (
-                                  <Badge key={idx} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/50">
-                                    {new Date(time).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </Badge>
-                                ));
-                              })()}
-                            </div>
                           </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(() => {
+                              const times = interview.preferredTimes || interview.preferred_times || [];
+                              const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
+                                console.log('[Admin] Processing times for', interview.candidateFirstName, timesArray);
+                                return timesArray.map((time, idx) => {
+                                  console.log('[Admin] Time', idx, ':', time, 'Type:', typeof time);
+                                  const formatted = formatPreferredTimeWithTimezone(time);
+                                  console.log('[Admin] Formatted:', formatted);
+                                  return (
+                                <Badge key={idx} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/50">
+                                      {formatted.fullDisplay}
+                                </Badge>
+                                  );
+                                });
+                            })()}
+                          </div>
+                        </div>
                         )}
 
                         {/* Client Notes */}
@@ -1257,18 +1424,18 @@ export default function AdminRecruitmentPage() {
                         {/* Show "Finalize Hire" and "Mark Declined" buttons for offer-sent */}
                         {status === 'offer-sent' && (
                           <div className="flex gap-2 w-full">
-                            <Button 
-                              variant="default" 
-                              size="sm" 
+                          <Button 
+                            variant="default" 
+                            size="sm" 
                               className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                              onClick={(e) => {
-                                e.stopPropagation()
+                            onClick={(e) => {
+                              e.stopPropagation()
                                 openConfirmAcceptanceModal(interview)
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Finalize Hire
-                            </Button>
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Finalize Hire
+                          </Button>
                             <Button 
                               variant="destructive" 
                               size="sm" 
@@ -1440,53 +1607,207 @@ export default function AdminRecruitmentPage() {
 
       {/* Interview Detail Modal */}
       <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
-            <DialogTitle>Interview Request Details</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-slate-100">Interview Request Details</DialogTitle>
           </DialogHeader>
           {selectedInterview && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold text-foreground">{selectedInterview.candidateFirstName}</h3>
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">
+                      {selectedInterview.candidateFirstName.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-100">{selectedInterview.candidateFirstName}</h3>
+                    <p className="text-sm text-slate-400 font-mono">{selectedInterview.bpoc_candidate_id || selectedInterview.bpocCandidateId}</p>
+                  </div>
+                </div>
                 <Badge className={
                   selectedInterview.status === 'pending' 
                     ? 'bg-blue-600 text-white border border-blue-500'
                     : selectedInterview.status === 'scheduled'
                     ? 'bg-green-600 text-white border border-green-500'
-                    : 'bg-muted text-foreground border border-border'
+                    : selectedInterview.status === 'completed'
+                    ? 'bg-emerald-600 text-white border border-emerald-500'
+                    : selectedInterview.status === 'hired'
+                    ? 'bg-purple-600 text-white border border-purple-500'
+                    : 'bg-slate-700 text-slate-200 border border-slate-600'
                 }>
                   {selectedInterview.status}
                 </Badge>
               </div>
 
+              {/* Scheduled Interview Details - Show if status is scheduled, completed, or hired */}
+              {(selectedInterview.status === 'scheduled' || selectedInterview.status === 'completed' || selectedInterview.status === 'hired') && selectedInterview.scheduledTime && (
+                <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-5 w-5 text-green-400" />
+                    <h4 className="font-semibold text-green-300">Scheduled Interview</h4>
+                  </div>
+                  <div className="space-y-2">
               <div>
-                <label className="text-sm text-muted-foreground">Candidate ID</label>
-                <p className="text-foreground font-mono text-sm">{selectedInterview.bpoc_candidate_id}</p>
+                      <label className="text-xs text-slate-400">Date & Time</label>
+                      <p className="text-slate-100 font-medium">
+                        {new Date(selectedInterview.scheduledTime).toLocaleString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
               </div>
-
+                    {selectedInterview.meetingLink && (
               <div>
-                <label className="text-sm text-muted-foreground">Preferred Interview Times</label>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  {(() => {
-                    const times = selectedInterview.preferredTimes || selectedInterview.preferred_times || [];
-                    const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
-                    return timesArray.map((time, idx) => (
-                      <li key={idx} className="text-foreground">{new Date(time).toLocaleString()}</li>
-                    ));
-                  })()}
-                </ul>
-              </div>
-
-              {selectedInterview.client_notes && (
-                <div>
-                  <label className="text-sm text-muted-foreground">Client Notes</label>
-                  <p className="text-foreground mt-1">{selectedInterview.client_notes}</p>
+                        <label className="text-xs text-slate-400">Meeting Link</label>
+                        <a 
+                          href={selectedInterview.meetingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline block break-all"
+                        >
+                          {selectedInterview.meetingLink}
+                        </a>
+                      </div>
+                    )}
+                    {selectedInterview.adminNotes && (
+                      <div>
+                        <label className="text-xs text-slate-400">Admin Notes</label>
+                        <p className="text-slate-200 text-sm bg-slate-800/50 p-2 rounded border border-slate-700">
+                          {selectedInterview.adminNotes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              <div>
-                <label className="text-sm text-muted-foreground">Request Date</label>
-                <p className="text-foreground">{new Date(selectedInterview.created_at).toLocaleString()}</p>
+              {/* Client's Preferred Times */}
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                <label className="text-sm font-medium text-slate-300 block mb-3">Client's Preferred Interview Times</label>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const times = selectedInterview.preferredTimes || selectedInterview.preferred_times || [];
+                    const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
+                    return timesArray.map((time, idx) => {
+                      const formatted = formatPreferredTimeWithTimezone(time);
+                      return (
+                        <Badge key={idx} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/50">
+                          {formatted.fullDisplay}
+                        </Badge>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Client Notes */}
+              {selectedInterview.client_notes && (
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                  <label className="text-sm font-medium text-slate-300 block mb-2">Client Notes</label>
+                  <p className="text-slate-200">{selectedInterview.client_notes}</p>
+                </div>
+              )}
+
+              {/* Request Date */}
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                <label className="text-sm font-medium text-slate-300 block mb-2">Request Date</label>
+                <p className="text-slate-200">
+                  {new Date(selectedInterview.createdAt || selectedInterview.created_at).toLocaleString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-slate-700">
+                {/* Mark as Complete - Show for scheduled interviews */}
+                {selectedInterview.status === 'scheduled' && (
+                  <Button 
+                    variant="default" 
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(`/api/admin/recruitment/interviews/${selectedInterview.id}/complete`, {
+                          method: 'PATCH'
+                        })
+                        if (response.ok) {
+                          toast({ title: "Success", description: "Interview marked as completed" })
+                          setSelectedInterview(null)
+                          fetchInterviews()
+                        } else {
+                          throw new Error('Failed to mark complete')
+                        }
+                      } catch (error) {
+                        toast({ title: "Error", description: "Failed to mark interview as complete", variant: "destructive" })
+                      }
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Completed
+                  </Button>
+                )}
+
+                {/* Reschedule - Show for scheduled interviews */}
+                {selectedInterview.status === 'scheduled' && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
+                    onClick={() => {
+                      setInterviewToSchedule(selectedInterview)
+                      setScheduleFormData({
+                        scheduledTime: selectedInterview.scheduledTime || '',
+                        meetingLink: selectedInterview.meetingLink || '',
+                        adminNotes: selectedInterview.adminNotes || ''
+                      })
+                      setSelectedInterview(null)
+                      setScheduleModalOpen(true)
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Reschedule
+                  </Button>
+                )}
+
+                {/* Cancel Interview - Show for pending or scheduled */}
+                {(selectedInterview.status === 'pending' || selectedInterview.status === 'scheduled') && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-red-500/50 text-red-300 hover:bg-red-500/10"
+                    onClick={async () => {
+                      if (!confirm('Are you sure you want to cancel this interview?')) return
+                      try {
+                        const response = await fetch(`/api/admin/recruitment/interviews/${selectedInterview.id}/cancel`, {
+                          method: 'PATCH'
+                        })
+                        if (response.ok) {
+                          toast({ title: "Success", description: "Interview cancelled" })
+                          setSelectedInterview(null)
+                          fetchInterviews()
+                        } else {
+                          throw new Error('Failed to cancel')
+                        }
+                      } catch (error) {
+                        toast({ title: "Error", description: "Failed to cancel interview", variant: "destructive" })
+                      }
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancel Interview
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -1495,10 +1816,10 @@ export default function AdminRecruitmentPage() {
 
       {/* Send Job Offer Modal */}
       <Dialog open={hireModalOpen} onOpenChange={setHireModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-green-600" />
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-slate-100">
+              <Mail className="h-6 w-6 text-green-400" />
               Send Job Offer
             </DialogTitle>
           </DialogHeader>
@@ -1528,58 +1849,59 @@ export default function AdminRecruitmentPage() {
                 </div>
               )}
 
-              <div className="p-4 bg-muted rounded-lg">
-                <h3 className="font-semibold text-foreground mb-2">Candidate Information</h3>
+              <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                <h3 className="font-semibold text-slate-200 mb-2">Candidate Information</h3>
                 <div className="space-y-1 text-sm">
-                  <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-medium">{interviewToHire.candidateFirstName}</span></p>
-                  <p><span className="text-muted-foreground">BPOC ID:</span> <span className="text-foreground font-mono text-xs">{interviewToHire.bpocCandidateId}</span></p>
+                  <p><span className="text-slate-400">Name:</span> <span className="text-slate-100 font-medium">{interviewToHire.candidateFirstName}</span></p>
+                  <p><span className="text-slate-400">BPOC ID:</span> <span className="text-slate-300 font-mono text-xs">{interviewToHire.bpocCandidateId}</span></p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="position">Position / Job Title *</Label>
+                  <Label htmlFor="position" className="text-sm font-medium text-slate-200">Position / Job Title *</Label>
                   <Input
                     id="position"
                     placeholder="e.g., Customer Service Representative"
                     value={hireFormData.position}
                     onChange={(e) => setHireFormData(prev => ({ ...prev, position: e.target.value }))}
                     required
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company">Assign to Company *</Label>
+                  <Label htmlFor="company" className="text-sm font-medium text-slate-200">Assign to Company *</Label>
                   {interviewToHire?.client_users?.company ? (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950 border-2 border-blue-300 dark:border-blue-700 rounded-lg">
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    <div className="p-3 bg-blue-500/10 border-2 border-blue-500/50 rounded-xl">
+                      <p className="text-sm font-medium text-blue-300">
                         ✓ {interviewToHire.client_users.company.companyName}
                       </p>
-                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      <p className="text-xs text-blue-400 mt-1">
                         Pre-selected from client's hire request
                       </p>
                     </div>
                   ) : (
-                    <Select
-                      value={hireFormData.companyId}
-                      onValueChange={(value) => setHireFormData(prev => ({ ...prev, companyId: value }))}
-                    >
-                      <SelectTrigger id="company">
-                        <SelectValue placeholder="Select company" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <Select
+                    value={hireFormData.companyId}
+                    onValueChange={(value) => setHireFormData(prev => ({ ...prev, companyId: value }))}
+                  >
+                    <SelectTrigger id="company" className="bg-slate-800/50 border-slate-700/50 text-slate-200">
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id} className="text-slate-200">
+                          {company.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="candidateEmail">Candidate Email *</Label>
+                  <Label htmlFor="candidateEmail" className="text-sm font-medium text-slate-200">Candidate Email *</Label>
                   <Input
                     id="candidateEmail"
                     type="email"
@@ -1587,41 +1909,148 @@ export default function AdminRecruitmentPage() {
                     value={hireFormData.candidateEmail}
                     onChange={(e) => setHireFormData(prev => ({ ...prev, candidateEmail: e.target.value }))}
                     required
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
                   />
-                  <p className="text-xs text-muted-foreground">Job offer will be sent to this email</p>
+                  <p className="text-xs text-slate-400">Job offer will be sent to this email</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="candidatePhone">Candidate Phone (Optional)</Label>
+                  <Label htmlFor="candidatePhone" className="text-sm font-medium text-slate-200">Candidate Phone (Optional)</Label>
                   <Input
                     id="candidatePhone"
                     type="tel"
                     placeholder="+63 XXX XXX XXXX"
                     value={hireFormData.candidatePhone}
                     onChange={(e) => setHireFormData(prev => ({ ...prev, candidatePhone: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="clientPreferredStart">Preferred Start Date (Optional)</Label>
+                  <Label htmlFor="clientPreferredStart" className="text-sm font-medium text-slate-200">Client's Preferred Start Date (Optional)</Label>
                   <Input
                     id="clientPreferredStart"
                     type="date"
                     value={hireFormData.clientPreferredStart}
                     onChange={(e) => setHireFormData(prev => ({ ...prev, clientPreferredStart: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    This is the client's preferred start date. The final start date will be negotiated with the candidate.
+                  <p className="text-xs text-slate-400">
+                    The final start date will be negotiated with the candidate.
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="salary" className="text-sm font-medium text-slate-200">Salary (Total Monthly) *</Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    placeholder="e.g., 25000"
+                    value={hireFormData.salary}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, salary: e.target.value }))}
+                    required
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-slate-400">Total monthly salary in PHP. Can be adjusted later after speaking with candidate.</p>
+              </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="shiftType" className="text-sm font-medium text-slate-200">Shift Type *</Label>
+                    <Select
+                      value={hireFormData.shiftType}
+                      onValueChange={(value: any) => setHireFormData(prev => ({ ...prev, shiftType: value }))}
+                    >
+                      <SelectTrigger id="shiftType" className="bg-slate-800/50 border-slate-700/50 text-slate-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        <SelectItem value="DAY_SHIFT" className="text-slate-200">Day Shift</SelectItem>
+                        <SelectItem value="NIGHT_SHIFT" className="text-slate-200">Night Shift</SelectItem>
+                        <SelectItem value="MID_SHIFT" className="text-slate-200">Mid Shift</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="workLocation" className="text-sm font-medium text-slate-200">Work Location *</Label>
+                    <Select
+                      value={hireFormData.workLocation}
+                      onValueChange={(value: any) => setHireFormData(prev => ({ ...prev, workLocation: value }))}
+                    >
+                      <SelectTrigger id="workLocation" className="bg-slate-800/50 border-slate-700/50 text-slate-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        <SelectItem value="OFFICE" className="text-slate-200">Office</SelectItem>
+                        <SelectItem value="HYBRID" className="text-slate-200">Hybrid</SelectItem>
+                        <SelectItem value="WORK_FROM_HOME" className="text-slate-200">Work From Home</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="clientTimezone" className="text-sm font-medium text-slate-200">Client's Business Timezone</Label>
+                  <Input
+                    id="clientTimezone"
+                    placeholder="e.g., Australia/Brisbane, America/Los_Angeles"
+                    value={hireFormData.clientTimezone}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, clientTimezone: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-slate-400">The timezone where the client operates their business hours.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="workHours" className="text-sm font-medium text-slate-200">Work Hours Schedule</Label>
+                  <Input
+                    id="workHours"
+                    placeholder="e.g., 9 hours (includes 1 hour break, 15 min either side)"
+                    value={hireFormData.workHours}
+                    onChange={(e) => setHireFormData(prev => ({ ...prev, workHours: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-slate-400">Staff will work a 9-hour shift in Philippines time matching client's business hours.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="leaveCredits" className="text-sm font-medium text-slate-200">Annual Leave Credits</Label>
+                    <Input
+                      id="leaveCredits"
+                      type="number"
+                      value={hireFormData.leaveCredits}
+                      onChange={(e) => setHireFormData(prev => ({ ...prev, leaveCredits: parseInt(e.target.value) || 12 }))}
+                      className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                    />
+                    <p className="text-xs text-slate-400">Company standard: 12 days per year</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="hmoIncluded" className="flex items-center justify-between text-sm font-medium text-slate-200">
+                      <span>HMO Included</span>
+                      <Switch
+                        id="hmoIncluded"
+                        checked={hireFormData.hmoIncluded}
+                        onCheckedChange={(checked) => setHireFormData(prev => ({ ...prev, hmoIncluded: checked }))}
+                      />
+                    </Label>
+                    <p className="text-xs text-slate-400">
+                      {hireFormData.hmoIncluded 
+                        ? "🎉 Bonus! Client providing HMO from Day 1" 
+                        : "Default: HMO approved after regularization"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-xl">
                 <div className="flex gap-2">
-                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <Mail className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Next Steps</p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <p className="text-sm font-medium text-blue-300">Next Steps</p>
+                    <p className="text-xs text-blue-400">
                       After sending the offer, the candidate will receive an email with details. They can accept or decline the offer.
                       Once accepted, they'll receive a signup link to create their account and complete onboarding.
                     </p>
@@ -1629,11 +2058,11 @@ export default function AdminRecruitmentPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-4">
                 <Button
                   onClick={handleHireCandidate}
                   disabled={hiring}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
                   {hiring ? (
                     <>
@@ -1651,6 +2080,7 @@ export default function AdminRecruitmentPage() {
                   variant="outline"
                   onClick={() => setHireModalOpen(false)}
                   disabled={hiring}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
                   Cancel
                 </Button>
@@ -1675,11 +2105,14 @@ export default function AdminRecruitmentPage() {
               <div className="p-3 bg-blue-500/10 border border-blue-500/50 rounded-lg">
                 <p className="text-sm font-medium text-blue-300 mb-2">Client's Preferred Times:</p>
                 <div className="space-y-1">
-                  {interviewToSchedule.preferredTimes.map((time, idx) => (
-                    <p key={idx} className="text-xs text-blue-400/80">
-                      • {new Date(time).toLocaleString()}
-                    </p>
-                  ))}
+                  {interviewToSchedule.preferredTimes.map((time, idx) => {
+                    const formatted = formatPreferredTimeWithTimezone(time);
+                    return (
+                      <p key={idx} className="text-xs text-blue-400/80">
+                        • {formatted.fullDisplay}
+                      </p>
+                    );
+                  })}
                 </div>
                 {interviewToSchedule.clientNotes && (
                   <p className="text-xs text-blue-400/60 mt-2 italic">
@@ -1693,14 +2126,68 @@ export default function AdminRecruitmentPage() {
                 <Label htmlFor="scheduledTime" className="text-sm font-medium text-slate-200">
                   Scheduled Time *
                 </Label>
-                <Input
-                  id="scheduledTime"
-                  type="datetime-local"
-                  value={scheduleFormData.scheduledTime}
-                  onChange={(e) => setScheduleFormData(prev => ({ ...prev, scheduledTime: e.target.value }))}
-                  required
-                  className="bg-slate-800/50 border-slate-700/50 text-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
-                />
+                {(() => {
+                  const parsed = parseTimeSlot(scheduleFormData.scheduledTime)
+                  return (
+                    <div className="flex gap-2">
+                      {/* Date */}
+                      <input
+                        type="date"
+                        value={parsed.date}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(e.target.value, parsed.hour, parsed.minute, parsed.ampm)
+                          setScheduleFormData(prev => ({ ...prev, scheduledTime: newTime }))
+                        }}
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-200"
+                        min={new Date().toISOString().split('T')[0]}
+                        required
+                      />
+                      
+                      {/* Hour */}
+                      <select
+                        value={parsed.hour}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parseInt(e.target.value), parsed.minute, parsed.ampm)
+                          setScheduleFormData(prev => ({ ...prev, scheduledTime: newTime }))
+                        }}
+                        className="w-20 px-2 py-2 bg-slate-800/50 border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-200"
+                        required
+                      >
+                        {Array.from({length: 12}, (_, i) => i + 1).map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                      
+                      {/* Minute - ONLY :00 and :30 */}
+                      <select
+                        value={parsed.minute}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parsed.hour, parseInt(e.target.value), parsed.ampm)
+                          setScheduleFormData(prev => ({ ...prev, scheduledTime: newTime }))
+                        }}
+                        className="w-20 px-2 py-2 bg-slate-800/50 border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-200"
+                        required
+                      >
+                        <option value="0">:00</option>
+                        <option value="30">:30</option>
+                      </select>
+                      
+                      {/* AM/PM */}
+                      <select
+                        value={parsed.ampm}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parsed.hour, parsed.minute, e.target.value)
+                          setScheduleFormData(prev => ({ ...prev, scheduledTime: newTime }))
+                        }}
+                        className="w-20 px-2 py-2 bg-slate-800/50 border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-200"
+                        required
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Meeting Link */}
@@ -1795,39 +2282,39 @@ export default function AdminRecruitmentPage() {
               </div>
 
               {/* Confirmed Start Date */}
-              <div className="space-y-2">
+                <div className="space-y-2">
                 <Label htmlFor="confirmedStartDate" className="text-slate-200 font-medium">
                   Confirmed Start Date *
-                </Label>
-                <Input
+                  </Label>
+                  <Input
                   id="confirmedStartDate"
-                  type="date"
+                    type="date"
                   value={confirmFormData.confirmedStartDate}
                   onChange={(e) => setConfirmFormData({ ...confirmFormData, confirmedStartDate: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-slate-100"
-                />
-                <p className="text-xs text-slate-400">
+                  />
+                  <p className="text-xs text-slate-400">
                   Pre-filled from client's preferred date. Update if candidate requested a different date.
-                </p>
-              </div>
+                  </p>
+                </div>
 
               {/* Staff Email */}
-              <div className="space-y-2">
+                <div className="space-y-2">
                 <Label htmlFor="staffEmail" className="text-slate-200 font-medium">
-                  Staff Email Address *
-                </Label>
-                <Input
-                  id="staffEmail"
-                  type="email"
+                    Staff Email Address *
+                  </Label>
+                  <Input
+                    id="staffEmail"
+                    type="email"
                   value={confirmFormData.staffEmail}
                   onChange={(e) => setConfirmFormData({ ...confirmFormData, staffEmail: e.target.value })}
-                  placeholder="staff@example.com"
+                    placeholder="staff@example.com"
                   className="bg-slate-800 border-slate-700 text-slate-100 font-medium placeholder:text-slate-500"
-                />
-                <p className="text-xs text-slate-400">
+                  />
+                  <p className="text-xs text-slate-400">
                   Pre-filled from candidate's BPOC profile. This email will be used for staff signup and onboarding.
-                </p>
-              </div>
+                  </p>
+                </div>
 
               {/* Admin Notes */}
               <div className="space-y-2">

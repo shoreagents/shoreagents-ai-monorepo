@@ -802,6 +802,23 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [clientTimezone, setClientTimezone] = useState<string>('Australia/Brisbane')
+
+  // Fetch client's timezone from their profile
+  useEffect(() => {
+    async function fetchClientTimezone() {
+      try {
+        const response = await fetch('/api/client/profile')
+        const data = await response.json()
+        if (data.profile?.timezone) {
+          setClientTimezone(data.profile.timezone)
+        }
+      } catch (error) {
+        console.error('Failed to fetch client timezone:', error)
+      }
+    }
+    fetchClientTimezone()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -816,13 +833,21 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
     try {
       setSubmitting(true)
 
+      // Format times with timezone information
+      const timesWithTimezone = times.map(time => ({
+        datetime: time,
+        timezone: clientTimezone,
+        timezoneDisplay: getTimezoneDisplay()
+      }))
+
       const response = await fetch('/api/client/interviews/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bpoc_candidate_id: candidate.id,
-          preferred_times: times,
+          preferred_times: timesWithTimezone,
           client_notes: notes,
+          client_timezone: clientTimezone, // Send timezone separately too
         }),
       })
 
@@ -844,6 +869,27 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
     }
   }
 
+  // Helper functions for time slot parsing and building
+  function parseTimeSlot(time: string) {
+    if (!time) return { date: '', hour: 9, minute: 0, ampm: 'AM' }
+    const [datePart, timePart] = time.split('T')
+    const [hourStr, minuteStr] = timePart.split(':')
+    const hour24 = parseInt(hourStr)
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+    const ampm = hour24 >= 12 ? 'PM' : 'AM'
+    return { date: datePart, hour: hour12, minute: parseInt(minuteStr), ampm }
+  }
+  
+  function buildTimeSlot(date: string, hour: number, minute: number, ampm: string) {
+    let hour24 = hour
+    if (ampm === 'PM' && hour !== 12) hour24 = hour + 12
+    if (ampm === 'AM' && hour === 12) hour24 = 0
+    
+    const hourStr = hour24.toString().padStart(2, '0')
+    const minStr = minute.toString().padStart(2, '0')
+    return `${date}T${hourStr}:${minStr}`
+  }
+
   function addTimeSlot() {
     setPreferredTimes([...preferredTimes, ''])
   }
@@ -856,6 +902,23 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
     const updated = [...preferredTimes]
     updated[index] = value
     setPreferredTimes(updated)
+  }
+
+  // Get timezone display name
+  function getTimezoneDisplay() {
+    const tzMap: Record<string, string> = {
+      'Australia/Sydney': 'Sydney Time (AEDT)',
+      'Australia/Melbourne': 'Melbourne Time (AEDT)',
+      'Australia/Brisbane': 'Brisbane Time (AEST)',
+      'Australia/Adelaide': 'Adelaide Time (ACDT)',
+      'Australia/Perth': 'Perth Time (AWST)',
+      'America/New_York': 'Eastern Time (ET)',
+      'America/Chicago': 'Central Time (CT)',
+      'America/Denver': 'Mountain Time (MT)',
+      'America/Los_Angeles': 'Pacific Time (PT)',
+      'Pacific/Auckland': 'New Zealand Time (NZDT)',
+    }
+    return tzMap[clientTimezone] || clientTimezone
   }
 
   if (success) {
@@ -931,30 +994,85 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
               <Calendar className="w-4 h-4 text-blue-600" />
               Preferred Interview Times
             </label>
-            <p className="text-xs text-gray-600 mb-3">
+            <p className="text-xs text-gray-600 mb-2">
               Provide 2-3 time options that work for you. We'll check availability and confirm.
             </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
+              <p className="text-xs text-blue-900 font-medium">
+                🌍 Times in your timezone: <span className="font-bold">{getTimezoneDisplay()}</span>
+              </p>
+            </div>
             <div className="space-y-3">
-              {preferredTimes.map((time, index) => (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="datetime-local"
-                    value={time}
-                    onChange={(e) => updateTimeSlot(index, e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
-                    min={new Date().toISOString().slice(0, 16)}
-                  />
-                  {preferredTimes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTimeSlot(index)}
-                      className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              {preferredTimes.map((time, index) => {
+                const parsed = parseTimeSlot(time)
+                return (
+                  <div key={index} className="space-y-2">
+                    <div className="flex gap-2">
+                      {/* Date */}
+                      <input
+                        type="date"
+                        value={parsed.date}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(e.target.value, parsed.hour, parsed.minute, parsed.ampm)
+                          updateTimeSlot(index, newTime)
+                        }}
+                        className="flex-1 px-3 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                      
+                      {/* Hour */}
+                      <select
+                        value={parsed.hour}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parseInt(e.target.value), parsed.minute, parsed.ampm)
+                          updateTimeSlot(index, newTime)
+                        }}
+                        className="w-20 px-2 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
+                      >
+                        {Array.from({length: 12}, (_, i) => i + 1).map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                      
+                      {/* Minute - ONLY :00 and :30 */}
+                      <select
+                        value={parsed.minute}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parsed.hour, parseInt(e.target.value), parsed.ampm)
+                          updateTimeSlot(index, newTime)
+                        }}
+                        className="w-20 px-2 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
+                      >
+                        <option value="0">:00</option>
+                        <option value="30">:30</option>
+                      </select>
+                      
+                      {/* AM/PM */}
+                      <select
+                        value={parsed.ampm}
+                        onChange={(e) => {
+                          const newTime = buildTimeSlot(parsed.date, parsed.hour, parsed.minute, e.target.value)
+                          updateTimeSlot(index, newTime)
+                        }}
+                        className="w-20 px-2 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+
+                      {preferredTimes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTimeSlot(index)}
+                          className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
             {preferredTimes.length < 5 && (
               <button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getCandidateById } from '@/lib/bpoc-db'
 
 /**
  * GET /api/client/interviews
@@ -34,11 +35,33 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    console.log(`📋 [CLIENT] Fetched ${interviewRequests.length} interview requests for client ${clientUser.id}`)
+    // 4. Enrich with candidate data (avatar) from BPOC database
+    const enrichedInterviews = await Promise.all(
+      interviewRequests.map(async (interview) => {
+        try {
+          const candidate = await getCandidateById(interview.bpocCandidateId)
+          console.log(`🖼️ Candidate ${interview.bpocCandidateId} avatar_url:`, candidate?.avatar_url)
+          return {
+            ...interview,
+            candidateAvatar: candidate?.avatar_url || null
+          }
+        } catch (error) {
+          console.error(`❌ Failed to fetch candidate ${interview.bpocCandidateId}:`, error)
+          return {
+            ...interview,
+            candidateAvatar: null
+          }
+        }
+      })
+    )
+    
+    console.log(`📋 [CLIENT] Sample interview with avatar:`, enrichedInterviews[0]?.candidateAvatar)
+
+    console.log(`📋 [CLIENT] Fetched ${enrichedInterviews.length} interview requests for client ${clientUser.id}`)
 
     return NextResponse.json({
       success: true,
-      interviews: interviewRequests
+      interviews: enrichedInterviews
     })
 
   } catch (error) {

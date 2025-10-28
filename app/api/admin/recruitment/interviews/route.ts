@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
       include: {
         client_users: {
           include: {
-            company: true
+            company: true,
+            client_profiles: true // ✅ Include client profile to get timezone
           }
         }
       },
@@ -50,6 +51,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [ADMIN] Found ${interviews.length} interview requests`)
     console.log(`📊 [ADMIN] Interview statuses:`, formattedInterviews.map(i => ({ name: i.candidateFirstName, status: i.status })))
+    console.log(`🕒 [ADMIN] Sample preferredTimes:`, formattedInterviews[0]?.preferredTimes)
+    console.log(`🌍 [ADMIN] Sample client timezone:`, formattedInterviews[0]?.client_users?.client_profiles?.timezone)
 
     return NextResponse.json({
       success: true,

@@ -35,7 +35,15 @@ export async function POST(request: NextRequest) {
       candidateEmail,
       candidatePhone,
       bpocCandidateId,
-      clientPreferredStart // Optional: client's preferred start date
+      clientPreferredStart, // Optional: client's preferred start date
+      // New comprehensive offer details
+      salary,
+      shiftType,
+      workLocation,
+      hmoIncluded,
+      leaveCredits,
+      clientTimezone,
+      workHours
     } = body
 
     // Validation
@@ -125,24 +133,47 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ [ADMIN] Job offer sent: ${jobAcceptance.id}`)
 
+    // Prepare comprehensive offer details
+    const offerDetails = {
+      position,
+      companyName: company.companyName,
+      salary: salary || 'TBD',
+      shiftType: shiftType || 'DAY_SHIFT',
+      workLocation: workLocation || 'WORK_FROM_HOME',
+      hmoIncluded: hmoIncluded || false,
+      leaveCredits: leaveCredits || 12,
+      clientTimezone: clientTimezone || 'UTC',
+      workHours: workHours || '9 hours (includes 1 hour break, 15 min either side)',
+      preferredStartDate: clientPreferredStart || 'To be negotiated'
+    }
+
+    console.log('📋 [ADMIN] Offer Details:', offerDetails)
+
     // Generate offer acceptance link (not signup yet!)
     const offerLink = `${process.env.NEXT_PUBLIC_APP_URL}/offer/accept?jobId=${jobAcceptance.id}`
     console.log(`📧 [ADMIN] Offer acceptance link (email to be sent): ${offerLink}`)
 
-    // TODO: Send email to candidate with offer details and acceptance link
-    // This will include:
-    // - Position details
-    // - Company information
-    // - Preferred start date
+    // TODO: Send email to candidate with comprehensive offer details and acceptance link
+    // Email will include:
+    // - Position & Company details
+    // - Salary: ${offerDetails.salary} PHP/month
+    // - Shift Type: ${offerDetails.shiftType}
+    // - Work Location: ${offerDetails.workLocation}
+    // - HMO: ${offerDetails.hmoIncluded ? 'Included from Day 1 🎉' : 'After regularization'}
+    // - Leave Credits: ${offerDetails.leaveCredits} days/year
+    // - Work Hours: ${offerDetails.workHours} aligned with ${offerDetails.clientTimezone}
+    // - Preferred Start: ${offerDetails.preferredStartDate}
     // - Accept/Decline buttons
 
     // Log activity
     console.log(`🎉 [ADMIN] Job offer sent for ${position} at ${company.companyName}`)
+    console.log(`💰 Salary: ₱${salary}/month | 🏥 HMO: ${hmoIncluded ? 'Day 1' : 'Post-regularization'} | 🏖️ Leave: ${leaveCredits} days`)
 
     return NextResponse.json({
       success: true,
       message: 'Job offer sent to candidate. Waiting for their response.',
       jobAcceptance,
+      offerDetails, // Include all offer details in response
       offerLink, // Return this for now until email is implemented
       nextSteps: 'Candidate will receive an email to accept or decline the offer. Once accepted, you can finalize the start date and they will be able to create their account.'
     })

@@ -80,7 +80,7 @@ model staff_offboarding {
 
 ## 📊 COMPLETE TABLE RELATIONSHIPS
 
-### Total Tables: **33**
+### Total Tables: **35**
 
 ### Core User Tables (3)
 ```
@@ -120,10 +120,15 @@ model staff_offboarding {
 
 ## 👥 USER TYPES & ROLES
 
-### 1. **Management Users** (`management_users`)
+### 1. **Management Users** (`management_users` + `management_profiles`)
 **Roles:**
 - `ADMIN` - Full system access
 - `MANAGER` - Department-specific access
+
+**Profile Fields:**
+- Employment details (startDate, salary, leave tracking)
+- **Timezone** (default: "Asia/Manila")
+- Bio & responsibilities (ShoreAgents role description)
 
 **Departments:**
 - CEO_EXECUTIVE
@@ -1242,17 +1247,19 @@ SYSTEM                   CLIENT                   STAFF
 
 ## 📦 COMPLETE TABLE REFERENCE
 
-### Summary of All 31 Tables
+### Summary of All 35 Tables
 
 | # | Table Name | Purpose | Key Relationships |
 |---|------------|---------|-------------------|
 | 1 | `management_users` | Admin/Manager accounts | → company (manages) |
-| 2 | `staff_users` | Employee accounts | → company, multiple children |
-| 3 | `client_users` | Client portal users | → company |
-| 4 | `company` | Client companies | ← staff, clients, tasks |
-| 5 | `staff_profiles` | Employment details | → staff_users |
-| 6 | `staff_onboarding` | 9-step onboarding | → staff_users |
-| 7 | `staff_offboarding` | Offboarding process | → staff_users |
+| 2 | `management_profiles` | Management employment details + timezone | → management_users |
+| 3 | `staff_users` | Employee accounts | → company, multiple children |
+| 4 | `client_users` | Client portal users | → company |
+| 5 | `client_profiles` | Client profile + timezone | → client_users |
+| 6 | `company` | Client companies | ← staff, clients, tasks |
+| 7 | `staff_profiles` | Employment details + timezone | → staff_users |
+| 8 | `staff_onboarding` | 9-step onboarding | → staff_users |
+| 9 | `staff_offboarding` | Offboarding process | → staff_users |
 | 8 | `staff_personal_records` | Gov IDs, documents | → staff_users |
 | 9 | `staff_welcome_forms` | Welcome questionnaire | → staff_users |
 | 10 | `client_profiles` | Client user details | → client_users |
@@ -1265,7 +1272,8 @@ SYSTEM                   CLIENT                   STAFF
 | 17 | `subtasks` | Checklist items | → tasks |
 | 18 | `performance_metrics` | Activity tracking | → staff_users |
 | 19 | `reviews` | Performance reviews | → staff_users |
-| 20 | `tickets` | Support tickets | → staff, client, management |
+| 20 | `salary_history` | Salary increase tracking | staff/management users |
+| 21 | `tickets` | Support tickets | → staff, client, management |
 | 21 | `ticket_responses` | Ticket messages | → tickets |
 | 22 | `activity_posts` | Social feed posts | → staff, client, management |
 | 23 | `post_reactions` | Post reactions | → activity_posts |
@@ -1474,8 +1482,8 @@ DIRECT_URL="postgresql://user:pass@host:5432/db"
 
 ## 📊 STATISTICS
 
-- **Total Tables**: 33
-- **Total Enums**: 28
+- **Total Tables**: 35
+- **Total Enums**: 30
 - **Total API Endpoints**: 100+
 - **User Types**: 3 (Staff, Client, Management)
 - **Roles**: 8 (across all user types)

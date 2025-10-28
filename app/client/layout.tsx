@@ -49,6 +49,26 @@ export default async function ClientLayout({
     redirect("/login/staff")
   }
 
+  // Update client_profiles lastLoginAt if profile exists
+  try {
+    const profile = await prisma.client_profiles.findUnique({
+      where: { clientUserId: clientUser.id }
+    })
+    if (profile) {
+      await prisma.client_profiles.update({
+        where: { clientUserId: clientUser.id },
+        data: { 
+          lastLoginAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+    }
+  } catch (error) {
+    console.error('[ClientLayout] Failed to update profile lastLoginAt:', error)
+  }
+
+  console.log('[ClientLayout] Company logo:', clientUser.company?.logo)
+
   return (
     <WebSocketProvider userId={clientUser.id} userName={clientUser.name}>
       <div className="flex min-h-screen bg-gray-50">

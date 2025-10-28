@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { User, Mail, Briefcase, Phone, Clock, Edit2, Save, X, Building2, Bell, Camera, Loader2, TrendingUp, Calendar } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { User, Mail, Briefcase, Phone, Clock, Edit2, Save, X, Building2, Camera, Loader2, TrendingUp, Calendar } from "lucide-react"
 import { uploadClientFile, deleteClientFile } from "@/lib/supabase-upload"
 import { useToast } from "@/hooks/use-toast"
 
@@ -19,10 +19,6 @@ type ClientProfile = {
   mobilePhone: string | null
   timezone: string | null
   bio: string | null
-  notifyTaskCreate: boolean
-  notifyTaskComplete: boolean
-  notifyReviews: boolean
-  notifyWeeklyReports: boolean
   tasksCreated: number
   reviewsSubmitted: number
   lastLoginAt: string | null
@@ -61,7 +57,6 @@ export default function ClientProfilePage() {
   const [editedClientUser, setEditedClientUser] = useState<Partial<ClientUser>>({})
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
-  const [notificationLoading, setNotificationLoading] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => {
@@ -88,11 +83,7 @@ export default function ClientProfilePage() {
       directPhone: data?.profile?.directPhone || '',
       mobilePhone: data?.profile?.mobilePhone || '',
       timezone: data?.profile?.timezone || '',
-      bio: data?.profile?.bio || '',
-      notifyTaskCreate: data?.profile?.notifyTaskCreate ?? true,
-      notifyTaskComplete: data?.profile?.notifyTaskComplete ?? true,
-      notifyReviews: data?.profile?.notifyReviews ?? true,
-      notifyWeeklyReports: data?.profile?.notifyWeeklyReports ?? true
+      bio: data?.profile?.bio || ''
     })
     setEditedClientUser({
       name: data?.client_users?.name || '',
@@ -156,49 +147,6 @@ export default function ClientProfilePage() {
     }
   }
 
-  const updateNotificationPreference = async (preference: string, value: boolean) => {
-    if (!data?.profile) return
-
-    setNotificationLoading(preference)
-    
-    try {
-      const response = await fetch('/api/client/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [preference]: value }),
-      })
-      
-      if (!response.ok) throw new Error('Failed to update notification preference')
-      
-      // Update local state immediately for better UX
-      setData(prev => {
-        if (!prev?.profile) return prev
-        return {
-          ...prev,
-          profile: {
-            ...prev.profile,
-            [preference]: value
-          }
-        }
-      })
-      
-      toast({
-        title: "Notification Updated",
-        description: `Your ${preference.replace('notify', '').replace(/([A-Z])/g, ' $1').toLowerCase()} preference has been updated.`,
-        duration: 3000
-      })
-    } catch (error) {
-      console.error('Error updating notification preference:', error)
-      toast({
-        title: "Update Failed",
-        description: "Failed to update notification preference. Please try again.",
-        variant: "destructive",
-        duration: 5000
-      })
-    } finally {
-      setNotificationLoading(null)
-    }
-  }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -568,34 +516,6 @@ export default function ClientProfilePage() {
           </div>
         </div>
 
-        {/* Notification Preferences Skeleton */}
-        <div className="p-6 bg-white shadow-sm border-l-4 border-l-indigo-500 rounded-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <div className="h-6 w-6 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-          
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-300 rounded-lg">
-                      <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                    <div>
-                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-1"></div>
-                      <div className="h-3 w-48 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                  </div>
-                  <div className="h-6 w-12 bg-gray-200 rounded-full animate-pulse"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     )
   }
@@ -874,13 +794,37 @@ export default function ClientProfilePage() {
 
               <div>
                 <Label className="text-gray-900 font-medium mb-2 block">Timezone</Label>
-                <Input
+                <Select
                   value={editedProfile.timezone || ''}
-                  onChange={(e) => setEditedProfile({...editedProfile, timezone: e.target.value})}
+                  onValueChange={(value) => setEditedProfile({...editedProfile, timezone: value})}
                   disabled={savingProfile}
-                  className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="e.g., America/New_York, Asia/Manila"
-                />
+                >
+                  <SelectTrigger className="bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <SelectValue placeholder="Select your timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* USA Timezones */}
+                    <SelectItem value="America/New_York">🇺🇸 USA - Eastern Time (NY, FL, GA, NC, VA)</SelectItem>
+                    <SelectItem value="America/Chicago">🇺🇸 USA - Central Time (TX, IL, WI, TN, MO)</SelectItem>
+                    <SelectItem value="America/Denver">🇺🇸 USA - Mountain Time (CO, AZ, UT, NM)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">🇺🇸 USA - Pacific Time (CA, WA, OR, NV)</SelectItem>
+                    <SelectItem value="America/Anchorage">🇺🇸 USA - Alaska Time</SelectItem>
+                    <SelectItem value="Pacific/Honolulu">🇺🇸 USA - Hawaii Time</SelectItem>
+                    
+                    {/* Australia Timezones */}
+                    <SelectItem value="Australia/Sydney">🇦🇺 Australia - Sydney / NSW</SelectItem>
+                    <SelectItem value="Australia/Melbourne">🇦🇺 Australia - Melbourne / Victoria</SelectItem>
+                    <SelectItem value="Australia/Brisbane">🇦🇺 Australia - Brisbane / Queensland</SelectItem>
+                    <SelectItem value="Australia/Adelaide">🇦🇺 Australia - Adelaide / South Australia</SelectItem>
+                    <SelectItem value="Australia/Perth">🇦🇺 Australia - Perth / Western Australia</SelectItem>
+                    <SelectItem value="Australia/Darwin">🇦🇺 Australia - Darwin / Northern Territory</SelectItem>
+                    <SelectItem value="Australia/Hobart">🇦🇺 Australia - Hobart / Tasmania</SelectItem>
+                    
+                    {/* New Zealand Timezones */}
+                    <SelectItem value="Pacific/Auckland">🇳🇿 New Zealand</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">Start typing to search for your timezone</p>
               </div>
 
               <div>
@@ -919,17 +863,15 @@ export default function ClientProfilePage() {
                 </div>
               )}
 
-              {profile?.timezone && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg mt-1">
-                    <Clock className="h-4 w-4 text-gray-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600 mb-1">Timezone</p>
-                    <p className="text-gray-900 font-medium">{profile.timezone}</p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg mt-1">
+                  <Clock className="h-4 w-4 text-gray-600" />
                 </div>
-              )}
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-1">Timezone</p>
+                  <p className="text-gray-900 font-medium">{profile?.timezone || 'Not set'}</p>
+                </div>
+              </div>
 
               {profile?.bio && (
                 <div className="flex items-start gap-3">
@@ -1107,209 +1049,6 @@ export default function ClientProfilePage() {
         </div>
       </Card>
 
-      {/* Notification Preferences */}
-      <Card className="p-6 bg-white shadow-sm border-l-4 border-l-indigo-500">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-indigo-100 rounded-lg">
-            <Bell className="h-6 w-6 text-indigo-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900">Notification Preferences</h3>
-        </div>
-        
-        {editing ? (
-          <div className="space-y-6">
-            {/* Task Created Notification */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500 rounded-lg">
-                    <Briefcase className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <Label className="text-gray-900 font-medium text-base">Task Created</Label>
-                    <p className="text-sm text-gray-600">Get notified when new tasks are assigned to you</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={editedProfile.notifyTaskCreate ?? true}
-                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskCreate: checked})}
-                  disabled={savingProfile}
-                  className="data-[state=checked]:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Task Completed Notification */}
-            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500 rounded-lg">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <Label className="text-gray-900 font-medium text-base">Task Completed</Label>
-                    <p className="text-sm text-gray-600">Get notified when tasks are marked as completed</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={editedProfile.notifyTaskComplete ?? true}
-                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyTaskComplete: checked})}
-                  disabled={savingProfile}
-                  className="data-[state=checked]:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Reviews Notification */}
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-500 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <Label className="text-gray-900 font-medium text-base">Reviews</Label>
-                    <p className="text-sm text-gray-600">Get notified about review requests and feedback</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={editedProfile.notifyReviews ?? true}
-                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyReviews: checked})}
-                  disabled={savingProfile}
-                  className="data-[state=checked]:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Weekly Reports Notification */}
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500 rounded-lg">
-                    <Calendar className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <Label className="text-gray-900 font-medium text-base">Weekly Reports</Label>
-                    <p className="text-sm text-gray-600">Get notified about weekly performance reports</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={editedProfile.notifyWeeklyReports ?? true}
-                  onCheckedChange={(checked) => setEditedProfile({...editedProfile, notifyWeeklyReports: checked})}
-                  disabled={savingProfile}
-                  className="data-[state=checked]:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Task Created Toggle */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500 rounded-lg">
-                    <Briefcase className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 font-medium text-base">Task Created</p>
-                    <p className="text-sm text-gray-600">New task assignments</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {notificationLoading === 'notifyTaskCreate' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                  )}
-                  <Switch
-                    checked={profile?.notifyTaskCreate ?? true}
-                    onCheckedChange={(checked) => updateNotificationPreference('notifyTaskCreate', checked)}
-                    disabled={notificationLoading === 'notifyTaskCreate'}
-                    className="data-[state=checked]:bg-blue-600"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Task Completed Toggle */}
-            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500 rounded-lg">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 font-medium text-base">Task Completed</p>
-                    <p className="text-sm text-gray-600">Task completion updates</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {notificationLoading === 'notifyTaskComplete' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-green-600" />
-                  )}
-                  <Switch
-                    checked={profile?.notifyTaskComplete ?? true}
-                    onCheckedChange={(checked) => updateNotificationPreference('notifyTaskComplete', checked)}
-                    disabled={notificationLoading === 'notifyTaskComplete'}
-                    className="data-[state=checked]:bg-green-600"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Reviews Toggle */}
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-500 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 font-medium text-base">Reviews</p>
-                    <p className="text-sm text-gray-600">Review requests and feedback</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {notificationLoading === 'notifyReviews' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
-                  )}
-                  <Switch
-                    checked={profile?.notifyReviews ?? true}
-                    onCheckedChange={(checked) => updateNotificationPreference('notifyReviews', checked)}
-                    disabled={notificationLoading === 'notifyReviews'}
-                    className="data-[state=checked]:bg-purple-600"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Reports Toggle */}
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500 rounded-lg">
-                    <Calendar className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 font-medium text-base">Weekly Reports</p>
-                    <p className="text-sm text-gray-600">Performance reports</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {notificationLoading === 'notifyWeeklyReports' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
-                  )}
-                  <Switch
-                    checked={profile?.notifyWeeklyReports ?? true}
-                    onCheckedChange={(checked) => updateNotificationPreference('notifyWeeklyReports', checked)}
-                    disabled={notificationLoading === 'notifyWeeklyReports'}
-                    className="data-[state=checked]:bg-orange-600"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
     </div>
   )
 }

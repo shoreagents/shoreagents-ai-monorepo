@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 import { 
   Briefcase, 
   Plus, 
@@ -87,6 +88,7 @@ type TabType = 'talent-pool' | 'job-requests' | 'interviews'
 
 export default function RecruitmentPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('talent-pool')
   
   // Job Requests State
@@ -246,7 +248,11 @@ export default function RecruitmentPage() {
       const data = await response.json()
 
       if (data.success) {
-        alert("✅ Hire request sent to admin successfully!")
+        toast({
+          title: "✅ Hire Request Submitted Successfully",
+          description: "Our admin team has been notified and will proceed with the following steps:\n\n1. Send a formal job offer to the candidate\n2. Schedule a confirmation call to discuss role details\n3. Verify the candidate's interest and availability\n\nYou'll be notified once the candidate confirms their acceptance. Thank you for your patience!",
+          duration: 8000,
+        })
         setHireModalOpen(false)
         setHireData({ preferredStartDate: '', hireNotes: '' })
         setSelectedInterview(null)
@@ -257,7 +263,11 @@ export default function RecruitmentPage() {
       }
     } catch (error) {
       console.error('❌ Error sending hire request:', error)
-      alert(`Failed to send hire request: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({
+        title: "Error",
+        description: `Failed to send hire request: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      })
     } finally {
       setHireRequestingId(null)
     }

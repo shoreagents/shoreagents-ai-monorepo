@@ -126,6 +126,7 @@ model company {
   job_acceptances      job_acceptances[]
   staff_users          staff_users[]
   tasks                tasks[]
+  work_schedules       work_schedules[]
 }
 
 model document_comments {
@@ -267,23 +268,69 @@ model kudos {
 }
 
 model management_users {
-  id               String             @id
-  authUserId       String             @unique
-  name             String
-  role             ManagementRole     @default(MANAGER)
-  avatar           String?
-  phone            String?
-  department       Department
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  email            String             @unique
-  coverPhoto       String?
-  activity_posts   activity_posts[]
-  company          company[]
-  post_comments    post_comments[]
-  post_reactions   post_reactions[]
-  ticket_responses ticket_responses[]
-  tickets          tickets[]
+  id                  String                @id
+  authUserId          String                @unique
+  name                String
+  role                ManagementRole        @default(MANAGER)
+  avatar              String?
+  phone               String?
+  department          Department
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  email               String                @unique
+  coverPhoto          String?
+  activity_posts      activity_posts[]
+  company             company[]
+  management_profiles management_profiles?
+  post_comments       post_comments[]
+  post_reactions      post_reactions[]
+  ticket_responses    ticket_responses[]
+  tickets             tickets[]
+}
+
+model management_profiles {
+  id                 String           @id
+  managementUserId   String           @unique
+  phone              String?
+  timezone           String?          @default("Asia/Manila")
+  startDate          DateTime
+  daysEmployed       Int              @default(0)
+  currentRole        String
+  salary             Decimal?         @db.Decimal(10, 2)
+  lastPayIncrease    DateTime?
+  lastIncreaseAmount Decimal?         @db.Decimal(10, 2)
+  totalLeave         Int              @default(12)
+  usedLeave          Int              @default(0)
+  vacationUsed       Int              @default(0)
+  sickUsed           Int              @default(0)
+  hmo                Boolean          @default(true)
+  bio                String?
+  responsibilities   String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  civilStatus        String?
+  dateOfBirth        DateTime?
+  gender             String?
+  management_users   management_users @relation(fields: [managementUserId], references: [id], onDelete: Cascade)
+}
+
+model salary_history {
+  id               String   @id
+  userId           String
+  userType         String
+  previousSalary   Decimal  @db.Decimal(10, 2)
+  newSalary        Decimal  @db.Decimal(10, 2)
+  increaseAmount   Decimal  @db.Decimal(10, 2)
+  increasePercent  Decimal? @db.Decimal(5, 2)
+  reason           String?
+  notes            String?
+  approvedBy       String?
+  effectiveDate    DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([effectiveDate])
+  @@index([userId, effectiveDate])
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -516,6 +563,7 @@ model staff_profiles {
   staffUserId        String           @unique
   phone              String?
   location           String?
+  timezone           String?          @default("Asia/Manila")
   employmentStatus   EmploymentStatus @default(PROBATION)
   startDate          DateTime
   daysEmployed       Int              @default(0)
@@ -731,15 +779,26 @@ model user_badges {
 }
 
 model work_schedules {
-  id             String         @id
-  profileId      String
-  dayOfWeek      String
-  startTime      String
-  endTime        String
-  isWorkday      Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime
-  staff_profiles staff_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id               String             @id
+  profileId        String
+  companyId        String?
+  dayOfWeek        String
+  startTime        String
+  endTime          String
+  timezone         String?            @default("Asia/Manila")
+  shiftType        ShiftType?         @default(DAY_SHIFT)
+  workLocation     WorkLocationType?  @default(WORK_FROM_HOME)
+  isWorkday        Boolean            @default(true)
+  notes            String?
+  createdBy        String?
+  lastModifiedBy   String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  staff_profiles   staff_profiles     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  company          company?           @relation(fields: [companyId], references: [id])
+
+  @@index([profileId])
+  @@index([companyId])
 }
 
 enum AwayReason {
@@ -988,3 +1047,15 @@ enum TicketStatus {
   RESOLVED
   CLOSED
 }
+enum ShiftType {
+  DAY_SHIFT
+  NIGHT_SHIFT
+  MID_SHIFT
+}
+
+enum WorkLocationType {
+  WORK_FROM_HOME
+  OFFICE
+  HYBRID
+}
+

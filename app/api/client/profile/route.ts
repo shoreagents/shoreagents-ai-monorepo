@@ -32,7 +32,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - Not a client user" }, { status: 401 })
     }
 
-    // If no profile exists, return null profile
+    // Calculate real statistics
+    const [tasksCreated, reviewsSubmitted] = await Promise.all([
+      // Count tasks created by this client
+      prisma.tasks.count({
+        where: { 
+          createdById: clientUser.id,
+          createdByType: 'CLIENT'
+        }
+      }),
+      // Count reviews submitted by this client (where client is the reviewer)
+      prisma.reviews.count({
+        where: { reviewedBy: clientUser.id }
+      })
+    ])
+
+    // Prepare profile data with calculated stats
+    // If profile exists, merge with stats; if not, create a basic object with stats
+    const profileData = clientUser.client_profiles ? {
+      ...clientUser.client_profiles,
+      tasksCreated,
+      reviewsSubmitted
+    } : {
+      id: crypto.randomUUID(),
+      clientUserId: clientUser.id,
+      position: null,
+      department: null,
+      directPhone: null,
+      mobilePhone: null,
+      timezone: null,
+      bio: null,
+      notifyTaskCreate: true,
+      notifyTaskComplete: true,
+      notifyReviews: true,
+      notifyWeeklyReports: true,
+      tasksCreated,
+      reviewsSubmitted,
+      lastLoginAt: null,
+      createdAt: clientUser.createdAt,
+      updatedAt: clientUser.updatedAt
+    }
+
     return NextResponse.json({
       client_users: {
         id: clientUser.id,
@@ -43,7 +83,7 @@ export async function GET(req: NextRequest) {
         coverPhoto: clientUser.coverPhoto,
         company: clientUser.company
       },
-      profile: clientUser.client_profiles
+      profile: profileData
     })
   } catch (error: any) {
     console.error("❌ Error fetching client profile:", error)

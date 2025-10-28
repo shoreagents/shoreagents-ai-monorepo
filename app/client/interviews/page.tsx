@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
 import { 
   Calendar, 
   Clock, 
@@ -13,14 +18,23 @@ import {
   Video,
   Loader2,
   CalendarCheck,
-  UserCheck
+  UserCheck,
+  XCircle,
+  MessageSquare,
+  CalendarClock
 } from "lucide-react"
+
+interface PreferredTime {
+  datetime: string
+  timezone: string
+  timezoneDisplay: string
+}
 
 interface InterviewRequest {
   id: string
   candidateFirstName: string
   bpocCandidateId: string
-  preferredTimes: string[]
+  preferredTimes: (string | PreferredTime)[] // Support both old and new format
   clientNotes: string | null
   status: 'PENDING' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'HIRED'
   scheduledTime: string | null
@@ -28,12 +42,28 @@ interface InterviewRequest {
   adminNotes: string | null
   createdAt: string
   updatedAt: string
+  candidateAvatar?: string
 }
 
 export default function ClientInterviewsPage() {
   const [interviews, setInterviews] = useState<InterviewRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { toast } = useToast()
+  
+  // Modal states
+  const [selectedInterview, setSelectedInterview] = useState<InterviewRequest | null>(null)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false)
+  const [completeModalOpen, setCompleteModalOpen] = useState(false)
+  const [notesModalOpen, setNotesModalOpen] = useState(false)
+  
+  // Form states
+  const [cancelReason, setCancelReason] = useState('')
+  const [rescheduleNotes, setRescheduleNotes] = useState('')
+  const [completionNotes, setCompletionNotes] = useState('')
+  const [additionalNotes, setAdditionalNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     fetchInterviews()
@@ -49,6 +79,16 @@ export default function ClientInterviewsPage() {
         return
       }
 
+      console.log('🖼️🖼️🖼️ AVATAR DEBUG START 🖼️🖼️🖼️')
+      console.log('Total interviews:', data.interviews?.length)
+      data.interviews?.forEach((interview: any, idx: number) => {
+        console.log(`Interview ${idx + 1}: ${interview.candidateFirstName}`)
+        console.log(`  - Avatar field exists:`, 'candidateAvatar' in interview)
+        console.log(`  - Avatar value:`, interview.candidateAvatar)
+        console.log(`  - Avatar type:`, typeof interview.candidateAvatar)
+      })
+      console.log('🖼️🖼️🖼️ AVATAR DEBUG END 🖼️🖼️🖼️')
+      
       setInterviews(data.interviews)
     } catch (error) {
       console.error('Error fetching interviews:', error)
@@ -93,9 +133,24 @@ export default function ClientInterviewsPage() {
     })
   }
 
-  function formatPreferredTime(timeString: string) {
+  function formatPreferredTime(time: string | PreferredTime) {
     try {
-      const date = new Date(timeString)
+      // Handle new object format
+      if (typeof time === 'object' && time.datetime) {
+        const date = new Date(time.datetime)
+        const formatted = date.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+        return `${formatted} (${time.timezoneDisplay})`
+      }
+      
+      // Handle old string format
+      const date = new Date(time as string)
       return date.toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
@@ -105,8 +160,8 @@ export default function ClientInterviewsPage() {
         hour12: true
       })
     } catch (error) {
-      // Fallback to original string if parsing fails
-      return timeString
+      // Fallback
+      return typeof time === 'string' ? time : time.datetime
     }
   }
 
@@ -230,9 +285,17 @@ export default function ClientInterviewsPage() {
                     {/* Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <User className="h-6 w-6 text-white" />
-                        </div>
+                        {interview.candidateAvatar ? (
+                          <img 
+                            src={interview.candidateAvatar} 
+                            alt={interview.candidateFirstName}
+                            className="h-12 w-12 rounded-full object-cover border-2 border-blue-200"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <User className="h-6 w-6 text-white" />
+                          </div>
+                        )}
                         <div>
                           <h3 className="text-xl font-semibold text-gray-900">
                             {interview.candidateFirstName}
@@ -245,8 +308,14 @@ export default function ClientInterviewsPage() {
                       {getStatusBadge(interview.status)}
                     </div>
 
-                    {/* Status Message */}
-                    <div className="bg-linear-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border-l-4 border-l-yellow-500 shadow-sm">
+                    {/* Status Message - Dynamic Background */}
+                    <div className={`rounded-lg p-6 border-l-4 shadow-sm ${
+                      interview.status === 'PENDING' ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-l-yellow-500' :
+                      interview.status === 'SCHEDULED' ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-l-blue-500' :
+                      interview.status === 'COMPLETED' ? 'bg-gradient-to-br from-green-50 to-green-100 border-l-green-500' :
+                      interview.status === 'HIRED' ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-l-purple-500' :
+                      'bg-gradient-to-br from-gray-50 to-gray-100 border-l-gray-500'
+                    }`}>
                       {interview.status === 'PENDING' && (
                         <div className="flex items-start gap-4">
                           <div className="shrink-0">
@@ -256,10 +325,10 @@ export default function ClientInterviewsPage() {
                           </div>
                           <div className="flex-1">
                             <h3 className="text-lg font-bold text-yellow-900 mb-2">
-                              Waiting for Admin
+                              Waiting for Coordination
                             </h3>
                             <p className="text-sm text-yellow-800 leading-relaxed">
-                              Our admin team is coordinating with the candidate to schedule your interview. 
+                              Our team is coordinating with <span className="font-semibold">{interview.candidateFirstName}</span> to schedule your interview. 
                               You'll be notified once a time is confirmed.
                             </p>
                           </div>
@@ -267,19 +336,25 @@ export default function ClientInterviewsPage() {
                       )}
 
                       {interview.status === 'SCHEDULED' && interview.scheduledTime && (
-                        <div className="flex items-start gap-3">
-                          <CalendarCheck className="h-5 w-5 text-blue-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-gray-900">Interview Scheduled</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {formatDate(interview.scheduledTime)}
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0">
+                            <div className="h-12 w-12 rounded-full bg-blue-200 flex items-center justify-center">
+                              <CalendarCheck className="h-6 w-6 text-blue-700" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-blue-900 mb-2">
+                              Interview Scheduled
+                            </h3>
+                            <p className="text-sm text-blue-800 mb-3">
+                              <span className="font-semibold">Time:</span> {formatDate(interview.scheduledTime)}
                             </p>
                             {interview.meetingLink && (
                               <a 
                                 href={interview.meetingLink} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 mt-2 text-blue-600 hover:text-blue-800 font-medium"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
                               >
                                 <Video className="h-4 w-4" />
                                 Join Meeting
@@ -290,24 +365,37 @@ export default function ClientInterviewsPage() {
                       )}
 
                       {interview.status === 'COMPLETED' && (
-                        <div className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-gray-900">Interview Completed</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              This interview has been completed. Next steps will be communicated by our team.
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0">
+                            <div className="h-12 w-12 rounded-full bg-green-200 flex items-center justify-center">
+                              <CheckCircle2 className="h-6 w-6 text-green-700" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-green-900 mb-2">
+                              Interview Complete
+                            </h3>
+                            <p className="text-sm text-green-800 leading-relaxed">
+                              Great work! The interview with <span className="font-semibold">{interview.candidateFirstName}</span> has been completed. 
+                              Our team will review and get back to you with next steps.
                             </p>
                           </div>
                         </div>
                       )}
 
                       {interview.status === 'HIRED' && (
-                        <div className="flex items-start gap-3">
-                          <UserCheck className="h-5 w-5 text-purple-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-gray-900">Candidate Hired! 🎉</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Congratulations! This candidate has been hired and is moving forward with onboarding.
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0">
+                            <div className="h-12 w-12 rounded-full bg-purple-200 flex items-center justify-center">
+                              <UserCheck className="h-6 w-6 text-purple-700" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-purple-900 mb-2">
+                              Candidate Hired! 🎉
+                            </h3>
+                            <p className="text-sm text-purple-800 leading-relaxed">
+                              Congratulations! <span className="font-semibold">{interview.candidateFirstName}</span> has been hired and is now moving forward with onboarding.
                             </p>
                           </div>
                         </div>
@@ -356,6 +444,73 @@ export default function ClientInterviewsPage() {
                       </div>
                     )}
 
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-4 border-t border-gray-200">
+                      {/* Mark as Completed - Show for scheduled interviews */}
+                      {interview.status === 'SCHEDULED' && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setSelectedInterview(interview)
+                            setCompleteModalOpen(true)
+                          }}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Mark Complete
+                        </Button>
+                      )}
+
+                      {/* Request Reschedule - Show for pending or scheduled */}
+                      {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                          onClick={() => {
+                            setSelectedInterview(interview)
+                            setRescheduleModalOpen(true)
+                          }}
+                        >
+                          <CalendarClock className="h-4 w-4 mr-2" />
+                          Request Reschedule
+                        </Button>
+                      )}
+
+                      {/* Add Notes - Show for any active interview */}
+                      {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInterview(interview)
+                            setAdditionalNotes(interview.clientNotes || '')
+                            setNotesModalOpen(true)
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Add Notes
+                        </Button>
+                      )}
+
+                      {/* Cancel Interview - Show for pending or scheduled */}
+                      {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            setSelectedInterview(interview)
+                            setCancelModalOpen(true)
+                          }}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               </Card>
@@ -364,6 +519,240 @@ export default function ClientInterviewsPage() {
         )}
 
       </div>
+
+      {/* Cancel Interview Modal */}
+      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Interview Request</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for cancelling this interview request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="cancelReason">Reason for Cancellation</Label>
+              <Textarea
+                id="cancelReason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="E.g., Position filled, candidate unavailable..."
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setCancelModalOpen(false)}>
+                Keep Interview
+              </Button>
+              <Button 
+                variant="destructive"
+                disabled={submitting}
+                onClick={async () => {
+                  if (!selectedInterview) return
+                  setSubmitting(true)
+                  try {
+                    const response = await fetch(`/api/client/interviews/${selectedInterview.id}/cancel`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reason: cancelReason })
+                    })
+                    if (response.ok) {
+                      toast({ title: "Success", description: "Interview request cancelled" })
+                      setCancelModalOpen(false)
+                      setCancelReason('')
+                      fetchInterviews()
+                    } else {
+                      throw new Error('Failed to cancel')
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: "Failed to cancel interview", variant: "destructive" })
+                  } finally {
+                    setSubmitting(false)
+                  }
+                }}
+              >
+                {submitting ? 'Cancelling...' : 'Confirm Cancellation'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Reschedule Modal */}
+      <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Reschedule</DialogTitle>
+            <DialogDescription>
+              Send a note to the admin team requesting a reschedule for this interview.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rescheduleNotes">Your Message to Admin Team</Label>
+              <Textarea
+                id="rescheduleNotes"
+                value={rescheduleNotes}
+                onChange={(e) => setRescheduleNotes(e.target.value)}
+                placeholder="E.g., Can we move this to next week? I have a conflict..."
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setRescheduleModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                disabled={submitting || !rescheduleNotes.trim()}
+                onClick={async () => {
+                  if (!selectedInterview) return
+                  setSubmitting(true)
+                  try {
+                    const response = await fetch(`/api/client/interviews/${selectedInterview.id}/reschedule-request`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ notes: rescheduleNotes })
+                    })
+                    if (response.ok) {
+                      toast({ title: "Success", description: "Reschedule request sent to admin team" })
+                      setRescheduleModalOpen(false)
+                      setRescheduleNotes('')
+                      fetchInterviews()
+                    } else {
+                      throw new Error('Failed to send request')
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: "Failed to send reschedule request", variant: "destructive" })
+                  } finally {
+                    setSubmitting(false)
+                  }
+                }}
+              >
+                {submitting ? 'Sending...' : 'Send Request'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Complete Modal */}
+      <Dialog open={completeModalOpen} onOpenChange={setCompleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark Interview as Completed</DialogTitle>
+            <DialogDescription>
+              Confirm that the interview has been completed and optionally add feedback.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="completionNotes">Feedback / Notes (Optional)</Label>
+              <Textarea
+                id="completionNotes"
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                placeholder="How did the interview go? Any feedback?"
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setCompleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                disabled={submitting}
+                onClick={async () => {
+                  if (!selectedInterview) return
+                  setSubmitting(true)
+                  try {
+                    const response = await fetch(`/api/client/interviews/${selectedInterview.id}/complete`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ notes: completionNotes })
+                    })
+                    if (response.ok) {
+                      toast({ title: "Success", description: "Interview marked as completed" })
+                      setCompleteModalOpen(false)
+                      setCompletionNotes('')
+                      fetchInterviews()
+                    } else {
+                      throw new Error('Failed to mark complete')
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: "Failed to mark interview as complete", variant: "destructive" })
+                  } finally {
+                    setSubmitting(false)
+                  }
+                }}
+              >
+                {submitting ? 'Saving...' : 'Mark as Completed'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Update Notes Modal */}
+      <Dialog open={notesModalOpen} onOpenChange={setNotesModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Interview Notes</DialogTitle>
+            <DialogDescription>
+              Add or update your notes for this interview request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="additionalNotes">Your Notes</Label>
+              <Textarea
+                id="additionalNotes"
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                placeholder="Add any additional information or requirements..."
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setNotesModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                disabled={submitting}
+                onClick={async () => {
+                  if (!selectedInterview) return
+                  setSubmitting(true)
+                  try {
+                    const response = await fetch(`/api/client/interviews/${selectedInterview.id}/notes`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ notes: additionalNotes })
+                    })
+                    if (response.ok) {
+                      toast({ title: "Success", description: "Notes updated successfully" })
+                      setNotesModalOpen(false)
+                      fetchInterviews()
+                    } else {
+                      throw new Error('Failed to update notes')
+                    }
+                  } catch (error) {
+                    toast({ title: "Error", description: "Failed to update notes", variant: "destructive" })
+                  } finally {
+                    setSubmitting(false)
+                  }
+                }}
+              >
+                {submitting ? 'Saving...' : 'Save Notes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

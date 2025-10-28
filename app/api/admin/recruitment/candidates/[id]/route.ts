@@ -39,8 +39,22 @@ export async function GET(
     }
 
     console.log(`✅ [ADMIN] Found candidate: ${candidate.first_name}`)
+    console.log(`📧 [ADMIN] Candidate email: ${candidate.email}`)
+    console.log(`📱 [ADMIN] Candidate phone: ${candidate.phone}`)
+    console.log(`💼 [ADMIN] Candidate position: ${candidate.position}`)
 
-    return NextResponse.json(candidate, { status: 200 })
+    // Return in the format the frontend expects
+    return NextResponse.json({ 
+      success: true, 
+      candidate: {
+        email: candidate.email,
+        phone: candidate.phone,
+        position: candidate.position,
+        first_name: candidate.first_name,
+        last_name: candidate.last_name,
+        ...candidate
+      }
+    }, { status: 200 })
   } catch (error: any) {
     console.error('❌ [ADMIN] Error fetching candidate:', error)
     return NextResponse.json({ 

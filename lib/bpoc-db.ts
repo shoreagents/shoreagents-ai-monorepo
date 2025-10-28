@@ -166,6 +166,9 @@ export async function getCandidateById(candidateId: string) {
     SELECT 
       u.id,
       u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
       u.avatar_url,
       u.bio,
       u.position,
