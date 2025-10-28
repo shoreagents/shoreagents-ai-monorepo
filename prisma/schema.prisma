@@ -937,3 +937,31 @@ enum TicketStatus {
   RESOLVED
   CLOSED
 }
+
+model PerformanceMetric {
+  id                String    @id @default(uuid())
+  staffUserId       String
+  date              DateTime  @default(now())
+  mouseMovements    Int       @default(0)
+  mouseClicks       Int       @default(0)
+  keystrokes        Int       @default(0)
+  activeTime        Int       @default(0)
+  idleTime          Int       @default(0)
+  screenTime        Int       @default(0)
+  downloads         Int       @default(0)
+  uploads           Int       @default(0)
+  bandwidth         Int       @default(0)
+  clipboardActions  Int       @default(0)
+  filesAccessed     Int       @default(0)
+  urlsVisited       Int       @default(0)
+  tabsSwitched      Int       @default(0)
+  productivityScore Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  applicationsused  Json?     @default("[]")
+  visitedurls       Json?     @default("[]")
+  screenshoturls    Json?     @default("[]")
+  staffUser         StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("performance_metrics")
+}

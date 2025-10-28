@@ -28,8 +28,8 @@ export async function GET(
     const staffUser = await prisma.staff_users.findUnique({
       where: { id: staffUserId },
       include: {
-        onboarding: true,
-        profile: true
+        staff_onboarding: true,
+        staff_profiles: true
       }
     })
 
@@ -39,17 +39,17 @@ export async function GET(
 
     // Calculate admin-specific progress based on APPROVED/REJECTED statuses only
     let adminProgress = 0
-    if (staffUser.onboarding) {
+    if (staffUser.staff_onboarding) {
       const sections = [
-        staffUser.onboarding.personalInfoStatus,
-        staffUser.onboarding.govIdStatus,
-        staffUser.onboarding.documentsStatus,
-        staffUser.onboarding.signatureStatus,
-        staffUser.onboarding.emergencyContactStatus,
-        staffUser.onboarding.resumeStatus,
-        staffUser.onboarding.educationStatus,
-        staffUser.onboarding.medicalStatus,
-        staffUser.onboarding.dataPrivacyStatus
+        staffUser.staff_onboarding.personalInfoStatus,
+        staffUser.staff_onboarding.govIdStatus,
+        staffUser.staff_onboarding.documentsStatus,
+        staffUser.staff_onboarding.signatureStatus,
+        staffUser.staff_onboarding.emergencyContactStatus,
+        staffUser.staff_onboarding.resumeStatus,
+        staffUser.staff_onboarding.educationStatus,
+        staffUser.staff_onboarding.medicalStatus,
+        staffUser.staff_onboarding.dataPrivacyStatus
       ]
 
       // Admin progress: Only count APPROVED/REJECTED sections (11.11% each for 9 sections)
@@ -71,13 +71,13 @@ export async function GET(
         avatar: staffUser.avatar,
         createdAt: staffUser.createdAt
       },
-      onboarding: staffUser.onboarding ? {
-        ...staff_users.onboarding,
+      onboarding: staffUser.staff_onboarding ? {
+        ...staffUser.staff_onboarding,
         completionPercent: adminProgress // Override with admin-specific progress
       } : null,
-      profile: staffUser.profile ? {
-        ...staff_users.profile,
-        daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))
+      profile: staffUser.staff_profiles ? {
+        ...staffUser.staff_profiles,
+        daysEmployed: Math.floor((new Date().getTime() - new Date(staffUser.staff_profiles.startDate).getTime()) / (1000 * 60 * 60 * 24))
       } : null
     })
 

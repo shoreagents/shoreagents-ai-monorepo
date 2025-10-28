@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, CheckCircle, AlertCircle, Pen } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { generateContractHTML, contractSections } from "@/lib/contract-template"
@@ -189,15 +190,81 @@ export default function ContractSigningPage({ onContractSigned }: ContractSignin
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-slate-900 to-indigo-900">
-        <div className="text-white text-lg">Loading your employment contract...</div>
+      <div className="min-h-screen p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-14 w-14 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-7 w-64" />
+                <Skeleton className="h-4 w-80" />
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          </Card>
+
+          {/* Contract Content Skeleton */}
+          <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
+            {/* Contract HTML skeleton */}
+            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              ))}
+            </div>
+            
+            {/* Section Checkboxes Skeleton */}
+            <div className="mt-8 space-y-4 border-t border-slate-600 pt-6">
+              <Skeleton className="h-6 w-64 mb-4" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-start space-x-3 p-3 rounded-lg bg-slate-700/30">
+                  <Skeleton className="h-5 w-5 rounded mt-1" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Signature Section Skeleton */}
+          <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-6" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+              </div>
+              <Skeleton className="h-[200px] w-full rounded-lg border-2 border-slate-600" />
+              <div className="flex gap-4">
+                <Skeleton className="h-10 flex-1" />
+                <Skeleton className="h-10 flex-1" />
+              </div>
+              <Skeleton className="h-3 w-full" />
+            </div>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (error && !contract) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-slate-900 to-indigo-900 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md p-6 bg-slate-800/50 backdrop-blur border-slate-700">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white text-center mb-2">Error Loading Contract</h2>
@@ -213,7 +280,7 @@ export default function ContractSigningPage({ onContractSigned }: ContractSignin
   if (!contract) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-slate-900 to-indigo-900 p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
@@ -270,7 +337,7 @@ export default function ContractSigningPage({ onContractSigned }: ContractSignin
 
         {/* Signature Section */}
         {allSectionsChecked && (
-          <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700 animate-in fade-in duration-500">
+          <Card className="p-6 bg-slate-800/50 backdrop-blur border-slate-700">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Pen className="h-6 w-6 text-indigo-400" />
