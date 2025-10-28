@@ -155,25 +155,33 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-4xl mx-auto py-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+      <div className="max-w-4xl mx-auto py-8 animate-in fade-in duration-700">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Welcome to ShoreAgents! <span className="inline-block animate-bounce">👋</span>
-          </h1>
-          <p className="text-xl text-slate-300 mb-2">
-            Let's get to know you better
-          </p>
-          <p className="text-slate-400">
-            Help us create a more personalized experience by sharing some fun facts about yourself
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Sparkles className="h-8 w-8 text-yellow-400 animate-pulse" />
+            <h1 className="text-5xl font-black bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+              Welcome to ShoreAgents!
+            </h1>
+            <Sparkles className="h-8 w-8 text-yellow-400 animate-pulse" />
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Heart className="h-6 w-6 text-pink-400 animate-pulse" />
+            <p className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              Let's get to know you better
+            </p>
+            <Heart className="h-6 w-6 text-pink-400 animate-pulse" />
+          </div>
+          <p className="text-slate-300 text-lg">
+            Help us create a more personalized experience by sharing some fun facts about yourself ✨
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile Card - We Already Know You */}
           {profileData && (
-            <Card className="bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-indigo-500/20 backdrop-blur-xl border-purple-400/30">
+            <Card className="group bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-indigo-500/20 backdrop-blur-xl border-purple-400/30 ring-1 ring-purple-400/50 transition-all duration-500 hover:ring-2 hover:ring-purple-400 hover:shadow-2xl hover:shadow-purple-500/50 hover:scale-[1.02]">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-center gap-6">
                   {/* Avatar & Company Logo */}
@@ -241,13 +249,14 @@ export default function WelcomePage() {
           )}
 
           {/* Required Field */}
-          <Card className="bg-gradient-to-r from-orange-500/20 to-red-500/20 backdrop-blur-xl border-orange-500/30 ring-1 ring-orange-400/50">
+          <Card className="group bg-gradient-to-r from-orange-500/20 to-red-500/20 backdrop-blur-xl border-orange-500/30 ring-1 ring-orange-400/50 transition-all duration-500 hover:ring-2 hover:ring-orange-400 hover:shadow-2xl hover:shadow-orange-500/50 hover:scale-[1.02]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Utensils className="h-5 w-5" />
-                🎉 First Day Surprise! <span className="text-orange-400">*</span>
+                <Utensils className="h-6 w-6 text-orange-400 group-hover:rotate-12 transition-transform duration-300" />
+                <span className="text-2xl font-black">🎉 First Day Surprise!</span> 
+                <span className="text-orange-400 text-xl">*</span>
               </CardTitle>
-              <CardDescription className="text-orange-100">
+              <CardDescription className="text-orange-100 text-base">
                 We're going to surprise you with a meal on your first day! Pick your favorite fast food place and we'll have it ready for you! 🍔✨
               </CardDescription>
             </CardHeader>
@@ -279,115 +288,116 @@ export default function WelcomePage() {
           </Card>
 
           {/* Optional Fields */}
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20">
+          <Card className="group bg-gradient-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 backdrop-blur-xl border-white/20 ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-[1.01]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Heart className="h-5 w-5" />
-                Tell Us About Yourself
+              <CardTitle className="text-white flex items-center gap-2 text-2xl font-black">
+                <Heart className="h-6 w-6 text-pink-400 animate-pulse group-hover:scale-110 transition-transform" />
+                <span className="group-hover:text-pink-300 transition-colors">Tell Us About Yourself</span>
+                <Sparkles className="h-5 w-5 text-yellow-400 animate-spin" />
               </CardTitle>
-              <CardDescription className="text-slate-300">
-                All of these are optional - share as much or as little as you'd like!
+              <CardDescription className="text-slate-300 text-base">
+                All of these are optional - share as much or as little as you'd like! 💫
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Row 1 */}
-                <div>
-                  <Label htmlFor="favoriteColor" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Palette className="h-4 w-4" />
-                    Favorite Color
+                <div className="group/field">
+                  <Label htmlFor="favoriteColor" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-pink-300 transition-colors">
+                    <Palette className="h-4 w-4 text-pink-400 group-hover/field:rotate-12 transition-transform" />
+                    Favorite Color 🎨
                   </Label>
                   <Input
                     id="favoriteColor"
                     value={formData.favoriteColor}
                     onChange={(e) => handleInputChange('favoriteColor', e.target.value)}
                     placeholder="e.g., Ocean Blue, Forest Green..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="favoriteMusic" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Music className="h-4 w-4" />
-                    Favorite Music Genre
+                <div className="group/field">
+                  <Label htmlFor="favoriteMusic" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-purple-300 transition-colors">
+                    <Music className="h-4 w-4 text-purple-400 group-hover/field:scale-110 transition-transform" />
+                    Favorite Music Genre 🎵
                   </Label>
                   <Input
                     id="favoriteMusic"
                     value={formData.favoriteMusic}
                     onChange={(e) => handleInputChange('favoriteMusic', e.target.value)}
                     placeholder="e.g., Pop, Rock, Jazz, K-Pop..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
                 {/* Row 2 */}
-                <div>
-                  <Label htmlFor="favoriteMovie" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Star className="h-4 w-4" />
-                    Favorite Movie
+                <div className="group/field">
+                  <Label htmlFor="favoriteMovie" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-yellow-300 transition-colors">
+                    <Star className="h-4 w-4 text-yellow-400 group-hover/field:rotate-180 transition-transform duration-500" />
+                    Favorite Movie 🎬
                   </Label>
                   <Input
                     id="favoriteMovie"
                     value={formData.favoriteMovie}
                     onChange={(e) => handleInputChange('favoriteMovie', e.target.value)}
                     placeholder="e.g., The Matrix, Inception..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="favoriteBook" className="text-slate-300 text-sm flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Favorite Book
+                <div className="group/field">
+                  <Label htmlFor="favoriteBook" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-blue-300 transition-colors">
+                    <BookOpen className="h-4 w-4 text-blue-400 group-hover/field:scale-110 transition-transform" />
+                    Favorite Book 📚
                   </Label>
                   <Input
                     id="favoriteBook"
                     value={formData.favoriteBook}
                     onChange={(e) => handleInputChange('favoriteBook', e.target.value)}
                     placeholder="e.g., Harry Potter, The Great Gatsby..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
                 {/* Row 3 */}
-                <div>
-                  <Label htmlFor="hobby" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    Hobby
+                <div className="group/field">
+                  <Label htmlFor="hobby" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-cyan-300 transition-colors">
+                    <Camera className="h-4 w-4 text-cyan-400 group-hover/field:-rotate-12 transition-transform" />
+                    Hobby 📸
                   </Label>
                   <Input
                     id="hobby"
                     value={formData.hobby}
                     onChange={(e) => handleInputChange('hobby', e.target.value)}
                     placeholder="e.g., Photography, Cooking, Gaming..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="dreamDestination" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Plane className="h-4 w-4" />
-                    Dream Destination
+                <div className="group/field">
+                  <Label htmlFor="dreamDestination" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-green-300 transition-colors">
+                    <Plane className="h-4 w-4 text-green-400 group-hover/field:translate-x-2 transition-transform" />
+                    Dream Destination ✈️
                   </Label>
                   <Input
                     id="dreamDestination"
                     value={formData.dreamDestination}
                     onChange={(e) => handleInputChange('dreamDestination', e.target.value)}
                     placeholder="e.g., Japan, Iceland, New Zealand..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-green-400 focus:ring-2 focus:ring-green-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
                 {/* Row 4 */}
-                <div>
-                  <Label htmlFor="favoriteSeason" className="text-slate-300 text-sm">
-                    Favorite Season
+                <div className="group/field">
+                  <Label htmlFor="favoriteSeason" className="text-slate-300 text-sm font-semibold group-hover/field:text-amber-300 transition-colors">
+                    Favorite Season 🌤️
                   </Label>
                   <Select value={formData.favoriteSeason} onValueChange={(value) => handleInputChange('favoriteSeason', value)}>
-                    <SelectTrigger className="bg-slate-800/50 border-slate-600 text-white">
+                    <SelectTrigger className="mt-1 bg-slate-800/50 border-slate-600 text-white transition-all duration-300 hover:bg-slate-800/70 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/50">
                       <SelectValue placeholder="Select a season" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-slate-800 border-slate-600">
                       <SelectItem value="spring">🌸 Spring</SelectItem>
                       <SelectItem value="summer">☀️ Summer</SelectItem>
                       <SelectItem value="autumn">🍂 Autumn</SelectItem>
@@ -396,88 +406,91 @@ export default function WelcomePage() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="petName" className="text-slate-300 text-sm">
-                    Pet Name (if you have one)
+                <div className="group/field">
+                  <Label htmlFor="petName" className="text-slate-300 text-sm font-semibold group-hover/field:text-rose-300 transition-colors">
+                    Pet Name (if you have one) 🐾
                   </Label>
                   <Input
                     id="petName"
                     value={formData.petName}
                     onChange={(e) => handleInputChange('petName', e.target.value)}
                     placeholder="e.g., Buddy, Luna, Max..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
                 {/* Row 5 */}
-                <div>
-                  <Label htmlFor="favoriteSport" className="text-slate-300 text-sm">
-                    Favorite Sport
+                <div className="group/field">
+                  <Label htmlFor="favoriteSport" className="text-slate-300 text-sm font-semibold group-hover/field:text-orange-300 transition-colors">
+                    Favorite Sport ⚽
                   </Label>
                   <Input
                     id="favoriteSport"
                     value={formData.favoriteSport}
                     onChange={(e) => handleInputChange('favoriteSport', e.target.value)}
                     placeholder="e.g., Basketball, Soccer, Tennis..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/50 hover:bg-slate-800/70"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="favoriteGame" className="text-slate-300 text-sm flex items-center gap-2">
-                    <Gamepad2 className="h-4 w-4" />
-                    Favorite Game
+                <div className="group/field">
+                  <Label htmlFor="favoriteGame" className="text-slate-300 text-sm flex items-center gap-2 font-semibold group-hover/field:text-indigo-300 transition-colors">
+                    <Gamepad2 className="h-4 w-4 text-indigo-400 group-hover/field:rotate-12 transition-transform" />
+                    Favorite Game 🎮
                   </Label>
                   <Input
                     id="favoriteGame"
                     value={formData.favoriteGame}
                     onChange={(e) => handleInputChange('favoriteGame', e.target.value)}
                     placeholder="e.g., Minecraft, Valorant, Chess..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/50 hover:bg-slate-800/70"
                   />
                 </div>
               </div>
 
               {/* Text Areas */}
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="favoriteQuote" className="text-slate-300 text-sm">
-                    Favorite Quote or Motto
+                <div className="group/field">
+                  <Label htmlFor="favoriteQuote" className="text-slate-300 text-sm font-semibold group-hover/field:text-purple-300 transition-colors flex items-center gap-2">
+                    <Star className="h-4 w-4 text-purple-400 animate-pulse" />
+                    Favorite Quote or Motto 💭
                   </Label>
                   <Textarea
                     id="favoriteQuote"
                     value={formData.favoriteQuote}
                     onChange={(e) => handleInputChange('favoriteQuote', e.target.value)}
                     placeholder="Share a quote that inspires you..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 hover:bg-slate-800/70"
                     rows={3}
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="funFact" className="text-slate-300 text-sm">
-                    Fun Fact About Yourself
+                <div className="group/field">
+                  <Label htmlFor="funFact" className="text-slate-300 text-sm font-semibold group-hover/field:text-yellow-300 transition-colors flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-yellow-400 animate-spin" />
+                    Fun Fact About Yourself ✨
                   </Label>
                   <Textarea
                     id="funFact"
                     value={formData.funFact}
                     onChange={(e) => handleInputChange('funFact', e.target.value)}
                     placeholder="Tell us something interesting about yourself..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 hover:bg-slate-800/70"
                     rows={3}
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="additionalInfo" className="text-slate-300 text-sm">
-                    Anything Else You'd Like to Share?
+                <div className="group/field">
+                  <Label htmlFor="additionalInfo" className="text-slate-300 text-sm font-semibold group-hover/field:text-blue-300 transition-colors flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-blue-400 animate-pulse" />
+                    Anything Else You'd Like to Share? 💬
                   </Label>
                   <Textarea
                     id="additionalInfo"
                     value={formData.additionalInfo}
                     onChange={(e) => handleInputChange('additionalInfo', e.target.value)}
                     placeholder="Any other information you'd like your team to know about you..."
-                    className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
+                    className="mt-1 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 hover:bg-slate-800/70"
                     rows={4}
                   />
                 </div>
@@ -497,17 +510,18 @@ export default function WelcomePage() {
             <Button
               type="submit"
               disabled={isSubmitting || !formData.favoriteFastFood.trim()}
-              className="bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 text-lg font-semibold"
+              className="group/btn bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white px-12 py-4 text-xl font-black rounded-2xl transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Submitting...
+                  <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                  <span className="animate-pulse">Submitting...</span>
                 </>
               ) : (
                 <>
-                  <Heart className="h-5 w-5 mr-2" />
+                  <Rocket className="h-6 w-6 mr-3 group-hover/btn:animate-bounce" />
                   Submit Welcome Form
+                  <Sparkles className="h-6 w-6 ml-3 group-hover/btn:animate-spin" />
                 </>
               )}
             </Button>
