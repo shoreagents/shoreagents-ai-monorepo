@@ -28,18 +28,18 @@ export async function GET(req: NextRequest) {
       where: { 
         companyId: clientUser.companyId,
         // Must have completed onboarding
-        onboarding: {
+        staff_onboarding: {
           isComplete: true
         },
         // But start date must be in the future
-        profile: {
+        staff_profiles: {
           startDate: {
             gt: today
           }
         }
       },
       include: {
-        onboarding: {
+        staff_onboarding: {
           select: {
             id: true,
             completionPercent: true,
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             lastName: true,
           }
         },
-        profile: {
+        staff_profiles: {
           select: {
             startDate: true,
             employmentStatus: true,
@@ -72,8 +72,8 @@ export async function GET(req: NextRequest) {
       let daysUntilStart = null
       let startDateFormatted = null
 
-      if (staff.profile?.startDate) {
-        const startDate = new Date(staff.profile.startDate)
+      if (staff.staff_profiles?.startDate) {
+        const startDate = new Date(staff.staff_profiles.startDate)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const diffTime = startDate.getTime() - today.getTime()
@@ -83,13 +83,13 @@ export async function GET(req: NextRequest) {
 
       // Calculate overall onboarding progress
       let sectionsApproved = 0
-      if (staff.onboarding) {
+      if (staff.staff_onboarding) {
         const statuses = [
-          staff.onboarding.personalInfoStatus,
-          staff.onboarding.govIdStatus,
-          staff.onboarding.documentsStatus,
-          staff.onboarding.signatureStatus,
-          staff.onboarding.emergencyContactStatus
+          staff.staff_onboarding.personalInfoStatus,
+          staff.staff_onboarding.govIdStatus,
+          staff.staff_onboarding.documentsStatus,
+          staff.staff_onboarding.signatureStatus,
+          staff.staff_onboarding.emergencyContactStatus
         ]
         sectionsApproved = statuses.filter(s => s === "APPROVED").length
       }
@@ -99,25 +99,25 @@ export async function GET(req: NextRequest) {
         name: staff.name,
         email: staff.email,
         avatar: staff.avatar,
-        onboarding: staff.onboarding ? {
-          completionPercent: staff.onboarding.completionPercent,
-          isComplete: staff.onboarding.isComplete,
+        onboarding: staff.staff_onboarding ? {
+          completionPercent: staff.staff_onboarding.completionPercent,
+          isComplete: staff.staff_onboarding.isComplete,
           sectionsApproved,
           totalSections: 5,
           sections: {
-            personalInfo: staff.onboarding.personalInfoStatus,
-            govId: staff.onboarding.govIdStatus,
-            documents: staff.onboarding.documentsStatus,
-            signature: staff.onboarding.signatureStatus,
-            emergencyContact: staff.onboarding.emergencyContactStatus,
+            personalInfo: staff.staff_onboarding.personalInfoStatus,
+            govId: staff.staff_onboarding.govIdStatus,
+            documents: staff.staff_onboarding.documentsStatus,
+            signature: staff.staff_onboarding.signatureStatus,
+            emergencyContact: staff.staff_onboarding.emergencyContactStatus,
           },
-          updatedAt: staff.onboarding.updatedAt
+          updatedAt: staff.staff_onboarding.updatedAt
         } : null,
-        profile: staff.profile ? {
+        profile: staff.staff_profiles ? {
           startDate: startDateFormatted,
           daysUntilStart,
-          employmentStatus: staff.profile.employmentStatus,
-          currentRole: staff.profile.currentRole,
+          employmentStatus: staff.staff_profiles.employmentStatus,
+          currentRole: staff.staff_profiles.currentRole,
         } : null,
         createdAt: staff.createdAt
       }
