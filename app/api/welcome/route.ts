@@ -34,10 +34,14 @@ export async function GET() {
       }, { status: 400 })
     }
 
-    // Return auto-fill data
+    // Return auto-fill data with profile info
     return NextResponse.json({
       name: staffUser.name,
+      email: staffUser.email,
+      avatar: staffUser.avatar || null,
       client: staffUser.company?.companyName || "ShoreAgents",
+      companyLogo: staffUser.company?.logo || null,
+      position: staffUser.staff_profiles?.currentRole || "Team Member",
       startDate: staffUser.staff_profiles?.startDate ? 
         new Date(staffUser.staff_profiles.startDate).toLocaleDateString() : 
         new Date().toLocaleDateString()

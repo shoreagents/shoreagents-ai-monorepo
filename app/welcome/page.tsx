@@ -8,7 +8,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, CheckCircle2, Heart, Coffee, Music, Gamepad2, BookOpen, Camera, Plane, Utensils, Palette, GamepadIcon, Star, Users, Home } from "lucide-react"
+import { Loader2, CheckCircle2, Heart, Coffee, Music, Gamepad2, BookOpen, Camera, Plane, Utensils, Palette, GamepadIcon, Star, Users, Home, Building2, Mail, Briefcase, Calendar } from "lucide-react"
+import Image from "next/image"
+
+interface ProfileData {
+  name: string
+  email: string
+  avatar: string | null
+  client: string
+  companyLogo: string | null
+  position: string
+  startDate: string
+}
 
 interface WelcomeFormData {
   // Auto-filled fields
@@ -37,6 +48,7 @@ interface WelcomeFormData {
 
 export default function WelcomePage() {
   const router = useRouter()
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [formData, setFormData] = useState<WelcomeFormData>({
     name: "",
     client: "",
@@ -68,6 +80,7 @@ export default function WelcomePage() {
         const response = await fetch('/api/welcome')
         if (response.ok) {
           const data = await response.json()
+          setProfileData(data)
           setFormData(prev => ({
             ...prev,
             name: data.name || "",
@@ -158,46 +171,74 @@ export default function WelcomePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Auto-filled Information */}
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Your Information
-              </CardTitle>
-              <CardDescription className="text-slate-300">
-                This information is pre-filled from your profile
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-slate-300 text-sm">Full Name</Label>
-                  <Input
-                    value={formData.name}
-                    disabled
-                    className="bg-slate-800/50 border-slate-600 text-slate-300"
-                  />
+          {/* Profile Card - We Already Know You */}
+          {profileData && (
+            <Card className="bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-indigo-500/20 backdrop-blur-xl border-purple-400/30">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  {/* Avatar & Company Logo */}
+                  <div className="flex gap-4 items-center">
+                    <div className="relative">
+                      {profileData.avatar ? (
+                        <Image
+                          src={profileData.avatar}
+                          alt={profileData.name}
+                          width={80}
+                          height={80}
+                          className="rounded-full ring-4 ring-purple-400/50"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center ring-4 ring-purple-400/50">
+                          <span className="text-2xl font-bold text-white">
+                            {profileData.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {profileData.companyLogo && (
+                      <div className="relative">
+                        <Image
+                          src={profileData.companyLogo}
+                          alt={profileData.client}
+                          width={60}
+                          height={60}
+                          className="rounded-lg border-2 border-white/20"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Profile Info */}
+                  <div className="flex-1 text-center md:text-left">
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                      Hi {profileData.name.split(' ')[0]}! 👋
+                    </h2>
+                    <p className="text-lg text-slate-200 mb-3">
+                      We already know you're <span className="font-semibold text-purple-300">{profileData.name}</span> joining <span className="font-semibold text-blue-300">{profileData.client}</span> as a <span className="font-semibold text-indigo-300">{profileData.position}</span>!
+                    </p>
+                    <p className="text-slate-300 mb-4">
+                      Now we want to get to know more about <span className="italic">you</span> - the person behind the professional! 🌟
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm">
+                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <Mail className="h-4 w-4 text-purple-300" />
+                        <span className="text-slate-200">{profileData.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <Building2 className="h-4 w-4 text-blue-300" />
+                        <span className="text-slate-200">{profileData.client}</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <Calendar className="h-4 w-4 text-indigo-300" />
+                        <span className="text-slate-200">Starts {profileData.startDate}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-slate-300 text-sm">Client</Label>
-                  <Input
-                    value={formData.client}
-                    disabled
-                    className="bg-slate-800/50 border-slate-600 text-slate-300"
-                  />
-                </div>
-                <div>
-                  <Label className="text-slate-300 text-sm">Start Date</Label>
-                  <Input
-                    value={formData.startDate}
-                    disabled
-                    className="bg-slate-800/50 border-slate-600 text-slate-300"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Required Field */}
           <Card className="bg-linear-to-r from-orange-500/20 to-red-500/20 backdrop-blur-xl border-orange-500/30">
