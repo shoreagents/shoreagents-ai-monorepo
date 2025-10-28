@@ -206,11 +206,11 @@ export default function Sidebar() {
                     {getUserInitials(session?.user?.name)}
                   </div>
                 )}
-                <div className="flex-1">
-                  <div className="font-semibold text-white">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white truncate">
                     {status === "loading" ? "Loading..." : session?.user?.name || "Guest"}
                   </div>
-                  <div className="text-xs text-white/60">
+                  <div className="text-xs text-white/60 break-all">
                     {session?.user?.email || "Not logged in"}
                   </div>
                 </div>
