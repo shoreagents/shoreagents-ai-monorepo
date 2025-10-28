@@ -340,7 +340,7 @@ export default function AdminOnboardingDetailPage() {
     setConfirmCompleteModal(false)
     
     // Double-check that onboarding is not already complete
-    if (onboarding?.isComplete || profile) {
+    if (onboarding?.isComplete) {
       setError("This staff member's onboarding has already been completed.")
       return
     }
