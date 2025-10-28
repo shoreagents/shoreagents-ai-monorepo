@@ -42,6 +42,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Staff user not found" }, { status: 404 });
     }
 
+    // Get staff profile for contact details
+    const staffProfile = await retryQuery(() => prisma.staff_profiles.findUnique({
+      where: { staffUserId: staffUser.id }
+    }));
+
     let contract = await retryQuery(() => prisma.employment_contracts.findUnique({
       where: { staffUserId: staffUser.id },
       include: {
@@ -65,7 +70,7 @@ export async function GET(req: NextRequest) {
       
       // Calculate salary breakdown
       const totalSalary = jobAcceptance.salary ? parseFloat(jobAcceptance.salary) : 25000;
-      const deMinimis = 3000; // Fixed de minimis
+      const deMinimis = 4000; // Fixed de minimis (government mandate)
       const basicSalary = totalSalary - deMinimis;
       
       // Build work schedule from job acceptance data
@@ -150,15 +155,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No contract found and no job acceptance to create from" }, { status: 404 });
     }
 
+    // Add contact details to response
+    const contractWithDetails = {
+      ...contract,
+      staffEmail: staffUser.email,
+      staffPhone: staffProfile?.phone || null,
+      staffLocation: contract.employeeAddress
+    };
+
     if (contract.signed) {
       return NextResponse.json({ 
         success: true, 
-        contract, 
+        contract: contractWithDetails, 
         message: "Contract already signed" 
       }, { status: 200 });
     }
 
-    return NextResponse.json({ success: true, contract }, { status: 200 });
+    return NextResponse.json({ success: true, contract: contractWithDetails }, { status: 200 });
   } catch (error) {
     console.error("Error fetching employment contract:", error);
     return NextResponse.json({ error: "Failed to fetch employment contract" }, { status: 500 });

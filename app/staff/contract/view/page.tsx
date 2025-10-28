@@ -13,7 +13,10 @@ import {
   Download,
   Calendar,
   User,
-  Building
+  Building,
+  Mail,
+  Phone,
+  MapPin
 } from "lucide-react"
 
 interface ContractData {
@@ -24,6 +27,17 @@ interface ContractData {
   contractSigned: boolean
   signedAt: string
   createdAt: string
+  employeeName: string
+  employeeAddress: string
+  position: string
+  startDate: string
+  workSchedule: string
+  basicSalary: number
+  deMinimis: number
+  totalMonthlyGross: number
+  staffEmail?: string
+  staffPhone?: string
+  staffLocation?: string
   company: {
     companyName: string
   }
@@ -125,21 +139,93 @@ export default function StaffContractViewPage() {
           </div>
         </div>
 
-        {/* Contract Info */}
+        {/* Contact Details - HIGHLIGHTED */}
+        <Card className="mb-6 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border-purple-500/50 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2 text-xl">
+              <User className="h-6 w-6 text-purple-400" />
+              Your Contact Details
+            </CardTitle>
+            <CardDescription className="text-purple-200">
+              Keep these details up to date for contract and payroll purposes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-purple-500/30">
+                <p className="text-sm text-purple-300 mb-2 flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address
+                </p>
+                <p className="text-white font-semibold">{contract.staffEmail || 'Not provided'}</p>
+              </div>
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-purple-500/30">
+                <p className="text-sm text-purple-300 mb-2 flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number
+                </p>
+                <p className="text-white font-semibold">{contract.staffPhone || 'Not provided'}</p>
+              </div>
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-purple-500/30">
+                <p className="text-sm text-purple-300 mb-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Address
+                </p>
+                <p className="text-white font-semibold">{contract.employeeAddress || 'Not provided'}</p>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-sm text-blue-300">
+                ℹ️ Need to update your contact details? Go to your <a href="/profile" className="underline font-semibold">Profile Settings</a> or contact HR.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Employment Details */}
         <Card className="mb-6 bg-slate-800 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Contract Information
+              Employment Information
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-slate-400">Company</p>
-                <p className="text-white flex items-center gap-2">
+                <p className="text-white flex items-center gap-2 font-semibold">
                   <Building className="h-4 w-4" />
                   {contract.company.companyName}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Position</p>
+                <p className="text-white font-semibold">{contract.position}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Start Date</p>
+                <p className="text-white flex items-center gap-2 font-semibold">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(contract.startDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="md:col-span-2 lg:col-span-3">
+                <p className="text-sm text-slate-400">Work Schedule</p>
+                <p className="text-white font-semibold">{contract.workSchedule}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Basic Salary</p>
+                <p className="text-white font-semibold">₱{contract.basicSalary.toLocaleString()}/month</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">De Minimis</p>
+                <p className="text-white font-semibold">₱{contract.deMinimis.toLocaleString()}/month</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Total Salary (Including De Minimis)</p>
+                <p className="text-white font-semibold text-lg text-green-400">
+                  ₱{contract.totalMonthlyGross.toLocaleString()}/month
                 </p>
               </div>
               <div>
@@ -148,14 +234,14 @@ export default function StaffContractViewPage() {
                   variant={contract.contractSigned ? "default" : "secondary"}
                   className={contract.contractSigned ? "bg-green-600" : "bg-yellow-600"}
                 >
-                  {contract.contractSigned ? "Signed" : "Pending"}
+                  {contract.contractSigned ? "Signed" : "Pending Signature"}
                 </Badge>
               </div>
               <div>
                 <p className="text-sm text-slate-400">Signed Date</p>
                 <p className="text-white flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {contract.contractSigned ? new Date(contract.signedAt).toLocaleDateString() : "Not signed"}
+                  {contract.contractSigned ? new Date(contract.signedAt).toLocaleDateString() : "Not signed yet"}
                 </p>
               </div>
               <div>
