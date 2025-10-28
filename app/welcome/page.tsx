@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, CheckCircle2, Heart, Coffee, Music, Gamepad2, BookOpen, Camera, Plane, Utensils, Palette, GamepadIcon, Star, Users, Home, Building2, Mail, Briefcase, Calendar } from "lucide-react"
+import { Loader2, CheckCircle2, Heart, Coffee, Music, Gamepad2, BookOpen, Camera, Plane, Utensils, Palette, GamepadIcon, Star, Users, Home, Building2, Mail, Briefcase, Calendar, Sparkles, Rocket } from "lucide-react"
 import Image from "next/image"
 
 interface ProfileData {
