@@ -49,6 +49,7 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -56,6 +57,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (status === "authenticated") {
       fetchProfileData()
+      fetchOnboardingStatus()
     }
   }, [status])
 
@@ -70,6 +72,18 @@ export default function Sidebar() {
       console.error("Failed to fetch profile data:", error)
     } finally {
       setLoadingProfile(false)
+    }
+  }
+
+  const fetchOnboardingStatus = async () => {
+    try {
+      const response = await fetch("/api/onboarding/status")
+      if (response.ok) {
+        const data = await response.json()
+        setOnboardingStatus(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch onboarding status:", error)
     }
   }
 
@@ -189,6 +203,9 @@ export default function Sidebar() {
                     <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
                     {item.label === "The Feed" && (
                       <NotificationBadge className="ml-auto" />
+                    )}
+                    {item.label === "Onboarding" && onboardingStatus && onboardingStatus.completionPercent < 100 && (
+                      <span className="ml-auto flex h-2 w-2 items-center justify-center rounded-full bg-red-500 shadow-lg shadow-red-500/50 animate-pulse" />
                     )}
                   </Link>
                 )
