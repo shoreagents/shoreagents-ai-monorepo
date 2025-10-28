@@ -1,13 +1,16 @@
 /**
- * Admin Recruitment - Confirm Offer Acceptance API
+ * Admin Recruitment - Finalize Hire API (Consolidated)
  * POST /api/admin/recruitment/interviews/confirm-acceptance
  * 
- * Updates interview status from OFFER_SENT to OFFER_ACCEPTED after admin confirms with candidate
+ * Finalizes hire by creating job acceptance record and updating status to HIRED
+ * This consolidates the previous "Confirm Acceptance" and "Finalize Hire" steps
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getCandidateById } from '@/lib/bpoc-db'
+import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,18 +27,33 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { interviewRequestId, confirmedStartDate, adminNotes } = body
+    const { interviewRequestId, bpocCandidateId, confirmedStartDate, staffEmail, adminNotes } = body
 
     // Validation
     if (!interviewRequestId) {
       return NextResponse.json({ error: 'Interview request ID is required' }, { status: 400 })
     }
 
-    console.log('✅ [ADMIN] Confirming offer acceptance for interview:', interviewRequestId)
+    if (!confirmedStartDate) {
+      return NextResponse.json({ error: 'Confirmed start date is required' }, { status: 400 })
+    }
 
-    // Get interview request
+    if (!staffEmail) {
+      return NextResponse.json({ error: 'Staff email is required' }, { status: 400 })
+    }
+
+    console.log('🎯 [ADMIN] Finalizing hire for interview:', interviewRequestId)
+
+    // Get interview request with company info
     const interview = await prisma.interview_requests.findUnique({
-      where: { id: interviewRequestId }
+      where: { id: interviewRequestId },
+      include: {
+        client_users: {
+          include: {
+            company: true
+          }
+        }
+      }
     })
 
     if (!interview) {
@@ -49,33 +67,99 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Update interview request status to OFFER_ACCEPTED
+    // Get candidate info from BPOC database
+    let candidateData = null
+    if (bpocCandidateId) {
+      try {
+        candidateData = await getCandidateById(bpocCandidateId)
+        console.log('✅ [ADMIN] Found candidate in BPOC:', candidateData?.first_name)
+      } catch (error) {
+        console.warn('⚠️ [ADMIN] Could not fetch BPOC candidate data:', error)
+      }
+    }
+
+    // Get candidate phone if available
+    let candidatePhone = null
+    if (candidateData?.resume_data?.phone || candidateData?.resume_data?.contact?.phone) {
+      candidatePhone = candidateData.resume_data.phone || candidateData.resume_data.contact?.phone || null
+    }
+
+    // Check if job acceptance already exists
+    const existingJobAcceptance = await prisma.job_acceptances.findUnique({
+      where: { interviewRequestId: interviewRequestId }
+    })
+
+    let jobAcceptance
+    if (existingJobAcceptance) {
+      // Update existing job acceptance
+      console.log('📝 [ADMIN] Updating existing job acceptance:', existingJobAcceptance.id)
+      jobAcceptance = await prisma.job_acceptances.update({
+        where: { id: existingJobAcceptance.id },
+        data: {
+          candidateEmail: staffEmail,
+          candidatePhone: candidatePhone,
+          position: candidateData?.position || existingJobAcceptance.position,
+          bpocCandidateId: bpocCandidateId || existingJobAcceptance.bpocCandidateId,
+          acceptedByAdminId: session.user.id,
+          updatedAt: new Date()
+        }
+      })
+    } else {
+      // Create new job acceptance record
+      console.log('🆕 [ADMIN] Creating new job acceptance')
+      jobAcceptance = await prisma.job_acceptances.create({
+        data: {
+          id: crypto.randomUUID(),
+          interviewRequestId: interviewRequestId,
+          bpocCandidateId: bpocCandidateId || '',
+          candidateEmail: staffEmail,
+          candidatePhone: candidatePhone,
+          position: candidateData?.position || 'Staff Member',
+          companyId: interview.client_users?.companyId || '',
+          acceptedByAdminId: session.user.id,
+          acceptedAt: new Date(),
+          signupEmailSent: false,
+          signupEmailSentAt: null,
+          staffUserId: null, // Will be set when staff creates account
+          contractSigned: false,
+          contractSignedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      })
+    }
+
+    console.log('✅ [ADMIN] Job acceptance record ready:', jobAcceptance.id)
+
+    // Update interview request status to HIRED
     const updatedInterview = await prisma.interview_requests.update({
       where: { id: interviewRequestId },
       data: {
-        status: 'OFFER_ACCEPTED',
-        finalStartDate: confirmedStartDate ? new Date(confirmedStartDate) : interview.clientPreferredStart,
+        status: 'HIRED',
+        finalStartDate: new Date(confirmedStartDate),
         adminNotes: adminNotes 
-          ? `${interview.adminNotes || ''}\n\n[Offer Accepted] ${adminNotes}`
-          : `${interview.adminNotes || ''}\n\n[Offer Accepted] Candidate confirmed acceptance via phone/email on ${new Date().toLocaleDateString()}`,
+          ? `${interview.adminNotes || ''}\n\n[Hire Finalized] ${adminNotes}`
+          : `${interview.adminNotes || ''}\n\n[Hire Finalized] Job acceptance ID: ${jobAcceptance.id}. Staff account prepared for: ${staffEmail}`,
         updatedAt: new Date()
       }
     })
 
-    console.log('✅ [ADMIN] Offer acceptance confirmed. Status updated to OFFER_ACCEPTED')
+    console.log('✅ [ADMIN] Hire finalized. Status updated to HIRED')
 
     return NextResponse.json({
       success: true,
-      message: 'Offer acceptance confirmed successfully',
+      message: 'Hire finalized successfully',
       interview: updatedInterview,
-      nextStep: 'You can now finalize the hire by setting the final start date and preparing their account.'
+      jobAcceptanceId: jobAcceptance.id,
+      staffEmail: staffEmail,
+      instructions: `Staff member should create their account using ${staffEmail}. The system will auto-match their signup to this hire record.`
     })
 
   } catch (error: any) {
-    console.error('❌ [ADMIN] Error confirming offer acceptance:', error)
+    console.error('❌ [ADMIN] Error finalizing hire:', error)
     return NextResponse.json({ 
       success: false,
-      error: error.message || 'Failed to confirm offer acceptance' 
+      error: error.message || 'Failed to finalize hire' 
     }, { status: 500 })
   }
 }

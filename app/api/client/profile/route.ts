@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import crypto from "crypto"
 
 // GET /api/client/profile - Fetch client profile details
 export async function GET(req: NextRequest) {
@@ -104,13 +105,15 @@ export async function PUT(req: NextRequest) {
           ...(notifyTaskCreate !== undefined && { notifyTaskCreate }),
           ...(notifyTaskComplete !== undefined && { notifyTaskComplete }),
           ...(notifyReviews !== undefined && { notifyReviews }),
-          ...(notifyWeeklyReports !== undefined && { notifyWeeklyReports })
+          ...(notifyWeeklyReports !== undefined && { notifyWeeklyReports }),
+          updatedAt: new Date()
         }
       })
     } else {
       // Create new profile
       profile = await prisma.client_profiles.create({
         data: {
+          id: crypto.randomUUID(),
           clientUserId: clientUser.id,
           position: position || null,
           department: department || null,
@@ -121,7 +124,8 @@ export async function PUT(req: NextRequest) {
           notifyTaskCreate: notifyTaskCreate ?? true,
           notifyTaskComplete: notifyTaskComplete ?? true,
           notifyReviews: notifyReviews ?? true,
-          notifyWeeklyReports: notifyWeeklyReports ?? true
+          notifyWeeklyReports: notifyWeeklyReports ?? true,
+          updatedAt: new Date()
         }
       })
     }
@@ -136,7 +140,8 @@ export async function PUT(req: NextRequest) {
           ...(name !== undefined && { name }),
           ...(role !== undefined && { role }),
           ...(avatar !== undefined && { avatar }),
-          ...(coverPhoto !== undefined && { coverPhoto })
+          ...(coverPhoto !== undefined && { coverPhoto }),
+          updatedAt: new Date()
         }
       })
     }

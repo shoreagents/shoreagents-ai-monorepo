@@ -41,23 +41,12 @@ export default function AdminDocumentsPage() {
   const fetchAllDocuments = async () => {
     setLoading(true)
     try {
-      // Fetch from all three sources
-      const [staffRes, clientRes, adminRes] = await Promise.all([
-        fetch('/api/documents'),
-        fetch('/api/client/documents'),
-        fetch('/api/admin/documents')
-      ])
-
-      const staffData = await staffRes.json()
-      const clientData = await clientRes.json()
+      // Admin only needs to fetch from admin endpoint (which returns all documents)
+      const adminRes = await fetch('/api/admin/documents')
       const adminData = await adminRes.json()
 
-      // Combine all documents
-      const allDocs: Document[] = [
-        ...(staffData.documents || []),
-        ...(clientData.documents || []),
-        ...(Array.isArray(adminData) ? adminData : [])
-      ]
+      // Use admin documents
+      const allDocs: Document[] = Array.isArray(adminData) ? adminData : []
 
       // Deduplicate by ID
       const uniqueDocs = Array.from(

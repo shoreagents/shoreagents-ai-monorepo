@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
             role: true,
           },
         },
-        assignedStaff: {
+        task_assignments: {
           include: {
             staff_users: {
               select: {
