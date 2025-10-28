@@ -182,7 +182,7 @@ const navItems = [
   { icon: "LayoutDashboard", label: "Dashboard", href: "/admin", badge: null },
   { icon: "User", label: "My Profile", href: "/admin/profile", badge: null },
   { icon: "Building2", label: "Client", href: "/admin/clients", badge: null },
-  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/onboarding", badge: null },
+  { icon: "ClipboardCheck", label: "Onboarding", href: "/admin/staff/onboarding", badge: null },
   { icon: "Users", label: "Staff", href: "/admin/staff", badge: null },
   { icon: "Clock", label: "Time Tracking", href: "/admin/time-tracking", badge: null },
   { icon: "TrendingUp", label: "Analytics", href: "/admin/analytics", badge: null },
