@@ -1,503 +1,330 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import {
-  Activity, MousePointer, Keyboard, Clock, Monitor, Download,
-  Upload, Wifi, Copy, FileText, Globe, Eye, BarChart3, RefreshCw
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Clock, Target, TrendingUp, Award, Activity } from "lucide-react"
 
-interface PerformanceMetric {
-  id: string
-  date: string
-  mouseMovements: number
-  mouseClicks: number
-  keystrokes: number
-  idleTime: number
-  activeTime: number
-  screenshotCount: number
-  applicationsUsed: string[]
-  urlsVisited: number
-  visitedUrlsList?: string[]
+interface PerformanceData {
+  today: {
+    activeTime: number
+    idleTime: number
+    productivityScore: number
+  }
+  weeklyAverage: {
+    productivityScore: number
+    activeTime: number
+  }
 }
 
 export default function PerformanceDashboard() {
-  const [metrics, setMetrics] = useState<PerformanceMetric[]>([])
-  const [todayMetrics, setTodayMetrics] = useState<PerformanceMetric | null>(null)
-  const [totalScreenshots, setTotalScreenshots] = useState(0)
-  const [liveMetrics, setLiveMetrics] = useState<any>(null)
+  const [data, setData] = useState<PerformanceData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
-  const [isElectron, setIsElectron] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [debugEvents, setDebugEvents] = useState<any[]>([])
-  const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-    
-    // Check if running in Electron
-    const inElectron = typeof window !== 'undefined' && window.electron?.isElectron
-    setIsElectron(!!inElectron)
-    
-    // Fetch API metrics
-    fetchMetrics()
-    
-    // Auto-refresh metrics every 10 seconds to pick up new screenshots
-    const refreshInterval = setInterval(() => {
-      fetchMetrics()
-    }, 10000) // 10 seconds
-    
-    // If in Electron, also get live metrics
-    if (inElectron) {
-      fetchLiveMetrics()
-      
-      // Subscribe to real-time updates
-      const unsubscribe = window.electron?.performance?.onMetricsUpdate((data) => {
-        if (data.metrics) {
-          setLiveMetrics(data.metrics)
-        }
-      })
-      
-            // Subscribe to debug activity events
-            const unsubscribeDebug = window.electron?.activityTracker?.onActivityDebug((event) => {
-              setDebugEvents(prev => {
-                // Filter out redundant events that don't count towards metrics
-                const skipEvents = ['keyup', 'mouseup', 'mousedown', 'wheel']
-                if (skipEvents.includes(event.type)) {
-                  return prev // Skip redundant events
-                }
-                const newEvents = [event, ...prev].slice(0, 50) // Keep last 50 events
-                return newEvents
-              })
-            })
-      
-      return () => {
-        clearInterval(refreshInterval)
-        unsubscribe?.()
-        unsubscribeDebug?.()
-      }
-    }
-    
-    return () => {
-      clearInterval(refreshInterval)
-    }
+    fetchData()
   }, [])
 
-  const fetchMetrics = async () => {
+  const fetchData = async () => {
     try {
       const response = await fetch("/api/analytics")
-      if (!response.ok) throw new Error("Failed to fetch performance metrics")
-      const data = await response.json()
-      setMetrics(data.metrics)
-      setTodayMetrics(data.today || null)
-      setTotalScreenshots(data.totalScreenshots || 0)
+      if (!response.ok) throw new Error("Failed to fetch data")
+      const result = await response.json()
+      
+      // Transform data for staff-friendly display
+      // Note: API returns activeTime in seconds (after conversion from minutes in API)
+      const activeTime = (result.today?.activeTime || 0)
+      const idleTime = (result.today?.idleTime || 0)
+      
+      // Use database productivityScore if available, otherwise calculate
+      const todayScore = result.today?.productivityScore ?? calculateProductivityScore(result.today || {})
+      
+      setData({
+        today: {
+          activeTime: Math.floor(Number(activeTime) / 60), // Convert seconds to minutes for display
+          idleTime: Math.floor(Number(idleTime) / 60), // Convert seconds to minutes for display
+          productivityScore: todayScore
+        },
+        weeklyAverage: {
+          productivityScore: calculateAverageProductivity(result.metrics || []),
+          activeTime: result.today?.activeTime || 0
+        }
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load performance data")
+      console.error('Error fetching data:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchLiveMetrics = async () => {
-    if (!window.electron?.performance) return
-    
-    try {
-      const metrics = await window.electron.performance.getCurrentMetrics()
-      setLiveMetrics(metrics)
-    } catch (err) {
-      console.error('Error fetching live metrics:', err)
-    }
-  }
-
-  const handleForceSync = async () => {
-    if (!window.electron?.sync) return
-    
-    setIsSyncing(true)
-    try {
-      await window.electron.sync.forceSync()
-      // Refresh API metrics after sync
-      await fetchMetrics()
-    } catch (err) {
-      console.error('Error forcing sync:', err)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const formatTime = (seconds: number) => {
-    // Handle both seconds (live metrics) and minutes (API metrics)
-    const totalSeconds = Math.floor(seconds)
-    const hours = Math.floor(totalSeconds / 3600)
-    const mins = Math.floor((totalSeconds % 3600) / 60)
-    const secs = totalSeconds % 60
-    return `${hours}h ${mins}m ${secs}s`
-  }
-
-  const calculateProductivityScore = (metric: PerformanceMetric) => {
+  const calculateProductivityScore = (metric: any) => {
     if (!metric) return 0
-    
-    // Prevent NaN by checking for zero division
-    const totalTime = metric.activeTime + metric.idleTime
+    // If database already has a productivityScore, use it
+    if (metric.productivityScore !== undefined && metric.productivityScore !== null) {
+      return metric.productivityScore
+    }
+    // Otherwise calculate from active/idle time
+    const totalTime = (metric.activeTime || 0) + (metric.idleTime || 0)
     const activePercent = totalTime > 0 ? (metric.activeTime / totalTime) * 100 : 0
-    const keystrokesScore = Math.min((metric.keystrokes / 5000) * 100, 100)
-    const clicksScore = Math.min((metric.mouseClicks / 1000) * 100, 100)
-    
-    return Math.round((activePercent + keystrokesScore + clicksScore) / 3)
+    return Math.round(activePercent)
+  }
+
+  const calculateAverageProductivity = (metrics: any[]) => {
+    if (metrics.length === 0) return 0
+    const sum = metrics.reduce((acc, m) => acc + calculateProductivityScore(m), 0)
+    return Math.round(sum / metrics.length)
+  }
+
+  const formatTime = (minutes: number) => {
+    if (!minutes || isNaN(minutes) || minutes < 0) {
+      return "0h 0m"
+    }
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${mins}m`
+  }
+
+  const getProductivityMessage = (score: number) => {
+    if (score >= 90) return { message: "Outstanding! You're maintaining excellent productivity!", color: "text-emerald-400", badge: "Excellence" }
+    if (score >= 75) return { message: "Great work! You're performing well today.", color: "text-blue-400", badge: "Great" }
+    if (score >= 60) return { message: "Good effort! Keep up the momentum.", color: "text-amber-400", badge: "Good" }
+    return { message: "Keep pushing forward! You can do better.", color: "text-orange-400", badge: "Improving" }
+  }
+
+  const getTrendArrow = (score: number) => {
+    if (score >= 80) return "📈"
+    if (score >= 60) return "📊"
+    return "📉"
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-32 rounded-xl bg-slate-800/50 animate-pulse" />
-            ))}
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-6">
+          {/* Header Skeleton */}
+          <div className="h-32 rounded-2xl bg-slate-800/50 animate-pulse" />
+          
+          {/* Today's Performance Section Skeleton */}
+          <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-6 w-48 bg-slate-700/50 rounded" />
+              <div className="h-8 w-8 bg-slate-700/50 rounded" />
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-slate-900/50 rounded-xl p-4">
+                  <div className="h-4 w-24 bg-slate-700/50 rounded mb-3" />
+                  <div className="h-10 w-20 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-4 w-32 bg-slate-700/50 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Weekly Overview & Goals Skeleton */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+              <div className="h-6 w-32 bg-slate-700/50 rounded mb-4" />
+              <div className="h-16 w-24 bg-slate-700/50 rounded mb-3" />
+              <div className="h-6 w-full bg-slate-700/50 rounded mb-2" />
+              <div className="h-4 w-48 bg-slate-700/50 rounded" />
+            </div>
+            <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+              <div className="h-6 w-32 bg-slate-700/50 rounded mb-4" />
+              <div className="space-y-4">
+                <div className="bg-slate-900/50 rounded-xl p-4">
+                  <div className="h-4 w-24 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-10 w-24 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-4 w-48 bg-slate-700/50 rounded" />
+                </div>
+                <div className="bg-slate-900/50 rounded-xl p-4">
+                  <div className="h-4 w-24 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-2 w-full bg-slate-700/50 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Tips Skeleton */}
+          <div className="rounded-2xl bg-slate-800/50 p-6 animate-pulse">
+            <div className="h-6 w-40 bg-slate-700/50 rounded mb-4" />
+            <div className="grid md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-slate-900/50 rounded-xl p-4">
+                  <div className="h-8 w-8 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-6 w-32 bg-slate-700/50 rounded mb-2" />
+                  <div className="h-16 w-full bg-slate-700/50 rounded" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-        <div className="mx-auto max-w-5xl">
-          <div className="rounded-xl bg-red-500/10 p-6 ring-1 ring-red-500/30">
-            <h2 className="text-xl font-bold text-red-400">Error Loading Performance Data</h2>
-            <p className="mt-2 text-red-300">{error}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Use live metrics if available in Electron, otherwise use todayMetrics
-  // BUT always use todayMetrics for screenshotCount (managed by screenshot service, not Electron)
-  const displayMetrics = (isElectron && liveMetrics) 
-    ? { ...liveMetrics, screenshotCount: todayMetrics?.screenshotCount || 0 }
-    : todayMetrics
-  const productivity = displayMetrics ? calculateProductivityScore(displayMetrics) : 0
+  const todayScore = data?.today.productivityScore || 0
+  const weeklyScore = data?.weeklyAverage.productivityScore || 0
+  const todayMessage = getProductivityMessage(todayScore)
+  const weekMessage = getProductivityMessage(weeklyScore)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full space-y-6">
+        
         {/* Header */}
-        <div className="rounded-2xl bg-gradient-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+        <div className="rounded-2xl bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-white/10">
           <div className="flex items-center justify-between">
-            <div className="flex-1">
+            <div>
               <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
                 <Activity className="h-8 w-8 text-purple-400" />
-                Performance Dashboard
-                {isElectron && (
-                  <Badge variant="outline" className="ml-2 border-emerald-500/50 text-emerald-400">
-                    <Activity className="h-3 w-3 mr-1 animate-pulse" />
-                    Live Tracking
-                  </Badge>
-                )}
+                Performance Analytics
               </h1>
               <p className="mt-1 text-slate-300">
-                {isElectron ? 'Real-time desktop activity monitoring' : 'Activity monitoring'}
+                Your productivity insights and performance metrics
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {isElectron && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDebug(!showDebug)}
-                    className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {showDebug ? 'Hide' : 'Show'} Debug
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleForceSync}
-                    disabled={isSyncing}
-                    className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? 'Syncing...' : 'Sync Now'}
-                  </Button>
-                </>
-              )}
-              <div className="rounded-xl bg-white/10 px-4 py-2 text-center backdrop-blur-sm">
-                <div className="text-2xl font-bold text-white">{productivity}%</div>
-                <div className="text-xs text-slate-400">Productivity</div>
+            <div className="hidden md:flex items-center gap-4">
+              <div className="rounded-xl bg-white/10 px-6 py-3 text-center backdrop-blur-sm">
+                <div className="text-2xl font-bold text-white">{todayScore}%</div>
+                <div className="text-xs text-slate-400">Today's Score</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Debug Panel - Shows real-time events from uiohook-napi */}
-        {showDebug && isElectron && (
-          <div className="rounded-2xl bg-gradient-to-br from-amber-900/50 via-orange-900/50 to-amber-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-amber-500/30">
+        {/* Today's Performance */}
+        <div className="rounded-2xl bg-linear-to-br from-indigo-900/50 to-purple-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-indigo-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="h-5 w-5 text-indigo-400" />
+              Today's Performance
+            </h2>
+            <span className="text-2xl">{getTrendArrow(todayScore)}</span>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-sm text-slate-400 mb-2">Productivity Score</div>
+              <div className="text-4xl font-bold text-white mb-2">{todayScore}%</div>
+              <div className={`text-sm font-semibold ${todayMessage.color}`}>
+                {todayMessage.message}
+              </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-sm text-slate-400 mb-2">Active Time</div>
+              <div className="text-4xl font-bold text-white mb-2">
+                {data ? formatTime(data.today.activeTime) : "0h 0m"}
+              </div>
+              <div className="text-sm text-slate-300">
+                Time actively working
+              </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-sm text-slate-400 mb-2">Idle/Inactive Time</div>
+              <div className="text-4xl font-bold text-white mb-2">
+                {data ? formatTime(data.today.idleTime) : "0h 0m"}
+              </div>
+              <div className="text-sm text-slate-300">
+                Time away from work
+              </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-sm text-slate-400 mb-2">Status</div>
+              <div className={`text-2xl font-bold ${todayMessage.color} mb-2`}>
+                {todayMessage.badge}
+              </div>
+              <div className="text-sm text-slate-300">
+                Keep up the great work!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Overview */}
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl bg-linear-to-br from-blue-900/50 to-cyan-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-blue-500/30">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Activity className="h-5 w-5 text-amber-400 animate-pulse" />
-                uiohook-napi Event Monitor (Temporary Debug)
+                <TrendingUp className="h-5 w-5 text-blue-400" />
+                Weekly Average
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDebugEvents([])}
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-              >
-                Clear
-              </Button>
             </div>
-            <div className="rounded-lg bg-black/50 p-4 h-96 overflow-y-auto font-mono text-sm">
-              {debugEvents.length === 0 ? (
-                <div className="text-center text-slate-400 mt-8">
-                  <p>Waiting for activity...</p>
-                  <p className="text-xs mt-2">Move your mouse, click, or type to see events</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {debugEvents.map((event, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center gap-3 p-2 rounded ${
-                        event.type === 'keydown'
-                          ? 'bg-emerald-900/30 text-emerald-300'
-                          : event.type === 'click'
-                          ? 'bg-purple-900/30 text-purple-300'
-                          : event.type === 'mousemove'
-                          ? 'bg-blue-900/30 text-blue-300'
-                          : 'bg-slate-800/30 text-slate-300'
-                      }`}
-                    >
-                      <span className="text-xs text-slate-500 w-20">{event.timestamp}</span>
-                      <span className="font-bold w-28">
-                        {event.type === 'keydown' ? 'KEY' : event.type === 'click' ? 'CLICK' : event.type === 'mousemove' ? 'MOVE' : event.type.toUpperCase()}
-                      </span>
-                      {event.data && (
-                        <span className="text-xs flex-1">
-                          {/* Keyboard events - show key name prominently */}
-                          {event.data.keyName && (
-                            <span className="font-bold text-emerald-400 px-3 py-1 bg-emerald-900/40 rounded text-sm">
-                              {event.data.keyName}
-                            </span>
-                          )}
-                          
-                          {/* Mouse events */}
-                          {event.data.x !== undefined && event.data.y !== undefined && !event.data.keyName && (
-                            <span>x:{event.data.x} y:{event.data.y}</span>
-                          )}
-                          {event.data.button !== undefined && (
-                            <span className="ml-2 text-purple-400">btn:{event.data.button}</span>
-                          )}
-                        </span>
-                      )}
-                      <div className="ml-auto flex gap-1">
-                        {event.type === 'keydown' && <Keyboard className="h-4 w-4" />}
-                        {event.type === 'click' && <MousePointer className="h-4 w-4" />}
-                        {event.type === 'mousemove' && <MousePointer className="h-4 w-4 opacity-50" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-4 text-sm text-amber-200 bg-amber-900/20 p-3 rounded-lg">
-              <p className="font-bold">ℹ️ Debug Mode (Temporary)</p>
-              <p className="mt-1 text-xs text-amber-300">
-                This panel shows only the events that count towards performance metrics (redundant events are filtered).
-                Color coding: <span className="text-emerald-300">Green = Keyboard</span>, <span className="text-purple-300">Purple = Click</span>, <span className="text-blue-300">Blue = Mouse Move</span>
-              </p>
-              <p className="mt-2 text-xs text-amber-300">
-                💡 <strong>Filtered out:</strong> KEYUP, MOUSEUP, MOUSEDOWN, WHEEL - only showing KEYDOWN, CLICK, and MOUSEMOVE
-              </p>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-slate-400 mb-2">Productivity Score</div>
+                <div className="text-5xl font-bold text-white">{weeklyScore}%</div>
+              </div>
+              <div className={`text-lg font-semibold ${weekMessage.color}`}>
+                {weekMessage.message}
+              </div>
+              <div className="text-sm text-slate-300 mt-2">
+                Your consistent performance shows dedication and professionalism.
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Real-time Input Tracking */}
-        {displayMetrics && (
-          <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-gradient-to-br from-blue-900/50 to-blue-800/50 p-4 ring-1 ring-blue-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.mouseMovements?.toLocaleString() || 0}</div>
-                    <div className="mt-1 text-sm text-blue-300">Mouse Movements</div>
-                  </div>
-                  <MousePointer className="h-8 w-8 text-blue-400" />
+          <div className="rounded-2xl bg-linear-to-br from-purple-900/50 to-pink-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-purple-500/30 col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-400" />
+                Your Goals
+              </h2>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+                <div className="text-sm text-slate-400 mb-2">Recommended Score</div>
+                <div className="text-3xl font-bold text-white">75%+</div>
+                <div className="text-sm text-slate-300 mt-2">
+                  Maintain productivity above this threshold
                 </div>
               </div>
-
-              <div className="rounded-xl bg-gradient-to-br from-purple-900/50 to-purple-800/50 p-4 ring-1 ring-purple-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.mouseClicks?.toLocaleString() || 0}</div>
-                    <div className="mt-1 text-sm text-purple-300">Mouse Clicks</div>
+              <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+                <div className="text-sm text-slate-400 mb-2">Your Progress</div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-linear-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                      style={{ width: `${Math.min(weeklyScore, 100)}%` }}
+                    />
                   </div>
-                  <MousePointer className="h-8 w-8 text-purple-400" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-gradient-to-br from-emerald-900/50 to-emerald-800/50 p-4 ring-1 ring-emerald-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.keystrokes?.toLocaleString() || 0}</div>
-                    <div className="mt-1 text-sm text-emerald-300">Keystrokes</div>
-                  </div>
-                  <Keyboard className="h-8 w-8 text-emerald-400" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-gradient-to-br from-amber-900/50 to-amber-800/50 p-4 ring-1 ring-amber-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{formatTime(displayMetrics.idleTime || 0)}</div>
-                    <div className="mt-1 text-sm text-amber-300">Idle Time</div>
-                  </div>
-                  <Clock className="h-8 w-8 text-amber-400" />
+                  <span className="text-sm font-bold text-white">{weeklyScore}%</span>
                 </div>
               </div>
             </div>
-
-            {/* Activity Summary */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{formatTime(displayMetrics.activeTime || 0)}</div>
-                    <div className="mt-1 text-sm text-slate-400">Active Time</div>
-                  </div>
-                  <Activity className="h-8 w-8 text-emerald-400" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.applicationsUsed?.length || 0}</div>
-                    <div className="mt-1 text-sm text-slate-400">Apps Used</div>
-                  </div>
-                  <Monitor className="h-8 w-8 text-blue-400" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.urlsVisited?.toLocaleString() || 0}</div>
-                    <div className="mt-1 text-sm text-slate-400">URLs Visited</div>
-                  </div>
-                  <Globe className="h-8 w-8 text-purple-400" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-slate-900/50 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{displayMetrics.screenshotCount?.toLocaleString() || 0}</div>
-                    <div className="mt-1 text-sm text-slate-400">Screenshots Today</div>
-                  </div>
-                  <Eye className="h-8 w-8 text-amber-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* Applications & URLs */}
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-                <h2 className="mb-4 text-xl font-bold text-white">Active Applications</h2>
-                {!displayMetrics.applicationsUsed || displayMetrics.applicationsUsed.length === 0 ? (
-                  <p className="text-slate-400">No applications recorded yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {displayMetrics.applicationsUsed.slice(0, 5).map((app: string, index: number) => (
-                      <div key={index} className="rounded-lg bg-slate-800/50 p-3 ring-1 ring-white/5">
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-4 w-4 text-blue-400" />
-                          <span className="text-white">{app}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-                <h2 className="mb-4 text-xl font-bold text-white">Browser Activity</h2>
-                <div className="space-y-4">
-                  
-                  
-                  {/* Display list of visited URLs */}
-                  {isElectron && (
-                    <div className="mt-4 space-y-2">
-                      <h3 className="text-sm font-semibold text-slate-300">Visited Pages:</h3>
-                      {displayMetrics.visitedUrlsList && displayMetrics.visitedUrlsList.length > 0 ? (
-                        <div className="max-h-64 overflow-y-auto space-y-2 pr-2" style={{ 
-                          scrollbarWidth: 'thin',
-                          scrollbarColor: '#475569 #1e293b'
-                        }}>
-                          {displayMetrics.visitedUrlsList.map((url: string, index: number) => {
-                            // Remove "page:" prefix if present
-                            const displayUrl = url.startsWith('page:') ? url.substring(5) : url
-                            
-                            return (
-                              <div
-                                key={index}
-                                className="flex items-start gap-2 rounded-lg bg-slate-800/50 p-3 text-sm hover:bg-slate-800 transition-colors"
-                              >
-                                <Globe className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                                <span className="text-slate-300 break-all">{displayUrl}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-400 italic">No pages visited yet. Browse some websites to see them here.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Weekly Performance */}
-        <div className="rounded-2xl bg-slate-900/50 p-6 backdrop-blur-xl ring-1 ring-white/10">
-          <h2 className="mb-4 text-xl font-bold text-white">Weekly Performance</h2>
-          {metrics.length === 0 ? (
-            <p className="text-slate-400">No performance data available yet</p>
-          ) : (
-            <div className="space-y-2">
-              {metrics.slice(0, 7).map((metric) => {
-                const score = calculateProductivityScore(metric)
-                return (
-                  <div key={metric.id} className="rounded-lg bg-slate-800/50 p-4 ring-1 ring-white/5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-white">
-                          {new Date(metric.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                        </div>
-                        <div className="mt-1 text-sm text-slate-400">
-                          {formatTime(metric.activeTime)} active • {metric.keystrokes.toLocaleString()} keystrokes
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-white">{score}%</div>
-                        <div className="text-xs text-slate-400">Score</div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          </div>
         </div>
+
+        {/* Performance Tips */}
+        <div className="rounded-2xl bg-linear-to-br from-emerald-900/50 to-teal-900/50 p-6 shadow-xl backdrop-blur-xl ring-1 ring-emerald-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Award className="h-5 w-5 text-emerald-400" />
+              Performance Tips
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-2xl mb-2">✅</div>
+              <div className="text-white font-semibold mb-2">Stay Consistent</div>
+              <div className="text-sm text-slate-300">
+                Regular breaks and consistent work hours improve overall productivity
+              </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-2xl mb-2">🎯</div>
+              <div className="text-white font-semibold mb-2">Focus on Quality</div>
+              <div className="text-sm text-slate-300">
+                Quality work and attention to detail always yields better results
+              </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-xl p-4 ring-1 ring-white/10">
+              <div className="text-2xl mb-2">💪</div>
+              <div className="text-white font-semibold mb-2">Keep Improving</div>
+              <div className="text-sm text-slate-300">
+                Small daily improvements lead to significant long-term growth
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

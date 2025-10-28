@@ -66,8 +66,15 @@ export async function GET(
           orderBy: { date: 'desc' },
           take: 30,
         },
-        tasks: {
-          orderBy: { createdAt: 'desc' },
+        taskAssignments: {
+          include: {
+            task: true,
+          },
+          orderBy: {
+            task: {
+              createdAt: 'desc'
+            }
+          },
         },
         reviewsReceived: {
           orderBy: { submittedDate: 'desc' },
@@ -131,12 +138,13 @@ export async function GET(
     })
 
     // Calculate task stats
+    const tasks = user.taskAssignments.map(ta => ta.task).filter(Boolean)
     const taskStats = {
-      total: user.tasks.length,
-      todo: user.tasks.filter(t => t.status === 'TODO').length,
-      inProgress: user.tasks.filter(t => t.status === 'IN_PROGRESS').length,
-      completed: user.tasks.filter(t => t.status === 'COMPLETED').length,
-      stuck: user.tasks.filter(t => t.status === 'STUCK').length,
+      total: tasks.length,
+      todo: tasks.filter(t => t.status === 'TODO').length,
+      inProgress: tasks.filter(t => t.status === 'IN_PROGRESS').length,
+      completed: tasks.filter(t => t.status === 'COMPLETED').length,
+      stuck: tasks.filter(t => t.status === 'STUCK').length,
     }
 
     // Calculate attendance stats from timeEntries
@@ -238,7 +246,7 @@ export async function GET(
       // Tasks
       tasks: {
         stats: taskStats,
-        recent: user.tasks.slice(0, 5).map(t => ({
+        recent: tasks.slice(0, 5).map(t => ({
           id: t.id,
           title: t.title,
           status: t.status,
@@ -259,8 +267,7 @@ export async function GET(
         id: r.id,
         type: r.type,
         overallScore: Number(r.overallScore),
-        previousScore: r.previousScore ? Number(r.previousScore) : null,
-        submittedDate: r.submittedDate.toISOString(),
+        submittedDate: r.submittedDate ? r.submittedDate.toISOString() : null,
         reviewer: r.reviewer,
         status: r.status,
       })),

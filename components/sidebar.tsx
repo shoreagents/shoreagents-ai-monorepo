@@ -24,6 +24,7 @@ import {
   Building2,
   ClipboardCheck,
   Settings,
+  UserMinus,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { NotificationBadge } from "@/components/notification-badge"
@@ -42,17 +43,23 @@ const navItems = [
   { href: "/ai-assistant", icon: MessageSquare, label: "AI Assistant" },
   { href: "/activity", icon: FileText, label: "The Feed" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+  { href: "/offboarding", icon: UserMinus, label: "Offboarding" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ]
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)
+  const [todayActivity, setTodayActivity] = useState<any>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -128,24 +135,24 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen w-64 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 bg-gradient-to-b from-slate-900 via-purple-900/20 to-slate-900 border-r border-purple-200/20 backdrop-blur-sm ${
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform shadow-2xl transition-transform duration-300 lg:translate-x-0 bg-linear-to-b from-slate-900 via-purple-900/20 to-slate-900 border-r border-purple-200/20 backdrop-blur-sm ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <ScrollArea className="h-full">
           <div className="space-y-6 p-6">
             <div className="space-y-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-xl font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-xl font-bold text-white shadow-lg bg-linear-to-r from-cyan-600 via-blue-600 to-purple-600">
                 SP
               </div>
-              <h1 className="bg-gradient-to-r from-white via-cyan-200 to-white bg-clip-text text-2xl font-bold text-transparent">Staff Portal</h1>
+              <h1 className="bg-linear-to-r from-white via-cyan-200 to-white bg-clip-text text-2xl font-bold text-transparent">Staff Portal</h1>
               <p className="text-sm text-white/60">Performance Dashboard</p>
             </div>
 
-            <div className="space-y-3 rounded-xl p-4 bg-gradient-to-br from-purple-50/10 to-cyan-50/10 backdrop-blur-sm border border-purple-200/20">
+            <div className="space-y-3 rounded-xl p-4 bg-linear-to-br from-purple-50/10 to-cyan-50/10 backdrop-blur-sm border border-purple-200/20">
               <div className="flex items-center gap-3">
                 {loadingProfile ? (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-linear-to-r from-cyan-600 via-blue-600 to-purple-600">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   </div>
                 ) : profileData?.user?.avatar ? (
@@ -158,15 +165,15 @@ export default function Sidebar() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg bg-linear-to-r from-cyan-600 via-blue-600 to-purple-600">
                     {getUserInitials(session?.user?.name)}
                   </div>
                 )}
-                <div className="flex-1">
-                  <div className="font-semibold text-white">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white truncate">
                     {status === "loading" ? "Loading..." : session?.user?.name || "Guest"}
                   </div>
-                  <div className="text-xs text-white/60">
+                  <div className="text-xs text-white/60 break-all">
                     {session?.user?.email || "Not logged in"}
                   </div>
                 </div>
@@ -175,9 +182,17 @@ export default function Sidebar() {
                 <span className="text-xs text-white/60">
                   {session?.user?.role || "STAFF"}
                 </span>
-                <span className="rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 px-3 py-1 text-xs font-semibold text-white border border-cyan-400/30">
-                  {status === "authenticated" ? "Active" : "Offline"}
-                </span>
+                {/* Check if user is active based on profile data or session status */}
+                {isMounted && (
+                  /* @ts-ignore - active field exists but not in generated types yet */
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold text-white border ${
+                    profileData?.user?.active === false
+                      ? "bg-linear-to-r from-red-500/20 to-red-600/20 border-red-400/30"
+                      : "bg-linear-to-r from-cyan-500/20 to-purple-500/20 border-cyan-400/30"
+                  }`}>
+                    {status === "authenticated" ? (profileData?.user?.active === false ? "Inactive" : "Active") : "Offline"}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -193,7 +208,7 @@ export default function Sidebar() {
                     onClick={() => setIsOpen(false)}
                      className={`group relative flex items-center gap-3 rounded-lg px-4 py-2.5 font-medium transition-all duration-300 ${
                        isActive 
-                         ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-4 border-cyan-400"  
+                         ? "bg-linear-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white shadow-lg border-l-4 border-cyan-400"  
                          : "text-white/70 hover:bg-slate-800/30 hover:text-white"
                      }`}
                    >
@@ -212,20 +227,29 @@ export default function Sidebar() {
               })}
             </nav>
 
-            <div className="space-y-3 rounded-xl p-4 bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 backdrop-blur-sm border border-purple-200/20">
+            <div className="space-y-3 rounded-xl p-4 bg-linear-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 backdrop-blur-sm border border-purple-200/20">
               <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Today's Activity</div>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Active Time</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">6h 32m</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity 
+                      ? `${Math.floor(todayActivity.activeTime / 3600)}h ${Math.floor((todayActivity.activeTime % 3600) / 60)}m`
+                      : "0h 0m"
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Tasks Done</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">8/12</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity?.tasksDone || "0/0"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Breaks Taken</span>
-                  <span className="rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">3</span>
+                  <span className="rounded-full bg-linear-to-r from-cyan-500 via-blue-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    {todayActivity?.breaksTaken || 0}
+                  </span>
                 </div>
               </div>
             </div>
@@ -234,7 +258,7 @@ export default function Sidebar() {
             <Link
               href="/client"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-3 rounded-lg border border-purple-200/20 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 px-4 py-3 font-medium text-white/70 transition-all hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-cyan-500/20 hover:text-white active:scale-95"
+              className="flex w-full items-center gap-3 rounded-lg border border-purple-200/20 bg-linear-to-r from-purple-500/10 to-cyan-500/10 px-4 py-3 font-medium text-white/70 transition-all hover:bg-linear-to-r hover:from-purple-500/20 hover:to-cyan-500/20 hover:text-white active:scale-95"
             >
               <LayoutDashboard className="h-5 w-5" />
               <span>Client Portal →</span>
@@ -243,7 +267,7 @@ export default function Sidebar() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="group flex w-full items-center gap-3 rounded-lg bg-gradient-to-r from-red-500/10 to-pink-500/10 px-4 py-3 font-medium text-red-400 transition-all hover:bg-gradient-to-r hover:from-red-500/20 hover:to-pink-500/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 active:scale-95"
+              className="group flex w-full items-center gap-3 rounded-lg bg-linear-to-r from-red-500/10 to-pink-500/10 px-4 py-3 font-medium text-red-400 transition-all hover:bg-linear-to-r hover:from-red-500/20 hover:to-pink-500/20 hover:text-red-300 hover:shadow-lg hover:shadow-red-500/30 active:scale-95"
             >
               <LogOut className="h-5 w-5" />
               <span>Logout</span>

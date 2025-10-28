@@ -114,7 +114,7 @@ export default function AIChatAssistant() {
   }
 
   // Insert document or task mention
-  const insertMention = (item: Document | Task) => {
+  const insertMention = (item: Document | Task | { id: string; title: string; isSpecial: boolean }) => {
     const beforeMention = input.substring(0, mentionStartPos)
     const afterMention = input.substring(inputRef.current?.selectionStart || input.length)
     const newValue = `${beforeMention}@${item.title} ${afterMention}`
@@ -412,17 +412,17 @@ export default function AIChatAssistant() {
   }))
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto flex w-full max-w-7xl gap-6">
+    <div className="flex min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto flex w-full max-w-full gap-6">
         
         {/* Main Chat Area */}
         <div className="flex flex-1 flex-col space-y-6">
           
         {/* Header */}
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-900/50 via-purple-900/50 to-indigo-900/50 p-6 ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="rounded-2xl bg-linear-to-br from-indigo-900/50 via-purple-900/50 to-indigo-900/50 p-6 ring-1 ring-white/10 backdrop-blur-sm">
             <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
               <Bot className="h-7 w-7 text-indigo-300" />
             </div>
             <div>
@@ -481,7 +481,7 @@ export default function AIChatAssistant() {
         <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl bg-slate-900/50 p-6 ring-1 ring-white/10 backdrop-blur-sm">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
                   <Bot className="h-10 w-10 text-indigo-300" />
               </div>
               <div>
@@ -507,14 +507,14 @@ export default function AIChatAssistant() {
                   <div key={message.id}>
                     <div className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                   {message.role === "assistant" && (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
                       <Bot className="h-5 w-5 text-indigo-300" />
                     </div>
                   )}
                   <div
                     className={`max-w-[80%] space-y-2 rounded-xl p-4 ${
                       message.role === "user"
-                        ? "bg-gradient-to-br from-indigo-500/30 to-purple-500/30 text-white ring-1 ring-indigo-400/50"
+                        ? "bg-linear-to-br from-indigo-500/30 to-purple-500/30 text-white ring-1 ring-indigo-400/50"
                         : "bg-slate-800/50 text-white ring-1 ring-white/10"
                     }`}
                   >
@@ -543,7 +543,7 @@ export default function AIChatAssistant() {
                     )}
                   </div>
                   {message.role === "user" && (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/30 to-orange-500/30 ring-1 ring-amber-400/50">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-amber-500/30 to-orange-500/30 ring-1 ring-amber-400/50">
                       <User className="h-5 w-5 text-amber-300" />
                         </div>
                       )}
@@ -572,7 +572,7 @@ export default function AIChatAssistant() {
               ))}
               {isLoading && (
                 <div className="flex gap-3">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-indigo-400/50">
                     <Bot className="h-5 w-5 text-indigo-300" />
                   </div>
                   <div className="flex items-center gap-2 rounded-xl bg-slate-800/50 px-4 py-3 ring-1 ring-white/10">
@@ -613,18 +613,18 @@ export default function AIChatAssistant() {
                       onClick={() => insertMention(item)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all ${
                         isSpecial 
-                          ? 'bg-gradient-to-r from-emerald-500/10 to-blue-500/10 ring-1 ring-emerald-500/30 hover:from-emerald-500/20 hover:to-blue-500/20' 
+                          ? 'bg-linear-to-r from-emerald-500/10 to-blue-500/10 ring-1 ring-emerald-500/30 hover:from-emerald-500/20 hover:to-blue-500/20' 
                           : 'hover:bg-slate-700/50'
                       }`}
                     >
                       {isSpecial ? (
-                        <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
+                        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                           <Briefcase className="h-4 w-4 text-emerald-400" />
                         </div>
                       ) : isTask ? (
-                        <Briefcase className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                        <Briefcase className="h-4 w-4 shrink-0 text-emerald-400" />
                       ) : (
-                        <FileText className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+                        <FileText className="h-4 w-4 shrink-0 text-indigo-400" />
                       )}
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -684,7 +684,7 @@ export default function AIChatAssistant() {
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500/30 to-purple-500/30 px-6 py-3 font-medium text-white ring-1 ring-indigo-400/50 transition-all hover:from-indigo-500/40 hover:to-purple-500/40 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-linear-to-r from-indigo-500/30 to-purple-500/30 px-6 py-3 font-medium text-white ring-1 ring-indigo-400/50 transition-all hover:from-indigo-500/40 hover:to-purple-500/40 disabled:opacity-50"
             >
               <Send className="h-5 w-5" />
               <span className="hidden md:inline">Send</span>
@@ -694,7 +694,7 @@ export default function AIChatAssistant() {
         </div>
 
         {/* Document Library Sidebar */}
-        <div className={`w-80 flex-shrink-0 space-y-4 ${showDocs ? "" : "hidden lg:block"}`}>
+        <div className={`w-80 shrink-0 space-y-4 ${showDocs ? "" : "hidden lg:block"}`}>
           
           {/* Knowledge Base Header */}
           <div className="rounded-2xl bg-slate-900/50 p-5 ring-1 ring-white/10 backdrop-blur-sm">
@@ -784,7 +784,7 @@ export default function AIChatAssistant() {
                           className="group rounded-lg bg-slate-800/30 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800/50 hover:ring-white/10"
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`flex-shrink-0 rounded-lg p-2 ring-1 ${config.color}`}>
+                            <div className={`shrink-0 rounded-lg p-2 ring-1 ${config.color}`}>
                               <Icon className="h-4 w-4" />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -859,7 +859,7 @@ export default function AIChatAssistant() {
                     className="group rounded-lg bg-slate-800/30 p-3 ring-1 ring-white/5 transition-all hover:bg-slate-800/50 hover:ring-white/10"
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`flex-shrink-0 rounded-lg p-2 ring-1 ${
+                      <div className={`shrink-0 rounded-lg p-2 ring-1 ${
                         task.status === 'DONE' ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30' :
                         task.status === 'IN_PROGRESS' ? 'bg-amber-500/20 text-amber-400 ring-amber-500/30' :
                         task.status === 'FOR_REVIEW' ? 'bg-purple-500/20 text-purple-400 ring-purple-500/30' :
@@ -908,7 +908,7 @@ export default function AIChatAssistant() {
           {/* Upload Button */}
           <button 
             onClick={() => setShowUploadModal(true)}
-            className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3 text-sm font-bold text-white ring-1 ring-indigo-500/50 transition-all hover:from-indigo-700 hover:to-purple-700 active:scale-95"
+            className="w-full rounded-xl bg-linear-to-r from-indigo-600 to-purple-600 py-3 text-sm font-bold text-white ring-1 ring-indigo-500/50 transition-all hover:from-indigo-700 hover:to-purple-700 active:scale-95"
           >
             <Upload className="inline h-4 w-4 mr-2" />
             Upload Document

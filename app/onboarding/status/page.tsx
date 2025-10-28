@@ -269,7 +269,7 @@ export default function OnboardingStatusPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Header */}
         <div className="mb-6">
           <Button

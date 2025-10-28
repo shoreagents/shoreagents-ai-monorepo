@@ -100,8 +100,23 @@ export async function POST(req: NextRequest) {
 
     if (authError || !authData.user) {
       console.error("Supabase auth error:", authError)
+      
+      // Handle specific Supabase errors - check for email already exists
+      // The error object has __isAuthError: true, status: 422, code: 'email_exists'
+      const errorObj = authError as any
+      const errorStatus = errorObj?.status
+      const errorCode = errorObj?.code
+      const errorMessage = errorObj?.message
+      
+      if (errorStatus === 422 || errorCode === 'email_exists') {
+        return NextResponse.json(
+          { error: "A user with this email address has already been registered" },
+          { status: 400 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: authError?.message || "Failed to create auth user" },
+        { error: errorMessage || "Failed to create auth user" },
         { status: 500 }
       )
     }

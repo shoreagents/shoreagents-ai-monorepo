@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import { 
   User, 
   CreditCard, 
@@ -716,23 +717,71 @@ export default function OnboardingForm() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div className="loader"></div>
+      <div className="min-h-screen p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="max-w-6xl mx-auto w-full space-y-6">
+          {/* Status Button Skeleton */}
+          <div className="text-center mb-6">
+            <Skeleton className="h-10 w-48 mx-auto" />
+          </div>
+
+          {/* Progress Card Skeleton */}
+          <Card className="mb-6 bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
+            <CardContent className="py-6">
+              {/* Step indicators skeleton */}
+              <div className="flex items-center mb-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1 min-h-[80px] justify-start">
+                      <Skeleton className="h-10 w-10 rounded-full mb-2" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    {i < 7 && (
+                      <div className="w-full h-0.5 mx-2">
+                        <Skeleton className="h-full" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Progress bar skeleton */}
+              <Skeleton className="h-2 w-full rounded-full" />
+            </CardContent>
+          </Card>
+
+          {/* Form Card Skeleton */}
+          <Card className="bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0">
+            <CardHeader>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-96" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Form fields skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Action buttons skeleton */}
+              <div className="flex gap-4">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-700">
-        {/* Header */}
-        <div className="text-center mb-8 mt-12">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Welcome to ShoreAgents! <span className="inline-block animate-wave origin-[70%_70%]">👋</span>
-          </h1>
-          <p className="text-slate-300 mb-4">
-            Complete your onboarding to get started
-          </p>
+    <div className="min-h-screen p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="max-w-6xl mx-auto w-full space-y-6">
+        {/* Status Button */}
+        <div className="text-center mb-6">
           <Button
             onClick={() => router.push("/onboarding/status")}
             variant="outline"
@@ -2918,18 +2967,6 @@ export default function OnboardingForm() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Return to Dashboard */}
-      <div className="max-w-6xl mx-auto w-full text-center mt-8">
-        <Button
-          onClick={() => router.push("/")}
-          variant="ghost"
-          className="text-slate-400 hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Return to Dashboard
-        </Button>
-      </div>
     </div>
   )
 }

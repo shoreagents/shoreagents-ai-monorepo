@@ -11,10 +11,43 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+        <div className="mx-auto max-w-full space-y-6 animate-in fade-in duration-700">
+          {/* Header Skeleton */}
+          <div className="h-24 rounded-xl bg-slate-800/50 animate-pulse" />
+
+          {/* Cards Skeleton */}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl bg-slate-800/50 p-6 animate-pulse">
+              <div className="h-6 w-32 bg-slate-700/50 rounded mb-4" />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-40 bg-slate-700/50 rounded" />
+                    <div className="h-3 w-60 bg-slate-700/50 rounded" />
+                  </div>
+                  <div className="h-10 w-16 bg-slate-700/50 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Save Button Skeleton */}
+          <div className="flex justify-end">
+            <div className="h-10 w-32 bg-slate-800/50 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
-      <div className="mx-auto max-w-6xl animate-in fade-in duration-700">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
+      <div className="mx-auto max-w-full animate-in fade-in duration-700">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
