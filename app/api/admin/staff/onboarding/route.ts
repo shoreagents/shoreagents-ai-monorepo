@@ -74,7 +74,15 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ staff: staffList })
+    // Transform to match frontend expectations (camelCase)
+    const transformedStaff = staffList.map(staff => ({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email,
+      onboarding: staff.staff_onboarding // Transform snake_case to camelCase
+    }))
+
+    return NextResponse.json({ staff: transformedStaff })
 
   } catch (error) {
     console.error("Admin onboarding list error:", error)
