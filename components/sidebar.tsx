@@ -52,6 +52,7 @@ export default function Sidebar() {
   const [profileData, setProfileData] = useState<any>(null)
   const [todayActivity, setTodayActivity] = useState<any>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
   const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
   const pathname = usePathname()
   const router = useRouter()
