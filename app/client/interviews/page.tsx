@@ -448,66 +448,59 @@ export default function ClientInterviewsPage() {
                     <div className="flex gap-2 pt-4 border-t border-gray-200">
                       {/* Mark as Completed - Show for scheduled interviews */}
                       {interview.status === 'SCHEDULED' && (
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
+                        <button
                           onClick={() => {
                             setSelectedInterview(interview)
                             setCompleteModalOpen(true)
                           }}
+                          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:shadow-lg font-medium transition-all flex items-center gap-2 text-sm"
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          <CheckCircle2 className="h-4 w-4" />
                           Mark Complete
-                        </Button>
+                        </button>
                       )}
 
                       {/* Request Reschedule - Show for pending or scheduled */}
                       {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                        <button
                           onClick={() => {
                             setSelectedInterview(interview)
                             setRescheduleModalOpen(true)
                           }}
+                          className="px-4 py-2 border-2 border-blue-400 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-all flex items-center gap-2 text-sm"
                         >
-                          <CalendarClock className="h-4 w-4 mr-2" />
+                          <CalendarClock className="h-4 w-4" />
                           Request Reschedule
-                        </Button>
+                        </button>
                       )}
 
                       {/* Add Notes - Show for any active interview */}
                       {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
+                        <button
                           onClick={() => {
                             setSelectedInterview(interview)
                             setAdditionalNotes(interview.clientNotes || '')
                             setNotesModalOpen(true)
                           }}
+                          className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-all flex items-center gap-2 text-sm"
                         >
-                          <MessageSquare className="h-4 w-4 mr-2" />
+                          <MessageSquare className="h-4 w-4" />
                           Add Notes
-                        </Button>
+                        </button>
                       )}
 
                       {/* Cancel Interview - Show for pending or scheduled */}
                       {(interview.status === 'PENDING' || interview.status === 'SCHEDULED') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="border-red-500 text-red-600 hover:bg-red-50"
+                        <button
                           onClick={() => {
                             setSelectedInterview(interview)
                             setCancelModalOpen(true)
                           }}
+                          className="px-4 py-2 border-2 border-rose-400 text-rose-600 rounded-lg hover:bg-rose-50 font-medium transition-all flex items-center gap-2 text-sm"
                         >
-                          <XCircle className="h-4 w-4 mr-2" />
+                          <XCircle className="h-4 w-4" />
                           Cancel
-                        </Button>
+                        </button>
                       )}
                     </div>
 
@@ -541,12 +534,14 @@ export default function ClientInterviewsPage() {
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setCancelModalOpen(false)}>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+              >
                 Keep Interview
-              </Button>
-              <Button 
-                variant="destructive"
+              </button>
+              <button
                 disabled={submitting}
                 onClick={async () => {
                   if (!selectedInterview) return
@@ -571,9 +566,10 @@ export default function ClientInterviewsPage() {
                     setSubmitting(false)
                   }
                 }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-xl hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Cancelling...' : 'Confirm Cancellation'}
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -600,11 +596,14 @@ export default function ClientInterviewsPage() {
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setRescheduleModalOpen(false)}>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRescheduleModalOpen(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+              >
                 Cancel
-              </Button>
-              <Button 
+              </button>
+              <button
                 disabled={submitting || !rescheduleNotes.trim()}
                 onClick={async () => {
                   if (!selectedInterview) return
@@ -629,9 +628,10 @@ export default function ClientInterviewsPage() {
                     setSubmitting(false)
                   }
                 }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Sending...' : 'Send Request'}
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -658,12 +658,14 @@ export default function ClientInterviewsPage() {
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setCompleteModalOpen(false)}>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCompleteModalOpen(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+              >
                 Cancel
-              </Button>
-              <Button 
-                className="bg-green-600 hover:bg-green-700"
+              </button>
+              <button
                 disabled={submitting}
                 onClick={async () => {
                   if (!selectedInterview) return
@@ -688,9 +690,10 @@ export default function ClientInterviewsPage() {
                     setSubmitting(false)
                   }
                 }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Saving...' : 'Mark as Completed'}
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -717,11 +720,14 @@ export default function ClientInterviewsPage() {
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setNotesModalOpen(false)}>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setNotesModalOpen(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+              >
                 Cancel
-              </Button>
-              <Button 
+              </button>
+              <button
                 disabled={submitting}
                 onClick={async () => {
                   if (!selectedInterview) return
@@ -745,9 +751,10 @@ export default function ClientInterviewsPage() {
                     setSubmitting(false)
                   }
                 }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Saving...' : 'Save Notes'}
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>

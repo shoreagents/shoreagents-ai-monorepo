@@ -601,11 +601,12 @@ export default function AdminRecruitmentPage() {
       const response = await fetch(`/api/admin/recruitment/candidates/${interview.bpocCandidateId}`)
       if (response.ok) {
         const candidateData = await response.json()
-        candidateEmail = candidateData.resume_data?.email || candidateData.resume_data?.contact?.email || ''
-        console.log('📧 Pre-filled candidate email:', candidateEmail)
+        console.log('🔍 [Finalize Hire] Full candidate data:', candidateData)
+        candidateEmail = candidateData.candidate?.email || ''
+        console.log('📧 [Finalize Hire] Pre-filled candidate email:', candidateEmail)
       }
     } catch (error) {
-      console.error('Error fetching candidate email:', error)
+      console.error('❌ [Finalize Hire] Error fetching candidate email:', error)
     }
     
     setConfirmFormData({
