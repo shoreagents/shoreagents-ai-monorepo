@@ -81,26 +81,66 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 pt-20 md:p-8 lg:pt-8">
       <div className="mx-auto max-w-7xl space-y-8 animate-in fade-in duration-700">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/client-company">
-            <button className="flex items-center justify-center rounded-xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-3 transition-all hover:bg-slate-800 hover:scale-105">
-              <ArrowLeft className="h-5 w-5 text-white" />
-            </button>
-          </Link>
-          {company.logo ? (
-            <div className="h-20 w-20 overflow-hidden rounded-2xl ring-2 ring-white/10">
-              <img src={company.logo} alt={company.companyName} className="h-full w-full object-cover" />
+        {/* Back Button */}
+        <Link href="/client-company">
+          <button className="flex items-center justify-center rounded-xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-3 transition-all hover:bg-slate-800 hover:scale-105">
+            <ArrowLeft className="h-5 w-5 text-white" />
+          </button>
+        </Link>
+
+        {/* Hero Banner with Cover Photo and Logo */}
+        <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-indigo-900/30 to-slate-900/80 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden">
+          {/* Cover Photo */}
+          {company.coverPhoto ? (
+            <div className="h-48 w-full overflow-hidden">
+              <img src={company.coverPhoto} alt={`${company.companyName} cover`} className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-3xl font-bold text-white ring-2 ring-white/10">
-              {company.companyName.charAt(0)}
-            </div>
+            <div className="h-48 w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600" />
           )}
-          <div>
-            <h1 className="text-4xl font-bold text-white">{company.companyName}</h1>
-            {company.tradingName && (
-              <p className="text-lg text-slate-400 mt-1">({company.tradingName})</p>
+          
+          {/* Company Info - Overlapping the cover */}
+          <div className="relative px-8 pb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 -mt-12">
+              {/* Logo */}
+              {company.logo ? (
+                <div className="h-32 w-32 overflow-hidden rounded-2xl ring-4 ring-slate-900 bg-slate-900">
+                  <img src={company.logo} alt={company.companyName} className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-5xl font-bold text-white ring-4 ring-slate-900">
+                  {company.companyName.charAt(0)}
+                </div>
+              )}
+              
+              {/* Company Name and Details */}
+              <div className="flex-1 sm:mt-8">
+                <h1 className="text-4xl font-bold text-white mb-2">{company.companyName}</h1>
+                {company.tradingName && (
+                  <p className="text-lg text-slate-400 mb-3">({company.tradingName})</p>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  {company.industry && (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/20 px-4 py-1.5 ring-1 ring-indigo-500/50">
+                      <Tag className="h-3.5 w-3.5 text-indigo-400" />
+                      <span className="text-sm font-semibold text-indigo-300">{company.industry}</span>
+                    </div>
+                  )}
+                  {company.location && (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/20 px-4 py-1.5 ring-1 ring-purple-500/50">
+                      <MapPin className="h-3.5 w-3.5 text-purple-400" />
+                      <span className="text-sm font-semibold text-purple-300">{company.location}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Company Bio */}
+            {company.bio && (
+              <p className="mt-6 text-slate-300 leading-relaxed border-t border-white/5 pt-6">
+                {company.bio}
+              </p>
             )}
           </div>
         </div>
