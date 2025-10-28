@@ -38,13 +38,15 @@ import {
   Zap,
   Award,
   TrendingUp,
-  UserSearch
+  UserSearch,
+  RotateCw
 } from "lucide-react"
 
 // Types
 interface JobRequest {
   id: number
   job_title: string
+  job_description: string
   work_type: string
   work_arrangement: string
   experience_level: string
@@ -52,6 +54,20 @@ interface JobRequest {
   created_at: string
   applicants: number
   views: number
+  company_id: string
+  salary_min: number | null
+  salary_max: number | null
+  currency: string
+  salary_type: string
+  department: string | null
+  industry: string | null
+  shift: string
+  priority: string
+  application_deadline: string | null
+  requirements: string[] | null
+  responsibilities: string[] | null
+  benefits: string[] | null
+  skills: string[] | null
 }
 
 interface Candidate {
@@ -94,12 +110,16 @@ export default function RecruitmentPage() {
   const [jobRequests, setJobRequests] = useState<JobRequest[]>([])
   const [jobsLoading, setJobsLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null)
+  const [jobDetailOpen, setJobDetailOpen] = useState(false)
   
   // Talent Pool State
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [candidatesLoading, setCandidatesLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Interviews State
   const [interviews, setInterviews] = useState<InterviewRequest[]>([])
@@ -196,6 +216,7 @@ export default function RecruitmentPage() {
 
       if (data.success) {
         setCandidates(data.candidates)
+        setLastFetchTime(new Date())
         
         const allSkills = new Set<string>()
         data.candidates.forEach((c: Candidate) => {
@@ -207,6 +228,15 @@ export default function RecruitmentPage() {
       console.error('Failed to fetch candidates:', error)
     } finally {
       setCandidatesLoading(false)
+    }
+  }
+
+  async function refreshCandidates() {
+    try {
+      setIsRefreshing(true)
+      await fetchCandidates()
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -365,7 +395,13 @@ export default function RecruitmentPage() {
         body: JSON.stringify(cleanedData)
       })
 
-      if (!response.ok) throw new Error("Failed to create job request")
+      const data = await response.json()
+
+      if (!response.ok) {
+        const errorMsg = data.details || data.error || "Failed to create job request"
+        console.error("Job request error:", data)
+        throw new Error(errorMsg)
+      }
 
       await fetchJobRequests()
       setShowForm(false)
@@ -393,7 +429,8 @@ export default function RecruitmentPage() {
       })
     } catch (error) {
       console.error("Error submitting job request:", error)
-      alert("Failed to create job request. Please try again.")
+      const errorMsg = error instanceof Error ? error.message : "Failed to create job request"
+      alert(`Failed to create job request: ${errorMsg}`)
     } finally {
       setSubmitting(false)
     }
@@ -506,6 +543,9 @@ export default function RecruitmentPage() {
             availableSkills={availableSkills}
             clearFilters={clearFilters}
             router={router}
+            lastFetchTime={lastFetchTime}
+            isRefreshing={isRefreshing}
+            onRefresh={refreshCandidates}
           />
         )}
 
@@ -522,6 +562,10 @@ export default function RecruitmentPage() {
             addArrayItem={addArrayItem}
             removeArrayItem={removeArrayItem}
             updateArrayItem={updateArrayItem}
+            selectedJob={selectedJob}
+            setSelectedJob={setSelectedJob}
+            jobDetailOpen={jobDetailOpen}
+            setJobDetailOpen={setJobDetailOpen}
           />
         )}
 
@@ -572,38 +616,65 @@ function TalentPoolTab({
   setMinCulturalFit,
   availableSkills,
   clearFilters,
-  router
+  router,
+  lastFetchTime,
+  isRefreshing,
+  onRefresh
 }: any) {
   return (
     <div className="space-y-6">
       {/* Search and Filter Bar */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by skills, role, or keywords..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by skills, role, or keywords..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+              showFilters
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-5 h-5" />
+            Filters
+            {(selectedSkills.length > 0 || minExperience > 0 || minCulturalFit > 0) && (
+              <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {selectedSkills.length + (minExperience > 0 ? 1 : 0) + (minCulturalFit > 0 ? 1 : 0)}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            title="Refresh candidate list"
+          >
+            <RotateCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-            showFilters
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <Filter className="w-5 h-5" />
-          Filters
-          {(selectedSkills.length > 0 || minExperience > 0 || minCulturalFit > 0) && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {selectedSkills.length + (minExperience > 0 ? 1 : 0) + (minCulturalFit > 0 ? 1 : 0)}
+        
+        {/* Last Updated Timestamp */}
+        {lastFetchTime && (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Clock className="w-4 h-4" />
+            <span>
+              Last updated: {new Date(lastFetchTime).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
             </span>
-          )}
-        </button>
+          </div>
+        )}
       </div>
 
       {/* Advanced Filters Panel */}
@@ -731,7 +802,7 @@ function TalentPoolTab({
             <CandidateCard
               key={candidate.id}
               candidate={candidate}
-              onClick={() => router.push(`/client/talent-pool/${candidate.id}`)}
+              onClick={() => router.push(`/client/talent-pool/${candidate.id}?from=recruitment`)}
             />
           ))}
         </div>
@@ -890,7 +961,11 @@ function JobRequestsTab({
   handleSubmit,
   addArrayItem,
   removeArrayItem,
-  updateArrayItem
+  updateArrayItem,
+  selectedJob,
+  setSelectedJob,
+  jobDetailOpen,
+  setJobDetailOpen
 }: any) {
   if (showForm) {
     return (
@@ -1444,12 +1519,29 @@ function JobRequestsTab({
                       </span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedJob(job)
+                      setJobDetailOpen(true)
+                    }}
+                  >
                     View Details
                   </Button>
                 </div>
               </Card>
             ))}
+      
+      {/* Job Detail Modal */}
+      <JobDetailModal 
+        job={selectedJob}
+        open={jobDetailOpen}
+        onClose={() => {
+          setJobDetailOpen(false)
+          setSelectedJob(null)
+        }}
+      />
     </div>
   )
 }
@@ -1985,5 +2077,237 @@ function InterviewsTab({
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ============================================================================
+// JOB DETAIL MODAL
+// ============================================================================
+
+function JobDetailModal({ 
+  job, 
+  open, 
+  onClose 
+}: { 
+  job: JobRequest | null; 
+  open: boolean; 
+  onClose: () => void 
+}) {
+  if (!job) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-white text-gray-900 !max-w-[95vw] lg:!max-w-[1400px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                {job.job_title}
+              </DialogTitle>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge className={
+                  job.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
+                  job.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                  'bg-gray-100 text-gray-800 border-gray-200'
+                }>
+                  {job.status.toUpperCase()}
+                </Badge>
+                <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <Briefcase className="h-4 w-4" />
+                  {job.work_type}
+                </span>
+                <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  {job.work_arrangement}
+                </span>
+                <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <Target className="h-4 w-4" />
+                  {job.experience_level}
+                </span>
+              </div>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Job Description */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Job Description</h3>
+            </div>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {job.job_description}
+            </p>
+          </div>
+
+          {/* Work Details Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            {job.department && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Department</p>
+                <p className="text-sm font-semibold text-gray-900">{job.department}</p>
+              </div>
+            )}
+            {job.industry && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Industry</p>
+                <p className="text-sm font-semibold text-gray-900">{job.industry}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase mb-1">Shift</p>
+              <p className="text-sm font-semibold text-gray-900 capitalize">{job.shift}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase mb-1">Priority</p>
+              <Badge className={
+                job.priority === 'high' ? 'bg-red-100 text-red-800' :
+                job.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }>
+                {job.priority.toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Compensation */}
+          {(job.salary_min || job.salary_max) && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Compensation</h3>
+              </div>
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-2xl font-bold text-green-700">
+                  {job.currency} {job.salary_min?.toLocaleString() || '---'} - {job.salary_max?.toLocaleString() || '---'}
+                  <span className="text-sm font-normal text-green-600 ml-2">/ {job.salary_type}</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Requirements */}
+          {job.requirements && job.requirements.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Requirements</h3>
+              </div>
+              <ul className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {job.requirements.map((req, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-700 flex-1">{req}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Responsibilities */}
+          {job.responsibilities && job.responsibilities.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Responsibilities</h3>
+              </div>
+              <ul className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {job.responsibilities.map((resp, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-700 flex-1">{resp}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Skills */}
+          {job.skills && job.skills.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-teal-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Required Skills</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {job.skills.map((skill, index) => (
+                  <Badge 
+                    key={index}
+                    className="bg-teal-100 text-teal-800 border-teal-200 px-3 py-1.5"
+                  >
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Benefits */}
+          {job.benefits && job.benefits.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Benefits</h3>
+              </div>
+              <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {job.benefits.map((benefit, index) => (
+                  <li key={index} className="flex items-center gap-2 text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    <span>{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Meta Information */}
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Posted:</span>
+              <span className="font-medium text-gray-900">
+                {new Date(job.created_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </span>
+            </div>
+            {job.application_deadline && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Application Deadline:</span>
+                <span className="font-medium text-red-600">
+                  {new Date(job.application_deadline).toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-300">
+              <span className="text-gray-600">Applicants:</span>
+              <span className="font-bold text-blue-600 flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                {job.applicants || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button
+            onClick={onClose}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

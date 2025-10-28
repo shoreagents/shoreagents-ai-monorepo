@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, MapPin, Calendar, Briefcase, Award, Book, Languages,
   Brain, Zap, Target, TrendingUp, Video, CheckCircle, X, Plus, FileText
@@ -72,12 +72,22 @@ type TabType = 'profile' | 'ai' | 'disc' | 'performance'
 export default function CandidateProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const candidateId = params.id as string
+  const fromPage = searchParams.get('from')
 
   const [candidate, setCandidate] = useState<CandidateProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('profile')
+
+  const handleBackNavigation = () => {
+    if (fromPage === 'recruitment') {
+      router.push('/client/recruitment')
+    } else {
+      router.push('/client/talent-pool')
+    }
+  }
 
   useEffect(() => {
     fetchCandidate()
@@ -118,10 +128,10 @@ export default function CandidateProfilePage() {
         <div className="text-center">
           <p className="text-xl text-gray-900 font-semibold mb-2">Candidate not found</p>
           <button
-            onClick={() => router.push('/client/talent-pool')}
+            onClick={handleBackNavigation}
             className="text-blue-600 hover:text-blue-700 font-medium"
           >
-            ← Back to Talent Pool
+            ← Back to {fromPage === 'recruitment' ? 'Recruitment' : 'Talent Pool'}
           </button>
         </div>
       </div>
@@ -137,11 +147,11 @@ export default function CandidateProfilePage() {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
-            onClick={() => router.push('/client/talent-pool')}
+            onClick={handleBackNavigation}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back to Talent Pool
+            Back to {fromPage === 'recruitment' ? 'Recruitment' : 'Talent Pool'}
           </button>
         </div>
       </div>

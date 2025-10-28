@@ -49,7 +49,7 @@ export async function queryBPOC<T = any>(
 }
 
 /**
- * Get all candidates with resumes (anonymized for clients)
+ * Get all candidates with saved resumes (anonymized for clients)
  * @param filters Optional filters for skills, location, experience, etc.
  * @returns Array of candidate profiles
  */
@@ -70,7 +70,7 @@ export async function getCandidates(filters?: {
       u.position,
       u.location_city,
       u.location_country,
-      re.resume_data,
+      sr.resume_data,
       bcr.result_json as cultural_results,
       dps.latest_primary_type,
       dps.latest_secondary_type,
@@ -83,12 +83,12 @@ export async function getCandidates(filters?: {
       ths.latest_accuracy as typing_accuracy,
       uls.overall_score as leaderboard_score
     FROM users u
-    LEFT JOIN resumes_extracted re ON u.id = re.user_id
+    LEFT JOIN saved_resumes sr ON u.id = sr.user_id
     LEFT JOIN bpoc_cultural_results bcr ON u.id = bcr.user_id
     LEFT JOIN disc_personality_stats dps ON u.id = dps.user_id
     LEFT JOIN typing_hero_stats ths ON u.id = ths.user_id
     LEFT JOIN user_leaderboard_scores uls ON u.id = uls.user_id
-    WHERE re.resume_data IS NOT NULL
+    WHERE sr.resume_data IS NOT NULL
   `
 
   const params: any[] = []
@@ -97,7 +97,7 @@ export async function getCandidates(filters?: {
   // Filter by skills
   if (filters?.skills && filters.skills.length > 0) {
     sql += ` AND EXISTS (
-      SELECT 1 FROM jsonb_array_elements_text(re.resume_data->'skills') skill
+      SELECT 1 FROM jsonb_array_elements_text(sr.resume_data->'skills') skill
       WHERE skill ILIKE ANY($${paramIndex})
     )`
     params.push(filters.skills.map(s => `%${s}%`))
@@ -115,7 +115,7 @@ export async function getCandidates(filters?: {
   if (filters?.minExperience && filters.minExperience > 0) {
     sql += ` AND (
       SELECT COUNT(*)
-      FROM jsonb_array_elements(re.resume_data->'experience')
+      FROM jsonb_array_elements(sr.resume_data->'experience')
     ) >= $${paramIndex}`
     params.push(filters.minExperience)
     paramIndex++
@@ -142,7 +142,7 @@ export async function getCandidates(filters?: {
       OR u.bio ILIKE $${paramIndex}
       OR u.position ILIKE $${paramIndex}
       OR EXISTS (
-        SELECT 1 FROM jsonb_array_elements_text(re.resume_data->'skills') skill
+        SELECT 1 FROM jsonb_array_elements_text(sr.resume_data->'skills') skill
         WHERE skill ILIKE $${paramIndex}
       )
     )`
@@ -173,8 +173,8 @@ export async function getCandidateById(candidateId: string) {
       u.location_country,
       u.location_province,
       u.created_at,
-      re.resume_data,
-      re.created_at as resume_created_at,
+      sr.resume_data,
+      sr.created_at as resume_created_at,
       bcr.result_json as cultural_results,
       bcr.summary_text as cultural_summary,
       dps.latest_primary_type,
@@ -199,7 +199,7 @@ export async function getCandidateById(candidateId: string) {
       air.salary_analysis as ai_salary_analysis,
       air.career_path as ai_career_path
     FROM users u
-    LEFT JOIN resumes_extracted re ON u.id = re.user_id
+    LEFT JOIN saved_resumes sr ON u.id = sr.user_id
     LEFT JOIN bpoc_cultural_results bcr ON u.id = bcr.user_id
     LEFT JOIN disc_personality_stats dps ON u.id = dps.user_id
     LEFT JOIN typing_hero_stats ths ON u.id = ths.user_id

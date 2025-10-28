@@ -1,3 +1,15 @@
+/**
+ * Client Job Requests API
+ * POST /api/client/job-requests - Create job request
+ * GET /api/client/job-requests - Fetch company's job requests
+ * 
+ * Company Mapping Strategy:
+ * - Uses company.organizationId (or company.id as fallback) as the company_id in BPOC
+ * - Auto-creates company record in BPOC if it doesn't exist (on first job post)
+ * - Ensures complete isolation: Each company only sees their own job requests
+ * - Respects BPOC's foreign key constraint: job_requests.company_id → companies.id
+ */
+
 import { NextRequest, NextResponse } from "next/server"
 import { Pool } from "pg"
 import { auth } from "@/lib/auth"
@@ -11,6 +23,59 @@ const bpocPool = new Pool({
 // Check if BPOC database URL is configured
 if (!process.env.BPOC_DATABASE_URL) {
   console.error("❌ BPOC_DATABASE_URL environment variable is not set")
+}
+
+/**
+ * Map frontend experience level values to BPOC enum values
+ * BPOC uses: 'entry-level', 'mid-level', 'senior-level'
+ */
+function mapExperienceLevel(level: string): string {
+  const mapping: Record<string, string> = {
+    'entry-level': 'entry-level',
+    'mid-level': 'mid-level',
+    'senior': 'senior-level',  // Frontend sends 'senior', BPOC expects 'senior-level'
+    'Senior': 'senior-level',
+    'senior-level': 'senior-level'
+  }
+  return mapping[level] || level
+}
+
+/**
+ * Ensure company exists in BPOC database
+ * Creates company record if it doesn't exist
+ * Returns the company ID to use for job_requests
+ */
+async function ensureBPOCCompany(company: { id: string; organizationId: string; companyName: string }) {
+  const bpocCompanyId = company.organizationId || company.id
+  
+  try {
+    // Check if company already exists in BPOC members table
+    const existingCompany = await bpocPool.query(
+      'SELECT company_id FROM members WHERE company_id = $1 LIMIT 1',
+      [bpocCompanyId]
+    )
+    
+    if (existingCompany.rows.length > 0) {
+      console.log(`✅ Company already exists in BPOC members: ${company.companyName} (${bpocCompanyId})`)
+      return bpocCompanyId
+    }
+    
+    // Company doesn't exist, create it in members table
+    console.log(`📋 Creating company in BPOC members table: ${company.companyName} (${bpocCompanyId})`)
+    
+    // Insert into members table with required fields: company_id and company
+    const result = await bpocPool.query(
+      'INSERT INTO members (company_id, company, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING company_id',
+      [bpocCompanyId, company.companyName]
+    )
+    
+    console.log(`✅ Company created in BPOC members: ${company.companyName} (${result.rows[0].company_id})`)
+    return result.rows[0].company_id
+    
+  } catch (error) {
+    console.error('❌ Error ensuring BPOC company in members table:', error)
+    throw error
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -34,7 +99,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get client's company_id
+    // Get client's company with organizationId (unique identifier)
     const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
@@ -46,39 +111,42 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // First, let's check the actual structure of the job_requests table
+    // Ensure company exists in BPOC database (creates if needed)
+    let bpocCompanyId;
     try {
-      const tableStructure = await bpocPool.query(
-        `SELECT column_name, data_type, is_nullable 
-         FROM information_schema.columns 
-         WHERE table_name = 'job_requests' 
-         ORDER BY ordinal_position`
-      )
-      console.log("📋 BPOC job_requests table structure:", tableStructure.rows)
-    } catch (structureError) {
-      console.error("Error checking table structure:", structureError)
-    }
-
-    // For now, use a default company ID since BPOC database schema is different
-    // TODO: Map Supabase company IDs to BPOC company IDs properly
-    let bpocCompanyId = '1' // Default company ID for BPOC database
-    
-    try {
-      // Check if we can find any existing company in BPOC
-      const companyCheck = await bpocPool.query(
-        `SELECT company_id FROM job_requests LIMIT 1`
-      )
-      
-      if (companyCheck.rows.length > 0) {
-        bpocCompanyId = companyCheck.rows[0].company_id
-        console.log("✅ Using existing company ID from BPOC:", bpocCompanyId)
-      } else {
-        console.log("✅ Using default company ID:", bpocCompanyId)
-      }
+      bpocCompanyId = await ensureBPOCCompany({
+        id: clientUser.company.id,
+        organizationId: clientUser.company.organizationId,
+        companyName: clientUser.company.companyName
+      })
+      console.log(`✅ Company ensured in BPOC: ${bpocCompanyId}`)
     } catch (companyError) {
-      console.error("Error checking BPOC companies:", companyError)
-      // Use default company ID
+      console.error('❌ Failed to ensure company in BPOC:', companyError)
+      return NextResponse.json(
+        { 
+          error: 'Failed to create/verify company in BPOC',
+          details: companyError instanceof Error ? companyError.message : 'Unknown error'
+        },
+        { status: 500 }
+      )
     }
+    
+    // Check valid enum values for experience_level (for debugging)
+    try {
+      const enumCheck = await bpocPool.query(`
+        SELECT enumlabel 
+        FROM pg_enum 
+        WHERE enumtypid = (
+          SELECT oid FROM pg_type WHERE typname = 'experience_level_enum'
+        )
+      `)
+      console.log('📊 Valid experience_level enum values:', enumCheck.rows.map(r => r.enumlabel))
+    } catch (enumError) {
+      console.log('⚠️ Could not check enum values:', enumError)
+    }
+    
+    console.log(`📋 Creating job request for company: ${clientUser.company.companyName} (ID: ${bpocCompanyId})`)
+    console.log(`📋 Experience level: ${body.experience_level} → ${mapExperienceLevel(body.experience_level)}`)
 
     // Insert into BPOC database
     const result = await bpocPool.query(
@@ -119,7 +187,7 @@ export async function POST(request: NextRequest) {
         body.job_description,
         body.work_type,
         body.work_arrangement,
-        body.experience_level,
+        mapExperienceLevel(body.experience_level), // Map to BPOC enum format
         body.salary_min,
         body.salary_max,
         body.currency,
@@ -143,9 +211,14 @@ export async function POST(request: NextRequest) {
       jobRequest: result.rows[0]
     })
   } catch (error) {
-    console.error("Error creating job request:", error)
+    console.error("❌ Error creating job request:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    console.error("❌ Error details:", errorMessage)
     return NextResponse.json(
-      { error: "Failed to create job request" },
+      { 
+        error: "Failed to create job request",
+        details: errorMessage
+      },
       { status: 500 }
     )
   }
@@ -170,7 +243,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // Get client's company_id
+    // Get client's company with organizationId (unique identifier)
     const clientUser = await prisma.client_users.findUnique({
       where: { authUserId: session.user.id },
       include: { company: true }
@@ -180,27 +253,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client user or company not found" }, { status: 404 })
     }
 
-    // Use the same company ID logic as POST method
-    let bpocCompanyId = '1' // Default company ID for BPOC database
+    // Use company.id as the company identifier in BPOC (fallback to organizationId if needed)
+    const bpocCompanyId = clientUser.company.organizationId || clientUser.company.id
     
-    try {
-      // Check if we can find any existing company in BPOC
-      const companyCheck = await bpocPool.query(
-        `SELECT company_id FROM job_requests LIMIT 1`
-      )
-      
-      if (companyCheck.rows.length > 0) {
-        bpocCompanyId = companyCheck.rows[0].company_id
-        console.log("✅ GET: Using existing company ID from BPOC:", bpocCompanyId)
-      } else {
-        console.log("✅ GET: Using default company ID:", bpocCompanyId)
-      }
-    } catch (companyError) {
-      console.error("Error checking BPOC companies in GET:", companyError)
-      // Use default company ID
-    }
+    console.log(`🔍 Fetching job requests for company: ${clientUser.company.companyName} (ID: ${bpocCompanyId})`)
 
-    // Fetch job requests from BPOC database
+    // Fetch ONLY this company's job requests from BPOC database
     const result = await bpocPool.query(
       `SELECT * FROM job_requests 
        WHERE company_id = $1 
