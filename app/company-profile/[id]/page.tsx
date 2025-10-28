@@ -29,18 +29,18 @@ async function getCompanyDetails(companyId: string) {
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       include: {
-        clientUsers: {
+        client_users: {
           include: {
-            profile: true,
+            client_profiles: true,
           },
         },
-        staffUsers: {
+        staff_users: {
           include: {
-            profile: true,
+            staff_profiles: true,
             gamification_profiles: true,
           },
         },
-        accountManager: {
+        management_users: {
           select: {
             id: true,
             name: true,
@@ -114,12 +114,12 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 text-center transition-all duration-500 hover:scale-[1.02] hover:ring-white/20 hover:shadow-blue-500/30">
             <Users className="h-8 w-8 text-blue-400 mb-2" />
-            <div className="text-3xl font-bold text-white">{company.staffUsers.length}</div>
+            <div className="text-3xl font-bold text-white">{company.staff_users.length}</div>
             <div className="text-xs font-medium uppercase tracking-wider text-slate-400">Staff Members</div>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 text-center transition-all duration-500 hover:scale-[1.02] hover:ring-white/20 hover:shadow-purple-500/30">
             <User className="h-8 w-8 text-purple-400 mb-2" />
-            <div className="text-3xl font-bold text-white">{company.clientUsers.length}</div>
+            <div className="text-3xl font-bold text-white">{company.client_users.length}</div>
             <div className="text-xs font-medium uppercase tracking-wider text-slate-400">Client Users</div>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-slate-900/50 backdrop-blur-xl ring-1 ring-white/10 p-6 text-center transition-all duration-500 hover:scale-[1.02] hover:ring-white/20 hover:shadow-emerald-500/30">
@@ -199,25 +199,25 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
               )}
             </div>
 
-            {company.accountManager && (
+            {company.management_users && (
               <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-orange-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-orange-500/20">
                 <h2 className="mb-6 text-2xl font-bold text-white">Account Manager</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 text-2xl font-bold text-white">
-                    {company.accountManager.avatar ? (
+                    {company.management_users.avatar ? (
                       <img 
-                        src={company.accountManager.avatar} 
-                        alt={company.accountManager.name} 
+                        src={company.management_users.avatar} 
+                        alt={company.management_users.name} 
                         className="h-full w-full rounded-2xl object-cover" 
                       />
                     ) : (
-                      company.accountManager.name.charAt(0)
+                      company.management_users.name.charAt(0)
                     )}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">{company.accountManager.name}</h3>
-                    <p className="text-sm text-slate-400">{company.accountManager.department}</p>
-                    <p className="text-xs text-slate-500">{company.accountManager.email}</p>
+                    <h3 className="text-lg font-bold text-white">{company.management_users.name}</h3>
+                    <p className="text-sm text-slate-400">{company.management_users.department}</p>
+                    <p className="text-xs text-slate-500">{company.management_users.email}</p>
                   </div>
                 </div>
               </div>
@@ -229,11 +229,11 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
             {/* Staff Users */}
             <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-indigo-500/20">
               <h2 className="mb-6 text-2xl font-bold text-white">
-                Staff Members ({company.staffUsers.length})
+                Staff Members ({company.staff_users.length})
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {company.staffUsers.length > 0 ? (
-                  company.staffUsers.map((staff) => (
+                {company.staff_users.length > 0 ? (
+                  company.staff_users.map((staff) => (
                     <div key={staff.id} className="flex items-center gap-3 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-white/10">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-lg font-bold text-white">
                         {staff.avatar ? (
@@ -244,7 +244,7 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-white truncate">{staff.name}</p>
-                        <p className="text-sm text-slate-400 truncate">{staff.profile?.currentRole || "Staff"}</p>
+                        <p className="text-sm text-slate-400 truncate">{staff.staff_profiles?.currentRole || "Staff"}</p>
                       </div>
                     </div>
                   ))
@@ -257,11 +257,11 @@ export default async function CompanyProfilePage({ params }: CompanyProfilePageP
             {/* Client Users */}
             <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-purple-500/20">
               <h2 className="mb-6 text-2xl font-bold text-white">
-                Client Users ({company.clientUsers.length})
+                Client Users ({company.client_users.length})
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {company.clientUsers.length > 0 ? (
-                  company.clientUsers.map((client) => (
+                {company.client_users.length > 0 ? (
+                  company.client_users.map((client) => (
                     <div key={client.id} className="flex items-center gap-3 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-white/10">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-lg font-bold text-white">
                         {client.avatar ? (
