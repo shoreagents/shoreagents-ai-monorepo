@@ -16,8 +16,8 @@ async function fetchClientUser(email: string, retries = 3): Promise<any> {
     } catch (error) {
       console.error(`[ClientLayout] Attempt ${i + 1}/${retries} failed:`, error)
       if (i === retries - 1) throw error
-      // Exponential backoff: 100ms, 200ms, 400ms
-      await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i)))
+      // Exponential backoff: 1s, 2s, 4s (more aggressive for Supabase)
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)))
     }
   }
 }
