@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     
     if (filter === "pending") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: false,
           OR: [
             { personalInfoStatus: "SUBMITTED" },
@@ -40,13 +40,13 @@ export async function GET(req: NextRequest) {
       }
     } else if (filter === "incomplete") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: false
         }
       }
     } else if (filter === "complete") {
       whereClause = {
-        onboarding: {
+        staff_onboarding: {
           isComplete: true
         }
       }
