@@ -58,6 +58,52 @@ export async function GET(req: NextRequest) {
       const jobAcceptance = staffUser.job_acceptances;
       const company = staffUser.company || jobAcceptance.company;
       
+      // Get staff profile for address
+      const staffProfile = await retryQuery(() => prisma.staff_profiles.findUnique({
+        where: { staffUserId: staffUser.id }
+      }));
+      
+      // Calculate salary breakdown
+      const totalSalary = jobAcceptance.salary ? parseFloat(jobAcceptance.salary) : 25000;
+      const deMinimis = 3000; // Fixed de minimis
+      const basicSalary = totalSalary - deMinimis;
+      
+      // Build work schedule from job acceptance data
+      let workSchedule = "Monday-Friday";
+      if (jobAcceptance.workHours) {
+        workSchedule += `, ${jobAcceptance.workHours}`;
+      } else if (jobAcceptance.shiftType) {
+        // Fallback to shift type
+        const shiftMap: Record<string, string> = {
+          'DAY_SHIFT': '9:00 AM - 5:00 PM',
+          'NIGHT_SHIFT': '9:00 PM - 5:00 AM',
+          'MID_SHIFT': '3:00 PM - 11:00 PM'
+        };
+        workSchedule += `, ${shiftMap[jobAcceptance.shiftType] || '9:00 AM - 5:00 PM'}`;
+      } else {
+        workSchedule += ', 9:00 AM - 5:00 PM';
+      }
+      
+      // Add timezone if available
+      if (jobAcceptance.clientTimezone) {
+        const tzDisplayMap: Record<string, string> = {
+          'Australia/Brisbane': 'Brisbane Time (AEST)',
+          'America/New_York': 'Eastern Time (EST)',
+          'Europe/London': 'London Time (GMT)'
+        };
+        const tzDisplay = tzDisplayMap[jobAcceptance.clientTimezone] || jobAcceptance.clientTimezone;
+        workSchedule += ` (${tzDisplay})`;
+      }
+      
+      // HMO offer text
+      const hmoText = jobAcceptance.hmoIncluded 
+        ? "HMO coverage included from day 1" 
+        : "HMO coverage after probation";
+      
+      // Leave credits
+      const leaveCredits = jobAcceptance.leaveCredits || 12;
+      const leaveText = `${leaveCredits} days annual leave (after probation)`;
+      
       // Default contract values (can be customized by admin later)
       contract = await prisma.employment_contracts.create({
         data: {
@@ -66,17 +112,17 @@ export async function GET(req: NextRequest) {
           companyId: staffUser.companyId,
           jobAcceptanceId: jobAcceptance.id,
           employeeName: staffUser.name,
-          employeeAddress: "To be provided",
-          contactType: "FULL_TIME",
+          employeeAddress: staffProfile?.location || "To be provided",
+          contactType: jobAcceptance.workLocation === 'WORK_FROM_HOME' ? 'REMOTE' : 'FULL_TIME',
           position: jobAcceptance.position || "Staff Member",
           assignedClient: company?.companyName || "To be assigned",
-          startDate: jobAcceptance.interview_requests?.finalStartDate || new Date(),
-          workSchedule: "Monday-Friday, 9:00 AM - 5:00 PM",
-          basicSalary: 25000, // Default PHP 25,000
-          deMinimis: 3000, // Default PHP 3,000
-          totalMonthlyGross: 28000,
-          hmoOffer: "HMO coverage after probation",
-          paidLeave: "12 days annual leave after probation",
+          startDate: jobAcceptance.preferredStartDate || jobAcceptance.interview_requests?.finalStartDate || new Date(),
+          workSchedule: workSchedule,
+          basicSalary: basicSalary,
+          deMinimis: deMinimis,
+          totalMonthlyGross: totalSalary,
+          hmoOffer: hmoText,
+          paidLeave: leaveText,
           probationaryPeriod: "6 months",
           signed: false,
           fullyInitialed: false,
@@ -91,6 +137,13 @@ export async function GET(req: NextRequest) {
       });
       
       console.log('✅ [CONTRACT] Contract auto-created:', contract.id);
+      console.log('💰 [CONTRACT] Salary breakdown:', {
+        total: totalSalary,
+        basic: basicSalary,
+        deMinimis: deMinimis,
+        hmo: jobAcceptance.hmoIncluded,
+        leave: leaveCredits
+      });
     }
 
     if (!contract) {
