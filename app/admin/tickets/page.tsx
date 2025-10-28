@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton } from "@/components/tickets/ticket-skeleton"
+import { TicketListSkeleton, TicketStatsSkeleton, TicketFiltersSkeleton, TicketKanbanSkeleton } from "@/components/tickets/ticket-skeleton"
 
 export default function AdminTicketsPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban")
@@ -139,8 +139,12 @@ export default function AdminTicketsPage() {
         {/* Filters skeleton */}
         <TicketFiltersSkeleton />
         
-        {/* Tickets list skeleton */}
-        <TicketListSkeleton count={6} />
+        {/* Tickets skeleton - Show kanban or list based on view */}
+        {view === "kanban" ? (
+          <TicketKanbanSkeleton count={3} />
+        ) : (
+          <TicketListSkeleton count={6} />
+        )}
       </div>
     )
   }
