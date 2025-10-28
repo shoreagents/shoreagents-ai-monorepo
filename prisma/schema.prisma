@@ -648,6 +648,8 @@ model staff_welcome_forms {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime
   staff_users      staff_users @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_interests")
 }
 
 model subtasks {

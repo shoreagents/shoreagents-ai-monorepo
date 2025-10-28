@@ -241,29 +241,39 @@ export default function WelcomePage() {
           )}
 
           {/* Required Field */}
-          <Card className="bg-linear-to-r from-orange-500/20 to-red-500/20 backdrop-blur-xl border-orange-500/30">
+          <Card className="bg-gradient-to-r from-orange-500/20 to-red-500/20 backdrop-blur-xl border-orange-500/30 ring-1 ring-orange-400/50">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Utensils className="h-5 w-5" />
-                Quick Question <span className="text-orange-400">*</span>
+                🎉 First Day Surprise! <span className="text-orange-400">*</span>
               </CardTitle>
-              <CardDescription className="text-slate-300">
-                This one is required - we need to know your go-to fast food! 🍔
+              <CardDescription className="text-orange-100">
+                We're going to surprise you with a meal on your first day! Pick your favorite fast food place and we'll have it ready for you! 🍔✨
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div>
-                <Label htmlFor="favoriteFastFood" className="text-slate-300 text-sm">
-                  What's your favorite fast food?
+                <Label htmlFor="favoriteFastFood" className="text-orange-200 text-sm font-semibold">
+                  What's your favorite fast food? 🎁
                 </Label>
-                <Input
-                  id="favoriteFastFood"
-                  value={formData.favoriteFastFood}
-                  onChange={(e) => handleInputChange('favoriteFastFood', e.target.value)}
-                  placeholder="e.g., McDonald's, Jollibee, KFC..."
-                  className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400"
-                  required
-                />
+                <Select value={formData.favoriteFastFood} onValueChange={(value) => handleInputChange('favoriteFastFood', value)}>
+                  <SelectTrigger className="bg-slate-800/50 border-orange-400/50 text-white mt-2">
+                    <SelectValue placeholder="Choose your favorite..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-orange-400/30">
+                    <SelectItem value="McDo">🍔 McDo (McDonald's)</SelectItem>
+                    <SelectItem value="Jollibee">🍗 Jollibee</SelectItem>
+                    <SelectItem value="Chowking">🍜 Chowking</SelectItem>
+                    <SelectItem value="Burger King">👑 Burger King</SelectItem>
+                    <SelectItem value="Wendys">🍔 Wendy's</SelectItem>
+                    <SelectItem value="KFC">🍗 KFC</SelectItem>
+                    <SelectItem value="Tokyo Tokyo">🍱 Tokyo Tokyo</SelectItem>
+                    <SelectItem value="Banh Mi Kitchen">🥖 Banh Mi Kitchen</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-orange-200 mt-2 italic">
+                  💡 We'll order from your choice and have it waiting for you on Day 1!
+                </p>
               </div>
             </CardContent>
           </Card>
