@@ -2141,23 +2141,23 @@ function InterviewsTab({
 
       {/* Cancel Interview Modal */}
       <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>Cancel Interview Request</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Cancel Interview Request</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Please provide a reason for cancelling this interview request.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="cancelReason">Reason for Cancellation</Label>
+              <Label htmlFor="cancelReason" className="text-gray-900">Reason for Cancellation</Label>
               <Textarea
                 id="cancelReason"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="E.g., Position filled, candidate unavailable..."
                 rows={4}
-                className="mt-2"
+                className="mt-2 bg-white text-gray-900 border-gray-300"
               />
             </div>
             <div className="flex gap-3">
@@ -2206,23 +2206,23 @@ function InterviewsTab({
         setRescheduleModalOpen(open)
         if (!open) setRescheduleNotes('')
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>Request Reschedule</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Request Reschedule</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Send a note to the admin team requesting a reschedule for this interview.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="rescheduleNotes">Reschedule Request Notes</Label>
+              <Label htmlFor="rescheduleNotes" className="text-gray-900">Reschedule Request Notes</Label>
               <Textarea
                 id="rescheduleNotes"
                 value={rescheduleNotes}
                 onChange={(e) => setRescheduleNotes(e.target.value)}
                 placeholder="E.g., Can we move this to next week? I have a conflict..."
                 rows={4}
-                className="mt-2"
+                className="mt-2 bg-white text-gray-900 border-gray-300"
               />
             </div>
             <div className="flex gap-3">
@@ -2271,23 +2271,23 @@ function InterviewsTab({
 
       {/* Mark as Complete Modal */}
       <Dialog open={completeModalOpen} onOpenChange={setCompleteModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>Mark Interview as Completed</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Mark Interview as Completed</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Confirm that the interview has been completed and optionally add feedback.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="completionNotes">Feedback / Notes (Optional)</Label>
+              <Label htmlFor="completionNotes" className="text-gray-900">Feedback / Notes (Optional)</Label>
               <Textarea
                 id="completionNotes"
                 value={completionNotes}
                 onChange={(e) => setCompletionNotes(e.target.value)}
                 placeholder="How did the interview go? Any feedback?"
                 rows={4}
-                className="mt-2"
+                className="mt-2 bg-white text-gray-900 border-gray-300"
               />
             </div>
             <div className="flex gap-3">
@@ -2333,23 +2333,23 @@ function InterviewsTab({
 
       {/* Add/Update Notes Modal */}
       <Dialog open={notesModalOpen} onOpenChange={setNotesModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>Update Interview Notes</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Update Interview Notes</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Add or update your notes for this interview request.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="additionalNotes">Your Notes</Label>
+              <Label htmlFor="additionalNotes" className="text-gray-900">Your Notes</Label>
               <Textarea
                 id="additionalNotes"
                 value={additionalNotes}
                 onChange={(e) => setAdditionalNotes(e.target.value)}
                 placeholder="Add any additional information or requirements..."
                 rows={4}
-                className="mt-2"
+                className="mt-2 bg-white text-gray-900 border-gray-300"
               />
             </div>
             <div className="flex gap-3">
