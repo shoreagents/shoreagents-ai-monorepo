@@ -235,11 +235,11 @@ export function useTimeTrackingWebSocket() {
       }
       console.log('[WebSocket] Mapped active break:', activeBreak)
 
-      // Update state with fetched data
+      // Update state with fetched data (filter out any undefined entries)
       setState({
         isClockedIn: statusData.isClockedIn || false,
         activeEntry: statusData.activeEntry || null,
-        timeEntries: entriesData.entries || [],
+        timeEntries: (entriesData.entries || []).filter(e => e && e.clockIn),
         scheduledBreaks: breaksData.breaks || [],
         activeBreak: activeBreak,
         weeklySchedule: statusData.workSchedules || [],
@@ -262,12 +262,14 @@ export function useTimeTrackingWebSocket() {
     setState(prev => ({
       ...prev,
       isClockedIn: true,
-      activeEntry: data.time_entries,
-      // Add new entry to the top of the history
-      timeEntries: [data.time_entries, ...prev.timeEntries.filter(e => e.id !== data.time_entries.id)],
+      activeEntry: data.timeEntry, // ← FIXED: was data.time_entries (plural)
+      // Add new entry to the top of the history (filter out undefined)
+      timeEntries: data.timeEntry 
+        ? [data.timeEntry, ...prev.timeEntries.filter(e => e && e.id !== data.timeEntry.id)]
+        : prev.timeEntries.filter(e => e),
       weeklySchedule: data.workSchedules || prev.weeklySchedule,
       showBreakScheduler: data.showBreakScheduler || false,
-      pendingTimeEntryId: data.time_entries?.id || null
+      pendingTimeEntryId: data.timeEntry?.id || null
     }))
     
     // Refresh stats from API to get accurate calculations
@@ -294,8 +296,10 @@ export function useTimeTrackingWebSocket() {
       ...prev,
       isClockedIn: false,
       activeEntry: null,
-      // Remove the old entry (if it exists) and add the updated one with clockOut time
-      timeEntries: [data.time_entries, ...prev.timeEntries.filter(e => e.id !== data.time_entries.id)],
+      // Remove the old entry (if it exists) and add the updated one with clockOut time (filter out undefined)
+      timeEntries: data.timeEntry
+        ? [data.timeEntry, ...prev.timeEntries.filter(e => e && e.id !== data.timeEntry.id)]
+        : prev.timeEntries.filter(e => e),
       weeklySchedule: data.workSchedules || prev.weeklySchedule
     }))
     

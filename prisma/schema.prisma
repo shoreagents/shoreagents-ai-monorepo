@@ -766,21 +766,29 @@ model tickets {
 }
 
 model time_entries {
-  id              String          @id
-  staffUserId     String
-  clockIn         DateTime
-  clockOut        DateTime?
-  totalHours      Decimal?        @db.Decimal(5, 2)
-  notes           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime
-  breaksScheduled Boolean         @default(false)
-  clockOutReason  ClockOutReason?
-  expectedClockIn DateTime?
-  lateBy          Int?
-  wasLate         Boolean         @default(false)
-  breaks          breaks[]
-  staff_users     staff_users     @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  id                 String           @id
+  staffUserId        String
+  workScheduleId     String?
+  clockIn            DateTime
+  clockOut           DateTime?
+  totalHours         Decimal?         @db.Decimal(5, 2)
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  breaksScheduled    Boolean          @default(false)
+  clockOutReason     ClockOutReason?
+  expectedClockIn    DateTime?
+  wasLate            Boolean          @default(false)
+  lateBy             Int?
+  lateReason         LateReason?
+  wasEarly           Boolean          @default(false)
+  earlyBy            Int?
+  wasEarlyClockOut   Boolean          @default(false)
+  earlyClockOutBy    Int?
+  workedFullShift    Boolean          @default(false)
+  breaks             breaks[]
+  staff_users        staff_users      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  work_schedule      work_schedules?  @relation(fields: [workScheduleId], references: [id])
 }
 
 model user_badges {
@@ -809,6 +817,7 @@ model work_schedules {
   lastModifiedBy   String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
+  time_entries     time_entries[]
   staff_profiles   staff_profiles     @relation(fields: [profileId], references: [id], onDelete: Cascade)
   company          company?           @relation(fields: [companyId], references: [id])
 
@@ -858,6 +867,19 @@ enum ClockOutReason {
   INTERNET_ISSUE
   POWER_OUTAGE
   PERSONAL
+  OTHER
+}
+
+enum LateReason {
+  TRAFFIC
+  OVERSLEPT
+  EMERGENCY
+  POWER_OUTAGE
+  INTERNET_ISSUE
+  FAMILY_MATTER
+  HEALTH_ISSUE
+  TRANSPORTATION
+  WEATHER
   OTHER
 }
 
