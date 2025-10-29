@@ -113,7 +113,13 @@ export default function RecruitmentPage() {
   const [hireModalOpen, setHireModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [selectedInterview, setSelectedInterview] = useState<InterviewRequest | null>(null)
-  const [hireData, setHireData] = useState({ preferredStartDate: '', hireNotes: '' })
+  const [hireData, setHireData] = useState({ 
+    preferredStartDate: '', 
+    hireNotes: '',
+    isMonToFri: true,
+    workStartTime: '09:00',
+    workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  })
   const [rejectData, setRejectData] = useState({ rejectReason: '' })
   
   // Filters
@@ -241,7 +247,13 @@ export default function RecruitmentPage() {
         body: JSON.stringify({
           interviewRequestId: selectedInterview.id,
           preferredStartDate: hireData.preferredStartDate,
-          notes: hireData.hireNotes || "Client would like to hire this candidate"
+          notes: hireData.hireNotes || "Client would like to hire this candidate",
+          workSchedule: {
+            workDays: hireData.workDays,
+            workStartTime: hireData.workStartTime,
+            isMonToFri: hireData.isMonToFri,
+            clientTimezone: "Australia/Brisbane" // TODO: Get from client profile
+          }
         })
       })
 
@@ -254,7 +266,13 @@ export default function RecruitmentPage() {
           duration: 8000,
         })
         setHireModalOpen(false)
-        setHireData({ preferredStartDate: '', hireNotes: '' })
+        setHireData({ 
+          preferredStartDate: '', 
+          hireNotes: '',
+          isMonToFri: true,
+          workStartTime: '09:00',
+          workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        })
         setSelectedInterview(null)
         // Refresh interviews to show updated status
         await fetchInterviews()
@@ -636,7 +654,7 @@ function TalentPoolTab({
                 Skills
               </label>
               <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-white">
-                {availableSkills.slice(0, 20).map(skill => (
+                {availableSkills.slice(0, 20).map((skill: string) => (
                   <label key={skill} className="flex items-center gap-2 py-1 hover:bg-gray-50 px-2 rounded">
                     <input
                       type="checkbox"
@@ -1494,8 +1512,8 @@ function InterviewsTab({
   rejectModalOpen: boolean
   setRejectModalOpen: (open: boolean) => void
   setSelectedInterview: (interview: InterviewRequest | null) => void
-  hireData: { preferredStartDate: string; hireNotes: string }
-  setHireData: (data: { preferredStartDate: string; hireNotes: string }) => void
+  hireData: { preferredStartDate: string; hireNotes: string; isMonToFri: boolean; workStartTime: string; workDays: string[] }
+  setHireData: (data: { preferredStartDate: string; hireNotes: string; isMonToFri: boolean; workStartTime: string; workDays: string[] }) => void
   rejectData: { rejectReason: string }
   setRejectData: (data: { rejectReason: string }) => void
   handleHireRequest: () => void
@@ -1830,7 +1848,13 @@ function InterviewsTab({
                     className="bg-green-600 hover:bg-green-700 text-white"
                     onClick={() => {
                       setSelectedInterview(interview)
-                      setHireData({ preferredStartDate: '', hireNotes: '' })
+                      setHireData({ 
+                        preferredStartDate: '', 
+                        hireNotes: '',
+                        isMonToFri: true,
+                        workStartTime: '09:00',
+                        workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                      })
                       setHireModalOpen(true)
                     }}
                   >
@@ -1868,7 +1892,8 @@ function InterviewsTab({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4 max-h-[500px] overflow-y-auto">
+            {/* Preferred Start Date */}
             <div>
               <Label htmlFor="preferredStartDate" className="text-gray-900 font-medium mb-2 block">
                 Preferred Start Date *
@@ -1878,13 +1903,94 @@ function InterviewsTab({
                 type="date"
                 value={hireData.preferredStartDate}
                 onChange={(e) => setHireData({ ...hireData, preferredStartDate: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
                 className="bg-white text-gray-900 border-gray-300"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Admin will confirm this date with the candidate</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Date will display in your local format (DD/MM/YYYY). Admin will confirm with candidate.
+              </p>
+            </div>
+
+            {/* Work Schedule Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <Label className="text-gray-900 font-semibold text-base">Work Schedule</Label>
+              </div>
+
+              {/* Work Days */}
+              <div className="space-y-3 mb-4">
+                <Label className="text-gray-900 font-medium">Work Days *</Label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hireData.isMonToFri}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setHireData({ 
+                          ...hireData, 
+                          isMonToFri: checked,
+                          workDays: checked 
+                            ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                            : hireData.workDays
+                        })
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Monday to Friday</span>
+                  </label>
+                </div>
+                {!hireData.isMonToFri && (
+                  <div className="ml-6 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <p className="font-medium text-blue-900 mb-1">Custom Schedule</p>
+                    <p>Select 5 consecutive working days in the next step with admin</p>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Filipino staff work 9-hour shifts (including breaks)</p>
+              </div>
+
+              {/* Start Time */}
+              <div>
+                <Label htmlFor="workStartTime" className="text-gray-900 font-medium mb-2 block">
+                  Work Start Time (Your Timezone) *
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="workStartTime"
+                    type="time"
+                    value={hireData.workStartTime}
+                    onChange={(e) => setHireData({ ...hireData, workStartTime: e.target.value })}
+                    className="bg-white text-gray-900 border-gray-300 w-40"
+                    required
+                  />
+                  <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                    <span className="font-medium">End: </span>
+                    {(() => {
+                      const [hours, minutes] = hireData.workStartTime.split(':').map(Number)
+                      const endHour = (hours + 9) % 24
+                      return `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+                    })()}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Times will be converted to Philippines timezone (Manila)
+                </p>
+              </div>
+
+              {/* Timezone Display */}
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-900">Your Timezone:</span>
+                  <span className="text-blue-700">Brisbane (AEST)</span>
+                </div>
+              </div>
             </div>
             
-            <div>
+            {/* Additional Notes */}
+            <div className="border-t pt-4">
               <Label htmlFor="hireNotes" className="text-gray-900 font-medium mb-2 block">
                 Additional Notes (Optional)
               </Label>
@@ -1892,7 +1998,7 @@ function InterviewsTab({
                 id="hireNotes"
                 value={hireData.hireNotes}
                 onChange={(e) => setHireData({ ...hireData, hireNotes: e.target.value })}
-                placeholder="Any additional information for the admin (e.g., salary offer, benefits, etc.)"
+                placeholder="Any additional information for the admin (e.g., salary offer, benefits, role details, etc.)"
                 className="bg-white text-gray-900 border-gray-300"
                 rows={4}
               />
@@ -1904,7 +2010,13 @@ function InterviewsTab({
               variant="outline"
               onClick={() => {
                 setHireModalOpen(false)
-                setHireData({ preferredStartDate: '', hireNotes: '' })
+                setHireData({ 
+                  preferredStartDate: '', 
+                  hireNotes: '',
+                  isMonToFri: true,
+                  workStartTime: '09:00',
+                  workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                })
               }}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >

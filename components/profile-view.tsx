@@ -50,32 +50,6 @@ interface ProfileData {
     emergencyContactRelation: string | null
     emergencyContactPhone: string | null
     emergencyContactAddress: string | null
-    validIdUrl: string | null
-    birthCertUrl: string | null
-    nbiClearanceUrl: string | null
-    policeClearanceUrl: string | null
-    sssDocUrl: string | null
-    tinDocUrl: string | null
-    philhealthDocUrl: string | null
-    pagibigDocUrl: string | null
-  } | null
-  onboardingData: {
-    firstName: string | null
-    middleName: string | null
-    lastName: string | null
-    gender: string | null
-    civilStatus: string | null
-    dateOfBirth: string | null
-    contactNo: string | null
-    email: string | null
-    medicalCertUrl: string | null
-    resumeUrl: string | null
-    diplomaTorUrl: string | null
-    dataPrivacyConsentUrl: string | null
-    signatureUrl: string | null
-    idPhotoUrl: string | null
-    certificateEmpUrl: string | null
-    birForm2316Url: string | null
   } | null
   workSchedules: Array<{
     id: string
@@ -973,40 +947,20 @@ export default function ProfileView() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                <div className="text-sm text-slate-400 mb-1">First Name</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.firstName || 'Not provided'}</div>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                <div className="text-sm text-slate-400 mb-1">Middle Name</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.middleName || 'Not provided'}</div>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                <div className="text-sm text-slate-400 mb-1">Last Name</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.lastName || 'Not provided'}</div>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                <div className="text-sm text-slate-400 mb-1">Email</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.email || profileData.user.email}</div>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                <div className="text-sm text-slate-400 mb-1">Contact Number</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.contactNo || 'Not provided'}</div>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Date of Birth</div>
                 <div className="text-lg font-semibold text-white">
-                  {profileData.onboardingData?.dateOfBirth ? (mounted ? formatDate(profileData.onboardingData.dateOfBirth) : profileData.onboardingData.dateOfBirth) : 'Not provided'}
+                  {profile?.dateOfBirth ? (mounted ? formatDate(profile.dateOfBirth) : profile.dateOfBirth) : 'Not provided'}
                 </div>
               </div>
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Gender</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.gender || 'Not provided'}</div>
+                <div className="text-lg font-semibold text-white">{profile?.gender || 'Not provided'}</div>
               </div>
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Civil Status</div>
-                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.civilStatus || 'Not provided'}</div>
+                <div className="text-lg font-semibold text-white">{profile?.civilStatus || 'Not provided'}</div>
               </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 md:col-span-2">
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Address</div>
                 <div className="text-lg font-semibold text-white">{profile?.location || 'Not provided'}</div>
               </div>

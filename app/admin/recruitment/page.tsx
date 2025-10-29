@@ -85,6 +85,12 @@ interface InterviewRequest {
   status: string
   createdAt: string
   clientPreferredStart?: string | null
+  workSchedule?: {
+    workDays: string[]
+    workStartTime: string
+    isMonToFri: boolean
+    clientTimezone: string
+  } | null
   client_name?: string
   client_email?: string
   company_name?: string
@@ -96,6 +102,9 @@ interface InterviewRequest {
     company?: {
       id: string
       companyName: string
+    }
+    client_profiles?: {
+      timezone: string
     }
   }
 }
@@ -395,6 +404,12 @@ export default function AdminRecruitmentPage() {
   }
 
   async function openHireModal(interview: InterviewRequest) {
+    console.log('🔍 [ADMIN] Opening hire modal with interview data:', {
+      id: interview.id,
+      candidateName: interview.candidateFirstName,
+      workSchedule: interview.workSchedule
+    })
+    
     setInterviewToHire(interview)
     setHiring(true) // Show loading state
     
@@ -434,12 +449,37 @@ export default function AdminRecruitmentPage() {
         preferredStart = date.toISOString().split('T')[0] // Format as YYYY-MM-DD
       }
       
-      // Get client timezone from their profile
+      // Get client timezone from their profile or workSchedule
       console.log('🌍 Looking for client timezone in:', interview.client_users)
-      const clientTimezone = interview.client_users?.client_profiles?.timezone || 'UTC'
+      const clientTimezone = interview.workSchedule?.clientTimezone || interview.client_users?.client_profiles?.timezone || 'UTC'
       console.log('🌍 Client timezone found:', clientTimezone)
       
-      console.log('📋 Pre-filling hire form:', {
+      // Calculate work hours from client's schedule if provided
+      let workHoursDisplay = '9 hours (includes 1 hour break, 15 min either side)' // Default
+      let shiftType: 'DAY_SHIFT' | 'NIGHT_SHIFT' | 'MID_SHIFT' = 'DAY_SHIFT' // Default
+      
+      if (interview.workSchedule) {
+        const { workStartTime, workDays, isMonToFri } = interview.workSchedule
+        
+        // Calculate end time (start + 9 hours)
+        const [startHour, startMinute] = workStartTime.split(':').map(Number)
+        const endHour = (startHour + 9) % 24
+        const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
+        
+        // Format schedule display
+        const scheduleType = isMonToFri ? 'Monday to Friday' : '5 Consecutive Days'
+        workHoursDisplay = `${workStartTime} - ${endTime} ${clientTimezone} (9 hours, ${scheduleType})`
+        
+        console.log('📅 Using client work schedule:', {
+          workDays,
+          workStartTime,
+          endTime,
+          clientTimezone,
+          isMonToFri
+        })
+      }
+      
+      console.log('📋 [ADMIN] Pre-filling hire form:', {
         position: candidatePosition,
         companyId: clientCompanyId,
         companyName: interview.client_users?.company?.companyName || interview.company_name,
@@ -447,7 +487,9 @@ export default function AdminRecruitmentPage() {
         clientName: interview.client_users?.name || interview.client_name,
         candidateEmail,
         candidatePhone,
-        clientTimezone
+        clientTimezone,
+        workHoursDisplay,
+        hasWorkSchedule: !!interview.workSchedule
       })
       
       setHireFormData({
@@ -457,12 +499,12 @@ export default function AdminRecruitmentPage() {
         candidatePhone: candidatePhone, // Pre-fill from BPOC
         clientPreferredStart: preferredStart, // Pre-fill from client's request
         salary: '', // Admin will enter
-        shiftType: 'DAY_SHIFT', // Default
+        shiftType: shiftType, // From client's schedule
         workLocation: 'OFFICE', // Default (first option)
         hmoIncluded: false, // Default NO, approved after regularization
         leaveCredits: 12, // Company standard
         clientTimezone: clientTimezone, // Client's business timezone
-        workHours: '9 hours (includes 1 hour break, 15 min either side)' // Default Philippines standard
+        workHours: workHoursDisplay // From client's schedule
       })
     } catch (error) {
       console.error('Error fetching candidate details:', error)
@@ -549,7 +591,9 @@ export default function AdminRecruitmentPage() {
           hmoIncluded: hireFormData.hmoIncluded,
           leaveCredits: hireFormData.leaveCredits,
           clientTimezone: hireFormData.clientTimezone,
-          workHours: hireFormData.workHours
+          workHours: hireFormData.workHours,
+          // Pass client's work schedule to be saved in job_acceptances
+          workSchedule: interviewToHire.workSchedule
         })
       })
 
@@ -2007,12 +2051,12 @@ export default function AdminRecruitmentPage() {
                   <Label htmlFor="workHours" className="text-sm font-medium text-slate-200">Work Hours Schedule</Label>
                   <Input
                     id="workHours"
-                    placeholder="e.g., 9 hours (includes 1 hour break, 15 min either side)"
                     value={hireFormData.workHours}
-                    onChange={(e) => setHireFormData(prev => ({ ...prev, workHours: e.target.value }))}
-                    className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
+                    readOnly
+                    disabled
+                    className="bg-slate-900/50 border-slate-700/50 text-slate-300 cursor-not-allowed"
                   />
-                  <p className="text-xs text-slate-400">Staff will work a 9-hour shift in Philippines time matching client's business hours.</p>
+                  <p className="text-xs text-slate-400">This is the client's offer. Any schedule changes will be negotiated with the candidate over the phone.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

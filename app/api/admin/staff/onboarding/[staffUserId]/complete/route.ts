@@ -93,27 +93,91 @@ export async function POST(
 
     // 🎯 CHECK IF PROFILE ALREADY EXISTS (from hiring process)
     if (staffUser.staff_profiles) {
-      console.log("✅ PROFILE ALREADY EXISTS - JUST MARK COMPLETE:", { 
+      console.log("✅ PROFILE ALREADY EXISTS - SYNCING ONBOARDING DATA TO PERSONAL RECORDS:", { 
         profileId: staffUser.staff_profiles.id,
         staffUserId: staffUser.id,
         staffName: staffUser.name,
         companyId: staffUser.companyId
       })
       
-      // Just mark onboarding as complete
-      await prisma.staff_onboarding.update({
+      // Get employment contract URL if it exists
+      let employmentContractUrl = null
+      if (employmentContract && employmentContract.signed) {
+        // Assuming contract is stored as PDF or has a URL field
+        employmentContractUrl = employmentContract.id // Or whatever field stores the URL/reference
+      }
+
+      // UPDATE staff_personal_records with ALL onboarding data
+      const personalRecordData = {
+        staffUserId: staffUser.id,
+        sss: onboarding.sss,
+        tin: onboarding.tin,
+        philhealthNo: onboarding.philhealthNo,
+        pagibigNo: onboarding.pagibigNo,
+        emergencyContactName: onboarding.emergencyContactName,
+        emergencyContactNo: onboarding.emergencyContactNo,
+        emergencyRelationship: onboarding.emergencyRelationship,
+        validIdUrl: onboarding.validIdUrl,
+        birthCertUrl: onboarding.birthCertUrl,
+        nbiClearanceUrl: onboarding.nbiClearanceUrl,
+        policeClearanceUrl: onboarding.policeClearanceUrl,
+        sssDocUrl: onboarding.sssDocUrl,
+        tinDocUrl: onboarding.tinDocUrl,
+        philhealthDocUrl: onboarding.philhealthDocUrl,
+        pagibigDocUrl: onboarding.pagibigDocUrl,
+        birForm2316Url: onboarding.birForm2316Url,
+        idPhotoUrl: onboarding.idPhotoUrl,
+        signatureUrl: onboarding.signatureUrl,
+        certificateEmpUrl: onboarding.certificateEmpUrl,
+        medicalCertUrl: onboarding.medicalCertUrl,
+        resumeUrl: onboarding.resumeUrl,
+        employmentContractUrl: employmentContractUrl,
+        updatedAt: new Date()
+      }
+
+      console.log("📋 UPSERTING PERSONAL RECORDS:", { staffUserId: staffUser.id, hasContract: !!employmentContractUrl })
+      
+      await prisma.staff_personal_records.upsert({
+        where: { staffUserId: staffUser.id },
+        update: personalRecordData,
+        create: {
+          id: crypto.randomUUID(),
+          ...personalRecordData
+        }
+      })
+
+      // UPDATE staff_profiles with additional onboarding data (gender, DOB, civil status, phone)
+      await prisma.staff_profiles.update({
         where: { staffUserId: staffUser.id },
         data: {
-          isComplete: true,
+          phone: onboarding.contactNo,
+          gender: onboarding.gender,
+          civilStatus: onboarding.civilStatus,
+          dateOfBirth: onboarding.dateOfBirth,
           updatedAt: new Date()
         }
       })
 
-      console.log("🎉 ONBOARDING MARKED COMPLETE (profile existed)")
+      console.log("✅ STAFF PROFILE UPDATED with personal details")
+      
+      // Mark onboarding as complete
+      await prisma.staff_onboarding.update({
+        where: { staffUserId: staffUser.id },
+        data: {
+          isComplete: true,
+          completionPercent: 100,
+          updatedAt: new Date()
+        }
+      })
+
+      console.log("🎉 ONBOARDING COMPLETED & ALL DATA SYNCED TO PERSONAL RECORDS")
+
+      // ✨ Auto-generate activity post
+      await logStaffOnboarded(staffUser.id, staffUser.name)
 
       return NextResponse.json({ 
         success: true,
-        message: `Onboarding completed for ${staffUser.name}. Profile already exists from hiring process.`,
+        message: `Onboarding completed for ${staffUser.name}. All data synced to personal records.`,
         profileId: staffUser.staff_profiles.id,
         companyName: staffUser.company?.companyName || "N/A",
         staffName: staffUser.name,
@@ -151,18 +215,16 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Assign staff to company & update legal name from onboarding
+    // Update legal name from onboarding (companyId already assigned during hiring)
     const fullName = `${onboarding.firstName} ${onboarding.middleName || ''} ${onboarding.lastName}`.trim()
     await prisma.staff_users.update({
       where: { id: staffUser.id },
       data: { 
-        companyId: companyId,
         name: fullName // Update with full legal name from onboarding
       }
     })
-    console.log("✅ STAFF USER UPDATED:", { 
+    console.log("✅ STAFF USER NAME UPDATED:", { 
       staffUserId: staffUser.id, 
-      companyId, 
       fullName,
       companyName: company.companyName 
     })
@@ -205,21 +267,14 @@ export async function POST(
       totalLeave: vacationLeave
     })
 
-    // Check if personal record already exists
-    const existingPersonalRecord = await prisma.staff_personal_records.findUnique({
-      where: { staffUserId: staffUser.id }
-    })
-
-    if (existingPersonalRecord) {
-      console.log("⚠️ PERSONAL RECORD ALREADY EXISTS:", { 
-        personalRecordId: existingPersonalRecord.id,
-        staffUserId: existingPersonalRecord.staffUserId
-      })
+    // Get employment contract URL if it exists
+    let employmentContractUrl = null
+    if (employmentContract && employmentContract.signed) {
+      employmentContractUrl = employmentContract.id // Contract reference/URL
     }
 
-    // Create StaffPersonalRecord with HR data from onboarding
+    // Create/Update StaffPersonalRecord with HR data from onboarding
     const personalRecordData = {
-      id: crypto.randomUUID(), // Generate UUID for the id field
       staffUserId: staffUser.id,
       sss: onboarding.sss,
       tin: onboarding.tin,
@@ -236,15 +291,25 @@ export async function POST(
       tinDocUrl: onboarding.tinDocUrl,
       philhealthDocUrl: onboarding.philhealthDocUrl,
       pagibigDocUrl: onboarding.pagibigDocUrl,
-      updatedAt: new Date(), // Provide updatedAt timestamp
+      birForm2316Url: onboarding.birForm2316Url,
+      idPhotoUrl: onboarding.idPhotoUrl,
+      signatureUrl: onboarding.signatureUrl,
+      certificateEmpUrl: onboarding.certificateEmpUrl,
+      medicalCertUrl: onboarding.medicalCertUrl,
+      resumeUrl: onboarding.resumeUrl,
+      employmentContractUrl: employmentContractUrl,
+      updatedAt: new Date()
     }
-    console.log("🔐 CREATING/UPDATING PERSONAL RECORD:", personalRecordData)
+    console.log("🔐 CREATING/UPDATING PERSONAL RECORD:", { staffUserId: staffUser.id, hasContract: !!employmentContractUrl })
     
     try {
       const personalRecord = await prisma.staff_personal_records.upsert({
         where: { staffUserId: staffUser.id },
         update: personalRecordData,
-        create: personalRecordData
+        create: {
+          id: crypto.randomUUID(),
+          ...personalRecordData
+        }
       })
       console.log("✅ PERSONAL RECORD CREATED/UPDATED:", { 
         personalRecordId: personalRecord.id,

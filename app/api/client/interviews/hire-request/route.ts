@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { interviewRequestId, preferredStartDate, notes } = body
+    const { interviewRequestId, preferredStartDate, notes, workSchedule } = body
 
     // Validation
     if (!interviewRequestId) {
@@ -73,9 +73,12 @@ export async function POST(request: NextRequest) {
         hireRequestedAt: new Date(),
         clientPreferredStart: preferredStartDate ? new Date(preferredStartDate) : null,
         clientNotes: notes ? `${interviewRequest.clientNotes || ''}\n\nHire Request Notes: ${notes}` : interviewRequest.clientNotes,
+        workSchedule: workSchedule || null,
         updatedAt: new Date()
       }
     })
+
+    console.log(`📅 [CLIENT] Work schedule saved:`, workSchedule)
 
     console.log(`✅ [CLIENT] Hire request submitted for ${interviewRequest.candidateFirstName}`)
 

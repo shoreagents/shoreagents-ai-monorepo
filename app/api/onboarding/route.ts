@@ -32,6 +32,12 @@ export async function GET(req: NextRequest) {
     // If no onboarding exists, create one with pre-filled data from BPOC + signup
     if (!staffUser.staff_onboarding) {
       console.log('🎯 [ONBOARDING] Creating new onboarding record with pre-filled data')
+      console.log('🔍 [ONBOARDING] Staff user data:', {
+        staffUserId: staffUser.id,
+        hasJobAcceptance: !!staffUser.job_acceptances,
+        hasInterviewRequest: !!staffUser.job_acceptances?.interview_requests,
+        bpocCandidateId: staffUser.job_acceptances?.interview_requests?.bpocCandidateId
+      })
       
       // Get BPOC candidate data if available
       let bpocData: any = null

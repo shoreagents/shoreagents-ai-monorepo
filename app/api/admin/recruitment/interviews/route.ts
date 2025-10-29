@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
     console.log(`📊 [ADMIN] Interview statuses:`, formattedInterviews.map(i => ({ name: i.candidateFirstName, status: i.status })))
     console.log(`🕒 [ADMIN] Sample preferredTimes:`, formattedInterviews[0]?.preferredTimes)
     console.log(`🌍 [ADMIN] Sample client timezone:`, formattedInterviews[0]?.client_users?.client_profiles?.timezone)
+    console.log(`📅 [ADMIN] Sample workSchedule:`, formattedInterviews[0]?.workSchedule)
 
     return NextResponse.json({
       success: true,

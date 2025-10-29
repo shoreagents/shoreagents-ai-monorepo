@@ -100,7 +100,7 @@ export default function StaffSignUpPage() {
       // Show welcome popup if matched to job offer
       if (data.fromJobAcceptance) {
         setShowWelcome(true)
-        // Auto-login after 2 seconds
+        // Auto-login after 2 seconds, then redirect
         setTimeout(async () => {
           const loginResult = await signIn('credentials', {
             email,
@@ -108,6 +108,9 @@ export default function StaffSignUpPage() {
             userType: 'staff',
             redirect: false
           })
+          
+          setShowWelcome(false) // Close the popup before redirect
+          setLoading(false)
           
           if (loginResult?.ok) {
             router.push('/onboarding')
@@ -117,6 +120,7 @@ export default function StaffSignUpPage() {
         }, 2000)
       } else {
         // No match - redirect to login
+        setLoading(false)
         router.push('/login/staff?registered=true')
       }
     } catch (err: any) {

@@ -1977,6 +1977,8 @@ export default function OnboardingForm() {
                         const data = await response.json()
                         if (data.success) {
                           setSuccess('Government IDs saved successfully! ✅')
+                          // Refresh onboarding data to update progress bar
+                          await fetchOnboardingData(true) // Preserve current step
                           setTimeout(() => setCurrentStep(4), 500)
                         } else {
                           setError(data.error || 'Failed to save government IDs')

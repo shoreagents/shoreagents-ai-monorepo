@@ -43,7 +43,9 @@ export async function POST(request: NextRequest) {
       hmoIncluded,
       leaveCredits,
       clientTimezone,
-      workHours
+      workHours,
+      // Work schedule data from client
+      workSchedule
     } = body
 
     // Validation
@@ -116,6 +118,33 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Parse work schedule from client's hire request
+    let workDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    let workStartTime = "09:00"
+    let workEndTime = "18:00"
+    let scheduleTimezone = clientTimezone || "UTC"
+    let isDefaultSchedule = true
+
+    if (workSchedule) {
+      workDays = workSchedule.workDays || workDays
+      workStartTime = workSchedule.workStartTime || workStartTime
+      isDefaultSchedule = workSchedule.isMonToFri !== false
+      scheduleTimezone = workSchedule.clientTimezone || scheduleTimezone
+      
+      // Calculate end time (start + 9 hours)
+      const [startHour, startMinute] = workStartTime.split(':').map(Number)
+      const endHour = (startHour + 9) % 24
+      workEndTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
+      
+      console.log(`📅 [ADMIN] Work schedule from client:`, {
+        workDays,
+        workStartTime,
+        workEndTime,
+        scheduleTimezone,
+        isDefaultSchedule
+      })
+    }
+
     // Create job acceptance record (pending candidate acceptance)
     const jobAcceptance = await prisma.job_acceptances.create({
       data: {
@@ -127,6 +156,11 @@ export async function POST(request: NextRequest) {
         position,
         companyId,
         acceptedByAdminId: managementUser.id,
+        workDays,
+        workStartTime,
+        workEndTime,
+        clientTimezone: scheduleTimezone,
+        isDefaultSchedule,
         updatedAt: new Date()
       }
     })
