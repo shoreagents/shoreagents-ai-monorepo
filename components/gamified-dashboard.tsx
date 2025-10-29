@@ -58,8 +58,10 @@ export default function GamifiedDashboard() {
   const checkWelcomeFormStatus = async () => {
     try {
       const response = await fetch('/api/welcome')
-      if (response.ok) {
-        const data = await response.json()
+      const data = await response.json()
+      
+      // Handle both 200 (not submitted) and 400 (already submitted) responses
+      if (response.ok || response.status === 400) {
         setWelcomeFormStatus({ needsCompletion: !data.alreadySubmitted })
       }
     } catch (error) {
