@@ -56,6 +56,9 @@ export default function GamifiedDashboard() {
 
   // Check welcome form status
   const checkWelcomeFormStatus = async () => {
+    // Only check once - if we already have a status, don't check again
+    if (welcomeFormStatus !== null) return
+    
     try {
       const response = await fetch('/api/welcome')
       const data = await response.json()
@@ -63,6 +66,7 @@ export default function GamifiedDashboard() {
       // Handle both 200 (not submitted) and 400 (already submitted) responses
       if (response.ok || response.status === 400) {
         setWelcomeFormStatus({ needsCompletion: !data.alreadySubmitted })
+        console.log('✅ [WELCOME CHECK] Status cached:', !data.alreadySubmitted ? 'needs completion' : 'already submitted')
       }
     } catch (error) {
       console.error('Failed to check welcome form status:', error)
@@ -71,10 +75,10 @@ export default function GamifiedDashboard() {
 
   // Check if onboarding is complete and redirect to welcome form
   useEffect(() => {
-    if (onboardingStatus?.isComplete && onboardingStatus.completionPercent === 100) {
+    if (onboardingStatus?.isComplete && onboardingStatus.completionPercent === 100 && welcomeFormStatus === null) {
       checkWelcomeFormStatus()
     }
-  }, [onboardingStatus])
+  }, [onboardingStatus, welcomeFormStatus])
 
   const fetchUserName = async () => {
     try {

@@ -54,6 +54,7 @@ export default function Sidebar() {
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [onboardingStatus, setOnboardingStatus] = useState<{ completionPercent: number } | null>(null)
+  const [hasStarted, setHasStarted] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -75,6 +76,14 @@ export default function Sidebar() {
       if (response.ok) {
         const data = await response.json()
         setProfileData(data)
+        
+        // Check if user has started (start date has passed)
+        if (data.profile?.startDate) {
+          const startDate = new Date(data.profile.startDate)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          setHasStarted(startDate <= today)
+        }
       }
     } catch (error) {
       console.error("Failed to fetch profile data:", error)
@@ -94,6 +103,11 @@ export default function Sidebar() {
       console.error("Failed to fetch onboarding status:", error)
     }
   }
+
+  // Filter nav items - hide onboarding after start date
+  const filteredNavItems = hasStarted 
+    ? navItems.filter(item => item.label !== "Onboarding")
+    : navItems
 
   const handleLogout = async () => {
     setIsOpen(false)
@@ -199,7 +213,7 @@ export default function Sidebar() {
 
             {/* Navigation */}
             <nav className="space-y-1">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (

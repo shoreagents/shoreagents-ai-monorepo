@@ -1,9 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard, Sparkles, Award, Zap, Star, Coffee, Rocket } from "lucide-react"
+import { Building2, Calendar, DollarSign, Mail, MapPin, Phone, User, Briefcase, Clock, TrendingUp, Shield, Umbrella, Heart, Camera, Upload, FileText, IdCard, Sparkles, Award, Zap, Star, Coffee, Rocket, Palette, Edit2, Save, X } from "lucide-react"
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ProfileData {
   user: {
@@ -46,6 +50,32 @@ interface ProfileData {
     emergencyContactRelation: string | null
     emergencyContactPhone: string | null
     emergencyContactAddress: string | null
+    validIdUrl: string | null
+    birthCertUrl: string | null
+    nbiClearanceUrl: string | null
+    policeClearanceUrl: string | null
+    sssDocUrl: string | null
+    tinDocUrl: string | null
+    philhealthDocUrl: string | null
+    pagibigDocUrl: string | null
+  } | null
+  onboardingData: {
+    firstName: string | null
+    middleName: string | null
+    lastName: string | null
+    gender: string | null
+    civilStatus: string | null
+    dateOfBirth: string | null
+    contactNo: string | null
+    email: string | null
+    medicalCertUrl: string | null
+    resumeUrl: string | null
+    diplomaTorUrl: string | null
+    dataPrivacyConsentUrl: string | null
+    signatureUrl: string | null
+    idPhotoUrl: string | null
+    certificateEmpUrl: string | null
+    birForm2316Url: string | null
   } | null
   workSchedules: Array<{
     id: string
@@ -71,6 +101,10 @@ export default function ProfileView() {
   const [activeTab, setActiveTab] = useState<'profile' | 'personal' | 'documents'>('profile')
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [editingInterests, setEditingInterests] = useState(false)
+  const [interests, setInterests] = useState<any>(null)
+  const [interestsForm, setInterestsForm] = useState<any>({})
+  const [interestsFetched, setInterestsFetched] = useState(false)
   
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -78,7 +112,11 @@ export default function ProfileView() {
   useEffect(() => {
     setMounted(true)
     fetchProfileData()
-  }, [])
+    // Only fetch interests once
+    if (!interestsFetched) {
+      fetchInterests()
+    }
+  }, [interestsFetched])
 
   const fetchProfileData = async () => {
     try {
@@ -216,6 +254,73 @@ export default function ProfileView() {
     } finally {
       setUploadingCover(false)
       if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
+  const fetchInterests = async () => {
+    // Don't fetch if already fetched
+    if (interestsFetched) return
+    
+    try {
+      const response = await fetch('/api/welcome')
+      
+      // Parse response
+      const data = await response.json()
+      
+      // 400 status means form already submitted - this is expected!
+      if (response.status === 400 && data.alreadySubmitted && data.interests) {
+        console.log('📊 [INTERESTS] Loaded interests:', data.interests)
+        setInterests(data.interests)
+        setInterestsForm(data.interests)
+      } else if (response.ok) {
+        // Form not submitted yet, no interests to load
+        console.log('📊 [INTERESTS] No interests found yet')
+      }
+    } catch (error) {
+      console.error('❌ [INTERESTS] Error fetching interests:', error)
+    } finally {
+      // Mark as fetched so we don't fetch again
+      setInterestsFetched(true)
+    }
+  }
+
+  const handleEditInterests = () => {
+    setEditingInterests(true)
+    setInterestsForm({ ...interests })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingInterests(false)
+    setInterestsForm({ ...interests })
+  }
+
+  const handleSaveInterests = async () => {
+    try {
+      const response = await fetch('/api/profile/interests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(interestsForm)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update interests')
+      }
+
+      setInterests(interestsForm)
+      setEditingInterests(false)
+      
+      toast({
+        title: "Success",
+        description: "Your interests have been updated!",
+        variant: "success",
+      })
+    } catch (error) {
+      console.error('Error saving interests:', error)
+      toast({
+        title: "Update Failed",
+        description: "Failed to update interests. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -693,6 +798,163 @@ export default function ProfileView() {
               </div>
             </div>
           </div>
+
+          {/* My Interests Section */}
+          {interests && (
+            <div className="group rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-purple-400/30 hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-[1.01]">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 transition-transform group-hover:rotate-12 group-hover:scale-110">
+                    <Palette className="h-6 w-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white group-hover:text-purple-300 transition-colors">My Interests</h2>
+                </div>
+                {!editingInterests ? (
+                  <Button
+                    onClick={handleEditInterests}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveInterests}
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button
+                      onClick={handleCancelEdit}
+                      variant="outline"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Favorite Fast Food */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🍔 Favorite Fast Food</Label>
+                  {editingInterests ? (
+                    <Select
+                      value={interestsForm.favoriteFastFood || ''}
+                      onValueChange={(value) => setInterestsForm({ ...interestsForm, favoriteFastFood: value })}
+                    >
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white">
+                        <SelectValue placeholder="Select your favorite" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="McDo">🍔 McDo</SelectItem>
+                        <SelectItem value="Jollibee">🍗 Jollibee</SelectItem>
+                        <SelectItem value="Chowking">🍜 Chowking</SelectItem>
+                        <SelectItem value="Burger King">👑 Burger King</SelectItem>
+                        <SelectItem value="Wendy's">🍔 Wendy's</SelectItem>
+                        <SelectItem value="KFC">🍗 KFC</SelectItem>
+                        <SelectItem value="Tokyo Tokyo">🍱 Tokyo Tokyo</SelectItem>
+                        <SelectItem value="Banh Mi Kitchen">🥖 Banh Mi Kitchen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteFastFood || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Color */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🎨 Favorite Color</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteColor || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteColor: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Blue"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteColor || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Music */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🎵 Favorite Music</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteMusic || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteMusic: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Rock, Pop, Jazz"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteMusic || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Movie */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🎬 Favorite Movie</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteMovie || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteMovie: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., The Matrix"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteMovie || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Hobby */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🎯 Hobby</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.hobby || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, hobby: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Photography"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.hobby || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dream Destination */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">✈️ Dream Destination</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.dreamDestination || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, dreamDestination: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Japan"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.dreamDestination || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         )}
         </>
@@ -711,20 +973,40 @@ export default function ProfileView() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1">First Name</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.firstName || 'Not provided'}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1">Middle Name</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.middleName || 'Not provided'}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1">Last Name</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.lastName || 'Not provided'}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1">Email</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.email || profileData.user.email}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1">Contact Number</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.contactNo || 'Not provided'}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Date of Birth</div>
                 <div className="text-lg font-semibold text-white">
-                  {profile?.dateOfBirth ? (mounted ? formatDate(profile.dateOfBirth) : profile.dateOfBirth) : 'Not provided'}
+                  {profileData.onboardingData?.dateOfBirth ? (mounted ? formatDate(profileData.onboardingData.dateOfBirth) : profileData.onboardingData.dateOfBirth) : 'Not provided'}
                 </div>
               </div>
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Gender</div>
-                <div className="text-lg font-semibold text-white">{profile?.gender || 'Not provided'}</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.gender || 'Not provided'}</div>
               </div>
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Civil Status</div>
-                <div className="text-lg font-semibold text-white">{profile?.civilStatus || 'Not provided'}</div>
+                <div className="text-lg font-semibold text-white">{profileData.onboardingData?.civilStatus || 'Not provided'}</div>
               </div>
-              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 md:col-span-2">
                 <div className="text-sm text-slate-400 mb-1">Address</div>
                 <div className="text-lg font-semibold text-white">{profile?.location || 'Not provided'}</div>
               </div>

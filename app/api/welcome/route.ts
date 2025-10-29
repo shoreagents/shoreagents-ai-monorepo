@@ -30,7 +30,23 @@ export async function GET() {
     if (existingWelcomeForm) {
       return NextResponse.json({ 
         error: "Welcome form already submitted",
-        alreadySubmitted: true 
+        alreadySubmitted: true,
+        interests: {
+          favoriteFastFood: existingWelcomeForm.favoriteFastFood,
+          favoriteColor: existingWelcomeForm.favoriteColor,
+          favoriteMusic: existingWelcomeForm.favoriteMusic,
+          favoriteMovie: existingWelcomeForm.favoriteMovie,
+          favoriteBook: existingWelcomeForm.favoriteBook,
+          hobby: existingWelcomeForm.hobby,
+          dreamDestination: existingWelcomeForm.dreamDestination,
+          favoriteSeason: existingWelcomeForm.favoriteSeason,
+          petName: existingWelcomeForm.petName,
+          favoriteSport: existingWelcomeForm.favoriteSport,
+          favoriteGame: existingWelcomeForm.favoriteGame,
+          favoriteQuote: existingWelcomeForm.favoriteQuote,
+          funFact: existingWelcomeForm.funFact,
+          additionalInfo: existingWelcomeForm.additionalInfo
+        }
       }, { status: 400 })
     }
 
