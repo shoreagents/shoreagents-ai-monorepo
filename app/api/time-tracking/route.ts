@@ -41,12 +41,15 @@ export async function GET(request: NextRequest) {
     const startOfToday = new Date(now)
     startOfToday.setHours(0, 0, 0, 0)
     
+    // Start of CALENDAR WEEK (Monday)
     const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - 7)
+    const dayOfWeek = startOfWeek.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // If Sunday, go back 6 days
+    startOfWeek.setDate(startOfWeek.getDate() - daysToMonday)
     startOfWeek.setHours(0, 0, 0, 0)
     
-    const startOfMonth = new Date(now)
-    startOfMonth.setDate(now.getDate() - 30)
+    // Start of CALENDAR MONTH (1st of current month)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     startOfMonth.setHours(0, 0, 0, 0)
 
     // Calculate today's hours (including active session)
@@ -98,9 +101,9 @@ export async function GET(request: NextRequest) {
       totalHours: totalHours.toFixed(2),
       count: entries.length,
       stats: {
-        today: parseFloat(todayHours.toFixed(1)),
-        week: parseFloat(weekHours.toFixed(1)),
-        month: parseFloat(monthHours.toFixed(1))
+        today: parseFloat(todayHours.toFixed(2)),
+        week: parseFloat(weekHours.toFixed(2)),
+        month: parseFloat(monthHours.toFixed(2))
       }
     })
   } catch (error) {

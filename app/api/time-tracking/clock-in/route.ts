@@ -52,13 +52,14 @@ export async function POST(request: NextRequest) {
           }
         }
       }),
-      // Get today's work schedule (use profileId directly to avoid JOIN)
+      // Get today's work schedule (use profileId directly to avoid JOIN) - FULL record including ID!
       profileId ? prisma.work_schedules.findFirst({
         where: {
           profileId: profileId,
           dayOfWeek: today
         },
         select: {
+          id: true,           // ← NEED THIS to save relationship!
           startTime: true,
           endTime: true
         }
@@ -81,22 +82,28 @@ export async function POST(request: NextRequest) {
     
     let wasLate = false
     let lateBy = 0
+    let wasEarly = false
+    let earlyBy = 0
     let expectedClockIn = null
     
     // Check if work schedule exists and has a valid startTime
     if (workSchedule && workSchedule.startTime && workSchedule.startTime.trim() !== '') {
       try {
-        // Parse shift start time (e.g., "09:00 AM" or "9:00 AM")
+        // Parse shift start time - supports both "09:00 AM" and "09:00" (24-hour)
         const timeStr = workSchedule.startTime.trim()
         const parts = timeStr.split(' ')
         
+        let hour: number
+        let minute: number
+        
         if (parts.length >= 2) {
+          // Format: "09:00 AM" or "9:00 PM"
           const time = parts[0]
           const period = parts[1].toUpperCase()
           const [hours, minutes] = time.split(':')
           
-          let hour = parseInt(hours)
-          const minute = parseInt(minutes || '0')
+          hour = parseInt(hours)
+          minute = parseInt(minutes || '0')
           
           // Convert to 24-hour format
           if (period === 'PM' && hour !== 12) {
@@ -104,22 +111,39 @@ export async function POST(request: NextRequest) {
           } else if (period === 'AM' && hour === 12) {
             hour = 0
           }
-          
-          // Create expected clock-in time
-          expectedClockIn = new Date(now)
-          expectedClockIn.setHours(hour, minute, 0, 0)
-          
-          // Check if user is late
-          if (now > expectedClockIn) {
-            wasLate = true
-            lateBy = Math.floor((now.getTime() - expectedClockIn.getTime()) / 60000)
-          }
+        } else {
+          // Format: "09:00" or "03:00" (24-hour format)
+          const [hours, minutes] = timeStr.split(':')
+          hour = parseInt(hours)
+          minute = parseInt(minutes || '0')
         }
+        
+        // Create expected clock-in time
+        expectedClockIn = new Date(now)
+        expectedClockIn.setHours(hour, minute, 0, 0)
+        
+        // Check if user is LATE or EARLY
+        const diffMs = now.getTime() - expectedClockIn.getTime()
+        const diffMinutes = Math.floor(Math.abs(diffMs) / 60000)
+        
+        if (diffMs > 0) {
+          // Clocked in AFTER shift start = LATE
+          wasLate = true
+          lateBy = diffMinutes
+        } else if (diffMs < 0) {
+          // Clocked in BEFORE shift start = EARLY
+          wasEarly = true
+          earlyBy = diffMinutes
+        }
+        // If diffMs === 0, they're exactly on time!
+        
       } catch (error) {
         console.error('[Clock-In] Error parsing start time:', workSchedule.startTime, error)
-        // If parsing fails, don't mark as late
+        // If parsing fails, don't mark as late/early
         wasLate = false
         lateBy = 0
+        wasEarly = false
+        earlyBy = 0
         expectedClockIn = null
       }
     }
@@ -129,11 +153,16 @@ export async function POST(request: NextRequest) {
       data: {
         id: randomUUID(),
         staffUserId: staffUser.id,
+        workScheduleId: workSchedule?.id || null,  // ← SAVE THE SCHEDULE LINK!
         clockIn: now,
         updatedAt: now,
         expectedClockIn,
         wasLate,
-        lateBy
+        lateBy: wasLate ? lateBy : null,
+        wasEarly,
+        earlyBy: wasEarly ? earlyBy : null,
+        lateReason: null,  // Will be set by UI if user is late
+        workedFullShift: false  // Will be calculated on clock-out
       },
     })
     
@@ -156,14 +185,25 @@ export async function POST(request: NextRequest) {
       },
       wasLate,
       lateBy,
+      wasEarly,
+      earlyBy,
       showBreakScheduler: shouldShowBreakScheduler,
+      // Message for logging, popup will be handled by UI based on wasLate/wasEarly flags
       message: wasLate 
         ? `Clocked in ${lateBy} minutes late`
-        : "Clocked in successfully",
+        : wasEarly
+        ? `Clocked in ${earlyBy} minutes early`
+        : "Clocked in on time",
     })
   } catch (error) {
-    console.error("Error clocking in:", error)
-    return NextResponse.json({ error: "Failed to clock in" }, { status: 500 })
+    console.error("❌ ERROR CLOCKING IN:", error)
+    console.error("❌ ERROR DETAILS:", JSON.stringify(error, null, 2))
+    console.error("❌ ERROR MESSAGE:", error instanceof Error ? error.message : "Unknown error")
+    console.error("❌ ERROR STACK:", error instanceof Error ? error.stack : "No stack")
+    return NextResponse.json({ 
+      error: "Failed to clock in",
+      details: error instanceof Error ? error.message : "Unknown error" 
+    }, { status: 500 })
   }
 }
 

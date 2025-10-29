@@ -9,6 +9,9 @@ const next = require('next')
 const { Server } = require('socket.io')
 const { PrismaClient } = require('@prisma/client')
 
+// Fix EventEmitter memory leak warning
+require('events').EventEmitter.defaultMaxListeners = 15;
+
 // Initialize Prisma Client
 const prisma = new PrismaClient()
 

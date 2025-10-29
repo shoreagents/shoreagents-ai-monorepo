@@ -152,8 +152,12 @@ export async function createActivityPost(activity: ActivityData) {
     const content = generatePostContent(activity)
     const postType = getPostType(activity.type)
 
+    const { randomUUID } = await import('crypto')
+    const now = new Date()
+    
     const post = await prisma.activity_posts.create({
       data: {
+        id: randomUUID(),
         staffUserId: activity.staffUserId,
         type: postType,
         content,
@@ -162,7 +166,8 @@ export async function createActivityPost(activity: ActivityData) {
           ...activity.data
         } : null,
         images: [],
-        audience: 'STAFF', // Auto-generated staff activity posts go to staff feed
+        audience: 'STAFF',
+        updatedAt: now  // ← ADD MISSING updatedAt!
       },
     })
 

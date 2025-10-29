@@ -74,8 +74,24 @@ export async function GET(req: NextRequest) {
       const basicSalary = totalSalary - deMinimis;
       
       // Build work schedule from job acceptance data
-      let workSchedule = "Monday-Friday";
-      if (jobAcceptance.workHours) {
+      let workSchedule = "";
+      
+      // Use workDays array if available, otherwise fallback to "Monday-Friday"
+      if (jobAcceptance.workDays && jobAcceptance.workDays.length > 0) {
+        if (jobAcceptance.workDays.length === 5 && 
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].every(day => jobAcceptance.workDays.includes(day))) {
+          workSchedule = "Monday-Friday";
+        } else {
+          workSchedule = jobAcceptance.workDays.join(', ');
+        }
+      } else {
+        workSchedule = "Monday-Friday";
+      }
+      
+      // Add work hours from workStartTime and workEndTime
+      if (jobAcceptance.workStartTime && jobAcceptance.workEndTime) {
+        workSchedule += `, ${jobAcceptance.workStartTime} - ${jobAcceptance.workEndTime}`;
+      } else if (jobAcceptance.workHours) {
         workSchedule += `, ${jobAcceptance.workHours}`;
       } else if (jobAcceptance.shiftType) {
         // Fallback to shift type
