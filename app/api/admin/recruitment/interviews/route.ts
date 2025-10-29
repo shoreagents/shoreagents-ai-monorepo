@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getCandidateById } from '@/lib/bpoc-db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,13 +41,37 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Transform data to match expected format
-    const formattedInterviews = interviews.map(interview => ({
-      ...interview,
-      status: interview.status.toLowerCase().replace('_', '-'), // Normalize: OFFER_SENT → offer-sent
-      client_name: interview.client_users?.name || 'Unknown',
-      client_email: interview.client_users?.email || 'Unknown',
-      company_name: interview.client_users?.company?.companyName || 'Unknown',
+    // Fetch candidate data from BPOC for each interview
+    const formattedInterviews = await Promise.all(interviews.map(async (interview) => {
+      let candidateData = null
+      try {
+        // Fetch candidate from BPOC database
+        candidateData = await getCandidateById(interview.bpocCandidateId)
+        console.log(`📧 Candidate data for ${interview.candidateFirstName}:`, {
+          email: candidateData?.email,
+          phone: candidateData?.phone,
+          position: candidateData?.position,
+          location: candidateData?.location_city
+        })
+      } catch (error) {
+        console.warn(`⚠️ Could not fetch candidate ${interview.bpocCandidateId} from BPOC:`, error)
+      }
+
+      return {
+        ...interview,
+        status: interview.status.toLowerCase().replace('_', '-'), // Normalize: OFFER_SENT → offer-sent
+        client_name: interview.client_users?.name || 'Unknown',
+        client_email: interview.client_users?.email || 'Unknown',
+        client_phone: interview.client_users?.client_profiles?.mobilePhone || interview.client_users?.client_profiles?.directPhone || null,
+        client_address: interview.client_users?.company?.location || null,
+        company_name: interview.client_users?.company?.companyName || 'Unknown',
+        // Add candidate data from BPOC
+        candidate_avatar_url: candidateData?.avatar_url || null,
+        candidate_position: candidateData?.position || null,
+        candidate_location: candidateData ? `${candidateData.location_city}, ${candidateData.location_country}` : null,
+        candidate_email: candidateData?.email || null,
+        candidate_phone: candidateData?.phone || null,
+      }
     }))
 
     console.log(`✅ [ADMIN] Found ${interviews.length} interview requests`)

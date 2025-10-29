@@ -28,7 +28,8 @@ import {
   CheckCircle,
   Mail,
   XCircle,
-  User
+  User,
+  Phone
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -93,7 +94,15 @@ interface InterviewRequest {
   } | null
   client_name?: string
   client_email?: string
+  client_phone?: string | null
+  client_address?: string | null
   company_name?: string
+  // Candidate data from BPOC
+  candidate_avatar_url?: string | null
+  candidate_position?: string | null
+  candidate_location?: string | null
+  candidate_email?: string | null
+  candidate_phone?: string | null
   client_users?: {
     id: string
     name: string
@@ -192,15 +201,17 @@ export default function AdminRecruitmentPage() {
     try {
       // Handle new object format
       if (typeof time === 'object' && time !== null && time.datetime) {
-        const dateObj = new Date(time.datetime)
-        if (isNaN(dateObj.getTime())) {
-          return {
-            clientTime: 'Invalid Date',
-            clientTimezone: time.timezoneDisplay || '',
-            fullDisplay: `Invalid Date (${time.timezoneDisplay || 'Unknown'})`
-          }
-        }
-        const clientTime = dateObj.toLocaleDateString('en-US', {
+        const clientTimezone = time.timezone || 'UTC'
+        const clientTzDisplay = time.timezoneDisplay || time.timezone || 'UTC'
+        
+        const localDateStr = time.datetime
+        const parts = localDateStr.split('T')
+        const [year, month, day] = parts[0].split('-').map(Number)
+        const [hour, minute] = (parts[1] || '00:00').split(':').map(Number)
+        
+        // Format client time (just display the numbers as-is since they're in client's local time)
+        const clientDate = new Date(year, month - 1, day, hour, minute)
+        const clientTimeStr = clientDate.toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
@@ -208,10 +219,57 @@ export default function AdminRecruitmentPage() {
           hour12: true
         })
         
+        // To convert timezone properly:
+        // 1. Create a UTC date (arbitrary, we'll adjust it)
+        const utcRef = new Date(Date.UTC(year, month - 1, day, hour, minute))
+        
+        // 2. Format this UTC date in the client's timezone to see what time it shows
+        const clientTestStr = utcRef.toLocaleString('en-US', {
+          timeZone: clientTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })
+        
+        // 3. Parse the result to find the offset
+        const match = clientTestStr.match(/(\d+)\/(\d+)\/(\d+),?\s*(\d+):(\d+)/)
+        if (!match) {
+          return {
+            clientTime: clientTimeStr,
+            clientTimezone: clientTzDisplay,
+            phTime: 'Error',
+            fullDisplay: `${clientTimeStr} (${clientTzDisplay})`
+          }
+        }
+        
+        const [, testMonth, testDay, testYear, testHour, testMinute] = match.map(Number)
+        
+        // 4. Calculate the difference between what we wanted and what we got
+        const wantedTime = new Date(year, month - 1, day, hour, minute).getTime()
+        const gotTime = new Date(testYear, testMonth - 1, testDay, testHour, testMinute).getTime()
+        const offsetMs = wantedTime - gotTime
+        
+        // 5. Create the correct UTC date by applying the offset
+        const correctUTC = new Date(utcRef.getTime() + offsetMs)
+        
+        // 6. Format this correct UTC date in Manila timezone
+        const phTimeStr = correctUTC.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'Asia/Manila'
+        })
+        
         return {
-          clientTime,
-          clientTimezone: time.timezoneDisplay || time.timezone || 'UTC',
-          fullDisplay: `${clientTime} (${time.timezoneDisplay || time.timezone || 'UTC'})`
+          clientTime: clientTimeStr,
+          clientTimezone: clientTzDisplay,
+          phTime: phTimeStr,
+          fullDisplay: `${clientTimeStr} (${clientTzDisplay}) → ${phTimeStr} (PH)`
         }
       }
       
@@ -221,26 +279,43 @@ export default function AdminRecruitmentPage() {
         return {
           clientTime: 'Invalid Date',
           clientTimezone: '',
+          phTime: 'Invalid Date',
           fullDisplay: time as string
         }
       }
-      const formatted = dateObj.toLocaleDateString('en-US', {
+      
+      // Format as UTC
+      const utcTime = dateObj.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: 'UTC'
       })
+      
+      // Convert to Philippine Time (Asia/Manila)
+      const phTime = dateObj.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Manila'
+      })
+      
       return {
-        clientTime: formatted,
+        clientTime: utcTime,
         clientTimezone: 'UTC',
-        fullDisplay: formatted
+        phTime,
+        fullDisplay: `${utcTime} (UTC) → ${phTime} (PH)`
       }
     } catch (error) {
       console.error('Error formatting time:', error, time)
       return {
         clientTime: 'Error',
         clientTimezone: '',
+        phTime: 'Error',
         fullDisplay: typeof time === 'string' ? time : JSON.stringify(time)
       }
     }
@@ -257,6 +332,11 @@ export default function AdminRecruitmentPage() {
   const [interviewToDecline, setInterviewToDecline] = useState<InterviewRequest | null>(null)
   const [declineReason, setDeclineReason] = useState('')
   const [declining, setDeclining] = useState(false)
+  
+  // Cancel Interview Modal State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [interviewToCancel, setInterviewToCancel] = useState<InterviewRequest | null>(null)
+  const [cancelling, setCancelling] = useState(false)
   
   // Stats
   const [stats, setStats] = useState({
@@ -325,6 +405,13 @@ export default function AdminRecruitmentPage() {
       if (data.success) {
         console.log('🔍 [FRONTEND] Interviews received:', data.interviews.length)
         console.log('🔍 [FRONTEND] Interview statuses:', data.interviews.map((i: InterviewRequest) => ({ name: i.candidateFirstName, status: i.status })))
+        console.log('📧 [FRONTEND] Sample candidate data:', data.interviews.map((i: InterviewRequest) => ({
+          name: i.candidateFirstName,
+          email: i.candidate_email,
+          phone: i.candidate_phone,
+          position: i.candidate_position,
+          location: i.candidate_location
+        })))
         setInterviews(data.interviews)
         const pendingCount = data.interviews.filter((i: InterviewRequest) => i.status === 'pending').length
         console.log('🔍 [FRONTEND] Pending count:', pendingCount)
@@ -789,6 +876,45 @@ export default function AdminRecruitmentPage() {
     }
   }
 
+  // Cancel Interview
+  async function handleCancelInterview() {
+    if (!interviewToCancel) return
+
+    try {
+      setCancelling(true)
+
+      const response = await fetch(`/api/admin/recruitment/interviews/${interviewToCancel.id}/cancel`, {
+        method: 'PATCH'
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Interview Cancelled",
+          description: `Interview with ${interviewToCancel.candidateFirstName} has been cancelled.`,
+        })
+
+        // Refresh interviews list
+        await fetchInterviews()
+
+        // Close modals
+        setCancelModalOpen(false)
+        setInterviewToCancel(null)
+        setSelectedInterview(null)
+      } else {
+        throw new Error('Failed to cancel interview')
+      }
+    } catch (error) {
+      console.error('Error cancelling interview:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel interview",
+        variant: "destructive"
+      })
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   // Filter candidates
   const filteredCandidates = candidates.filter(c => {
     const searchLower = candidateSearch.toLowerCase()
@@ -1187,17 +1313,15 @@ export default function AdminRecruitmentPage() {
                   
                   return (
                   <Card key={interview.id} className="p-6 hover:shadow-lg transition-all border-l-4 border-l-blue-500">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-4">
                       
-                      {/* Left: Candidate Info */}
-                      <div className="flex-1 space-y-4">
-                        
-                        {/* Header */}
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                            <UserCheck className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1">
+                      {/* Header - Full Width with Buttons */}
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={interview.candidate_avatar_url || undefined} />
+                          <AvatarFallback>{interview.candidateFirstName?.[0] || '?'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 flex-wrap">
                               <h3 className="text-xl font-semibold text-foreground">{interview.candidateFirstName}</h3>
                               <Badge className={
@@ -1217,63 +1341,141 @@ export default function AdminRecruitmentPage() {
                                   ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30'
                                   : status === 'completed'
                                   ? 'bg-green-500/20 text-green-300 border-green-500/50 hover:bg-green-500/30'
+                                : status === 'cancelled'
+                                ? 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/30'
+                                : status === 'rejected'
+                                ? 'bg-slate-500/20 text-slate-300 border-slate-500/50 hover:bg-slate-500/30'
                                   : 'bg-gray-500/20 text-gray-300 border-gray-500/50'
                               }>
                                 {status.toUpperCase().replace(/-/g, ' ')}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground mt-1">
-                              <span>
-                                <Calendar className="h-3 w-3 inline mr-1" />
-                                {new Date(interview.created_at).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                              </span>
-                              {(interview.client_name || interview.client_users?.name) && (
+                            {/* Candidate Info */}
+                            <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground mt-1">
+                              {interview.candidate_position && (
+                                <span className="text-foreground font-medium">{interview.candidate_position}</span>
+                              )}
+                              {interview.candidate_location && (
                                 <span className="flex items-center gap-1">
-                                  <span className="text-muted-foreground">•</span>
-                                  <User className="h-3 w-3 inline" />
-                                  <span className="font-medium text-foreground">
-                                    {interview.client_name || interview.client_users?.name}
-                                  </span>
+                                  {interview.candidate_position && <span>•</span>}
+                                  <MapPin className="h-3 w-3 inline" />
+                                  <span>{interview.candidate_location}</span>
                                 </span>
                               )}
-                              {(interview.company_name || interview.client_users?.company?.companyName) && (
+                              {interview.candidate_email && (
                                 <span className="flex items-center gap-1">
-                                  <span className="text-muted-foreground">•</span>
-                                  <Building2 className="h-3 w-3 inline" />
-                                  <span className="font-medium text-blue-400">
-                                    {interview.company_name || interview.client_users?.company?.companyName}
-                                  </span>
+                                  <span>•</span>
+                                  <Mail className="h-3 w-3 inline" />
+                                  <span>{interview.candidate_email}</span>
+                                </span>
+                              )}
+                              {interview.candidate_phone && (
+                                <span className="flex items-center gap-1">
+                                  <span>•</span>
+                                  <Phone className="h-3 w-3 inline" />
+                                  <span>{interview.candidate_phone}</span>
                                 </span>
                               )}
                             </div>
+                        </div>
+
+                        {/* Action Buttons in Header */}
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={() => setSelectedInterview(interview)}
+                            className="bg-gray-600 hover:bg-gray-700 text-white"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Full
+                          </Button>
+                          {status === 'pending' && (
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setInterviewToSchedule(interview)
+                                setScheduleFormData({
+                                  scheduledTime: '',
+                                  meetingLink: '',
+                                  adminNotes: ''
+                                })
+                                setScheduleModalOpen(true)
+                              }}
+                            >
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Schedule
+                            </Button>
+                          )}
+                          {(status === 'completed' || status === 'hire-requested') && (
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openHireModal(interview)
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Offer
+                            </Button>
+                          )}
+                          {status === 'offer-sent' && (
+                            <>
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openConfirmAcceptanceModal(interview)
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Finalize
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openDeclineModal(interview)
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Declined
+                            </Button>
+                            </>
+                          )}
                           </div>
                         </div>
 
+                      {/* Content - Full Width */}
+                      <div className="space-y-4">
+
                         {/* Status Message Box */}
-                        <div className={`rounded-lg p-4 border-l-4 ${
+                        <div className={`rounded-lg p-4 ${
                           status === 'pending'
-                            ? 'bg-yellow-500/10 border-l-yellow-500'
+                            ? 'bg-yellow-500/10'
                             : status === 'scheduled'
-                            ? 'bg-blue-500/10 border-l-blue-500'
+                            ? 'bg-blue-500/10'
                             : status === 'hire-requested'
-                            ? 'bg-orange-500/10 border-l-orange-500'
+                            ? 'bg-orange-500/10'
                             : status === 'offer-sent'
-                            ? 'bg-indigo-500/10 border-l-indigo-500'
+                            ? 'bg-indigo-500/10'
                             : status === 'offer-accepted'
-                            ? 'bg-emerald-500/10 border-l-emerald-500'
+                            ? 'bg-emerald-500/10'
                             : status === 'offer-declined'
-                            ? 'bg-red-500/10 border-l-red-500'
+                            ? 'bg-red-500/10'
                             : status === 'hired'
-                            ? 'bg-purple-500/10 border-l-purple-500'
+                            ? 'bg-purple-500/10'
                             : status === 'completed'
-                            ? 'bg-green-500/10 border-l-green-500'
-                            : 'bg-gray-500/10 border-l-gray-500'
+                            ? 'bg-green-500/10'
+                            : 'bg-gray-500/10'
                         }`}>
                           {status === 'pending' && (
                             <div className="flex items-start gap-3">
@@ -1376,9 +1578,82 @@ export default function AdminRecruitmentPage() {
                               </div>
                             </div>
                           )}
+                          {status === 'cancelled' && (
+                            <div className="flex items-start gap-3">
+                              <XCircle className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-gray-300">Interview Cancelled</p>
+                                <p className="text-sm text-gray-400/80 mt-1">
+                                  This interview has been cancelled by the admin.
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Preferred Interview Times - Only show before hiring stage */}
+                        {/* Client Info */}
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Client Details
+                          </h4>
+                          <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
+                            <span>
+                              <Calendar className="h-3 w-3 inline mr-1" />
+                              {new Date(interview.createdAt || interview.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                            </span>
+                            {(interview.client_name || interview.client_users?.name) && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">•</span>
+                                <User className="h-3 w-3 inline" />
+                                <span className="font-medium text-foreground">
+                                  {interview.client_name || interview.client_users?.name}
+                                </span>
+                              </span>
+                            )}
+                            {(interview.company_name || interview.client_users?.company?.companyName) && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">•</span>
+                                <Building2 className="h-3 w-3 inline" />
+                                <span className="font-medium text-blue-400">
+                                  {interview.company_name || interview.client_users?.company?.companyName}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground pl-4">
+                            {(interview.client_email || interview.client_users?.email) && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3 inline" />
+                                <span className="text-foreground">
+                                  {interview.client_email || interview.client_users?.email}
+                                </span>
+                              </span>
+                            )}
+                            {interview.client_phone && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">•</span>
+                                <Phone className="h-3 w-3 inline" />
+                                <span className="text-foreground">{interview.client_phone}</span>
+                              </span>
+                            )}
+                            {interview.client_address && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">•</span>
+                                <MapPin className="h-3 w-3 inline" />
+                                <span className="text-foreground">{interview.client_address}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Preferred Interview Times - Hide for cancelled */}
                         {(status === 'pending' || status === 'scheduled' || status === 'completed') && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
@@ -1390,7 +1665,7 @@ export default function AdminRecruitmentPage() {
                               const times = interview.preferredTimes || interview.preferred_times || [];
                               const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
                                 console.log('[Admin] Processing times for', interview.candidateFirstName, timesArray);
-                                return timesArray.map((time, idx) => {
+                                return timesArray.map((time: string | PreferredTime, idx: number) => {
                                   console.log('[Admin] Time', idx, ':', time, 'Type:', typeof time);
                                   const formatted = formatPreferredTimeWithTimezone(time);
                                   console.log('[Admin] Formatted:', formatted);
@@ -1418,83 +1693,6 @@ export default function AdminRecruitmentPage() {
                           </div>
                         )}
 
-                      </div>
-
-                      {/* Right: Action Buttons */}
-                      <div className="flex flex-col gap-2 flex-shrink-0">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setSelectedInterview(interview)}
-                          className="w-full"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Full
-                        </Button>
-                        {status === 'pending' && (
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setInterviewToSchedule(interview)
-                              setScheduleFormData({
-                                scheduledTime: '',
-                                meetingLink: '',
-                                adminNotes: ''
-                              })
-                              setScheduleModalOpen(true)
-                            }}
-                          >
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Schedule
-                          </Button>
-                        )}
-                        {/* Show "Send Offer" button for completed interviews or hire-requested */}
-                        {(status === 'completed' || status === 'hire-requested') && (
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            className="w-full bg-green-600 hover:bg-green-700"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openHireModal(interview)
-                            }}
-                          >
-                            <Mail className="h-4 w-4 mr-2" />
-                            Send Offer
-                          </Button>
-                        )}
-                        {/* Show "Finalize Hire" and "Mark Declined" buttons for offer-sent */}
-                        {status === 'offer-sent' && (
-                          <div className="flex gap-2 w-full">
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                                openConfirmAcceptanceModal(interview)
-                            }}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Finalize Hire
-                          </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openDeclineModal(interview)
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Mark Declined
-                            </Button>
-                          </div>
-                        )}
                       </div>
 
                     </div>
@@ -1656,38 +1854,66 @@ export default function AdminRecruitmentPage() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-slate-100">Interview Request Details</DialogTitle>
           </DialogHeader>
-          {selectedInterview && (
+          {selectedInterview && (() => {
+            // Normalize status to lowercase for comparison
+            const modalStatus = selectedInterview.status.toLowerCase().replace(/_/g, '-')
+            
+            return (
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-xl font-bold text-white">
-                      {selectedInterview.candidateFirstName.charAt(0)}
-                    </span>
-                  </div>
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={selectedInterview.candidate_avatar_url || undefined} />
+                    <AvatarFallback>{selectedInterview.candidateFirstName.charAt(0)}</AvatarFallback>
+                  </Avatar>
                   <div>
                     <h3 className="text-xl font-bold text-slate-100">{selectedInterview.candidateFirstName}</h3>
                     <p className="text-sm text-slate-400 font-mono">{selectedInterview.bpoc_candidate_id || selectedInterview.bpocCandidateId}</p>
                   </div>
                 </div>
                 <Badge className={
-                  selectedInterview.status === 'pending' 
-                    ? 'bg-blue-600 text-white border border-blue-500'
-                    : selectedInterview.status === 'scheduled'
-                    ? 'bg-green-600 text-white border border-green-500'
-                    : selectedInterview.status === 'completed'
-                    ? 'bg-emerald-600 text-white border border-emerald-500'
-                    : selectedInterview.status === 'hired'
-                    ? 'bg-purple-600 text-white border border-purple-500'
-                    : 'bg-slate-700 text-slate-200 border border-slate-600'
+                  modalStatus === 'pending' 
+                    ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 hover:bg-yellow-500/30'
+                    : modalStatus === 'scheduled'
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 hover:bg-blue-500/30'
+                    : modalStatus === 'hire-requested'
+                    ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 hover:bg-orange-500/30'
+                    : modalStatus === 'offer-sent'
+                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30'
+                    : modalStatus === 'offer-accepted'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                    : modalStatus === 'offer-declined'
+                    ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30'
+                    : modalStatus === 'hired'
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30'
+                    : modalStatus === 'completed'
+                    ? 'bg-green-500/20 text-green-300 border-green-500/50 hover:bg-green-500/30'
+                    : modalStatus === 'cancelled'
+                    ? 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/30'
+                    : modalStatus === 'rejected'
+                    ? 'bg-slate-500/20 text-slate-300 border-slate-500/50 hover:bg-slate-500/30'
+                    : 'bg-gray-500/20 text-gray-300 border-gray-500/50'
                 }>
-                  {selectedInterview.status}
+                  {modalStatus.toUpperCase().replace(/-/g, ' ')}
                 </Badge>
               </div>
 
+              {/* Cancelled Interview Message */}
+              {modalStatus === 'cancelled' && (
+                <div className="bg-gray-500/10 border border-gray-500/50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <XCircle className="h-5 w-5 text-gray-400" />
+                    <h4 className="font-semibold text-gray-300">Interview Cancelled</h4>
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    This interview has been cancelled by the admin. The client has been notified.
+                  </p>
+                </div>
+              )}
+
               {/* Scheduled Interview Details - Show if status is scheduled, completed, or hired */}
-              {(selectedInterview.status === 'scheduled' || selectedInterview.status === 'completed' || selectedInterview.status === 'hired') && selectedInterview.scheduledTime && (
+              {(modalStatus === 'scheduled' || modalStatus === 'completed' || modalStatus === 'hired') && selectedInterview.scheduledTime && (
                 <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="h-5 w-5 text-green-400" />
@@ -1733,14 +1959,15 @@ export default function AdminRecruitmentPage() {
                 </div>
               )}
 
-              {/* Client's Preferred Times */}
+              {/* Client's Preferred Times - Hide for cancelled */}
+              {modalStatus !== 'cancelled' && (
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
                 <label className="text-sm font-medium text-slate-300 block mb-3">Client's Preferred Interview Times</label>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
                     const times = selectedInterview.preferredTimes || selectedInterview.preferred_times || [];
                     const timesArray = Array.isArray(times) ? times : (typeof times === 'string' ? JSON.parse(times) : []);
-                    return timesArray.map((time, idx) => {
+                    return timesArray.map((time: string | PreferredTime, idx: number) => {
                       const formatted = formatPreferredTimeWithTimezone(time);
                       return (
                         <Badge key={idx} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/50">
@@ -1751,6 +1978,7 @@ export default function AdminRecruitmentPage() {
                   })()}
                 </div>
               </div>
+              )}
 
               {/* Client Notes */}
               {selectedInterview.client_notes && (
@@ -1762,7 +1990,7 @@ export default function AdminRecruitmentPage() {
 
               {/* Request Date */}
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                <label className="text-sm font-medium text-slate-300 block mb-2">Request Date</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">Interview Request Date</label>
                 <p className="text-slate-200">
                   {new Date(selectedInterview.createdAt || selectedInterview.created_at).toLocaleString('en-US', {
                     weekday: 'long',
@@ -1778,8 +2006,29 @@ export default function AdminRecruitmentPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-700">
+                {/* Schedule - Show for pending interviews */}
+                {modalStatus === 'pending' && (
+                  <Button 
+                    variant="default" 
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setInterviewToSchedule(selectedInterview)
+                      setScheduleFormData({
+                        scheduledTime: '',
+                        meetingLink: '',
+                        adminNotes: ''
+                      })
+                      setSelectedInterview(null)
+                      setScheduleModalOpen(true)
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule
+                  </Button>
+                )}
+
                 {/* Mark as Complete - Show for scheduled interviews */}
-                {selectedInterview.status === 'scheduled' && (
+                {modalStatus === 'scheduled' && (
                   <Button 
                     variant="default" 
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700"
@@ -1806,7 +2055,7 @@ export default function AdminRecruitmentPage() {
                 )}
 
                 {/* Reschedule - Show for scheduled interviews */}
-                {selectedInterview.status === 'scheduled' && (
+                {modalStatus === 'scheduled' && (
                   <Button 
                     variant="outline" 
                     className="flex-1 border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
@@ -1827,26 +2076,13 @@ export default function AdminRecruitmentPage() {
                 )}
 
                 {/* Cancel Interview - Show for pending or scheduled */}
-                {(selectedInterview.status === 'pending' || selectedInterview.status === 'scheduled') && (
+                {(modalStatus === 'pending' || modalStatus === 'scheduled') && (
                   <Button 
-                    variant="outline" 
-                    className="flex-1 border-red-500/50 text-red-300 hover:bg-red-500/10"
-                    onClick={async () => {
-                      if (!confirm('Are you sure you want to cancel this interview?')) return
-                      try {
-                        const response = await fetch(`/api/admin/recruitment/interviews/${selectedInterview.id}/cancel`, {
-                          method: 'PATCH'
-                        })
-                        if (response.ok) {
-                          toast({ title: "Success", description: "Interview cancelled" })
-                          setSelectedInterview(null)
-                          fetchInterviews()
-                        } else {
-                          throw new Error('Failed to cancel')
-                        }
-                      } catch (error) {
-                        toast({ title: "Error", description: "Failed to cancel interview", variant: "destructive" })
-                      }
+                    variant="destructive" 
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                    onClick={() => {
+                      setInterviewToCancel(selectedInterview)
+                      setCancelModalOpen(true)
                     }}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
@@ -1855,7 +2091,8 @@ export default function AdminRecruitmentPage() {
                 )}
               </div>
             </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2529,6 +2766,80 @@ export default function AdminRecruitmentPage() {
                   className="border-slate-700 hover:bg-slate-800"
                 >
                   Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Interview Confirmation Modal */}
+      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+        <DialogContent className="max-w-md bg-slate-900 border-slate-700 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-100 flex items-center gap-2">
+              <XCircle className="h-6 w-6 text-red-400" />
+              Cancel Interview
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Are you sure you want to cancel this interview?
+            </DialogDescription>
+          </DialogHeader>
+          {interviewToCancel && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={interviewToCancel.candidate_avatar_url || undefined} />
+                    <AvatarFallback>{interviewToCancel.candidateFirstName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-semibold text-slate-100">{interviewToCancel.candidateFirstName}</h4>
+                    <p className="text-sm text-slate-400">
+                      {interviewToCancel.client_name} • {interviewToCancel.company_name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-sm text-red-300">
+                  ⚠️ This action cannot be undone. The interview request will be cancelled and the client will be notified.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCancelModalOpen(false)
+                    setInterviewToCancel(null)
+                  }}
+                  disabled={cancelling}
+                  className="flex-1 border-slate-700 hover:bg-slate-800"
+                >
+                  No, Keep It
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelInterview}
+                  disabled={cancelling}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  {cancelling ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Yes, Cancel Interview
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
