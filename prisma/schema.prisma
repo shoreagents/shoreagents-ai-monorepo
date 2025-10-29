@@ -211,28 +211,28 @@ model gamification_profiles {
 }
 
 model interview_requests {
-  id                    String                 @id
-  clientUserId          String
-  bpocCandidateId       String
-  candidateFirstName    String
-  preferredTimes        Json
-  clientNotes           String?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime
-  adminNotes            String?
-  meetingLink           String?
-  scheduledTime         DateTime?
-  status                InterviewRequestStatus @default(PENDING)
-  hireRequestedBy       String?
-  hireRequestedAt       DateTime?
-  clientPreferredStart  DateTime?
-  finalStartDate        DateTime?
-  offerSentAt           DateTime?
-  offerResponseAt       DateTime?
-  offerDeclineReason    String?
-  workSchedule          Json?
-  client_users          client_users           @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  job_acceptances       job_acceptances?
+  id                   String                 @id
+  clientUserId         String
+  bpocCandidateId      String
+  candidateFirstName   String
+  preferredTimes       Json
+  clientNotes          String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  adminNotes           String?
+  clientPreferredStart DateTime?
+  finalStartDate       DateTime?
+  hireRequestedAt      DateTime?
+  hireRequestedBy      String?
+  meetingLink          String?
+  offerDeclineReason   String?
+  offerResponseAt      DateTime?
+  offerSentAt          DateTime?
+  scheduledTime        DateTime?
+  status               InterviewRequestStatus @default(PENDING)
+  workSchedule         Json?
+  client_users         client_users           @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  job_acceptances      job_acceptances?
 }
 
 model job_acceptances {
@@ -250,13 +250,13 @@ model job_acceptances {
   staffUserId          String?               @unique
   contractSigned       Boolean               @default(false)
   contractSignedAt     DateTime?
-  workDays             String[]              @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
-  workStartTime        String                @default("09:00")
-  workEndTime          String                @default("18:00")
-  clientTimezone       String                @default("UTC")
-  isDefaultSchedule    Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime
+  clientTimezone       String                @default("UTC")
+  isDefaultSchedule    Boolean               @default(true)
+  workDays             String[]              @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+  workEndTime          String                @default("18:00")
+  workStartTime        String                @default("09:00")
   employment_contracts employment_contracts?
   company              company               @relation(fields: [companyId], references: [id])
   interview_requests   interview_requests    @relation(fields: [interviewRequestId], references: [id], onDelete: Cascade)
@@ -274,16 +274,16 @@ model kudos {
 }
 
 model management_users {
-  id                  String                @id
-  authUserId          String                @unique
+  id                  String               @id
+  authUserId          String               @unique
   name                String
-  role                ManagementRole        @default(MANAGER)
+  role                ManagementRole       @default(MANAGER)
   avatar              String?
   phone               String?
   department          Department
-  createdAt           DateTime              @default(now())
+  createdAt           DateTime             @default(now())
   updatedAt           DateTime
-  email               String                @unique
+  email               String               @unique
   coverPhoto          String?
   activity_posts      activity_posts[]
   company             company[]
@@ -321,18 +321,18 @@ model management_profiles {
 }
 
 model salary_history {
-  id               String   @id
-  userId           String
-  userType         String
-  previousSalary   Decimal  @db.Decimal(10, 2)
-  newSalary        Decimal  @db.Decimal(10, 2)
-  increaseAmount   Decimal  @db.Decimal(10, 2)
-  increasePercent  Decimal? @db.Decimal(5, 2)
-  reason           String?
-  notes            String?
-  approvedBy       String?
-  effectiveDate    DateTime
-  createdAt        DateTime @default(now())
+  id              String   @id
+  userId          String
+  userType        String
+  previousSalary  Decimal  @db.Decimal(10, 2)
+  newSalary       Decimal  @db.Decimal(10, 2)
+  increaseAmount  Decimal  @db.Decimal(10, 2)
+  increasePercent Decimal? @db.Decimal(5, 2)
+  reason          String?
+  notes           String?
+  approvedBy      String?
+  effectiveDate   DateTime
+  createdAt       DateTime @default(now())
 
   @@index([userId])
   @@index([effectiveDate])
@@ -559,15 +559,15 @@ model staff_personal_records {
   tinDocUrl             String?
   philhealthDocUrl      String?
   pagibigDocUrl         String?
-  birForm2316Url        String?
-  idPhotoUrl            String?
-  signatureUrl          String?
-  certificateEmpUrl     String?
-  medicalCertUrl        String?
-  resumeUrl             String?
-  employmentContractUrl String?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime
+  birForm2316Url        String?
+  certificateEmpUrl     String?
+  employmentContractUrl String?
+  idPhotoUrl            String?
+  medicalCertUrl        String?
+  resumeUrl             String?
+  signatureUrl          String?
   staff_users           staff_users @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 }
 
@@ -576,7 +576,6 @@ model staff_profiles {
   staffUserId        String           @unique
   phone              String?
   location           String?
-  timezone           String?          @default("Asia/Manila")
   employmentStatus   EmploymentStatus @default(PROBATION)
   startDate          DateTime
   daysEmployed       Int              @default(0)
@@ -594,6 +593,7 @@ model staff_profiles {
   civilStatus        String?
   dateOfBirth        DateTime?
   gender             String?
+  timezone           String?          @default("Asia/Manila")
   staff_users        staff_users      @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   work_schedules     work_schedules[]
 }
@@ -623,12 +623,12 @@ model staff_users {
   post_comments                   post_comments[]
   post_reactions                  post_reactions[]
   reviews                         reviews[]
+  staff_welcome_forms             staff_welcome_forms?
   staff_offboarding               staff_offboarding?
   staff_onboarding                staff_onboarding?
   staff_personal_records          staff_personal_records?
   staff_profiles                  staff_profiles?
   company                         company?                @relation(fields: [companyId], references: [id])
-  staff_welcome_forms             staff_welcome_forms?
   task_assignments                task_assignments[]
   tasks                           tasks[]
   ticket_responses                ticket_responses[]
@@ -640,26 +640,26 @@ model staff_welcome_forms {
   id               String      @id
   staffUserId      String      @unique
   name             String
-  client           String
-  startDate        String
   favoriteFastFood String
-  favoriteColor    String?
-  favoriteMusic    String?
   favoriteMovie    String?
-  favoriteBook     String?
-  hobby            String?
-  dreamDestination String?
-  favoriteSeason   String?
-  petName          String?
-  favoriteSport    String?
-  favoriteGame     String?
-  favoriteQuote    String?
-  funFact          String?
-  additionalInfo   String?
   completed        Boolean     @default(false)
-  submittedAt      DateTime    @default(now())
   createdAt        DateTime    @default(now())
   updatedAt        DateTime
+  startDate        String
+  additionalInfo   String?
+  client           String
+  dreamDestination String?
+  favoriteBook     String?
+  favoriteColor    String?
+  favoriteGame     String?
+  favoriteMusic    String?
+  favoriteQuote    String?
+  favoriteSeason   String?
+  favoriteSport    String?
+  funFact          String?
+  hobby            String?
+  petName          String?
+  submittedAt      DateTime    @default(now())
   staff_users      staff_users @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
 
   @@map("staff_interests")
@@ -1084,6 +1084,7 @@ enum TicketStatus {
   RESOLVED
   CLOSED
 }
+
 enum ShiftType {
   DAY_SHIFT
   NIGHT_SHIFT
@@ -1095,4 +1096,3 @@ enum WorkLocationType {
   OFFICE
   HYBRID
 }
-
