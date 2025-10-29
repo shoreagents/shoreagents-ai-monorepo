@@ -135,7 +135,8 @@ export async function POST(req: NextRequest) {
         funFact: funFact?.trim() || null,
         additionalInfo: additionalInfo?.trim() || null,
         completed: true,
-        submittedAt: new Date()
+        submittedAt: new Date(),
+        updatedAt: new Date()
       }
     })
 
