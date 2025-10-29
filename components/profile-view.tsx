@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import DocumentViewerModal from "@/components/document-viewer-modal"
 
 interface ProfileData {
   user: {
@@ -47,9 +48,8 @@ interface ProfileData {
     philhealthNo: string | null
     pagibigNo: string | null
     emergencyContactName: string | null
-    emergencyContactRelation: string | null
-    emergencyContactPhone: string | null
-    emergencyContactAddress: string | null
+    emergencyContactNo: string | null
+    emergencyRelationship: string | null
   } | null
   workSchedules: Array<{
     id: string
@@ -79,6 +79,10 @@ export default function ProfileView() {
   const [interests, setInterests] = useState<any>(null)
   const [interestsForm, setInterestsForm] = useState<any>({})
   const [interestsFetched, setInterestsFetched] = useState(false)
+  
+  // Document viewer state
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerDocIndex, setViewerDocIndex] = useState(0)
   
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -308,6 +312,50 @@ export default function ProfileView() {
 
   const formatCurrency = (amount: number) => {
     return `₱${amount.toLocaleString()}`
+  }
+
+  // Build documents array for viewer
+  const buildDocumentsArray = () => {
+    if (!profileData?.personalRecords) return []
+    
+    const docs: Array<{ name: string; url: string; type: 'image' | 'pdf' }> = []
+    const pr = profileData.personalRecords
+    
+    // Government Documents
+    if (pr.sssDocUrl) docs.push({ name: 'SSS Document', url: pr.sssDocUrl, type: 'image' })
+    if (pr.tinDocUrl) docs.push({ name: 'TIN Document', url: pr.tinDocUrl, type: 'image' })
+    if (pr.philhealthDocUrl) docs.push({ name: 'PhilHealth Document', url: pr.philhealthDocUrl, type: 'image' })
+    if (pr.pagibigDocUrl) docs.push({ name: 'Pag-IBIG Document', url: pr.pagibigDocUrl, type: 'image' })
+    
+    // Personal Documents
+    if (pr.validIdUrl) docs.push({ name: 'Valid ID', url: pr.validIdUrl, type: 'image' })
+    if (pr.birthCertUrl) docs.push({ name: 'Birth Certificate', url: pr.birthCertUrl, type: 'image' })
+    
+    // Clearance Documents
+    if (pr.nbiClearanceUrl) docs.push({ name: 'NBI Clearance', url: pr.nbiClearanceUrl, type: 'image' })
+    if (pr.policeClearanceUrl) docs.push({ name: 'Police Clearance', url: pr.policeClearanceUrl, type: 'image' })
+    if (pr.medicalCertUrl) docs.push({ name: 'Medical Certificate', url: pr.medicalCertUrl, type: 'image' })
+    
+    // Employment Records
+    if (pr.resumeUrl) docs.push({ name: 'Resume / CV', url: pr.resumeUrl, type: 'pdf' })
+    if (pr.certificateEmpUrl) docs.push({ name: 'Certificate of Employment', url: pr.certificateEmpUrl, type: 'image' })
+    if (pr.employmentContractUrl) docs.push({ name: 'Employment Contract', url: pr.employmentContractUrl, type: 'pdf' })
+    if (pr.birForm2316Url) docs.push({ name: 'BIR Form 2316', url: pr.birForm2316Url, type: 'image' })
+    
+    // Staff ID & Signature
+    if (pr.idPhotoUrl) docs.push({ name: 'ID Photo', url: pr.idPhotoUrl, type: 'image' })
+    if (pr.signatureUrl) docs.push({ name: 'Digital Signature', url: pr.signatureUrl, type: 'image' })
+    
+    return docs
+  }
+
+  const openDocumentViewer = (docName: string) => {
+    const docs = buildDocumentsArray()
+    const index = docs.findIndex(d => d.name === docName)
+    if (index !== -1) {
+      setViewerDocIndex(index)
+      setViewerOpen(true)
+    }
   }
 
   if (loading) {
@@ -540,32 +588,29 @@ export default function ProfileView() {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Personal Information */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-blue-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-blue-500/30 hover:scale-[1.02]">
-            <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-2.5 group-hover:rotate-12 transition-transform duration-300">
-                <User className="h-6 w-6 text-white" />
-              </div>
-              <span className="group-hover:text-blue-300 transition-colors">Personal Information</span>
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-blue-400/50">
-                <Mail className="h-5 w-5 text-blue-400 animate-pulse" />
+        {/* Employment Details */}
+        <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-purple-500/30">
+          <h2 className="flex items-center gap-3 text-2xl font-black text-white">
+            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 group-hover:-rotate-12 transition-transform duration-300">
+              <Briefcase className="h-6 w-6 text-white" />
+            </div>
+            <span className="group-hover:text-purple-300 transition-colors">Employment Details</span>
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-purple-400/50">
+                <Building2 className="h-5 w-5 text-purple-400" />
                 <div className="flex-1">
-                  <div className="text-sm text-slate-400">Email</div>
-                  <div className="font-semibold text-white">{user.email}</div>
+                  <div className="text-sm text-slate-400">Company/Client 🏢</div>
+                  <div className="font-semibold text-white">{company?.name || "No company assigned"}</div>
                 </div>
               </div>
-              {profile?.phone && (
-                <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-cyan-400/50">
-                  <Phone className="h-5 w-5 text-cyan-400" />
-                  <div className="flex-1">
-                    <div className="text-sm text-slate-400">Phone</div>
-                    <div className="font-semibold text-white">{profile.phone}</div>
-                  </div>
+              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-pink-400/50">
+                <User className="h-5 w-5 text-pink-400" />
+                <div className="flex-1">
+                  <div className="text-sm text-slate-400">Account Manager ☕</div>
+                  <div className="font-semibold text-white">{company?.accountManager || "Not assigned"}</div>
                 </div>
-              )}
+              </div>
               {profile?.startDate && (
                 <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-indigo-400/50">
                   <Calendar className="h-5 w-5 text-indigo-400" />
@@ -586,32 +631,6 @@ export default function ProfileView() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Employment Details */}
-          <div className="group space-y-6 rounded-3xl bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-2xl hover:shadow-purple-500/30 hover:scale-[1.02]">
-            <h2 className="flex items-center gap-3 text-2xl font-black text-white">
-              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 group-hover:-rotate-12 transition-transform duration-300">
-                <Briefcase className="h-6 w-6 text-white" />
-              </div>
-              <span className="group-hover:text-purple-300 transition-colors">Employment Details</span>
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-purple-400/50">
-                <Building2 className="h-5 w-5 text-purple-400" />
-                <div className="flex-1">
-                  <div className="text-sm text-slate-400">Company/Client 🏢</div>
-                  <div className="font-semibold text-white">{company?.name || "No company assigned"}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl bg-slate-800/30 p-4 ring-1 ring-white/5 transition-all duration-300 hover:bg-slate-800/50 hover:scale-105 hover:ring-pink-400/50">
-                <User className="h-5 w-5 text-pink-400" />
-                <div className="flex-1">
-                  <div className="text-sm text-slate-400">Account Manager ☕</div>
-                  <div className="font-semibold text-white">{company?.accountManager || "Not assigned"}</div>
-                </div>
-              </div>
               {profile?.salary && (
                 <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-green-500/20 p-4 ring-1 ring-emerald-400/30 transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-emerald-400 hover:shadow-lg hover:shadow-emerald-500/50">
                   <DollarSign className="h-5 w-5 text-emerald-400 animate-pulse" />
@@ -632,7 +651,6 @@ export default function ProfileView() {
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </div>
 
@@ -812,7 +830,7 @@ export default function ProfileView() {
                 )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 {/* Favorite Fast Food */}
                 <div className="group/field">
                   <Label className="text-sm text-slate-400 mb-2 block">🍔 Favorite Fast Food</Label>
@@ -926,6 +944,142 @@ export default function ProfileView() {
                     </div>
                   )}
                 </div>
+
+                {/* Favorite Book */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">📚 Favorite Book</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteBook || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteBook: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Harry Potter"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteBook || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Season */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🍂 Favorite Season</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteSeason || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteSeason: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Summer"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteSeason || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pet Name */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🐾 Pet Name</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.petName || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, petName: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Fluffy"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.petName || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Sport */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">⚽ Favorite Sport</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteSport || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteSport: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Basketball"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteSport || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Game */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">🎮 Favorite Game</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteGame || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteGame: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Mobile Legends"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteGame || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorite Quote */}
+                <div className="group/field md:col-span-2">
+                  <Label className="text-sm text-slate-400 mb-2 block">💬 Favorite Quote</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.favoriteQuote || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, favoriteQuote: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., Be yourself; everyone else is already taken"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.favoriteQuote || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fun Fact */}
+                <div className="group/field">
+                  <Label className="text-sm text-slate-400 mb-2 block">⭐ Fun Fact</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.funFact || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, funFact: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="e.g., I can speak 3 languages"
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.funFact || 'Not specified'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="group/field md:col-span-3">
+                  <Label className="text-sm text-slate-400 mb-2 block">📝 Additional Info</Label>
+                  {editingInterests ? (
+                    <Input
+                      value={interestsForm.additionalInfo || ''}
+                      onChange={(e) => setInterestsForm({ ...interestsForm, additionalInfo: e.target.value })}
+                      className="bg-slate-800/50 border-slate-700 text-white focus:border-purple-500"
+                      placeholder="Anything else you'd like to share..."
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700 text-white">
+                      {interests.additionalInfo || 'Not specified'}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -946,6 +1100,20 @@ export default function ProfileView() {
               <h2 className="text-2xl font-black text-white">Personal Details</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1 flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </div>
+                <div className="text-lg font-semibold text-white">{user.email}</div>
+              </div>
+              <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
+                <div className="text-sm text-slate-400 mb-1 flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone
+                </div>
+                <div className="text-lg font-semibold text-white">{profile?.phone || 'Not provided'}</div>
+              </div>
               <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
                 <div className="text-sm text-slate-400 mb-1">Date of Birth</div>
                 <div className="text-lg font-semibold text-white">
@@ -1021,21 +1189,15 @@ export default function ProfileView() {
                     </div>
                   </div>
                   <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                    <div className="text-sm text-slate-400 mb-1">Relation</div>
+                    <div className="text-sm text-slate-400 mb-1">Relationship</div>
                     <div className="text-lg font-semibold text-white">
-                      {profileData.personalRecords.emergencyContactRelation || 'Not provided'}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5">
-                    <div className="text-sm text-slate-400 mb-1">Phone</div>
-                    <div className="text-lg font-semibold text-white">
-                      {profileData.personalRecords.emergencyContactPhone || 'Not provided'}
+                      {profileData.personalRecords.emergencyRelationship || 'Not provided'}
                     </div>
                   </div>
                   <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 md:col-span-2">
-                    <div className="text-sm text-slate-400 mb-1">Address</div>
+                    <div className="text-sm text-slate-400 mb-1">Phone Number</div>
                     <div className="text-lg font-semibold text-white">
-                      {profileData.personalRecords.emergencyContactAddress || 'Not provided'}
+                      {profileData.personalRecords.emergencyContactNo || 'Not provided'}
                     </div>
                   </div>
                 </div>
@@ -1061,28 +1223,24 @@ export default function ProfileView() {
             {profileData.personalRecords ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {profileData.personalRecords.sssDocUrl && (
-                  <a
-                    href={profileData.personalRecords.sssDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('SSS Document')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-orange-500 to-red-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
-        </div>
+                    </div>
                     <div className="flex-1">
                       <div className="font-semibold text-white">SSS Document</div>
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-purple-400" />
-                  </a>
+                  </button>
                 )}
                 {profileData.personalRecords.tinDocUrl && (
-                  <a
-                    href={profileData.personalRecords.tinDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-pink-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('TIN Document')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-pink-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
@@ -1092,14 +1250,12 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-pink-400" />
-                  </a>
+                  </button>
                 )}
                 {profileData.personalRecords.philhealthDocUrl && (
-                  <a
-                    href={profileData.personalRecords.philhealthDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('PhilHealth Document')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
@@ -1109,14 +1265,12 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-indigo-400" />
-                  </a>
+                  </button>
                 )}
                 {profileData.personalRecords.pagibigDocUrl && (
-                  <a
-                    href={profileData.personalRecords.pagibigDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-cyan-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('Pag-IBIG Document')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-cyan-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
@@ -1126,7 +1280,7 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-cyan-400" />
-                  </a>
+                  </button>
                 )}
               </div>
             ) : (
@@ -1145,11 +1299,9 @@ export default function ProfileView() {
             {profileData.personalRecords ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {profileData.personalRecords.validIdUrl && (
-                  <a
-                    href={profileData.personalRecords.validIdUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-blue-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('Valid ID')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-blue-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 p-3">
                       <IdCard className="h-5 w-5 text-white" />
@@ -1159,14 +1311,12 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-blue-400" />
-                  </a>
+                  </button>
                 )}
                 {profileData.personalRecords.birthCertUrl && (
-                  <a
-                    href={profileData.personalRecords.birthCertUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('Birth Certificate')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 p-3">
                       <FileText className="h-5 w-5 text-white" />
@@ -1176,7 +1326,7 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-purple-400" />
-                  </a>
+                  </button>
                 )}
               </div>
             ) : (
@@ -1195,11 +1345,9 @@ export default function ProfileView() {
             {profileData.personalRecords ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {profileData.personalRecords.nbiClearanceUrl && (
-                  <a
-                    href={profileData.personalRecords.nbiClearanceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-emerald-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('NBI Clearance')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-emerald-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 p-3">
                       <Shield className="h-5 w-5 text-white" />
@@ -1209,14 +1357,12 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-emerald-400" />
-                  </a>
+                  </button>
                 )}
                 {profileData.personalRecords.policeClearanceUrl && (
-                  <a
-                    href={profileData.personalRecords.policeClearanceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-green-500/50 hover:scale-[1.02]"
+                  <button
+                    onClick={() => openDocumentViewer('Police Clearance')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-green-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
                   >
                     <div className="rounded-lg bg-gradient-to-br from-green-500 to-lime-500 p-3">
                       <Shield className="h-5 w-5 text-white" />
@@ -1226,17 +1372,162 @@ export default function ProfileView() {
                       <div className="text-sm text-slate-400">Click to view</div>
                     </div>
                     <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-green-400" />
-                  </a>
+                  </button>
+                )}
+                {profileData.personalRecords.medicalCertUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('Medical Certificate')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-teal-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 p-3">
+                      <Heart className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Medical Certificate</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-teal-400" />
+                  </button>
                 )}
               </div>
             ) : (
               <p className="text-slate-400 text-center py-8">No clearance documents available</p>
             )}
           </div>
+
+          {/* Employment Records */}
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-amber-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-amber-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-2.5">
+                <Briefcase className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Employment Records</h2>
+            </div>
+            {profileData.personalRecords ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {profileData.personalRecords.resumeUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('Resume / CV')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-amber-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-amber-500 to-yellow-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Resume / CV</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-amber-400" />
+                  </button>
+                )}
+                {profileData.personalRecords.certificateEmpUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('Certificate of Employment')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-orange-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-orange-500 to-red-500 p-3">
+                      <Award className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Certificate of Employment</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-orange-400" />
+                  </button>
+                )}
+                {profileData.personalRecords.employmentContractUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('Employment Contract')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-rose-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Employment Contract</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-rose-400" />
+                  </button>
+                )}
+                {profileData.personalRecords.birForm2316Url && (
+                  <button
+                    onClick={() => openDocumentViewer('BIR Form 2316')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-violet-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">BIR Form 2316</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-violet-400" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No employment records available</p>
+            )}
+          </div>
+
+          {/* Staff ID & Signature */}
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900/80 via-indigo-900/20 to-slate-900/80 p-8 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 hover:ring-white/30 hover:shadow-indigo-500/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 p-2.5">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Staff ID & Signature</h2>
+            </div>
+            {profileData.personalRecords ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {profileData.personalRecords.idPhotoUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('ID Photo')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-indigo-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 p-3">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">ID Photo</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-indigo-400" />
+                  </button>
+                )}
+                {profileData.personalRecords.signatureUrl && (
+                  <button
+                    onClick={() => openDocumentViewer('Digital Signature')}
+                    className="group flex items-center gap-4 rounded-xl bg-slate-800/50 p-4 ring-1 ring-white/5 transition-all hover:bg-slate-800/80 hover:ring-purple-500/50 hover:scale-[1.02] cursor-pointer text-left w-full"
+                  >
+                    <div className="rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-3">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Digital Signature</div>
+                      <div className="text-sm text-slate-400">Click to view</div>
+                    </div>
+                    <Upload className="h-5 w-5 text-slate-400 transition-transform group-hover:scale-110 group-hover:text-purple-400" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No ID or signature documents available</p>
+            )}
+          </div>
         </div>
       )}
 
       </div>
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        documents={buildDocumentsArray()}
+        initialIndex={viewerDocIndex}
+      />
     </div>
   )
 }
