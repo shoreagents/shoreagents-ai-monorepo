@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
     // Create welcome form record
     const welcomeForm = await prisma.staff_welcome_forms.create({
       data: {
+        id: crypto.randomUUID(),
         staffUserId: staffUser.id,
         name: name || staffUser.name,
         client: client || "ShoreAgents",
