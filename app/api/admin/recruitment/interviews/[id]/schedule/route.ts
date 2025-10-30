@@ -44,13 +44,32 @@ export async function PATCH(
 
     console.log(`📅 Scheduling interview ${id} for ${scheduledDate.toISOString()}`)
 
+    // Fetch existing interview to append notes
+    const existing = await prisma.interview_requests.findUnique({
+      where: { id }
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 })
+    }
+
+    // Append admin notes with timestamp if provided
+    let updatedAdminNotes = existing.adminNotes
+    if (adminNotes && adminNotes.trim()) {
+      const timestamp = new Date().toLocaleString()
+      const trimmedNotes = adminNotes.trim()
+      const existingAdminNotes = existing.adminNotes?.trim() || ''
+      const newNote = existingAdminNotes ? `\n\n[${timestamp}] ${trimmedNotes}` : `[${timestamp}] ${trimmedNotes}`
+      updatedAdminNotes = existingAdminNotes + newNote
+    }
+
     // Update interview request
     const updatedInterview = await prisma.interview_requests.update({
       where: { id },
       data: {
         scheduledTime: scheduledDate,
         meetingLink: meetingLink || null,
-        adminNotes: adminNotes || null,
+        adminNotes: updatedAdminNotes,
         status: 'SCHEDULED', // Change status from PENDING to SCHEDULED
         updatedAt: new Date()
       }

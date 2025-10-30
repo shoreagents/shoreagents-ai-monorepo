@@ -19,6 +19,38 @@ export async function PATCH(
 
     console.log(`✅ [CLIENT] Marking interview ${id} as completed`)
 
+    // Fetch existing interview
+    const existing = await prisma.interview_requests.findUnique({
+      where: { id }
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 })
+    }
+
+    // Fetch the client user who created the interview and the current session user
+    const [interviewCreator, sessionClientUser] = await Promise.all([
+      prisma.client_users.findUnique({
+        where: { id: existing.clientUserId },
+        select: { companyId: true }
+      }),
+      prisma.client_users.findUnique({
+        where: { authUserId: session.user.id },
+        select: { companyId: true }
+      })
+    ])
+
+    if (!interviewCreator || !sessionClientUser) {
+      console.log(`❌ Client user not found`)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Ensure client belongs to the same company as the interview creator
+    if (interviewCreator.companyId !== sessionClientUser.companyId) {
+      console.log(`❌ Authorization failed: Different companies`)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     // Update interview status to COMPLETED and add feedback to client notes
     const updateData: any = {
       status: 'COMPLETED',
@@ -27,19 +59,15 @@ export async function PATCH(
 
     // If client provided feedback, append it to client notes
     if (notes && notes.trim()) {
-      const existing = await prisma.interview_requests.findUnique({
-        where: { id }
-      })
       const timestamp = new Date().toLocaleString()
-      const feedbackNote = `\n\n[${timestamp}] FEEDBACK: ${notes}`
-      updateData.clientNotes = (existing?.clientNotes || '') + feedbackNote
+      const trimmedNotes = notes.trim()
+      const existingNotes = existing.clientNotes?.trim() || ''
+      const feedbackNote = existingNotes ? `\n\n[${timestamp}] FEEDBACK: ${trimmedNotes}` : `[${timestamp}] FEEDBACK: ${trimmedNotes}`
+      updateData.clientNotes = existingNotes + feedbackNote
     }
 
     const interview = await prisma.interview_requests.update({
-      where: { 
-        id,
-        clientUserId: session.user.id // Ensure client owns this interview request
-      },
+      where: { id },
       data: updateData
     })
 

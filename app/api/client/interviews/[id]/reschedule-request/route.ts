@@ -18,6 +18,7 @@ export async function POST(
     const { notes } = body
 
     console.log(`📅 [CLIENT] Reschedule request for interview ${id}`)
+    console.log(`🔑 Session user ID: ${session.user.id}`)
 
     // Fetch existing interview
     const existing = await prisma.interview_requests.findUnique({
@@ -28,16 +29,44 @@ export async function POST(
       return NextResponse.json({ error: 'Interview not found' }, { status: 404 })
     }
 
+    console.log(`🔑 Interview clientUserId: ${existing.clientUserId}`)
+
+    // Fetch the client user who created the interview and the current session user
+    const [interviewCreator, sessionClientUser] = await Promise.all([
+      prisma.client_users.findUnique({
+        where: { id: existing.clientUserId },
+        select: { companyId: true }
+      }),
+      prisma.client_users.findUnique({
+        where: { authUserId: session.user.id },
+        select: { companyId: true }
+      })
+    ])
+
+    if (!interviewCreator || !sessionClientUser) {
+      console.log(`❌ Client user not found`)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Ensure client belongs to the same company as the interview creator
+    if (interviewCreator.companyId !== sessionClientUser.companyId) {
+      console.log(`❌ Authorization failed: Different companies`)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    console.log(`✅ Authorization successful: Same company (${sessionClientUser.companyId})`)
+
     // Append reschedule request to admin notes
     const timestamp = new Date().toLocaleString()
-    const rescheduleNote = `\n\n[${timestamp}] CLIENT RESCHEDULE REQUEST: ${notes}`
-    const updatedAdminNotes = (existing.adminNotes || '') + rescheduleNote
+    const trimmedNotes = notes.trim()
+    const existingAdminNotes = existing.adminNotes?.trim() || ''
+    const rescheduleNote = existingAdminNotes ? `\n\n[${timestamp}] CLIENT RESCHEDULE REQUEST: ${trimmedNotes}` : `[${timestamp}] CLIENT RESCHEDULE REQUEST: ${trimmedNotes}`
+    const updatedAdminNotes = existingAdminNotes + rescheduleNote
 
     // Update interview with reschedule request in admin notes
     const interview = await prisma.interview_requests.update({
       where: { 
-        id,
-        clientUserId: session.user.id // Ensure client owns this interview request
+        id
       },
       data: {
         adminNotes: updatedAdminNotes,

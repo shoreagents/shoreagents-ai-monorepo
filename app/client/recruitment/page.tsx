@@ -1739,20 +1739,24 @@ function InterviewsTab({
                 )}
 
                 {interview.status === 'SCHEDULED' && interview.scheduledTime && (
-                  <div className="flex items-start gap-4">
-                    <div className="shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-blue-200 flex items-center justify-center">
-                        <CalendarCheck className="h-6 w-6 text-blue-700" />
+                  <div className="flex items-center gap-4 justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="shrink-0">
+                        <div className="h-12 w-12 rounded-full bg-blue-200 flex items-center justify-center">
+                          <CalendarCheck className="h-6 w-6 text-blue-700" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-blue-900">
+                          Interview Scheduled
+                        </h3>
+                        <p className="text-sm text-blue-800">
+                          <span className="font-semibold">Time:</span> {formatDate(interview.scheduledTime)}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-blue-900 mb-2">
-                        Interview Scheduled
-                      </h3>
-                      <p className="text-sm text-blue-800 mb-3">
-                        <span className="font-semibold">Time:</span> {formatDate(interview.scheduledTime)}
-                      </p>
-                      {interview.meetingLink && (
+                    {interview.meetingLink && (
+                      <div className="flex-shrink-0">
                         <a 
                           href={interview.meetingLink} 
                           target="_blank" 
@@ -1762,8 +1766,8 @@ function InterviewsTab({
                           <Video className="h-4 w-4" />
                           Join Meeting
                         </a>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1828,7 +1832,7 @@ function InterviewsTab({
                     <FileText className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Your Notes:</span>
                   </div>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-200">
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-200 whitespace-pre-wrap">
                     {interview.clientNotes}
                   </p>
                 </div>
@@ -1841,7 +1845,7 @@ function InterviewsTab({
                     <FileText className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Admin Notes:</span>
                   </div>
-                  <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded border border-blue-200">
+                  <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded border border-blue-200 whitespace-pre-wrap">
                     {interview.adminNotes}
                   </p>
                 </div>
@@ -1882,7 +1886,7 @@ function InterviewsTab({
                   <button
                     onClick={() => {
                       setSelectedInterview(interview)
-                      setAdditionalNotes(interview.clientNotes || '')
+                      setAdditionalNotes('')
                       setNotesModalOpen(true)
                     }}
                     className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-all flex items-center gap-2 text-sm"
@@ -2335,19 +2339,19 @@ function InterviewsTab({
       <Dialog open={notesModalOpen} onOpenChange={setNotesModalOpen}>
         <DialogContent className="max-w-md bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle className="text-gray-900">Update Interview Notes</DialogTitle>
+            <DialogTitle className="text-gray-900">Add Notes to Interview</DialogTitle>
             <DialogDescription className="text-gray-600">
-              Add or update your notes for this interview request.
+              Add new notes to this interview request. They will be appended to your existing notes.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="additionalNotes" className="text-gray-900">Your Notes</Label>
+              <Label htmlFor="additionalNotes" className="text-gray-900">New Notes</Label>
               <Textarea
                 id="additionalNotes"
                 value={additionalNotes}
                 onChange={(e) => setAdditionalNotes(e.target.value)}
-                placeholder="Add any additional information or requirements..."
+                placeholder="Type your new notes here..."
                 rows={4}
                 className="mt-2 bg-white text-gray-900 border-gray-300"
               />
@@ -2385,7 +2389,7 @@ function InterviewsTab({
                 }}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {interviewSubmitting ? 'Saving...' : 'Save Notes'}
+                {interviewSubmitting ? 'Adding...' : 'Add Notes'}
               </button>
             </div>
           </div>

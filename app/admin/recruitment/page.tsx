@@ -29,7 +29,8 @@ import {
   Mail,
   XCircle,
   User,
-  Phone
+  Phone,
+  FileText
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -79,13 +80,19 @@ interface InterviewRequest {
   id: string
   clientUserId: string
   bpocCandidateId: string
+  bpoc_candidate_id?: string // snake_case variant
   candidateFirstName: string
   preferredTimes: (string | PreferredTime)[]
   preferred_times?: (string | PreferredTime)[] // snake_case variant
   clientNotes: string | null
+  client_notes?: string | null // snake_case variant
   status: string
   createdAt: string
+  created_at?: string // snake_case variant
   clientPreferredStart?: string | null
+  scheduledTime?: string | null
+  meetingLink?: string | null
+  adminNotes?: string | null
   workSchedule?: {
     workDays: string[]
     workStartTime: string
@@ -111,6 +118,7 @@ interface InterviewRequest {
     company?: {
       id: string
       companyName: string
+      logo?: string
     }
     client_profiles?: {
       timezone: string
@@ -191,6 +199,12 @@ export default function AdminRecruitmentPage() {
     adminNotes: ''
   })
   const [scheduling, setScheduling] = useState(false)
+  
+  // Admin Notes Modal State
+  const [adminNotesModalOpen, setAdminNotesModalOpen] = useState(false)
+  const [interviewForNotes, setInterviewForNotes] = useState<InterviewRequest | null>(null)
+  const [adminNotesText, setAdminNotesText] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
   
   // Finalize Hire Modal State (consolidated with confirm acceptance)
   const [confirmAcceptanceModalOpen, setConfirmAcceptanceModalOpen] = useState(false)
@@ -487,6 +501,56 @@ export default function AdminRecruitmentPage() {
       })
     } finally {
       setScheduling(false)
+    }
+  }
+
+  async function handleSaveAdminNotes() {
+    if (!interviewForNotes) return
+
+    // Validation
+    if (!adminNotesText.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter notes to add.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSavingNotes(true)
+    try {
+      const response = await fetch(`/api/admin/recruitment/interviews/${interviewForNotes.id}/notes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: adminNotesText })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Notes Added!",
+          description: `Notes added to interview with ${interviewForNotes.candidateFirstName}.`,
+        })
+        setAdminNotesModalOpen(false)
+        setAdminNotesText('')
+        fetchInterviews() // Refresh the list
+        // Also update selectedInterview if it's the same one
+        if (selectedInterview?.id === interviewForNotes.id) {
+          setSelectedInterview(null)
+        }
+      } else {
+        throw new Error(data.error || 'Failed to add notes')
+      }
+    } catch (error: any) {
+      console.error('Error adding notes:', error)
+      toast({
+        title: "Failed to Add Notes",
+        description: error.message || "Failed to add notes. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSavingNotes(false)
     }
   }
 
@@ -1353,7 +1417,7 @@ export default function AdminRecruitmentPage() {
                             {/* Candidate Info */}
                             <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground mt-1">
                               {interview.candidate_position && (
-                                <span className="text-foreground font-medium">{interview.candidate_position}</span>
+                                <span className="text-blue-400 font-medium">{interview.candidate_position}</span>
                               )}
                               {interview.candidate_location && (
                                 <span className="flex items-center gap-1">
@@ -1408,6 +1472,32 @@ export default function AdminRecruitmentPage() {
                             >
                               <Calendar className="h-4 w-4 mr-2" />
                               Schedule
+                            </Button>
+                          )}
+                          {status === 'scheduled' && (
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                try {
+                                  const response = await fetch(`/api/admin/recruitment/interviews/${interview.id}/complete`, {
+                                    method: 'PATCH'
+                                  })
+                                  if (response.ok) {
+                                    toast({ title: "Success", description: "Interview marked as completed" })
+                                    fetchInterviews()
+                                  } else {
+                                    throw new Error('Failed to mark complete')
+                                  }
+                                } catch (error) {
+                                  toast({ title: "Error", description: "Failed to mark interview as complete", variant: "destructive" })
+                                }
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Completed
                             </Button>
                           )}
                           {(status === 'completed' || status === 'hire-requested') && (
@@ -1593,61 +1683,48 @@ export default function AdminRecruitmentPage() {
 
                         {/* Client Info */}
                         <div className="space-y-2">
-                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <User className="h-4 w-4" />
+                          <h4 className="text-base font-semibold text-foreground">
                             Client Details
                           </h4>
                           <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
-                            <span>
-                              <Calendar className="h-3 w-3 inline mr-1" />
-                              {new Date(interview.createdAt || interview.created_at).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                            </span>
                             {(interview.client_name || interview.client_users?.name) && (
                               <span className="flex items-center gap-1">
-                                <span className="text-muted-foreground">•</span>
                                 <User className="h-3 w-3 inline" />
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium">
                                   {interview.client_name || interview.client_users?.name}
                                 </span>
                               </span>
                             )}
                             {(interview.company_name || interview.client_users?.company?.companyName) && (
                               <span className="flex items-center gap-1">
-                                <span className="text-muted-foreground">•</span>
+                                <span>•</span>
                                 <Building2 className="h-3 w-3 inline" />
-                                <span className="font-medium text-blue-400">
+                                <span>
                                   {interview.company_name || interview.client_users?.company?.companyName}
                                 </span>
                               </span>
                             )}
-                          </div>
-                          <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground pl-4">
                             {(interview.client_email || interview.client_users?.email) && (
                               <span className="flex items-center gap-1">
+                                <span>•</span>
                                 <Mail className="h-3 w-3 inline" />
-                                <span className="text-foreground">
+                                <span>
                                   {interview.client_email || interview.client_users?.email}
                                 </span>
                               </span>
                             )}
                             {interview.client_phone && (
                               <span className="flex items-center gap-1">
-                                <span className="text-muted-foreground">•</span>
+                                <span>•</span>
                                 <Phone className="h-3 w-3 inline" />
-                                <span className="text-foreground">{interview.client_phone}</span>
+                                <span>{interview.client_phone}</span>
                               </span>
                             )}
                             {interview.client_address && (
                               <span className="flex items-center gap-1">
-                                <span className="text-muted-foreground">•</span>
+                                <span>•</span>
                                 <MapPin className="h-3 w-3 inline" />
-                                <span className="text-foreground">{interview.client_address}</span>
+                                <span>{interview.client_address}</span>
                               </span>
                             )}
                           </div>
@@ -1656,10 +1733,9 @@ export default function AdminRecruitmentPage() {
                         {/* Preferred Interview Times - Hide for cancelled */}
                         {(status === 'pending' || status === 'scheduled' || status === 'completed') && (
                         <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">Client's Preferred Interview Times:</span>
-                          </div>
+                          <h4 className="text-base font-semibold text-foreground mb-2">
+                            Client's Preferred Interview Times
+                          </h4>
                           <div className="flex flex-wrap gap-2">
                             {(() => {
                               const times = interview.preferredTimes || interview.preferred_times || [];
@@ -1683,10 +1759,9 @@ export default function AdminRecruitmentPage() {
                         {/* Client Notes */}
                         {interview.client_notes && (
                           <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">Client Notes:</span>
-                            </div>
+                            <h4 className="text-base font-semibold text-foreground mb-2">
+                              Client Notes
+                            </h4>
                             <p className="text-sm bg-muted/50 p-3 rounded border">
                               {interview.client_notes}
                             </p>
@@ -1707,7 +1782,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Candidate Detail Modal */}
       <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Candidate Details</DialogTitle>
           </DialogHeader>
@@ -1774,7 +1849,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Job Detail Modal */}
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Job Request Details</DialogTitle>
           </DialogHeader>
@@ -1850,7 +1925,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Interview Detail Modal */}
       <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-        <DialogContent className="max-w-3xl bg-slate-900 border-slate-700 text-slate-100">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-900 border-slate-700 text-slate-100 overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-slate-100">Interview Request Details</DialogTitle>
           </DialogHeader>
@@ -1859,44 +1934,70 @@ export default function AdminRecruitmentPage() {
             const modalStatus = selectedInterview.status.toLowerCase().replace(/_/g, '-')
             
             return (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto overflow-x-hidden pr-2 pb-6">
               {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedInterview.candidate_avatar_url || undefined} />
-                    <AvatarFallback>{selectedInterview.candidateFirstName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={selectedInterview.candidate_avatar_url || undefined} />
+                  <AvatarFallback>{selectedInterview.candidateFirstName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
                     <h3 className="text-xl font-bold text-slate-100">{selectedInterview.candidateFirstName}</h3>
-                    <p className="text-sm text-slate-400 font-mono">{selectedInterview.bpoc_candidate_id || selectedInterview.bpocCandidateId}</p>
+                    <Badge className={
+                      modalStatus === 'pending' 
+                        ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 hover:bg-yellow-500/30'
+                        : modalStatus === 'scheduled'
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 hover:bg-blue-500/30'
+                        : modalStatus === 'hire-requested'
+                        ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 hover:bg-orange-500/30'
+                        : modalStatus === 'offer-sent'
+                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30'
+                        : modalStatus === 'offer-accepted'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                        : modalStatus === 'offer-declined'
+                        ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30'
+                        : modalStatus === 'hired'
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30'
+                        : modalStatus === 'completed'
+                        ? 'bg-green-500/20 text-green-300 border-green-500/50 hover:bg-green-500/30'
+                        : modalStatus === 'cancelled'
+                        ? 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/30'
+                        : modalStatus === 'rejected'
+                        ? 'bg-slate-500/20 text-slate-300 border-slate-500/50 hover:bg-slate-500/30'
+                        : 'bg-gray-500/20 text-gray-300 border-gray-500/50'
+                    }>
+                      {modalStatus.toUpperCase().replace(/-/g, ' ')}
+                    </Badge>
+                  </div>
+                  {/* Candidate Info */}
+                  <div className="flex items-center gap-2 flex-wrap text-sm text-slate-400 mt-1">
+                    {selectedInterview.candidate_position && (
+                      <span className="text-blue-400 font-medium">{selectedInterview.candidate_position}</span>
+                    )}
+                    {selectedInterview.candidate_location && (
+                      <span className="flex items-center gap-1">
+                        {selectedInterview.candidate_position && <span>•</span>}
+                        <MapPin className="h-3 w-3 inline" />
+                        <span>{selectedInterview.candidate_location}</span>
+                      </span>
+                    )}
+                    {selectedInterview.candidate_email && (
+                      <span className="flex items-center gap-1">
+                        <span>•</span>
+                        <Mail className="h-3 w-3 inline" />
+                        <span>{selectedInterview.candidate_email}</span>
+                      </span>
+                    )}
+                    {selectedInterview.candidate_phone && (
+                      <span className="flex items-center gap-1">
+                        <span>•</span>
+                        <Phone className="h-3 w-3 inline" />
+                        <span>{selectedInterview.candidate_phone}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
-                <Badge className={
-                  modalStatus === 'pending' 
-                    ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 hover:bg-yellow-500/30'
-                    : modalStatus === 'scheduled'
-                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 hover:bg-blue-500/30'
-                    : modalStatus === 'hire-requested'
-                    ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 hover:bg-orange-500/30'
-                    : modalStatus === 'offer-sent'
-                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30'
-                    : modalStatus === 'offer-accepted'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
-                    : modalStatus === 'offer-declined'
-                    ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30'
-                    : modalStatus === 'hired'
-                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30'
-                    : modalStatus === 'completed'
-                    ? 'bg-green-500/20 text-green-300 border-green-500/50 hover:bg-green-500/30'
-                    : modalStatus === 'cancelled'
-                    ? 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/30'
-                    : modalStatus === 'rejected'
-                    ? 'bg-slate-500/20 text-slate-300 border-slate-500/50 hover:bg-slate-500/30'
-                    : 'bg-gray-500/20 text-gray-300 border-gray-500/50'
-                }>
-                  {modalStatus.toUpperCase().replace(/-/g, ' ')}
-                </Badge>
               </div>
 
               {/* Cancelled Interview Message */}
@@ -1947,22 +2048,63 @@ export default function AdminRecruitmentPage() {
                         </a>
                       </div>
                     )}
-                    {selectedInterview.adminNotes && (
-                      <div>
-                        <label className="text-xs text-slate-400">Admin Notes</label>
-                        <p className="text-slate-200 text-sm bg-slate-800/50 p-2 rounded border border-slate-700">
-                          {selectedInterview.adminNotes}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
 
+              {/* Client Details */}
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                <h4 className="text-base font-semibold text-slate-100 mb-3">
+                  Client Details
+                </h4>
+                <div className="flex items-center gap-4 flex-wrap text-sm text-slate-400">
+                  {(selectedInterview.client_name || selectedInterview.client_users?.name) && (
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3 inline" />
+                      <span className="font-medium">
+                        {selectedInterview.client_name || selectedInterview.client_users?.name}
+                      </span>
+                    </span>
+                  )}
+                  {(selectedInterview.company_name || selectedInterview.client_users?.company?.companyName) && (
+                    <span className="flex items-center gap-1">
+                      <span>•</span>
+                      <Building2 className="h-3 w-3 inline" />
+                      <span>
+                        {selectedInterview.company_name || selectedInterview.client_users?.company?.companyName}
+                      </span>
+                    </span>
+                  )}
+                  {(selectedInterview.client_email || selectedInterview.client_users?.email) && (
+                    <span className="flex items-center gap-1">
+                      <span>•</span>
+                      <Mail className="h-3 w-3 inline" />
+                      <span>
+                        {selectedInterview.client_email || selectedInterview.client_users?.email}
+                      </span>
+                    </span>
+                  )}
+                  {selectedInterview.client_phone && (
+                    <span className="flex items-center gap-1">
+                      <span>•</span>
+                      <Phone className="h-3 w-3 inline" />
+                      <span>{selectedInterview.client_phone}</span>
+                    </span>
+                  )}
+                  {selectedInterview.client_address && (
+                    <span className="flex items-center gap-1">
+                      <span>•</span>
+                      <MapPin className="h-3 w-3 inline" />
+                      <span>{selectedInterview.client_address}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Client's Preferred Times - Hide for cancelled */}
               {modalStatus !== 'cancelled' && (
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                <label className="text-sm font-medium text-slate-300 block mb-3">Client's Preferred Interview Times</label>
+                <h4 className="text-base font-semibold text-slate-100 mb-3">Client's Preferred Interview Times</h4>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
                     const times = selectedInterview.preferredTimes || selectedInterview.preferred_times || [];
@@ -1980,37 +2122,100 @@ export default function AdminRecruitmentPage() {
               </div>
               )}
 
-              {/* Client Notes */}
-              {selectedInterview.client_notes && (
-                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                  <label className="text-sm font-medium text-slate-300 block mb-2">Client Notes</label>
-                  <p className="text-slate-200">{selectedInterview.client_notes}</p>
-                </div>
-              )}
+              {/* Combined Notes (Admin + Client) */}
+              {(() => {
+                const adminNotes = selectedInterview.adminNotes || '';
+                const clientNotes = selectedInterview.client_notes || selectedInterview.clientNotes || '';
+                
+                if (!adminNotes && !clientNotes) return null;
 
-              {/* Request Date */}
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                <label className="text-sm font-medium text-slate-300 block mb-2">Interview Request Date</label>
-                <p className="text-slate-200">
-                  {new Date(selectedInterview.createdAt || selectedInterview.created_at).toLocaleString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
-                </p>
-              </div>
+                // Parse notes and combine them
+                const parseNotes = (notesText: string, type: 'admin' | 'client') => {
+                  if (!notesText) return [];
+                  
+                  // Split by timestamp pattern: [date] text
+                  const entries = notesText.split(/\n\n(?=\[)/);
+                  
+                  return entries.map(entry => {
+                    const match = entry.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+                    if (match) {
+                      const [, timestamp, content] = match;
+                      try {
+                        const date = new Date(timestamp);
+                        return { timestamp, content: content.trim(), type, date, rawText: entry };
+                      } catch {
+                        return { timestamp, content: content.trim(), type, date: new Date(0), rawText: entry };
+                      }
+                    }
+                    return { timestamp: '', content: entry.trim(), type, date: new Date(0), rawText: entry };
+                  }).filter(e => e.content);
+                };
+
+                const adminEntries = parseNotes(adminNotes, 'admin');
+                const clientEntries = parseNotes(clientNotes, 'client');
+                const allEntries = [...adminEntries, ...clientEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                if (allEntries.length === 0) return null;
+
+                return (
+                  <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                    <h4 className="text-base font-semibold text-slate-100 mb-3">Notes</h4>
+                    <div className="space-y-3">
+                      {allEntries.map((entry, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`p-3 rounded border ${
+                            entry.type === 'admin' 
+                              ? 'bg-purple-500/10 border-purple-500/30' 
+                              : 'bg-blue-500/10 border-blue-500/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                entry.type === 'admin'
+                                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/50'
+                                  : 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                              }`}
+                            >
+                              {entry.type === 'admin' ? 'Admin' : 'Client'}
+                            </Badge>
+                            {entry.timestamp && (
+                              <span className="text-xs text-slate-400">{entry.timestamp}</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-300 whitespace-pre-wrap">{entry.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-slate-700">
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-700">
+                {/* Add Notes - Show for pending, scheduled, or completed interviews */}
+                {(modalStatus === 'pending' || modalStatus === 'scheduled' || modalStatus === 'completed') && (
+                  <Button 
+                    variant="outline" 
+                    className="border-slate-600 text-slate-300 hover:bg-slate-800 min-w-[120px]"
+                    onClick={() => {
+                      setInterviewForNotes(selectedInterview)
+                      setAdminNotesText('')
+                      setAdminNotesModalOpen(true)
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Notes
+                  </Button>
+                )}
+                
                 {/* Schedule - Show for pending interviews */}
                 {modalStatus === 'pending' && (
                   <Button 
                     variant="default" 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 min-w-[150px] bg-blue-600 hover:bg-blue-700"
                     onClick={() => {
                       setInterviewToSchedule(selectedInterview)
                       setScheduleFormData({
@@ -2031,7 +2236,7 @@ export default function AdminRecruitmentPage() {
                 {modalStatus === 'scheduled' && (
                   <Button 
                     variant="default" 
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    className="flex-1 min-w-[180px] bg-emerald-600 hover:bg-emerald-700"
                     onClick={async () => {
                       try {
                         const response = await fetch(`/api/admin/recruitment/interviews/${selectedInterview.id}/complete`, {
@@ -2058,13 +2263,13 @@ export default function AdminRecruitmentPage() {
                 {modalStatus === 'scheduled' && (
                   <Button 
                     variant="outline" 
-                    className="flex-1 border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
+                    className="flex-1 min-w-[150px] border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
                     onClick={() => {
                       setInterviewToSchedule(selectedInterview)
                       setScheduleFormData({
                         scheduledTime: selectedInterview.scheduledTime || '',
                         meetingLink: selectedInterview.meetingLink || '',
-                        adminNotes: selectedInterview.adminNotes || ''
+                        adminNotes: ''
                       })
                       setSelectedInterview(null)
                       setScheduleModalOpen(true)
@@ -2079,7 +2284,7 @@ export default function AdminRecruitmentPage() {
                 {(modalStatus === 'pending' || modalStatus === 'scheduled') && (
                   <Button 
                     variant="destructive" 
-                    className="flex-1 bg-red-600 hover:bg-red-700"
+                    className="flex-1 min-w-[180px] bg-red-600 hover:bg-red-700"
                     onClick={() => {
                       setInterviewToCancel(selectedInterview)
                       setCancelModalOpen(true)
@@ -2098,7 +2303,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Send Job Offer Modal */}
       <Dialog open={hireModalOpen} onOpenChange={setHireModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-slate-100">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-slate-100">
               <Mail className="h-6 w-6 text-green-400" />
@@ -2374,7 +2579,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Schedule Interview Modal */}
       <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-100">
               Schedule Interview with {interviewToSchedule?.candidateFirstName}
@@ -2396,11 +2601,6 @@ export default function AdminRecruitmentPage() {
                     );
                   })}
                 </div>
-                {interviewToSchedule.clientNotes && (
-                  <p className="text-xs text-blue-400/60 mt-2 italic">
-                    Note: {interviewToSchedule.clientNotes}
-                  </p>
-                )}
               </div>
 
               {/* Scheduled Time */}
@@ -2440,7 +2640,7 @@ export default function AdminRecruitmentPage() {
                         ))}
                       </select>
                       
-                      {/* Minute - ONLY :00 and :30 */}
+                      {/* Minute - 15 min intervals */}
                       <select
                         value={parsed.minute}
                         onChange={(e) => {
@@ -2451,7 +2651,9 @@ export default function AdminRecruitmentPage() {
                         required
                       >
                         <option value="0">:00</option>
+                        <option value="15">:15</option>
                         <option value="30">:30</option>
+                        <option value="45">:45</option>
                       </select>
                       
                       {/* AM/PM */}
@@ -2469,6 +2671,65 @@ export default function AdminRecruitmentPage() {
                       </select>
                     </div>
                   )
+                })()}
+                
+                {/* Client Time Preview */}
+                {(() => {
+                  const parsed = parseTimeSlot(scheduleFormData.scheduledTime)
+                  if (!parsed.date || !parsed.hour || parsed.minute === undefined) {
+                    return null
+                  }
+                  
+                  // Get client timezone - check all possible sources
+                  const clientTimezone = interviewToSchedule.workSchedule?.clientTimezone || 
+                                        interviewToSchedule.client_users?.client_profiles?.timezone || 
+                                        null
+                  
+                  // Don't show preview if we don't have a valid client timezone
+                  if (!clientTimezone || clientTimezone === 'UTC') {
+                    return null
+                  }
+                  
+                  try {
+                    // Convert 12-hour to 24-hour format
+                    let hour24 = parsed.hour
+                    if (parsed.ampm === 'PM' && parsed.hour !== 12) {
+                      hour24 = parsed.hour + 12
+                    } else if (parsed.ampm === 'AM' && parsed.hour === 12) {
+                      hour24 = 0
+                    }
+                    
+                    const [year, month, day] = parsed.date.split('-').map(Number)
+                    
+                    // Admin enters time in PH/Manila timezone (UTC+8)
+                    // Create UTC time by subtracting 8 hours from Manila time
+                    // Manila 22:00 = UTC 14:00 (22:00 - 8 hours)
+                    
+                    const utcDate = new Date(Date.UTC(year, month - 1, day, hour24 - 8, parsed.minute))
+                    
+                    // Format this UTC date in client's timezone
+                    const clientTimeStr = utcDate.toLocaleString('en-US', {
+                      timeZone: clientTimezone,
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZoneName: 'short'
+                    })
+                    
+                    return (
+                      <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <p className="text-xs text-blue-300">
+                          <span className="font-medium">Client's Time:</span> {clientTimeStr}
+                        </p>
+                      </div>
+                    )
+                  } catch (error) {
+                    console.error('Error converting timezone:', error)
+                    return null
+                  }
                 })()}
               </div>
 
@@ -2490,13 +2751,13 @@ export default function AdminRecruitmentPage() {
               {/* Admin Notes */}
               <div className="space-y-2">
                 <Label htmlFor="adminNotes" className="text-sm font-medium text-slate-200">
-                  Internal Notes (Optional)
+                  Notes (Optional)
                 </Label>
                 <Textarea
                   id="adminNotes"
                   value={scheduleFormData.adminNotes}
                   onChange={(e) => setScheduleFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
-                  placeholder="Any internal notes about this interview..."
+                  placeholder="Any notes about this interview..."
                   rows={3}
                   className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20"
                 />
@@ -2535,9 +2796,72 @@ export default function AdminRecruitmentPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Admin Notes Modal */}
+      <Dialog open={adminNotesModalOpen} onOpenChange={setAdminNotesModalOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-100">
+              Add Admin Notes
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Add notes to this interview. They will be appended to existing admin notes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Notes Text Area */}
+            <div className="space-y-2">
+              <Label htmlFor="adminNotesText" className="text-sm font-medium text-slate-200">
+                Notes
+              </Label>
+              <Textarea
+                id="adminNotesText"
+                value={adminNotesText}
+                onChange={(e) => setAdminNotesText(e.target.value)}
+                placeholder="Type your notes here..."
+                rows={5}
+                className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-blue-500/20 whitespace-pre-wrap"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleSaveAdminNotes}
+                disabled={savingNotes || !adminNotesText.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingNotes ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Notes
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAdminNotesModalOpen(false)
+                  setAdminNotesText('')
+                }}
+                disabled={savingNotes}
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Finalize Hire Modal (consolidated) */}
       <Dialog open={confirmAcceptanceModalOpen} onOpenChange={setConfirmAcceptanceModalOpen}>
-        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-2xl">
+        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
               <CheckCircle className="h-6 w-6" />
@@ -2665,7 +2989,7 @@ export default function AdminRecruitmentPage() {
 
       {/* Mark as Declined Modal */}
       <Dialog open={declineModalOpen} onOpenChange={setDeclineModalOpen}>
-        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-2xl">
+        <DialogContent className="bg-slate-900 text-slate-100 border-slate-700 max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-red-400">
               ❌ Mark Offer as Declined
@@ -2775,10 +3099,9 @@ export default function AdminRecruitmentPage() {
 
       {/* Cancel Interview Confirmation Modal */}
       <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
-        <DialogContent className="max-w-md bg-slate-900 border-slate-700 text-slate-100">
+        <DialogContent className="max-w-lg bg-slate-900 border-slate-700 text-slate-100">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              <XCircle className="h-6 w-6 text-red-400" />
+            <DialogTitle className="text-xl font-bold text-slate-100">
               Cancel Interview
             </DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2787,27 +3110,17 @@ export default function AdminRecruitmentPage() {
           </DialogHeader>
           {interviewToCancel && (
             <div className="space-y-4">
-              {/* Candidate Info */}
-              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={interviewToCancel.candidate_avatar_url || undefined} />
-                    <AvatarFallback>{interviewToCancel.candidateFirstName.charAt(0)}</AvatarFallback>
-                  </Avatar>
+              {/* Warning */}
+              <div className="rounded-lg p-4 bg-red-500/10">
+                <div className="flex items-start gap-3">
+                  <XCircle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-slate-100">{interviewToCancel.candidateFirstName}</h4>
-                    <p className="text-sm text-slate-400">
-                      {interviewToCancel.client_name} • {interviewToCancel.company_name}
+                    <p className="font-semibold text-red-300">This action cannot be undone</p>
+                    <p className="text-sm text-red-400/80 mt-1">
+                      The interview request will be cancelled and the client will be notified.
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Warning */}
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-sm text-red-300">
-                  ⚠️ This action cannot be undone. The interview request will be cancelled and the client will be notified.
-                </p>
               </div>
 
               {/* Action Buttons */}

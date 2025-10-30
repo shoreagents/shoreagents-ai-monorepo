@@ -19,15 +19,45 @@ export async function PATCH(
 
     console.log(`🚫 [CLIENT] Cancelling interview ${id}`)
 
+    // Fetch existing interview
+    const existing = await prisma.interview_requests.findUnique({
+      where: { id }
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 })
+    }
+
+    // Fetch the client user who created the interview and the current session user
+    const [interviewCreator, sessionClientUser] = await Promise.all([
+      prisma.client_users.findUnique({
+        where: { id: existing.clientUserId },
+        select: { companyId: true }
+      }),
+      prisma.client_users.findUnique({
+        where: { authUserId: session.user.id },
+        select: { companyId: true }
+      })
+    ])
+
+    if (!interviewCreator || !sessionClientUser) {
+      console.log(`❌ Client user not found`)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Ensure client belongs to the same company as the interview creator
+    if (interviewCreator.companyId !== sessionClientUser.companyId) {
+      console.log(`❌ Authorization failed: Different companies`)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     // Update interview status to CANCELLED and add cancellation reason to client notes
+    const trimmedReason = reason ? reason.trim() : ''
     const interview = await prisma.interview_requests.update({
-      where: { 
-        id,
-        clientUserId: session.user.id // Ensure client owns this interview request
-      },
+      where: { id },
       data: {
         status: 'CANCELLED',
-        clientNotes: reason ? `${reason}\n\n(Cancelled by client)` : 'Cancelled by client',
+        clientNotes: trimmedReason ? `${trimmedReason}\n\n(Cancelled by client)` : 'Cancelled by client',
         updatedAt: new Date()
       }
     })

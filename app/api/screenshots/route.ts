@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { supabaseAdmin } from "@/lib/supabase"
+import { randomUUID } from "crypto"
 
 // Function to emit performance updates (will be set by server.js)
 declare global {
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
         UPDATE performance_metrics 
         SET 
           "clipboardActions" = "clipboardActions" + 1,
-          "screenshotUrls" = COALESCE("screenshotUrls", '[]'::jsonb) || to_jsonb(${urlData.publicUrl}::text)
+          "screenshoturls" = COALESCE("screenshoturls", '[]'::jsonb) || to_jsonb(${urlData.publicUrl}::text)
         WHERE id = ${existingMetric.id}
       `
       
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       })
       console.log(`[Screenshots API] Incremented clipboardActions for metric ${existingMetric.id}: ${existingMetric.clipboardActions} → ${updated?.clipboardActions || 0}`)
       console.log(`[Screenshots API] Added screenshot URL: ${urlData.publicUrl}`)
-      console.log(`[Screenshots API] Total screenshot URLs now: ${updated ? (updated as any)?.screenshotUrls?.length || 0 : 0}`)
+      console.log(`[Screenshots API] Total screenshot URLs now: ${updated ? (updated as any)?.screenshoturls?.length || 0 : 0}`)
       
       // Emit real-time update for updated metric
       if (global.emitPerformanceUpdate) {
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
       // Create new metric with clipboardActions = 1
       const newMetric = await prisma.performance_metrics.create({
         data: {
+          id: randomUUID(),
           staffUserId: staffUser.id,
           date: today,
           clipboardActions: 1,
@@ -166,7 +168,7 @@ export async function POST(request: NextRequest) {
           urlsVisited: 0,
           tabsSwitched: 0,
           productivityScore: 0,
-          screenshotUrls: [urlData.publicUrl]
+          screenshoturls: [urlData.publicUrl]
         } as any
       })
       console.log('[Screenshots API] Created new metric with clipboardActions = 1')

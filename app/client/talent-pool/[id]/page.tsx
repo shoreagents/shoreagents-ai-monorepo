@@ -803,11 +803,13 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [clientTimezone, setClientTimezone] = useState<string>('Australia/Brisbane')
+  const [loadingTimezone, setLoadingTimezone] = useState(true)
 
   // Fetch client's timezone from their profile
   useEffect(() => {
     async function fetchClientTimezone() {
       try {
+        setLoadingTimezone(true)
         const response = await fetch('/api/client/profile')
         const data = await response.json()
         if (data.profile?.timezone) {
@@ -815,6 +817,8 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
         }
       } catch (error) {
         console.error('Failed to fetch client timezone:', error)
+      } finally {
+        setLoadingTimezone(false)
       }
     }
     fetchClientTimezone()
@@ -998,8 +1002,16 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
               Provide 2-3 time options that work for you. We'll check availability and confirm.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
-              <p className="text-xs text-blue-900 font-medium">
-                🌍 Times in your timezone: <span className="font-bold">{getTimezoneDisplay()}</span>
+              <p className="text-xs text-blue-900 font-medium flex items-center gap-2">
+                🌍 Times in your timezone: 
+                {loadingTimezone ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-blue-700">Loading timezone...</span>
+                  </span>
+                ) : (
+                  <span className="font-bold">{getTimezoneDisplay()}</span>
+                )}
               </p>
             </div>
             <div className="space-y-3">
@@ -1034,7 +1046,7 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
                         ))}
                       </select>
                       
-                      {/* Minute - ONLY :00 and :30 */}
+                      {/* Minute - 15 minute intervals */}
                       <select
                         value={parsed.minute}
                         onChange={(e) => {
@@ -1044,7 +1056,9 @@ function RequestInterviewModal({ candidate, onClose }: { candidate: CandidatePro
                         className="w-20 px-2 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
                       >
                         <option value="0">:00</option>
+                        <option value="15">:15</option>
                         <option value="30">:30</option>
+                        <option value="45">:45</option>
                       </select>
                       
                       {/* AM/PM */}
