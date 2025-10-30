@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create interview request using Prisma ORM (handles column mapping automatically)
-    const interviewRequest = await prisma.interview_requests.create({
+    const interviewRequest = await prisma.staff_interview_requests.create({
       data: {
         id: crypto.randomUUID(),
         clientUserId: clientUser.id,  // Use clientUser.id, not session.user.id!

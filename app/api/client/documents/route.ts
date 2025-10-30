@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // 1. Client's own uploads (source=CLIENT)
     // 2. Staff documents that are shared (sharedWithAll=true or client in sharedWith)
     // 3. Admin documents that are shared (sharedWithAll=true or client in sharedWith)
-    const documents = await prisma.documents.findMany({
+    const documents = await prisma.client_documents.findMany({
       where: {
         OR: [
           // Client's own documents
@@ -349,7 +349,7 @@ export async function POST(request: NextRequest) {
     
     // Create document with CLIENT source
     const now = new Date()
-    const document = await prisma.documents.create({
+    const document = await prisma.client_documents.create({
       data: {
         id: randomUUID(),
         staffUserId: firstStaff.id, // Use first staff as placeholder for relation

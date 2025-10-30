@@ -20,7 +20,7 @@ export async function PATCH(
     console.log(`📝 [CLIENT] Updating notes for interview ${id}`)
 
     // Update client notes
-    const interview = await prisma.interview_requests.update({
+    const interview = await prisma.staff_interview_requests.update({
       where: { 
         id,
         clientUserId: session.user.id // Ensure client owns this interview request

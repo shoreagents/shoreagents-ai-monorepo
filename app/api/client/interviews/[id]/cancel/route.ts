@@ -20,7 +20,7 @@ export async function PATCH(
     console.log(`🚫 [CLIENT] Cancelling interview ${id}`)
 
     // Update interview status to CANCELLED and add cancellation reason to client notes
-    const interview = await prisma.interview_requests.update({
+    const interview = await prisma.staff_interview_requests.update({
       where: { 
         id,
         clientUserId: session.user.id // Ensure client owns this interview request

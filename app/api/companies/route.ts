@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch all companies
-    const companies = await prisma.company.findMany({
+    const companies = await prisma.client_companies.findMany({
       select: {
         id: true,
         companyName: true,

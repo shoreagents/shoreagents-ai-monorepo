@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Fetch all interview requests from this client
-    const interviewRequests = await prisma.interview_requests.findMany({
+    const interviewRequests = await prisma.staff_interview_requests.findMany({
       where: {
         clientUserId: clientUser.id
       },

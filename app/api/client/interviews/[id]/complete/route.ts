@@ -27,7 +27,7 @@ export async function PATCH(
 
     // If client provided feedback, append it to client notes
     if (notes && notes.trim()) {
-      const existing = await prisma.interview_requests.findUnique({
+      const existing = await prisma.staff_interview_requests.findUnique({
         where: { id }
       })
       const timestamp = new Date().toLocaleString()
@@ -35,7 +35,7 @@ export async function PATCH(
       updateData.clientNotes = (existing?.clientNotes || '') + feedbackNote
     }
 
-    const interview = await prisma.interview_requests.update({
+    const interview = await prisma.staff_interview_requests.update({
       where: { 
         id,
         clientUserId: session.user.id // Ensure client owns this interview request

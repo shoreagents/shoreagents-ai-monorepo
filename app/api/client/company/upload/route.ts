@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       ? { logo: publicUrl }
       : { coverPhoto: publicUrl }
 
-    await prisma.company.update({
+    await prisma.client_companies.update({
       where: { id: clientUser.company.id },
       data: updateData
     })

@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     let jobAcceptance = null
 
     // Auto-match by email first (most common scenario from hire flow)
-    jobAcceptance = await prisma.job_acceptances.findFirst({
+    jobAcceptance = await prisma.staff_job_acceptances.findFirst({
       where: {
         candidateEmail: email,
         staffUserId: null // Not yet linked to a staff account
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       })
     } else if (jobAcceptanceId) {
       // Fallback: Try by jobAcceptanceId if provided
-      jobAcceptance = await prisma.job_acceptances.findUnique({
+      jobAcceptance = await prisma.staff_job_acceptances.findUnique({
         where: { id: jobAcceptanceId },
         include: {
           company: true,
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 
     // 2.5. Link job acceptance to staff user if found
     if (jobAcceptance) {
-      await prisma.job_acceptances.update({
+      await prisma.staff_job_acceptances.update({
         where: { id: jobAcceptance.id },
         data: {
           staffUserId: staffUser.id,
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
       
       // 2.6. Update interview request status to HIRED
       if (jobAcceptance.interviewRequestId) {
-        const interview = await prisma.interview_requests.update({
+        const interview = await prisma.staff_interview_requests.update({
           where: { id: jobAcceptance.interviewRequestId },
           data: {
             status: 'HIRED',

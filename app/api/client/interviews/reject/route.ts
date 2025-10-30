@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the interview belongs to this client
-    const interview = await prisma.interview_requests.findUnique({
+    const interview = await prisma.staff_interview_requests.findUnique({
       where: { id: interviewRequestId }
     })
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update interview status to REJECTED
-    const updatedInterview = await prisma.interview_requests.update({
+    const updatedInterview = await prisma.staff_interview_requests.update({
       where: { id: interviewRequestId },
       data: {
         status: 'REJECTED',

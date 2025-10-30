@@ -114,7 +114,7 @@ export async function PUT(req: NextRequest) {
       contractStart
     } = body
 
-    const updatedCompany = await prisma.company.update({
+    const updatedCompany = await prisma.client_companies.update({
       where: { id: clientUser.company.id },
       data: {
         ...(companyName !== undefined && { companyName }),

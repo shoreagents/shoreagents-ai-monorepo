@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     console.log('🔍 [VERIFY EMAIL] Checking email:', email)
 
     // Check if email matches any job acceptance
-    const jobAcceptance = await prisma.job_acceptances.findFirst({
+    const jobAcceptance = await prisma.staff_job_acceptances.findFirst({
       where: {
         candidateEmail: email,
         staffUserId: null // Not yet linked to a staff account

@@ -20,7 +20,7 @@ export async function POST(
     console.log(`📅 [CLIENT] Reschedule request for interview ${id}`)
 
     // Fetch existing interview
-    const existing = await prisma.interview_requests.findUnique({
+    const existing = await prisma.staff_interview_requests.findUnique({
       where: { id }
     })
 
@@ -34,7 +34,7 @@ export async function POST(
     const updatedAdminNotes = (existing.adminNotes || '') + rescheduleNote
 
     // Update interview with reschedule request in admin notes
-    const interview = await prisma.interview_requests.update({
+    const interview = await prisma.staff_interview_requests.update({
       where: { 
         id,
         clientUserId: session.user.id // Ensure client owns this interview request

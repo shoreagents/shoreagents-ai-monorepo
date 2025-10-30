@@ -51,12 +51,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Find or create Company record
-    let company = await prisma.company.findFirst({
+    let company = await prisma.client_companies.findFirst({
       where: { companyName }
     })
 
     if (!company) {
-      company = await prisma.company.create({
+      company = await prisma.client_companies.create({
         data: {
           id: randomUUID(),
           companyName,

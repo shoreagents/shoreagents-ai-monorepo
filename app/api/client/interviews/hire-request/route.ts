@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     console.log(`🎯 [CLIENT] ${clientUser.name} requesting to hire candidate`)
 
     // Check if interview request exists and belongs to this client
-    const interviewRequest = await prisma.interview_requests.findUnique({
+    const interviewRequest = await prisma.staff_interview_requests.findUnique({
       where: { id: interviewRequestId }
     })
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update interview request status to HIRE_REQUESTED
-    await prisma.interview_requests.update({
+    await prisma.staff_interview_requests.update({
       where: { id: interviewRequestId },
       data: {
         status: 'HIRE_REQUESTED',

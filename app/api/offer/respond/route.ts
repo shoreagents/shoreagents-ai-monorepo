@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.log(`📝 [OFFER] Candidate ${action}ing offer: ${jobAcceptanceId}`)
 
     // Find the job acceptance and interview request
-    const jobAcceptance = await prisma.job_acceptances.findUnique({
+    const jobAcceptance = await prisma.staff_job_acceptances.findUnique({
       where: { id: jobAcceptanceId },
       include: {
         interview_requests: {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'accept') {
       // ACCEPT OFFER
-      await prisma.interview_requests.update({
+      await prisma.staff_interview_requests.update({
         where: { id: jobAcceptance.interviewRequestId },
         data: {
           status: 'OFFER_ACCEPTED',
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     } else {
       // DECLINE OFFER
-      await prisma.interview_requests.update({
+      await prisma.staff_interview_requests.update({
         where: { id: jobAcceptance.interviewRequestId },
         data: {
           status: 'OFFER_DECLINED',

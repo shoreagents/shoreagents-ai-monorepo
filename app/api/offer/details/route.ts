@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 [OFFER] Fetching offer details: ${jobId}`)
 
     // Find the job acceptance with all related data
-    const jobAcceptance = await prisma.job_acceptances.findUnique({
+    const jobAcceptance = await prisma.staff_job_acceptances.findUnique({
       where: { id: jobId },
       include: {
         interview_requests: {
