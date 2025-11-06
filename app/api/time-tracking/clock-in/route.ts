@@ -15,14 +15,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const now = new Date()
+    // 🌏 GET STAFF TIMEZONE (Philippines = Asia/Manila)
+    const staffTimezone = staffUser.staff_profiles?.timezone || 'Asia/Manila'
+    console.log(`🌏 Staff timezone: ${staffTimezone}`)
     
-    // Calculate time ranges once
-    const startOfDay = new Date(now)
+    // 🕐 CALCULATE "NOW" IN STAFF'S TIMEZONE
+    const now = new Date()
+    const staffLocalTime = new Date(now.toLocaleString('en-US', { timeZone: staffTimezone }))
+    console.log(`🕐 UTC now: ${now.toISOString()}`)
+    console.log(`🕐 Staff local time: ${staffLocalTime.toISOString()} (${staffTimezone})`)
+    
+    // Calculate time ranges in STAFF'S timezone
+    const startOfDay = new Date(staffLocalTime)
     startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(now)
+    const endOfDay = new Date(staffLocalTime)
     endOfDay.setHours(23, 59, 59, 999)
-    const today = now.toLocaleDateString('en-US', { weekday: 'long' })
+    const today = staffLocalTime.toLocaleDateString('en-US', { weekday: 'long', timeZone: staffTimezone })
+    
+    console.log(`📅 Today (${staffTimezone}): ${today}`)
     
     // Get profile ID first (staffUser already includes staff_profiles from getStaffUser)
     const profileId = staffUser.staff_profiles?.id
@@ -69,7 +79,8 @@ export async function POST(request: NextRequest) {
 
     // 🔥 CALCULATE SHIFT DATE (Work Schedules = KING)
     // This determines which date the shift belongs to (handles night shifts crossing midnight)
-    let shiftDate: Date = new Date(now)
+    // Use STAFF'S LOCAL TIME (not UTC)
+    let shiftDate: Date = new Date(staffLocalTime)
     shiftDate.setHours(0, 0, 0, 0)
 
     if (workSchedule && workSchedule.dayOfWeek) {
@@ -105,7 +116,7 @@ export async function POST(request: NextRequest) {
             }
             
             // If shift starts late (after 8 PM), and they're clocking in early AM, use yesterday
-            if (shiftStartHour >= 20 && now.getHours() < 12) {
+            if (shiftStartHour >= 20 && staffLocalTime.getHours() < 12) {
               daysDiff = -1 // Use yesterday's date
             }
           }
@@ -172,12 +183,12 @@ export async function POST(request: NextRequest) {
           minute = parseInt(minutes || '0')
         }
         
-        // Create expected clock-in time
-        expectedClockIn = new Date(now)
+        // Create expected clock-in time (in staff's timezone)
+        expectedClockIn = new Date(staffLocalTime)
         expectedClockIn.setHours(hour, minute, 0, 0)
         
-        // Check if user is LATE or EARLY
-        const diffMs = now.getTime() - expectedClockIn.getTime()
+        // Check if user is LATE or EARLY (compare using staff's local time)
+        const diffMs = staffLocalTime.getTime() - expectedClockIn.getTime()
         const diffMinutes = Math.floor(Math.abs(diffMs) / 60000)
         
         if (diffMs > 0) {
