@@ -48,9 +48,9 @@ class PerformanceTracker {
       mouseMovements: 0,
       mouseClicks: 0,
       keystrokes: 0,
-      activeTime: 0, // in seconds
-      idleTime: 0, // in seconds
-      screenTime: 0, // in seconds
+      activeTime: 0, // in minutes (legacy format - matches database)
+      idleTime: 0, // in minutes (legacy format - matches database)
+      screenTime: 0, // in minutes (legacy format - matches database)
       downloads: 0,
       uploads: 0,
       bandwidth: 0,
@@ -94,13 +94,13 @@ class PerformanceTracker {
 
       if (todayMetrics) {
         // Load previous cumulative values (convert from API format)
-        // API sends seconds, so we keep as-is
+        // 🚨 DATABASE STORES MINUTES! Keep as-is for now (legacy format)
         this.metrics.mouseMovements = todayMetrics.mouseMovements || 0
         this.metrics.mouseClicks = todayMetrics.mouseClicks || 0
         this.metrics.keystrokes = todayMetrics.keystrokes || 0
-        this.metrics.activeTime = todayMetrics.activeTime || 0 // Already in seconds from API
-        this.metrics.idleTime = todayMetrics.idleTime || 0 // Already in seconds from API
-        this.metrics.screenTime = todayMetrics.screenTime || 0 // Already in seconds from API
+        this.metrics.activeTime = todayMetrics.activeTime || 0 // Keep as minutes (legacy)
+        this.metrics.idleTime = todayMetrics.idleTime || 0 // Keep as minutes (legacy)
+        this.metrics.screenTime = todayMetrics.screenTime || 0 // Keep as minutes (legacy)
         this.metrics.downloads = todayMetrics.downloads || 0
         this.metrics.uploads = todayMetrics.uploads || 0
         this.metrics.bandwidth = todayMetrics.bandwidth || 0
@@ -138,13 +138,15 @@ class PerformanceTracker {
    */
   async start() {
     if (this.isTracking) {
-      this.log('Tracker already running')
+      console.log('[PerformanceTracker] ⚠️  Tracker already running')
       return
     }
 
+    console.log('[PerformanceTracker] 🚀 STARTING Performance Tracker...')
+
     // Check if we should be tracking (only for staff users)
     if (this.shouldDisableTracking()) {
-      this.log('🚫 Performance tracking disabled - non-staff portal detected')
+      console.log('[PerformanceTracker] 🚫 Performance tracking disabled - non-staff portal detected')
       return
     }
 
@@ -154,8 +156,15 @@ class PerformanceTracker {
     this.isTracking = true
     this.sessionStartTime = Date.now()
     this.lastActivityTime = Date.now()
-    this.log('Starting performance tracking...')
-    this.log('Note: Input tracking is handled by Activity Tracker (uiohook-napi)')
+    
+    console.log('[PerformanceTracker] ✅ Performance tracking STARTED!')
+    console.log('[PerformanceTracker] 📝 Note: Input tracking is handled by Activity Tracker (uiohook-napi)')
+    console.log('[PerformanceTracker] 📊 Initial metrics:', {
+      keystrokes: this.metrics.keystrokes,
+      mouseClicks: this.metrics.mouseClicks,
+      activeTime: this.metrics.activeTime,
+      idleTime: this.metrics.idleTime
+    })
 
     // Input tracking is now handled by Activity Tracker
     // this.setupInputTracking() - REMOVED (deprecated iohook)
@@ -185,7 +194,21 @@ class PerformanceTracker {
       this.startApplicationTracking()
     }
 
-    this.log('Performance tracking started')
+    // Log metrics every 30 seconds for debugging
+    setInterval(() => {
+      if (this.isTracking) {
+        console.log('[PerformanceTracker] 📊 Current metrics:', {
+          keystrokes: this.metrics.keystrokes,
+          mouseClicks: this.metrics.mouseClicks,
+          activeTime: `${this.metrics.activeTime} sec`,
+          idleTime: `${this.metrics.idleTime} sec`,
+          isTracking: this.isTracking,
+          isPaused: this.isPaused
+        })
+      }
+    }, 30000)
+
+    console.log('[PerformanceTracker] ✅ Performance tracking started successfully')
   }
 
   /**
@@ -528,7 +551,7 @@ class PerformanceTracker {
       mouseMovements: metrics.mouseMovements,
       mouseClicks: metrics.mouseClicks,
       keystrokes: metrics.keystrokes,
-      // Send RAW SECONDS (no conversion) - API will use Math.max() like keystrokes
+      // 🚨 DATABASE STORES MINUTES! Keep as-is (legacy format)
       activeTime: Math.round(metrics.activeTime),
       idleTime: Math.round(metrics.idleTime),
       screenTime: Math.round(metrics.screenTime),

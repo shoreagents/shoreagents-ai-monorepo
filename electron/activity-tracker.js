@@ -295,10 +295,12 @@ class ActivityTracker {
         case 'click':
           // Only count 'click' events, not mousedown/mouseup to avoid double counting
           metrics.mouseClicks++
+          console.log(`[ActivityTracker] ✅ Mouse Click #${metrics.mouseClicks}`)
           break
         
         case 'keydown':
           metrics.keystrokes++
+          console.log(`[ActivityTracker] ✅ Keystroke #${metrics.keystrokes}`)
           break
         
         // mousedown, mouseup, wheel, keyup don't increment counters but still count as activity

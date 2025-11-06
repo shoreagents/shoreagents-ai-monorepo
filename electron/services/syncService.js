@@ -73,12 +73,19 @@ class SyncService {
     }
 
     this.isSyncing = true
-    this.log('Starting sync...')
+    console.log('[SyncService] 🔄 Starting sync...')
 
     try {
       // Get metrics from tracker
       const performanceTracker = require('./performanceTracker')
       const metrics = performanceTracker.getMetricsForAPI()
+
+      console.log('[SyncService] 📊 Metrics to sync:', {
+        keystrokes: metrics.keystrokes,
+        mouseClicks: metrics.mouseClicks,
+        activeTime: metrics.activeTime,
+        idleTime: metrics.idleTime
+      })
 
       // Send to API (will automatically get session cookie)
       const success = await this.sendMetrics(metrics)
@@ -86,12 +93,13 @@ class SyncService {
       if (success) {
         this.lastSyncTime = Date.now()
         this.retryCount = 0
-        this.log('Sync successful')
+        console.log('[SyncService] ✅ Sync successful!')
       } else {
+        console.error('[SyncService] 🚨 Sync FAILED!')
         this.handleSyncFailure()
       }
     } catch (error) {
-      this.log(`Sync error: ${error.message}`)
+      console.error(`[SyncService] 🚨 Sync error: ${error.message}`, error)
       this.handleSyncFailure()
     } finally {
       this.isSyncing = false
@@ -183,10 +191,12 @@ class SyncService {
 
         response.on('end', () => {
           if (response.statusCode >= 200 && response.statusCode < 300) {
-            this.log(`Metrics sent successfully: ${response.statusCode}`)
+            console.log(`[SyncService] ✅ API Response: ${response.statusCode}`)
+            console.log(`[SyncService] 📦 Response data:`, data.substring(0, 200))
             resolve(true)
           } else {
-            this.log(`API returned error: ${response.statusCode} - ${data}`)
+            console.error(`[SyncService] 🚨 API ERROR: ${response.statusCode}`)
+            console.error(`[SyncService] 📦 Error response:`, data)
             resolve(false)
           }
         })
@@ -194,7 +204,7 @@ class SyncService {
 
       // Handle errors
       request.on('error', (error) => {
-        this.log(`Network error: ${error.message}`)
+        console.error(`[SyncService] 🚨 NETWORK ERROR: ${error.message}`, error)
         resolve(false)
       })
 
