@@ -33,8 +33,8 @@ interface StaffAnalytics {
   productivityScore: number
   
   // Time Metrics
-  activeTime: number // seconds
-  idleTime: number // seconds
+  activeTime: number // 🚨 DATABASE STORES MINUTES!
+  idleTime: number // 🚨 DATABASE STORES MINUTES!
   activePercentage: number
   
   // Web Activity
@@ -84,17 +84,15 @@ export default function ClientAnalyticsPage() {
     }
   }
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
+  const formatTime = (minutes: number) => {
+    // 🚨 DATABASE STORES MINUTES, NOT SECONDS!
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
     
     if (hours > 0) {
-      return `${hours}h ${minutes}m`
-    } else if (minutes > 0) {
-      return `${minutes}m`
+      return `${hours}h ${mins}m`
     } else {
-      return `${secs}s`
+      return `${minutes}m`
     }
   }
 

@@ -90,16 +90,17 @@ export async function GET(request: NextRequest) {
     })
     const totalScreenshotCount = allMetrics.reduce((sum, m) => sum + m.clipboardActions, 0)
 
-    // Format metrics for frontend (values already in seconds - no conversion needed)
+    // Format metrics for frontend
+    // 🚨 DATABASE STORES MINUTES, NOT SECONDS! (Legacy format)
     const formattedMetrics = metrics.map((m) => ({
       id: m.id,
       date: m.date.toISOString(),
       mouseMovements: m.mouseMovements,
       mouseClicks: m.mouseClicks,
       keystrokes: m.keystrokes,
-      activeTime: m.activeTime, // Already in seconds
-      idleTime: m.idleTime, // Already in seconds
-      screenTime: m.screenTime, // Already in seconds
+      activeTime: m.activeTime, // MINUTES (from database)
+      idleTime: m.idleTime, // MINUTES (from database)
+      screenTime: m.screenTime, // MINUTES (from database)
       downloads: m.downloads,
       uploads: m.uploads,
       bandwidth: m.bandwidth,
@@ -120,9 +121,9 @@ export async function GET(request: NextRequest) {
           mouseMovements: todayMetric.mouseMovements,
           mouseClicks: todayMetric.mouseClicks,
           keystrokes: todayMetric.keystrokes,
-          activeTime: todayMetric.activeTime, // Already in seconds
-          idleTime: todayMetric.idleTime, // Already in seconds
-          screenTime: todayMetric.screenTime, // Already in seconds
+          activeTime: todayMetric.activeTime, // MINUTES (from database)
+          idleTime: todayMetric.idleTime, // MINUTES (from database)
+          screenTime: todayMetric.screenTime, // MINUTES (from database)
           downloads: todayMetric.downloads,
           uploads: todayMetric.uploads,
           bandwidth: todayMetric.bandwidth,

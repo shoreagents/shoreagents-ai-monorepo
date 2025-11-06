@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge"
 interface LiveMetrics {
   keystrokes: number
   mouseClicks: number
-  activeTime: number // seconds
-  idleTime: number // seconds
+  activeTime: number // minutes
+  idleTime: number // minutes
   clockedInAt: Date | null
   wasEarly: boolean
   earlyBy: number | null
@@ -45,21 +45,6 @@ export default function GamifiedAnalyticsDashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  // Format time: show seconds if < 60, otherwise show minutes/hours
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`
-    } else if (minutes > 0) {
-      return `${minutes}m`
-    } else {
-      return `${secs}s`
-    }
-  }
-
   const fetchLiveData = async () => {
     try {
       // Fetch live performance metrics
@@ -81,8 +66,8 @@ export default function GamifiedAnalyticsDashboard() {
       const metrics: LiveMetrics = {
         keystrokes: todayMetrics.keystrokes || 0,
         mouseClicks: todayMetrics.mouseClicks || 0,
-        activeTime: todayMetrics.activeTime || 0, // Keep as seconds for accurate display
-        idleTime: todayMetrics.idleTime || 0, // Keep as seconds for accurate display
+        activeTime: todayMetrics.activeTime || 0, // 🚨 DATABASE ALREADY STORES MINUTES!
+        idleTime: todayMetrics.idleTime || 0, // 🚨 DATABASE ALREADY STORES MINUTES!
         clockedInAt: timeData.activeEntry?.clockIn ? new Date(timeData.activeEntry.clockIn) : null,
         wasEarly: timeData.activeEntry?.wasEarly || false,
         earlyBy: timeData.activeEntry?.earlyBy || null,
@@ -159,7 +144,7 @@ export default function GamifiedAnalyticsDashboard() {
     }
     
     // Active time (0-10 points)
-    const activeHours = metrics.activeTime / 3600 // Convert seconds to hours
+    const activeHours = metrics.activeTime / 60
     if (activeHours >= 7) {
       activityScore += 10
       achievements.push("Marathon Runner")
@@ -358,14 +343,14 @@ export default function GamifiedAnalyticsDashboard() {
                 <Clock className="h-4 w-4" />
                 <span className="text-sm">Active Time</span>
               </div>
-              <div className="text-3xl font-bold text-yellow-400">{formatTime(liveMetrics.activeTime)}</div>
+              <div className="text-3xl font-bold text-yellow-400">{liveMetrics.activeTime}m</div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-slate-400">
                 <Coffee className="h-4 w-4" />
                 <span className="text-sm">Idle Time</span>
               </div>
-              <div className="text-3xl font-bold text-slate-400">{formatTime(liveMetrics.idleTime)}</div>
+              <div className="text-3xl font-bold text-slate-400">{liveMetrics.idleTime}m</div>
             </div>
           </div>
         </Card>
