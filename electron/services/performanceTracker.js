@@ -94,13 +94,13 @@ class PerformanceTracker {
 
       if (todayMetrics) {
         // Load previous cumulative values (convert from API format)
-        // 🚨 API sends MINUTES, we need to convert to SECONDS for internal tracking
+        // API sends seconds, so we keep as-is
         this.metrics.mouseMovements = todayMetrics.mouseMovements || 0
         this.metrics.mouseClicks = todayMetrics.mouseClicks || 0
         this.metrics.keystrokes = todayMetrics.keystrokes || 0
-        this.metrics.activeTime = (todayMetrics.activeTime || 0) * 60 // Convert minutes to seconds
-        this.metrics.idleTime = (todayMetrics.idleTime || 0) * 60 // Convert minutes to seconds
-        this.metrics.screenTime = (todayMetrics.screenTime || 0) * 60 // Convert minutes to seconds
+        this.metrics.activeTime = todayMetrics.activeTime || 0 // Already in seconds from API
+        this.metrics.idleTime = todayMetrics.idleTime || 0 // Already in seconds from API
+        this.metrics.screenTime = todayMetrics.screenTime || 0 // Already in seconds from API
         this.metrics.downloads = todayMetrics.downloads || 0
         this.metrics.uploads = todayMetrics.uploads || 0
         this.metrics.bandwidth = todayMetrics.bandwidth || 0
@@ -528,10 +528,10 @@ class PerformanceTracker {
       mouseMovements: metrics.mouseMovements,
       mouseClicks: metrics.mouseClicks,
       keystrokes: metrics.keystrokes,
-      // 🚨 CONVERT SECONDS TO MINUTES (database stores minutes for legacy reasons)
-      activeTime: Math.round(metrics.activeTime / 60),
-      idleTime: Math.round(metrics.idleTime / 60),
-      screenTime: Math.round(metrics.screenTime / 60),
+      // Send RAW SECONDS (no conversion) - API will use Math.max() like keystrokes
+      activeTime: Math.round(metrics.activeTime),
+      idleTime: Math.round(metrics.idleTime),
+      screenTime: Math.round(metrics.screenTime),
       downloads: metrics.downloads,
       uploads: metrics.uploads,
       bandwidth: metrics.bandwidth,
