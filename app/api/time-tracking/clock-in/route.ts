@@ -60,11 +60,65 @@ export async function POST(request: NextRequest) {
         },
         select: {
           id: true,           // ← NEED THIS to save relationship!
+          dayOfWeek: true,    // ← NEED THIS for shift date calculation!
           startTime: true,
           endTime: true
         }
       }) : null
     ])
+
+    // 🔥 CALCULATE SHIFT DATE (Work Schedules = KING)
+    // This determines which date the shift belongs to (handles night shifts crossing midnight)
+    let shiftDate: Date = new Date(now)
+    shiftDate.setHours(0, 0, 0, 0)
+
+    if (workSchedule && workSchedule.dayOfWeek) {
+      // Get the scheduled day name (e.g. "Thursday")
+      const scheduledDay = workSchedule.dayOfWeek
+      
+      // Find the most recent occurrence of that day
+      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      const scheduledDayIndex = daysOfWeek.indexOf(scheduledDay)
+      const todayIndex = daysOfWeek.indexOf(today)
+      
+      if (scheduledDayIndex !== -1 && todayIndex !== -1) {
+        // Calculate days difference
+        let daysDiff = todayIndex - scheduledDayIndex
+        
+        // If clocking in after midnight for a previous day's shift
+        if (daysDiff > 0 && daysDiff <= 1) {
+          // They might be late for yesterday's shift
+          // Check if their shift start time was yesterday
+          if (workSchedule.startTime && workSchedule.startTime.trim() !== '') {
+            const timeStr = workSchedule.startTime.trim()
+            const parts = timeStr.split(' ')
+            
+            let shiftStartHour = 0
+            if (parts.length >= 2) {
+              // Format: "11:00 PM"
+              const hour = parseInt(parts[0].split(':')[0])
+              const period = parts[1].toUpperCase()
+              shiftStartHour = (period === 'PM' && hour !== 12) ? hour + 12 : (period === 'AM' && hour === 12) ? 0 : hour
+            } else {
+              // Format: "23:00" (24-hour)
+              shiftStartHour = parseInt(timeStr.split(':')[0])
+            }
+            
+            // If shift starts late (after 8 PM), and they're clocking in early AM, use yesterday
+            if (shiftStartHour >= 20 && now.getHours() < 12) {
+              daysDiff = -1 // Use yesterday's date
+            }
+          }
+        }
+        
+        // Apply the day difference (if negative, go back; if 0, stay same)
+        if (daysDiff !== 0) {
+          shiftDate.setDate(shiftDate.getDate() - Math.abs(daysDiff))
+        }
+      }
+    }
+
+    console.log(`[Clock-In] Shift date calculated: ${shiftDate.toISOString()} (scheduled: ${workSchedule?.dayOfWeek}, today: ${today})`)
 
     if (activeEntry) {
       return NextResponse.json(
@@ -153,6 +207,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: randomUUID(),
         staffUserId: staffUser.id,
+        date: shiftDate,  // 🔥 SCHEDULED SHIFT DATE (Work Schedules = KING!)
         workScheduleId: workSchedule?.id || null,  // ← SAVE THE SCHEDULE LINK!
         clockIn: now,
         updatedAt: now,

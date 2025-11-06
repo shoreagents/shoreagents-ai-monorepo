@@ -190,25 +190,38 @@ export async function POST(request: NextRequest) {
       visitedUrls,
     } = body
 
-    // Check if there's already a metric for today
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    console.log('[API /analytics POST] 🔍 Looking for existing record:', {
-      staffUserId: staffUser.id,
-      today: today.toISOString(),
-      tomorrow: tomorrow.toISOString()
+    // 🔥 USE SHIFT DATE FROM ACTIVE TIME ENTRY (Work Schedules = KING!)
+    const activeTimeEntry = await prisma.time_entries.findFirst({
+      where: {
+        staffUserId: staffUser.id,
+        clockOut: null  // Active shift
+      },
+      orderBy: { clockIn: 'desc' }
     })
 
+    // Use the shift's scheduled date
+    let shiftDate: Date
+    if (activeTimeEntry && activeTimeEntry.date) {
+      // Use the date from time_entries (their scheduled shift date)
+      shiftDate = new Date(activeTimeEntry.date)
+      shiftDate.setHours(0, 0, 0, 0)
+    } else {
+      // No active shift - fallback to today (for testing without clocking in)
+      shiftDate = new Date()
+      shiftDate.setHours(0, 0, 0, 0)
+    }
+
+    console.log('[API /analytics POST] 🔍 Using shift date:', shiftDate.toISOString())
+    console.log('[API /analytics POST] 🔍 Looking for existing record:', {
+      staffUserId: staffUser.id,
+      shiftDate: shiftDate.toISOString()
+    })
+
+    // Search for existing record using shift date (EXACT match)
     const existingMetric = await prisma.performance_metrics.findFirst({
       where: {
         staffUserId: staffUser.id,
-        date: {
-          gte: today,
-          lt: tomorrow,
-        },
+        date: shiftDate  // Exact date match
       },
     })
 
@@ -251,11 +264,12 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new metric
-      console.log('[API /analytics POST] ✨ CREATING NEW record for today')
+      console.log('[API /analytics POST] ✨ CREATING NEW record for shift date:', shiftDate.toISOString())
       metric = await prisma.performance_metrics.create({
         data: {
           id: randomUUID(),
           staffUserId: staffUser.id,
+          date: shiftDate,  // 🔥 USE SHIFT DATE (Work Schedules = KING!)
           mouseMovements: mouseMovements || 0,
           mouseClicks: mouseClicks || 0,
           keystrokes: keystrokes || 0,

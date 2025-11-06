@@ -769,6 +769,7 @@ model tickets {
 model time_entries {
   id               String          @id
   staffUserId      String
+  date             DateTime        // 🆕 SCHEDULED SHIFT DATE (midnight) - Work Schedules KING!
   clockIn          DateTime
   clockOut         DateTime?
   totalHours       Decimal?        @db.Decimal(5, 2)
@@ -790,6 +791,8 @@ model time_entries {
   breaks           breaks[]
   staff_users      staff_users     @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
   work_schedule    work_schedules? @relation(fields: [workScheduleId], references: [id])
+  
+  @@index([staffUserId, date])
 }
 
 model user_badges {
