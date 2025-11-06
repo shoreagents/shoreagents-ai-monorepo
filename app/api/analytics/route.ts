@@ -196,6 +196,12 @@ export async function POST(request: NextRequest) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
+    console.log('[API /analytics POST] 🔍 Looking for existing record:', {
+      staffUserId: staffUser.id,
+      today: today.toISOString(),
+      tomorrow: tomorrow.toISOString()
+    })
+
     const existingMetric = await prisma.performance_metrics.findFirst({
       where: {
         staffUserId: staffUser.id,
@@ -206,9 +212,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('[API /analytics POST] 🔍 Existing metric found?', existingMetric ? `YES - ID: ${existingMetric.id}` : 'NO - will create new')
+
     let metric
 
     if (existingMetric) {
+      console.log('[API /analytics POST] ✏️  UPDATING existing record:', existingMetric.id)
       // Update existing metric: Use MAX value (Electron sends cumulative totals)
       // If Electron restarts, new values will be lower, so keep the higher existing values
       metric = await prisma.performance_metrics.update({
@@ -242,6 +251,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new metric
+      console.log('[API /analytics POST] ✨ CREATING NEW record for today')
       metric = await prisma.performance_metrics.create({
         data: {
           id: randomUUID(),
