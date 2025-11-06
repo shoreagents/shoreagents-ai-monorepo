@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Clock, LogIn, LogOut, Calendar, TrendingUp, AlertCircle, Coffee } from "lucide-react"
@@ -103,26 +103,44 @@ export default function TimeTracking() {
 
   // WebSocket automatically handles data fetching, no need for manual API calls
   
+  // Track which modals have been shown in THIS session (prevents duplicate useEffect calls)
+  const shownInSessionRef = useRef<Set<string>>(new Set())
+  
   // Track which time entries have already shown their modals (persists across sessions)
   const hasShownModal = (entryId: string, type: 'late' | 'early'): boolean => {
     if (typeof window === 'undefined') return false
     const key = `modal_shown_${type}_${entryId}`
+    
+    // Check session ref first (prevents duplicate calls in same session)
+    if (shownInSessionRef.current.has(key)) {
+      return true
+    }
+    
+    // Check localStorage (persists across sessions)
     return localStorage.getItem(key) === 'true'
   }
   
   const markModalShown = (entryId: string, type: 'late' | 'early') => {
     if (typeof window === 'undefined') return
     const key = `modal_shown_${type}_${entryId}`
+    
+    // Mark in session ref
+    shownInSessionRef.current.add(key)
+    
+    // Mark in localStorage
     localStorage.setItem(key, 'true')
+    
+    console.log(`[TimeTracking] Modal marked as shown: ${key}`)
   }
   
   // Check for late clock-in and show modal (only once per time entry)
   useEffect(() => {
     if (isClockedIn && activeEntry?.wasLate && activeEntry?.lateBy && activeEntry?.id) {
       if (!hasShownModal(activeEntry.id, 'late')) {
+        // Mark as shown FIRST (before state update that triggers render)
+        markModalShown(activeEntry.id, 'late')
         setLateMinutes(activeEntry.lateBy)
         setShowLateModal(true)
-        markModalShown(activeEntry.id, 'late')
       }
     }
   }, [isClockedIn, activeEntry?.id, activeEntry?.wasLate, activeEntry?.lateBy])
@@ -131,9 +149,10 @@ export default function TimeTracking() {
   useEffect(() => {
     if (isClockedIn && activeEntry?.wasEarly && activeEntry?.earlyBy && activeEntry?.id) {
       if (!hasShownModal(activeEntry.id, 'early')) {
+        // Mark as shown FIRST (before state update that triggers render)
+        markModalShown(activeEntry.id, 'early')
         setEarlyMinutes(activeEntry.earlyBy)
         setShowEarlyModal(true)
-        markModalShown(activeEntry.id, 'early')
       }
     }
   }, [isClockedIn, activeEntry?.id, activeEntry?.wasEarly, activeEntry?.earlyBy])
@@ -1979,6 +1998,12 @@ export default function TimeTracking() {
               console.error('Failed to save late reason:', error)
             }
           }
+          
+          // 🔥 MARK AS ACKNOWLEDGED (so it never shows again for this time entry)
+          if (activeEntry?.id) {
+            markModalShown(activeEntry.id, 'late')
+          }
+          
           setShowLateModal(false)
           // Break scheduler will be shown automatically via WebSocket state
         }}
@@ -1990,6 +2015,11 @@ export default function TimeTracking() {
         type="early-clock-in"
         data={{ earlyBy: earlyMinutes, expectedTime: activeEntry?.expectedClockIn }}
         onAction={() => {
+          // 🔥 MARK AS ACKNOWLEDGED (so it never shows again for this time entry)
+          if (activeEntry?.id) {
+            markModalShown(activeEntry.id, 'early')
+          }
+          
           setShowEarlyModal(false)
           // Break scheduler will be shown automatically via WebSocket state
         }}
